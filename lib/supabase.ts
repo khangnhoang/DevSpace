@@ -5,7 +5,7 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function getLessons(){ 
+export async function getLessons(){ 
     const {data, error} = await supabase
     .from('lessons')
     .select('id, title, slug');

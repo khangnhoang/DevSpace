@@ -1,32 +1,56 @@
+// app/learn/[slug]/page.tsx
+import LessonContent from "@/app/components/LessonContent";
+
 interface Props {
   params: {
-    slug: string; // Tên biến 'slug' phải khớp với tên thư mục [slug]
+    slug: string;
   };
 }
 
 export default async function LearnPage({ params }: Props) {
-  // Destructuring để lấy slug ra cho gọn
+  // 1. Lấy slug từ URL (Ví dụ: html-basic)
   const { slug } = await params;
 
+  // 2. Tạo dữ liệu giả (Mock Data) bằng Markdown để test
+  // (Lưu ý dùng dấu huyền ` để bao chuỗi)
+  const mockContent = `
+# Bài học: ${slug}
+
+Chào mừng đến với **W3Schools Clone**.
+Đây là nội dung được viết bằng **Markdown** và render bằng **Next.js**.
+
+## 1. Thẻ tiêu đề (Heading)
+Ở trên là H1, đây là H2. Cấu trúc rất rõ ràng.
+
+## 2. Danh sách (List)
+* Dễ học
+* Dễ làm
+* Code sạch
+
+## 3. Code Snippet (Quan trọng nhất)
+Thử xem đoạn code dưới đây có nền đen chữ trắng không nhé:
+
+\`\`\`javascript
+function testCode() {
+  console.log("Hello World!");
+  return "Success";
+}
+\`\`\`
+
+> Ghi chú: Nếu bạn thấy cái hộp này màu xám và chữ đẹp, nghĩa là thành công!
+  `;
+
   return (
-    <div className="p-10">
-      <h1 className="text-2xl font-bold text-blue-600 mb-4">
-        Trang chi tiết bài học
-      </h1>
-      
-      <p className="text-gray-700 mb-4">
-        Bạn đang truy cập vào đường dẫn có slug là:
-      </p>
-      
-      {/* Hiển thị slug ra màn hình để test */}
-      <div className="bg-gray-100 p-4 rounded border border-gray-300 font-mono text-lg">
-        {slug}
+    <div className="w-full p-8 min-h-screen bg-gray-50">
+      {/* Breadcrumb nhỏ xinh */}
+      <div className="text-sm text-gray-500 mb-6">
+        Home / Learn / <span className="font-bold text-blue-600">{slug}</span>
       </div>
 
-      <p className="mt-4 text-sm text-gray-500">
-        (Sau này nội dung bài học lấy từ Database sẽ nhét vào đây)
-      </p>
+      {/* Khung chứa bài học màu trắng */}
+      <div className="bg-white p-10 rounded-xl shadow-sm border border-gray-200">
+        <LessonContent content={mockContent} />
+      </div>
     </div>
   );
 }
-

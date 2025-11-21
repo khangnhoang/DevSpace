@@ -32,8 +32,8 @@ export default function RootLayout({
       > {<Header/>}
         <div className="flex flex-1 relative">
           {<Sidebar/>}
+          {children}
         </div>
-        {children}
       </body>
     </html>
   );

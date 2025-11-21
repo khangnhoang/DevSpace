@@ -20,8 +20,6 @@ export default async function LearnPage({ params }: Props) {
 
   // --- XỬ LÝ LỖI ---
   if (error || !lesson) {
-    console.error("Lỗi tìm bài học:", error);
-    // Cách 1: Hiện thông báo lỗi đơn giản
     return (
       <NotFoundLesson/>
     );

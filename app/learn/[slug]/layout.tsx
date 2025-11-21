@@ -28,10 +28,10 @@ export default async function RootLayout({
 }>) {
     const {data: lessons, error} = await getLessons()
   return (
-    <html lang="en">
+    <html lang="vi">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      > {<Header/>}
+      >
         <div className="flex flex-1 relative">
           {<Sidebar lessons = {lessons || []}/>}
           {children}

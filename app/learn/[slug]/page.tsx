@@ -1,7 +1,7 @@
 // app/learn/[slug]/page.tsx
 import { supabase } from "@/lib/supabase";
 import LessonContent from "@/app/components/LessonContent";
-import { notFound } from "next/navigation"; // Hàm dùng để chuyển hướng sang trang 404
+import NotFoundLesson from "@/app/components/NotFoundLesson";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -23,10 +23,7 @@ export default async function LearnPage({ params }: Props) {
     console.error("Lỗi tìm bài học:", error);
     // Cách 1: Hiện thông báo lỗi đơn giản
     return (
-      <div className="p-10 text-center text-red-500">
-        <h1 className="text-2xl font-bold">404 - Không tìm thấy bài học</h1>
-        <p>Slug {slug} không tồn tại trong Database.</p>
-      </div>
+      <NotFoundLesson/>
     );
     
     // Cách 2 (Nâng cao): Chuyển thẳng sang trang Not Found mặc định của Next.js

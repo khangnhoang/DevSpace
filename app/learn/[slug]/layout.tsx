@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "@/app/globals.css"
 
-import Header from "@/app/components/Header";
 import Sidebar from "@/app/components/Sidebar"
 import { getLessons } from "@/lib/supabase";
 

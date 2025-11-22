@@ -1,20 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "@/app/globals.css"
 
 import Header from "@/app/components/Header";
 import Sidebar from "@/app/components/Sidebar"
 import { getLessons } from "@/lib/supabase";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -28,15 +19,9 @@ export default async function RootLayout({
 }>) {
     const {data: lessons, error} = await getLessons()
   return (
-    <html lang="vi">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
         <div className="flex flex-1 relative">
           {<Sidebar lessons = {lessons || []}/>}
           {children}
         </div>
-      </body>
-    </html>
   );
 }

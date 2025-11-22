@@ -55,7 +55,7 @@ export default async function LearnPage({ params }: Props) {
 
         {/* Nội dung Markdown render qua MDX */}
         <LessonContent content={lesson.content} />
-        <div className="flex gap-4 justify-center justify-items-center">
+        <div className="flex gap-4 justify-center justify-items-center pt-6">
           {prevLesson ? (
             <Link
               href={`/learn/${prevLesson.slug}`}

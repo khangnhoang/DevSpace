@@ -27,6 +27,17 @@ export default async function LearnPage({ params }: Props) {
     // return notFound();
   }
 
+  const {data: allLessons} = await supabase
+    .from("lessons")
+    .select("slug, title")
+    .order('id', {ascending:true});
+
+  const currentIndex = allLessons?.findIndex((i) => i.slug === slug) ?? -1
+  const prevLesson = currentIndex > 0? allLessons![currentIndex - 1] : null;
+  const nextLesson = (allLessons && currentIndex< allLessons.length-1)? allLessons[currentIndex + 1] : null
+  
+  
+
   return (
     <div className="w-full p-8 min-h-screen bg-gray-50">
       {/* Breadcrumb */}
@@ -45,46 +56,39 @@ export default async function LearnPage({ params }: Props) {
         {/* Nội dung Markdown render qua MDX */}
         <LessonContent content={lesson.content} />
         <div className="flex gap-4 justify-center justify-items-center">
-          <Link
-            href="/"
-            className="border text-black rounded-md p-4 hover:bg-blue-500 hover:text-white flex"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              className="size-6"
+          {prevLesson ? (
+            <Link
+              href={`/learn/${prevLesson.slug}`}
+              className="border border-gray-300 text-black rounded-md p-4 hover:bg-blue-500 hover:text-white hover:border-blue-500 flex items-center gap-2 transition-colors"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M15.75 19.5 8.25 12l7.5-7.5"
-              />
-            </svg>
-            Bài trước
-          </Link>
-          <Link
-            href="/"
-            className="border text-black rounded-md p-4 px-6 hover:bg-blue-500 hover:text-white flex"
-          >
-            Bài sau
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              className="size-6"
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+              </svg>
+              <div>
+                <div className="text-xs opacity-60 text-left">Bài trước</div>
+                <div className="font-semibold">{prevLesson.title}</div>
+              </div>
+            </Link>
+          ) : (
+            <div /> // Div rỗng để giữ chỗ nếu không có bài trước
+          )}
+          {nextLesson ? (
+            <Link
+              // Sửa: Gắn link động
+              href={`/learn/${nextLesson.slug}`}
+              className="border border-gray-300 text-black rounded-md p-4 hover:bg-blue-500 hover:text-white hover:border-blue-500 flex items-center gap-2 transition-colors text-right"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="m8.25 4.5 7.5 7.5-7.5 7.5"
-              />
-            </svg>
-          </Link>
+              <div>
+                <div className="text-xs opacity-60 text-right">Bài sau</div>
+                <div className="font-semibold">{nextLesson.title}</div>
+              </div>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+              </svg>
+            </Link>
+          ) : (
+            <div />
+          )}
         </div>
       </div>
     </div>

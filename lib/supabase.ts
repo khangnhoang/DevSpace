@@ -8,7 +8,8 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 export async function getLessons(){ 
     const {data, error} = await supabase
     .from('lessons')
-    .select('id, title, slug');
+    .select('id, title, slug')
+    .order('id', {ascending: true});
 
     if(error){
         return {error};

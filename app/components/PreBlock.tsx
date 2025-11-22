@@ -5,7 +5,7 @@ import { useState, useRef, ComponentProps } from "react";
 export default function Pre({children, ...props}: ComponentProps<"pre">){
     const preRef = useRef<HTMLPreElement>(null);
 
-    const [isCopied,setIsCopied] = useState(false);
+    const [isCopied, setIsCopied] = useState(false);
 
 
     const handleCopy = async() => {
@@ -15,6 +15,7 @@ export default function Pre({children, ...props}: ComponentProps<"pre">){
 
         try{
             await navigator.clipboard.writeText(text)
+            setIsCopied(true);
         }
         catch {
             console.error("copy fail")

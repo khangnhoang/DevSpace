@@ -18,7 +18,7 @@ export default function Pre({children, ...props}: ComponentProps<"pre">){
             setIsCopied(true);
         }
         catch {
-            console.error("copy fail")
+            console.error("copy fai")
         }
     }
 

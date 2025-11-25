@@ -4,6 +4,10 @@ import { supabase } from '@/lib/supabase'; // Import client cũ
 import { useRouter } from 'next/navigation';
 
 type ViewState = 'login' | 'register'
+type AuthMessage = {
+  text: string,
+  type: 'error' | 'success'
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -12,6 +16,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [view, setView] = useState<ViewState>('login');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [message, setMessage] = useState<AuthMessage | null>(null);
 
   const handleLogin = async () => {
     setLoading(true);
@@ -22,14 +27,17 @@ export default function LoginPage() {
     });
 
     if (error) {
-      alert(error.message); // Báo lỗi đơn giản
+      setMessage({text:'Sai email hoặc mật khẩu', type:'error'}); // Báo lỗi đơn giản
     } else {
-      router.push('/'); // Thành công thì về trang chủ
+      setMessage({text:'Đăng nhập thành công', type:'success'});
       router.refresh(); // Refresh để cập nhật Header
+      setTimeout(() => {
+      router.push('/'); // Thành công thì về trang chủ
+      }, 3000)
     }
     setLoading(false);
   };
-
+  
   const handleSignUp = async () => {
     setLoading(true);
      const { error } = await supabase.auth.signUp({
@@ -38,10 +46,13 @@ export default function LoginPage() {
     });
 
     if (error) {
-      alert(error.message); // Báo lỗi đơn giản
+      setMessage({text:'Email hoặc mật khẩu không hợp lệ', type:'error'});
     } else {
-      router.push('/'); // Thành công thì về trang chủ
+      setMessage({text:'Đăng ký thành công', type:'success'});
       router.refresh(); // Refresh để cập nhật Header
+      setTimeout(() => {
+      router.push('/'); // Thành công thì về trang chủ
+      }, 3000)
     }
     setLoading(false);
   };
@@ -50,9 +61,20 @@ export default function LoginPage() {
     setView(view==='register'?'login':'register')
   }
 
+  const handleAuthentication = async () => {
+    if (view==='register'){
+      if (password !== confirmPassword) {
+      setMessage({text:'Mật khẩu không trùng khớp', type:'error'});
+      return
+      }   
+      handleSignUp()
+    } else
+      handleLogin()
+
+  }
   return (
     <div className="flex flex-col items-center justify-center min-h-screen w-full">
-      <form onSubmit={handleLogin} className="p-8 bg-white rounded shadow-md w-96">
+      <form onSubmit={handleAuthentication} className="p-8 bg-white rounded shadow-md w-96">
         <h1 className="text-2xl font-bold mb-6 text-center text-green-600">{view==='login'?'Đăng nhập':'Đăng ký'}</h1>
         
         <input 
@@ -72,15 +94,15 @@ export default function LoginPage() {
           className={`w-full p-2 mb-4 border rounded placeholder-gray-500 text-gray-500 ${view==='register'?'block':'hidden'}`}
           type="password" 
           placeholder="Xác nhận Mật khẩu..."
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
         />
-
+        {message && (<div className={`${message.type==='error'?'text-red-500':'text-green-500'}`}>{message.text}</div>)}
         <button 
-          onClick={handleLogin}
+          onClick={handleAuthentication}
           disabled={loading}
           className="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700 disabled:opacity-50"
-          type='submit'
+          type='button'
         >
           {view==='login'?'Đăng nhập':'Đăng ký'}
         </button>

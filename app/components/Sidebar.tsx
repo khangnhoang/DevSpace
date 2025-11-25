@@ -2,13 +2,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-type lessonItem = {
-  id: number;
-  title: string;
-  slug: string;
+type SidebarProps = {
+  lessons: { id: number; title: string; slug: string }[];
+  courseSlug: string;
 };
 
-export default function Sidebar({ lessons }: { lessons: lessonItem[] }) {
+export default function Sidebar({ lessons, courseSlug }: SidebarProps) {
   const pathName = usePathname();
   return (
     <aside className="flex px-2 py-4 gap-3 w-1/4 bg-slate-50 min-h-screen">
@@ -19,7 +18,7 @@ export default function Sidebar({ lessons }: { lessons: lessonItem[] }) {
           return (
             <Link
               key={lesson.id}
-              href={lesson.slug}
+              href={`/learn/${courseSlug}/${lesson.slug}`}
               className={`hover:bg-blue-500 hover:text-white p-3 ${
                 isActive ? "bg-blue-500 text-white font-bold" : "text-black"
               }`}

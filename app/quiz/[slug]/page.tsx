@@ -17,6 +17,7 @@ export default function QuizPage() {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [correct, setIsCorrect] = useState<boolean | null>(null)
 
   const handleSubmit = () => {
     if (selectedOption === null){
@@ -26,9 +27,9 @@ export default function QuizPage() {
 
     const currentCorrectAnswer = questions[0].correctAnswer
     if (selectedOption === currentCorrectAnswer){
-      alert("Đúng")
+      setIsCorrect(true)
     } else {
-      alert("Sai")
+      setIsCorrect(false)
     }
   };
 
@@ -42,6 +43,7 @@ export default function QuizPage() {
     
     try {
       setLoading(true)
+      setIsCorrect(null)
 
       const result = await getExerciseByLesson(slug);
 
@@ -106,12 +108,16 @@ export default function QuizPage() {
               <label htmlFor={`option-${i}`} className="text-lg cursor-pointer select-none flex-1">
                 {opt}
               </label>
-
             </div>
             );         
-          })}      
-        </form>      
+          })}
+        </form>
       </div>
+      {correct !== null && (<div className={`mt-5 text-3xl gap-4 flex flex-col justify-center items-center absolute w-[404.32] h-[317.36] rounded-md text-white ${correct?"bg-green-500":"bg-red-500"}
+            `}>
+              {correct?"Đúng":"Sai"}
+              <button className="cursor-pointer rounded-xl p-2 bg-gray-500 hover:bg-blue-500 hover:text-black">{correct?"Bài kế tiếp":"Làm lại"}</button>
+            </div>)} 
         <div className="w-1/1 flex justify-center p-2">
           <button onClick= {handleSubmit} className="text-black bg-gray-200 rounded-md cursor-pointer text-xl p-2 hover:bg-blue-400 hover:text-white">
             Gửi kết quả

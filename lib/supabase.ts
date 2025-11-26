@@ -24,3 +24,29 @@ export async function getLessonsByCourse(courseSlug: string) {
 
   return lessons || [];
 }
+
+export async function getExerciseByLesson(lessonSlug: string){
+  const { data: lesson} = await supabase
+    .from('lessons')
+    .select('id')
+    .eq('slug', lessonSlug)
+    .single();
+
+  if(!lesson) return [];
+
+  const { data: exercises, error} = await supabase
+    .from('exercises')
+    .select('*')
+    .eq('lesson_id', lesson.id)
+    .order('id', { ascending: true });
+
+  if(error){
+    alert(error.message);
+    return [];
+  }
+
+  return {
+    lesson,
+    exercises: exercises || []
+  };
+}

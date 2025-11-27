@@ -32,7 +32,7 @@ export async function getExerciseByLesson(lessonSlug: string){
     .eq('slug', lessonSlug)
     .single();
 
-  if(!lesson) return [];
+  if(!lesson) return null;
 
   const { data: exercises, error} = await supabase
     .from('exercises')
@@ -42,7 +42,7 @@ export async function getExerciseByLesson(lessonSlug: string){
 
   if(error){
     alert(error.message);
-    return [];
+    return null;
   }
 
   return {
@@ -67,5 +67,5 @@ export async function getCompleteLessonIds(userId: string) {
     .eq('user_id', userId)
 
   if(!data) return [];
-  return data.map(item => item.lesson_id);
+  return data.map(item => item.lesson_id)
 }

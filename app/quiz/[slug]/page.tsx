@@ -1,151 +1,240 @@
 "use client";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { useParams, useRouter } from "next/navigation";
 import { getExerciseByLesson } from "@/lib/supabase";
-import { Router } from "lucide-react";
 
 type QuizQuestion = {
-  id: number,
-  question: string,
-  options: string[]
-  correctAnswer: string
+  id: number;
+  question: string;
+  options: string[];
+  correctAnswer: string;
 };
 
 export default function QuizPage() {
   const params = useParams();
   const router = useRouter();
+
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [correct, setIsCorrect] = useState<boolean | null>(null)
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const currentQuestion = questions[currentIndex];
-  const isLastQuestion = currentIndex === questions.length-1
 
-  const TryAgain = () => {
-    setIsCorrect(null)
-    setSelectedOption(null)
-  }
+  // State quản lý logic bài thi
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [correct, setIsCorrect] = useState<boolean | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Các biến tính toán (Derived State)
+  const currentQuestion = questions[currentIndex];
+  const isLastQuestion =
+    questions.length > 0 && currentIndex === questions.length - 1;
+
+  // --- 1. LOGIC NÚT BẤM ---
+
+  const handleTryAgain = () => {
+    setIsCorrect(null); // Ẩn bảng kết quả
+    setSelectedOption(null); // Reset lựa chọn để user chọn lại
+  };
 
   const handleNextQuestion = () => {
     if (isLastQuestion) {
-      alert("Đây đã là câu hỏi cuối cùng")
-      router.push('/')
-      return 
+      alert("Chúc mừng! Bạn đã hoàn thành tất cả bài tập 🎉");
+      // TODO: Gọi API lưu tiến độ ở đây (Buổi sau làm)
+      router.push("/"); // Hoặc router.back() để về bài học
+      return;
     }
-    setCurrentIndex((prev) => prev + 1)
-    setIsCorrect(null)
-    setSelectedOption(null)
-  }
+
+    // Chuyển sang câu tiếp theo
+    setCurrentIndex((prev) => prev + 1);
+    setIsCorrect(null); // Ẩn bảng kết quả
+    setSelectedOption(null); // Reset lựa chọn
+  };
 
   const handleSubmit = () => {
-    if (selectedOption === null){
-      alert("vui lòng chọn đáp án")
-      return
+    if (selectedOption === null) {
+      alert("Vui lòng chọn đáp án trước khi gửi!");
+      return;
     }
 
-    const currentCorrectAnswer = questions[currentIndex].correctAnswer
-    if (selectedOption === currentCorrectAnswer){
-      setIsCorrect(true)
+    const currentCorrectAnswer = currentQuestion.correctAnswer;
+    if (selectedOption === currentCorrectAnswer) {
+      setIsCorrect(true);
     } else {
-      setIsCorrect(false)
+      setIsCorrect(false);
     }
   };
 
-  // const [currentQuestion, setCurrenQuestion] = useState(0);
-  // const [isSelectedOption, setIsSelectedOption] = useState("");
+  // --- 2. FETCH DATA ---
 
   useEffect(() => {
-    const fetctQuizData = async() => {
-      const slug = Array.isArray(params.slug)?params.slug[0]:params.slug;
-      if (!slug) return
-    
-    try {
-      setLoading(true)
-      setIsCorrect(null)
-      
-      const result = await getExerciseByLesson(slug);
+    const fetchQuizData = async () => {
+      const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
+      if (!slug) return;
 
-      let rawExercises: any[] = [];
-      if (Array.isArray(result)){
-        rawExercises = [];
-      } else {
-        rawExercises = result.exercises
+      try {
+        setLoading(true);
+        // Reset state khi load bài mới
+        setIsCorrect(null);
+        setCurrentIndex(0);
+        setSelectedOption(null);
+
+        const result = await getExerciseByLesson(slug);
+
+        if(!result){
+          setLoading(false);
+          return;
+        }
+
+        let rawExercises: any[] = [];
+        // Kiểm tra kỹ cấu trúc trả về của API
+        if (result && Array.isArray(result.exercises)) {
+          rawExercises = result.exercises;
+        } else if (Array.isArray(result)) {
+          rawExercises = result;
+        }
+
+        const formattedData: QuizQuestion[] = rawExercises.map((item: any) => ({
+          id: item.id,
+          question: item.question, // Nhớ check xem DB là 'question' hay 'quest'
+          options: [item.option_a, item.option_b, item.option_c, item.option_d],
+          correctAnswer: item.correct_answer,
+        }));
+
+        setQuestions(formattedData);
+      } catch (error) {
+        console.error("Lỗi tải bài tập:", error);
+      } finally {
+        setLoading(false);
       }
+    };
 
-    const formatedData: QuizQuestion[] = rawExercises.map((item: any) => ({
-        id: item.id,
-        question: item.question,
-        options: [item.option_a, item.option_b, item.option_c, item.option_d],
-        correctAnswer: item.correct_answer
-      }))
-      
-      console.log("Dữ liệu đã xử lí:", formatedData)
-      setQuestions(formatedData);
-    } 
-    catch (error) {
-      console.error("lỗi:", error)
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  fetctQuizData();
-  },[params.slug])
-  
-  if (loading) return <div className="text-white p-10 text-center">⏳ Đang tải câu hỏi...</div>;
-  
-  if (questions.length === 0) return <div className="text-white p-10 text-center">📭 Bài học này chưa có câu hỏi nào.</div>;
+    fetchQuizData();
+  }, [params.slug]);
 
-  // Hiển thị thử câu đầu tiên để xem dữ liệu lên chưa
-  const demoQuestion = questions[0];
+  // --- 3. RENDER ---
 
+  if (loading)
+    return (
+      <div className="text-white p-10 text-center text-xl animate-pulse">
+        ⏳ Đang tải câu hỏi...
+      </div>
+    );
 
+  if (questions.length === 0)
+    return (
+      <div className="text-white p-10 text-center">
+        <p className="text-2xl mb-4">📭 Bài học này chưa có câu hỏi nào.</p>
+        <button
+          onClick={() => router.back()}
+          className="text-blue-400 hover:underline"
+        >
+          Quay về bài học
+        </button>
+      </div>
+    );
+
+  // Bảo vệ: Nếu currentIndex vượt quá mảng (hiếm gặp)
+  if (!currentQuestion) return null;
 
   return (
-    <div className="bg-[#2d3748] h-screen w-full flex flex-col justify-center items-center gap-2">
-      <h1 className="text-4xl">Test Quiz</h1>
-      <p className="text-2xl">Câu hỏi: VN là viết tắt của?</p>
-      <div className="overflow-hidden relative border border-gray-500 p-6 rounded-lg bg-[#3a4556]">
-        <p className="text-xl mb-4 font-bold">Câu {currentIndex+1}: {currentQuestion.question}</p>        
-         <form className="flex flex-col gap-4">
-          {currentQuestion.options.map((opt, i) => {  
-            const type = ["a", "b", "c","d"][i];
-            const isSelected = selectedOption === type 
-            // 1. Phải bọc input và label trong 1 thẻ div cha (để tránh lỗi React)
-            return(
-              <div key={i} onClick={() => setSelectedOption(type)} className="flex items-center gap-3 p-2 hover:bg-gray-600 rounded cursor-pointer">
-              
-              <input 
-                type="radio" 
-                checked={isSelected}
-                onChange={() => {}}
-                id={`option-${i}`}   // Tạo ID riêng cho từng dòng
-                name="quiz_answer"   // QUAN TRỌNG: Phải cùng tên 'name' thì mới chỉ chọn được 1 cái
-                className="w-5 h-5 cursor-pointer accent-blue-500" // accent-blue để đổi màu nút radio
-              />
-              
-              {/* htmlFor phải khớp với id của input để bấm vào chữ cũng chọn được */}
-              <label htmlFor={`option-${i}`} className="text-lg cursor-pointer select-none flex-1">
-                {opt}
-              </label>
-            </div>
-            );         
+    <div className="bg-[#2d3748] min-h-screen w-full flex flex-col justify-center items-center gap-4 p-4">
+      <h1 className="text-4xl text-white font-bold mb-2">Test Quiz</h1>
+      <p className="text-xl text-gray-300">
+        Câu hỏi {currentIndex + 1} / {questions.length}
+      </p>
+
+      {/* --- KHUNG CÂU HỎI (Có Overlay khi hiện kết quả) --- */}
+      <div className="relative border border-gray-600 p-8 rounded-xl bg-[#3a4556] w-full max-w-2xl shadow-2xl overflow-hidden">
+        <p className="text-xl mb-6 font-bold text-white">
+          {currentQuestion.question}
+        </p>
+
+        <div className="flex flex-col gap-4">
+          {currentQuestion.options.map((opt, i) => {
+            const type = ["a", "b", "c", "d"][i];
+            const isSelected = selectedOption === type;
+
+            return (
+              <div
+                key={i}
+                // Chỉ cho chọn khi chưa hiện kết quả (correct === null)
+                onClick={() => correct === null && setSelectedOption(type)}
+                className={`flex items-center gap-4 p-3 rounded-lg cursor-pointer transition-all border-2
+                    ${
+                      isSelected
+                        ? "bg-blue-600 border-blue-400 shadow-md"
+                        : "bg-[#2d3748] border-transparent hover:bg-gray-600"
+                    }
+                    ${correct !== null ? "cursor-default opacity-80" : ""} 
+                `}
+              >
+                <input
+                  type="radio"
+                  checked={isSelected}
+                  onChange={() => {}} // Dummy handler để React ko warn
+                  id={`option-${i}`}
+                  name="quiz_answer"
+                  className="w-5 h-5 cursor-pointer accent-white"
+                  disabled={correct !== null} // Disable radio khi đã nộp
+                />
+
+                <label
+                  htmlFor={`option-${i}`}
+                  className="text-lg text-white cursor-pointer select-none flex-1"
+                >
+                  {opt}
+                </label>
+              </div>
+            );
           })}
-        </form>
-        {correct !== null && (<div className={`absolute inset-0 text-3xl gap-4 flex flex-col justify-center items-center rounded-md text-white ${correct?"bg-green-500":"bg-red-500"}
-            `}>
-              {correct?"Đúng":"Sai"}
-              <button onClick={!correct?TryAgain:handleNextQuestion} className="cursor-pointer rounded-xl p-2 bg-gray-500 hover:bg-blue-500 hover:text-black">{correct?"Bài kế tiếp":"Làm lại"}</button>
-            </div>)} 
-      </div>
-        <div className="w-1/1 flex justify-center p-2 gap-4">
-        <button className='rounded-md p-2 text-xl bg-gray-200 text-black hover:bg-blue-400 hover:text-white cursor-pointer'>Quay về bài học</button>
-          <button onClick= {handleSubmit} className="text-black bg-gray-200 rounded-md cursor-pointer text-xl p-2 hover:bg-blue-400 hover:text-white">
-            Gửi kết quả
-          </button>
         </div>
+
+        {/* --- OVERLAY KẾT QUẢ (Đè lên câu hỏi) --- */}
+        {correct !== null && (
+          <div
+            className={`absolute inset-0 flex flex-col justify-center items-center gap-6 text-white animate-in fade-in zoom-in duration-200
+                ${correct ? "bg-green-600/95" : "bg-red-600/95"} 
+            `}
+          >
+            <div className="text-5xl font-bold">
+              {correct ? "Chính xác! 🎉" : "Sai rồi! 😢"}
+            </div>
+
+            <button
+              onClick={correct ? handleNextQuestion : handleTryAgain}
+              className="cursor-pointer rounded-full px-8 py-3 bg-white text-black text-xl font-bold hover:bg-gray-200 hover:scale-105 transition-transform shadow-lg"
+            >
+              {correct
+                ? isLastQuestion
+                  ? "Hoàn thành 🏁"
+                  : "Bài kế tiếp ➡"
+                : "Thử lại ↺"}
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* --- KHUNG BUTTON CUỐI TRANG --- */}
+      <div className="flex gap-4 mt-4">
+        <button
+          onClick={() => router.back()}
+          className="px-6 py-2 text-lg bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors"
+        >
+          Quay về
+        </button>
+
+        <button
+          onClick={handleSubmit}
+          disabled={correct !== null || !selectedOption} // Disable khi đã nộp hoặc chưa chọn
+          className={`px-8 py-2 text-lg rounded-lg font-bold transition-colors
+                ${
+                  correct === null && selectedOption
+                    ? "bg-blue-500 text-white hover:bg-blue-600 cursor-pointer"
+                    : "bg-gray-700 text-gray-500 cursor-not-allowed"
+                }
+            `}
+        >
+          Gửi kết quả
+        </button>
+      </div>
+    </div>
   );
 }

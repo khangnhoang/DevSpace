@@ -64,7 +64,7 @@ export default function QuizPage() {
     try {
       setLoading(true)
       setIsCorrect(null)
-
+      
       const result = await getExerciseByLesson(slug);
 
       let rawExercises: any[] = [];
@@ -107,8 +107,8 @@ export default function QuizPage() {
     <div className="bg-[#2d3748] h-screen w-full flex flex-col justify-center items-center gap-2">
       <h1 className="text-4xl">Test Quiz</h1>
       <p className="text-2xl">Câu hỏi: VN là viết tắt của?</p>
-      <div className="border border-gray-500 p-6 rounded-lg bg-[#3a4556]">
-        <p className="text-xl mb-4 font-bold">Câu 1: {currentQuestion.question}</p>        
+      <div className="overflow-hidden relative border border-gray-500 p-6 rounded-lg bg-[#3a4556]">
+        <p className="text-xl mb-4 font-bold">Câu {currentIndex+1}: {currentQuestion.question}</p>        
          <form className="flex flex-col gap-4">
           {currentQuestion.options.map((opt, i) => {  
             const type = ["a", "b", "c","d"][i];
@@ -134,13 +134,14 @@ export default function QuizPage() {
             );         
           })}
         </form>
-      </div>
-      {correct !== null && (<div className={`mt-5 text-3xl gap-4 flex flex-col justify-center items-center absolute w-[404.32] h-[317.36] rounded-md text-white ${correct?"bg-green-500":"bg-red-500"}
+        {correct !== null && (<div className={`absolute inset-0 text-3xl gap-4 flex flex-col justify-center items-center rounded-md text-white ${correct?"bg-green-500":"bg-red-500"}
             `}>
               {correct?"Đúng":"Sai"}
               <button onClick={!correct?TryAgain:handleNextQuestion} className="cursor-pointer rounded-xl p-2 bg-gray-500 hover:bg-blue-500 hover:text-black">{correct?"Bài kế tiếp":"Làm lại"}</button>
             </div>)} 
-        <div className="w-1/1 flex justify-center p-2">
+      </div>
+        <div className="w-1/1 flex justify-center p-2 gap-4">
+        <button className='rounded-md p-2 text-xl bg-gray-200 text-black hover:bg-blue-400 hover:text-white cursor-pointer'>Quay về bài học</button>
           <button onClick= {handleSubmit} className="text-black bg-gray-200 rounded-md cursor-pointer text-xl p-2 hover:bg-blue-400 hover:text-white">
             Gửi kết quả
           </button>

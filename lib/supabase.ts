@@ -50,3 +50,22 @@ export async function getExerciseByLesson(lessonSlug: string){
     exercises: exercises || []
   };
 }
+
+export async function saveUserProgress(userId: string, lessonId: number){
+  const { error } = await supabase
+    .from('user_progress')
+    .insert({user_id: userId, lesson_id: lessonId});
+
+  if (error && error.code !== '23505')
+    alert('Lỗi lưu tiến độ' + error.message)
+}
+
+export async function getCompleteLessonIds(userId: string) {
+  const { data } = await supabase
+    .from ('user_progress')
+    .select('lesson_id')
+    .eq('user_id', userId)
+
+  if(!data) return [];
+  return data.map(item => item.lesson_id);
+}

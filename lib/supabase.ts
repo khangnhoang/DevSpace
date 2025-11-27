@@ -60,7 +60,7 @@ export async function saveUserProgress(userId: string, lessonId: number){
     alert('Lỗi lưu tiến độ' + error.message)
 }
 
-export async function getCompleteLessonIds(userId: string) {
+export async function getCompletedLessonIds(userId: string) {
   const { data } = await supabase
     .from ('user_progress')
     .select('lesson_id')

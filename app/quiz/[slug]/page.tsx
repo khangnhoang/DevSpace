@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getExerciseByLesson } from "@/lib/supabase";
+import { getExerciseByLesson, saveUserProgress, supabase } from "@/lib/supabase";
 
 type QuizQuestion = {
   id: number;
@@ -16,6 +16,9 @@ export default function QuizPage() {
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [userId, setUserId] = useState<string | null>(null)
+  const [lessonId, setLessonId] = useState<number | null>(null)
 
   // State quản lý logic bài thi
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -34,8 +37,14 @@ export default function QuizPage() {
     setSelectedOption(null); // Reset lựa chọn để user chọn lại
   };
 
-  const handleNextQuestion = () => {
+  const handleNextQuestion = async () => {
     if (isLastQuestion) {
+      if (userId && lessonId){
+        await saveUserProgress(userId, lessonId);
+      } else {
+        console.log("Lỗi lưu tiến trình")
+      }
+
       alert("Chúc mừng! Bạn đã hoàn thành tất cả bài tập 🎉");
       // TODO: Gọi API lưu tiến độ ở đây (Buổi sau làm)
       router.push("/"); // Hoặc router.back() để về bài học
@@ -62,6 +71,18 @@ export default function QuizPage() {
     }
   };
 
+  useEffect(() =>{
+    const getUser = async () => {
+      const {data: {user}} =  await supabase.auth.getUser();
+      if (user){
+        setUserId(user.id)
+      }
+    };
+    getUser();
+  }, []);
+
+
+
   // --- 2. FETCH DATA ---
 
   useEffect(() => {
@@ -83,6 +104,11 @@ export default function QuizPage() {
           return;
         }
 
+        if (result.lesson){
+          setLessonId(result.lesson.id)
+        }
+
+        
         let rawExercises: any[] = [];
         // Kiểm tra kỹ cấu trúc trả về của API
         if (result && Array.isArray(result.exercises)) {

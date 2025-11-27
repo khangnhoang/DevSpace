@@ -1,16 +1,16 @@
-// app/learn/[slug]/page.tsx
-import { supabase } from "@/lib/supabase";
+// app/learn/[course]/[slug]/page.tsx
+import { getLessonsByCourse, supabase } from "@/lib/supabase";
 import LessonContent from "@/app/components/LessonContent";
 import NotFoundLesson from "@/app/components/NotFoundLesson";
 import Link from "next/link";
 
 interface Props {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ course: string, slug: string }>;
 }
 
 // Nhớ thêm 'async'
 export default async function LearnPage({ params }: Props) {
-  const { slug } = await params;
+  const { course, slug } = await params;
 
   // --- GỌI DATABASE (REAL DATA) ---
   const { data: lesson, error } = await supabase
@@ -27,10 +27,7 @@ export default async function LearnPage({ params }: Props) {
     // return notFound();
   }
 
-  const {data: allLessons} = await supabase
-    .from("lessons")
-    .select("slug, title")
-    .order('id', {ascending:true});
+  const allLessons = await getLessonsByCourse(course)
 
   const currentIndex = allLessons?.findIndex((i) => i.slug === slug) ?? -1
   const prevLesson = currentIndex > 0? allLessons![currentIndex - 1] : null;
@@ -58,7 +55,7 @@ export default async function LearnPage({ params }: Props) {
         <div className="flex gap-4 justify-center justify-items-center">
           {prevLesson ? (
             <Link
-              href={`/learn/${prevLesson.slug}`}
+              href={`/learn/${course}/${prevLesson.slug}`}
               className="border border-gray-300 text-black rounded-md p-4 hover:bg-blue-500 hover:text-white hover:border-blue-500 flex items-center gap-2 transition-colors"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-5">
@@ -75,7 +72,7 @@ export default async function LearnPage({ params }: Props) {
           {nextLesson ? (
             <Link
               // Sửa: Gắn link động
-              href={`/learn/${nextLesson.slug}`}
+              href={`/learn/${course}/${nextLesson.slug}`}
               className="border border-gray-300 text-black rounded-md p-4 hover:bg-blue-500 hover:text-white hover:border-blue-500 flex items-center gap-2 transition-colors text-right"
             >
               <div>

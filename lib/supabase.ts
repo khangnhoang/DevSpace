@@ -75,3 +75,36 @@ export async function getCompletedLessonIds(userId: string) {
   if(!data) return [];
   return data.map(item => item.lesson_id)
 }
+
+export async function getUserDashboardData(userId: string){
+  const { data: allCourses } = await supabase
+    .from('courses')
+    .select('id, title, slug, lessons(id)')
+
+  if (!allCourses) return [];
+
+  const { data: dataProgress } = await supabase
+    .from('user_progress')
+    .select('lesson_id')
+    .eq('user_id', userId)
+
+  const completedLessonIds = dataProgress?.map(p => p.lesson_id) || [];
+
+  const dashboardData = allCourses.map((course) => {
+    const totalLessons = course.lessons.length;
+    const userCompledtedCount = course.lessons.filter(lesson => completedLessonIds.includes(lesson.id)).length;
+    const percent = totalLessons > 0 ? Math.round((userCompledtedCount / totalLessons) * 100) : 0; 
+
+    return {
+      id: course.id,
+      title: course.title,
+      slug: course.slug,
+      total: totalLessons,
+      completed: userCompledtedCount,
+      percent: percent,
+      isStarted: userCompledtedCount > 0
+    }
+  })
+  return dashboardData.filter(c => c.isStarted)
+}
+

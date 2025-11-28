@@ -1,22 +1,43 @@
-'use client'
-import { useState } from "react"
 import ProgressBar from "./PropressBar"
+import { getUserDashboardData, supabase } from "@/lib/supabase"
+import { redirect } from "next/navigation"
 
-export default function ProfilePage(){
+export default async function ProfilePage(){
+    const {data: {session}} = await supabase.auth.getSession();
+    // if (!session?.user) {
+    //     redirect("/login");
+    // }
+
+    const user = session.user; 
+    const firstLetter = user.email?.charAt(0).toUpperCase() || "U";
+    const displayName = user.email?.split("@")[0];
+    const myCourses = await getUserDashboardData(user.id); 
 
     return (
         <div className="bg-[#F9FAFB] h-screen w-screen flex">
             <div className="m-3 w-1/4 flex flex-col items-center gap-2 bg-[#6A7282] p-4 rounded-md">
-                <img src="/correct-incorrect-vector.jpg" alt="Avatar" className="w-40 h-40 rounded-full" />
-                <p className="text-2xl font-bold">Nguyễn Văn Nam</p>
-                <p>nambede@gmail.com</p>
+                <div className="w-40 h-40 rounded-full">{firstLetter}</div>
+                <p className="text-2xl font-bold">{displayName}</p>
+                <p>{user.email}</p>
             </div>
             <div className="m-3 w-3/4 flex flex-col gap-2 p-4 text-black bg-gray-200 rounded-xl">
-                <h1 className="text-5xl">Lập Trình JavaScript Cơ Bản</h1>
-                <p>Học Javascript cơ bản phù hợp cho người chưa từng học lập trình. Với hơn 100 bài học và có bài tập thực hành sau mỗi bài học.</p>
-                <h2 className="text-4xl">Bạn sẽ học được gì?</h2>
-                <p>Hiểu chi tiết về các khái niệm cơ bản trong JS</p>
-                <p className="w-90"><ProgressBar percent={31}/></p>
+                {myCourses.length > 0 ? (
+  myCourses.map((course: any) => (
+    <div key={course.id} className="...">
+      <div>
+        <h1>{course.title}</h1>
+      </div>
+
+      <div>
+        <h2>Tiến độ học tập</h2>
+        <div>
+          {/* ví dụ dùng component ProgressBar */}
+          <ProgressBar percent={course.percent} />
+        </div>
+      </div>
+    </div>
+  ))
+) : (<div> </div>)}
             </div>
         </div>
     )

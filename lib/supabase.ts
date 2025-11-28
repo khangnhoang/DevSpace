@@ -1,10 +1,30 @@
 import { createClient } from '@supabase/supabase-js';
-import { count } from 'console';
 
+// 1. Khởi tạo Client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
+
+// 2. Định nghĩa Types (Interface)
+interface Course {
+  id: number;
+  name: string; // Trong DB là 'name'
+  slug: string;
+}
+
+interface Lesson {
+  id: number;
+  course_id: number;
+}
+
+interface Progress {
+  lesson_id: number;
+}
+
+// --------------------------------------------------------
+// SECTION A: LOGIC BÀI HỌC (LESSONS)
+// --------------------------------------------------------
 
 export async function getLessonsByCourse(courseSlug: string) {
   // Bước 1: Tìm xem cái slug 'html-css' là ID số mấy?
@@ -20,91 +40,133 @@ export async function getLessonsByCourse(courseSlug: string) {
   const { data: lessons } = await supabase
     .from('lessons')
     .select('id, title, slug')
-    .eq('course_id', course.id) // Lọc theo khóa học
+    .eq('course_id', course.id)
     .order('id', { ascending: true });
 
   return lessons || [];
 }
 
-export async function getExerciseByLesson(lessonSlug: string){
-  const { data: lesson} = await supabase
+// --------------------------------------------------------
+// SECTION B: LOGIC BÀI TẬP (QUIZ / EXERCISES)
+// --------------------------------------------------------
+
+export async function getExerciseByLesson(lessonSlug: string) {
+  // 1. Lấy thông tin bài học + kèm theo slug của khóa học (Join bảng)
+  const { data: lesson } = await supabase
     .from('lessons')
     .select('id, title, slug, course_id, courses ( slug )')
     .eq('slug', lessonSlug)
     .single();
 
-  if(!lesson) return null;
+  if (!lesson) return null;
 
-  const { data: exercises, error} = await supabase
+  // 2. Lấy danh sách câu hỏi trắc nghiệm
+  const { data: exercises, error } = await supabase
     .from('exercises')
     .select('*')
     .eq('lesson_id', lesson.id)
     .order('id', { ascending: true });
 
-  if(error){
-    alert(error.message);
+  if (error) {
+    console.error("Lỗi lấy bài tập:", error.message); // Dùng console thay vì alert
     return null;
   }
 
+  // 3. Xử lý dữ liệu để trả về (Flatten structure)
+  // Ép kiểu 'as any' để TS không báo lỗi dòng lesson.courses
   const courseSlug = (lesson as any).courses?.slug;
 
   return {
     lesson: {
       ...lesson,
-      courseSlug: courseSlug
+      courseSlug: courseSlug // Frontend cần cái này để tạo nút "Quay về"
     },
     exercises: exercises || []
   };
 }
 
-export async function saveUserProgress(userId: string, lessonId: number){
+// --------------------------------------------------------
+// SECTION C: LOGIC TIẾN ĐỘ (USER PROGRESS)
+// --------------------------------------------------------
+
+// 1. Lưu tiến độ
+export async function saveUserProgress(userId: string, lessonId: number) {
   const { error } = await supabase
     .from('user_progress')
-    .insert({user_id: userId, lesson_id: lessonId});
+    .insert({ user_id: userId, lesson_id: lessonId });
 
-  if (error && error.code !== '23505')
-    alert('Lỗi lưu tiến độ' + error.message)
+  // Mã lỗi 23505: Unique violation (Đã lưu rồi) -> Bỏ qua, không báo lỗi
+  if (error && error.code !== '23505') {
+    console.error('Lỗi lưu tiến độ:', error.message);
+  }
 }
 
+// 2. Lấy danh sách ID các bài đã học
 export async function getCompletedLessonIds(userId: string) {
   const { data } = await supabase
-    .from ('user_progress')
+    .from('user_progress')
     .select('lesson_id')
-    .eq('user_id', userId)
+    .eq('user_id', userId);
 
-  if(!data) return [];
-  return data.map(item => item.lesson_id)
+  if (!data) return [];
+  return data.map(item => item.lesson_id); // Trả về mảng số [1, 2, 5...]
 }
 
-export async function getUserDashboardData(userId: string){
+// --------------------------------------------------------
+// SECTION D: LOGIC DASHBOARD (PROFILE PAGE)
+// --------------------------------------------------------
+
+export async function getUserDashboardData(userId: string) {
+  
+  // 1. Lấy danh sách Khóa học (Courses)
   const { data: allCourses } = await supabase
     .from('courses')
-    .select('id, title, slug, lessons(id)')
+    .select('id, name, slug') // Lưu ý: DB bạn là 'name', code cũ là 'title' -> phải lấy 'name'
+    .returns<Course[]>();
 
-  if (!allCourses) return [];
+  if (!allCourses || allCourses.length === 0) return [];
 
-  const { data: dataProgress } = await supabase
+  // 2. Lấy danh sách Bài học (Lessons) để tính tổng số bài
+  const { data: allLessons } = await supabase
+    .from('lessons')
+    .select('id, course_id')
+    .returns<Lesson[]>();
+
+  // 3. Lấy Tiến độ của User (Progress)
+  const { data: progressData } = await supabase
     .from('user_progress')
     .select('lesson_id')
     .eq('user_id', userId)
+    .returns<Progress[]>();
 
-  const completedLessonIds = dataProgress?.map(p => p.lesson_id) || [];
+  // Chuyển đổi dữ liệu progress thành mảng ID cho dễ so sánh
+  const completedLessonIds = progressData?.map(p => p.lesson_id) || [];
 
+  // 4. Tính toán phần trăm (Mapping)
   const dashboardData = allCourses.map((course) => {
-    const totalLessons = course.lessons.length;
-    const userCompledtedCount = course.lessons.filter(lesson => completedLessonIds.includes(lesson.id)).length;
-    const percent = totalLessons > 0 ? Math.round((userCompledtedCount / totalLessons) * 100) : 0; 
+    
+    // Lọc ra các bài học thuộc khóa này
+    const lessonsOfCourse = allLessons?.filter(l => l.course_id === course.id) || [];
+    const totalLessons = lessonsOfCourse.length;
+
+    // Đếm số bài user đã hoàn thành trong khóa này
+    const userCompletedCount = lessonsOfCourse.filter(l => 
+      completedLessonIds.includes(l.id)
+    ).length;
+
+    // Tính % (Tránh chia cho 0)
+    const percent = totalLessons > 0 ? Math.round((userCompletedCount / totalLessons) * 100) : 0;
 
     return {
       id: course.id,
-      title: course.title,
+      title: course.name, // Mapping lại: DB là 'name' -> UI dùng 'title'
       slug: course.slug,
       total: totalLessons,
-      completed: userCompledtedCount,
+      completed: userCompletedCount,
       percent: percent,
-      isStarted: userCompledtedCount > 0
-    }
-  })
-  return dashboardData.filter(c => c.isStarted)
-}
+      isStarted: userCompletedCount > 0
+    };
+  });
 
+  return dashboardData.filter(course => course.isStarted); // Chỉ trả về các khóa đã bắt đầu
+}

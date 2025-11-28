@@ -38,6 +38,7 @@ export default function Header(){
             <div className="h-full flex items-center">
                 <Link href="/" className="p-4 text-blue-500 text-lg font-bold">W3schools Clone</Link>
                 <Link href="/learn/html-css/html-intro" className="hover:bg-blue-500 hover:text-white cursor-pointer p-4 h-full flex items-center transition-colors">HTML & CSS</Link>
+                <Link href="/quiz/html-intro" className="hover:bg-blue-500 hover:text-white cursor-pointer p-4 h-full flex items-center transition-colors">BÀI TẬP</Link>
             </div>
 
             {/* --- PHẦN AUTH MỚI THÊM VÀO (Tự đẩy sang phải nhờ ml-auto) --- */}
@@ -45,9 +46,9 @@ export default function Header(){
                 {user ? (
                     // Trạng thái ĐÃ ĐĂNG NHẬP
                     <div className="flex gap-3 items-center">
-                        <span className="text-lg font-medium "> {"xin chào "}
+                        <Link href={`/profile`} className="text-lg font-medium cursor-pointer"> {"xin chào "}
                             {user.email?.split('@')[0]} {/* Hiện tên email */}
-                        </span>
+                        </Link>
                         <button 
                             onClick={handleLogout}
                             className="text-lg text-blue-500 hover:opacity-70 font-bold cursor-pointer"

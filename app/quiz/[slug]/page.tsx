@@ -161,7 +161,7 @@ export default function QuizPage() {
 
   if (loading)
     return (
-      <div className="text-white p-10 text-center text-xl animate-pulse">
+      <div className="text-white p-10 text-center text-xl animate-pulse w-full">
         ⏳ Đang tải câu hỏi...
       </div>
     );

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { count } from 'console';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -28,7 +29,7 @@ export async function getLessonsByCourse(courseSlug: string) {
 export async function getExerciseByLesson(lessonSlug: string){
   const { data: lesson} = await supabase
     .from('lessons')
-    .select('id')
+    .select('id, title, slug, course_id, courses ( slug )')
     .eq('slug', lessonSlug)
     .single();
 
@@ -45,8 +46,13 @@ export async function getExerciseByLesson(lessonSlug: string){
     return null;
   }
 
+  const courseSlug = (lesson as any).courses?.slug;
+
   return {
-    lesson,
+    lesson: {
+      ...lesson,
+      courseSlug: courseSlug
+    },
     exercises: exercises || []
   };
 }

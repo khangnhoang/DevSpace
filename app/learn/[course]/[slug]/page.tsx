@@ -86,6 +86,7 @@ export default async function LearnPage({ params }: Props) {
           ) : (
             <div />
           )}
+          <Link href={`/quiz/${slug}`}><button className="border border-gray-300 rounded-md text-black hover:bg-blue-500 hover:text-white gap-1 p-5 text-2xl cursor-pointer">Bài tập</button></Link>
         </div>
       </div>
     </div>

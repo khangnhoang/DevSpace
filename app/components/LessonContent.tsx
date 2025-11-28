@@ -1,7 +1,7 @@
 // components/LessonContent.tsx
 import { MDXRemote } from 'next-mdx-remote/rsc';
 import PreBlock from './PreBlock';
-
+import Link from "next/link"
 
 interface Props {
   content: string; // Nhận vào chuỗi nội dung bài học
@@ -24,7 +24,6 @@ export default function LessonContent({ content }: Props) {
         source={content}
         components={components}
         />
-
     </article>
   );
 }

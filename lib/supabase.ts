@@ -170,3 +170,38 @@ export async function getUserDashboardData(userId: string) {
 
   return dashboardData.filter(course => course.isStarted); // Chỉ trả về các khóa đã bắt đầu
 }
+
+export type HomeCourseData = DashboardCourse & { firstLessonSlug: string | null};
+
+type DashboardCourse = {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  image_url: string;
+  lessons?: { slug: string; id: number }[] | null;
+}
+
+export async function getDashboardData(): Promise<HomeCourseData[]> {
+  const { data: courses, error } = await supabase
+    .from('courses')
+    .select('id, name, slug, description, image_url, lessons (slug, id)')
+    .order('id', { ascending: true })
+    .order('id', { referencedTable: 'lessons', ascending: true });
+
+  if (error) {
+    console.error('Lỗi lấy khóa học ', error.message);
+    return [];
+  }
+
+  const safeCourses = (courses || []) as DashboardCourse[];
+
+  return safeCourses.map((course) => {
+    const firstLesson = course.lessons?.[0];
+
+    return {
+      ...course, 
+      firstLessonSlug: firstLesson?.slug || null
+    }
+  })
+}

@@ -33,7 +33,7 @@ export default function Header(){
     };
 
     return (
-        <header className="flex gap-4 bg-white text-black h-16 items-center pr-4 border-b-2 border-b-gray-200">
+        <header className="flex gap-4 bg-white text-black h-16 items-center pr-4 shadow-xl">
             {/* --- PHẦN GIAO DIỆN CŨ CỦA BẠN (GIỮ NGUYÊN) --- */}
             <div className="h-full flex items-center">
                 <Link href="/" className="p-4 text-blue-500 text-lg font-bold">W3schools Clone</Link>

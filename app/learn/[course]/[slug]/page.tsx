@@ -3,9 +3,10 @@ import { getLessonsByCourse, supabase } from "@/lib/supabase";
 import LessonContent from "@/app/components/LessonContent";
 import NotFoundLesson from "@/app/components/NotFoundLesson";
 import Link from "next/link";
+import matter from "gray-matter";
 
 interface Props {
-  params: Promise<{ course: string, slug: string }>;
+  params: Promise<{ course: string; slug: string }>;
 }
 
 // Nhớ thêm 'async'
@@ -27,13 +28,15 @@ export default async function LearnPage({ params }: Props) {
     // return notFound();
   }
 
-  const allLessons = await getLessonsByCourse(course)
+  const allLessons = await getLessonsByCourse(course);
 
-  const currentIndex = allLessons?.findIndex((i) => i.slug === slug) ?? -1
-  const prevLesson = currentIndex > 0? allLessons![currentIndex - 1] : null;
-  const nextLesson = (allLessons && currentIndex< allLessons.length-1)? allLessons[currentIndex + 1] : null
-  
-  
+  const currentIndex = allLessons?.findIndex((i) => i.slug === slug) ?? -1;
+  const prevLesson = currentIndex > 0 ? allLessons![currentIndex - 1] : null;
+  const nextLesson =
+    allLessons && currentIndex < allLessons.length - 1
+      ? allLessons[currentIndex + 1]
+      : null;
+  const { content: cleanContent } = matter(lesson.content);
 
   return (
     <div className="w-full p-8 min-h-screen bg-gray-50">
@@ -51,15 +54,26 @@ export default async function LearnPage({ params }: Props) {
         </h1>
 
         {/* Nội dung Markdown render qua MDX */}
-        <LessonContent content={lesson.content} />
+        <LessonContent content={cleanContent} />
         <div className="flex gap-4 justify-center justify-items-center">
           {prevLesson ? (
             <Link
               href={`/learn/${course}/${prevLesson.slug}`}
               className="border border-gray-300 text-black rounded-md p-4 hover:bg-blue-500 hover:text-white hover:border-blue-500 flex items-center gap-2 transition-colors"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+                stroke="currentColor"
+                className="size-5"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.75 19.5 8.25 12l7.5-7.5"
+                />
               </svg>
               <div>
                 <div className="text-xs opacity-60 text-left">Bài trước</div>
@@ -79,14 +93,29 @@ export default async function LearnPage({ params }: Props) {
                 <div className="text-xs opacity-60 text-right">Bài sau</div>
                 <div className="font-semibold">{nextLesson.title}</div>
               </div>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+                stroke="currentColor"
+                className="size-5"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="m8.25 4.5 7.5 7.5-7.5 7.5"
+                />
               </svg>
             </Link>
           ) : (
             <div />
           )}
-          <Link href={`/quiz/${slug}`}><button className="border border-gray-300 rounded-md text-black hover:bg-blue-500 hover:text-white gap-1 p-5 text-2xl cursor-pointer">Bài tập</button></Link>
+          <Link href={`/quiz/${slug}`}>
+            <button className="border border-gray-300 rounded-md text-black hover:bg-blue-500 hover:text-white gap-1 p-5 text-2xl cursor-pointer">
+              Bài tập
+            </button>
+          </Link>
         </div>
       </div>
     </div>

@@ -39,6 +39,7 @@ export default function Header(){
                 <Link href="/" className="p-4 text-blue-500 text-lg font-bold">W3schools Clone</Link>
                 <Link href="/learn/html-css/html-intro" className="hover:bg-blue-500 hover:text-white cursor-pointer p-4 h-full flex items-center transition-colors">HTML & CSS</Link>
                 <Link href="/quiz/html-intro" className="hover:bg-blue-500 hover:text-white cursor-pointer p-4 h-full flex items-center transition-colors">BÀI TẬP</Link>
+                <Link href="/try_it" className="hover:bg-blue-500 hover:text-white cursor-pointer p-4 h-full flex items-center transition-colors">TRY IT YOURSELF</Link>
             </div>
 
             {/* --- PHẦN AUTH MỚI THÊM VÀO (Tự đẩy sang phải nhờ ml-auto) --- */}

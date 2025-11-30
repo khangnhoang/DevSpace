@@ -66,7 +66,7 @@ function TryItEditor() {
       overviewRulerBorder: false,
       wordWrap: "on" as const,
       padding: { top: 16, bottom: 16 },
-      accessibilitySupport: "off",
+      accessibilitySupport: "off" as const,
     }),
     []
   );

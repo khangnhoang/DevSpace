@@ -1,4 +1,8 @@
-export default function ProgressBar({ percent }) {
+interface ProgressBarProps {
+  percent: number;
+}
+
+export default function ProgressBar({ percent }: ProgressBarProps) {
   // percent là số bạn truyền vào (ví dụ: 31)
   
   return (

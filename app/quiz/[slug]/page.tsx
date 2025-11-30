@@ -1,7 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getExerciseByLesson, saveUserProgress, supabase } from "@/lib/supabase";
+import {
+  getExerciseByLesson,
+  saveUserProgress,
+  supabase,
+} from "@/lib/supabase";
 
 type QuizQuestion = {
   id: number;
@@ -17,13 +21,18 @@ export default function QuizPage() {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [userId, setUserId] = useState<string | null>(null)
-  const [lessonId, setLessonId] = useState<number | null>(null)
+  const [userId, setUserId] = useState<string | null>(null);
+  const [lessonId, setLessonId] = useState<number | null>(null);
 
   // State quản lý logic bài thi
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [correct, setIsCorrect] = useState<boolean | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [lessonInfo, setLessonInfo] = useState<{
+    title: string;
+    courseSlug: string;
+    lessonSlug: string;
+  } | null>(null);
 
   // Các biến tính toán (Derived State)
   const currentQuestion = questions[currentIndex];
@@ -39,14 +48,15 @@ export default function QuizPage() {
 
   const handleNextQuestion = async () => {
     if (isLastQuestion) {
-      if (userId && lessonId){
+      if (userId && lessonId) {
         await saveUserProgress(userId, lessonId);
       } else {
-        console.log("Lỗi lưu tiến trình")
+        console.log("Lỗi lưu tiến trình");
       }
 
       alert("Chúc mừng! Bạn đã hoàn thành tất cả bài tập 🎉");
       // TODO: Gọi API lưu tiến độ ở đây (Buổi sau làm)
+      router.refresh();
       router.push("/"); // Hoặc router.back() để về bài học
       return;
     }
@@ -71,17 +81,25 @@ export default function QuizPage() {
     }
   };
 
-  useEffect(() =>{
+  useEffect(() => {
     const getUser = async () => {
-      const {data: {user}} =  await supabase.auth.getUser();
-      if (user){
-        setUserId(user.id)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
       }
     };
     getUser();
   }, []);
 
-
+  const handleBack = () => {
+    if (lessonInfo) {
+      router.push(`/learn/${lessonInfo.courseSlug}/${lessonInfo.lessonSlug}`);
+    } else {
+      router.back();
+    }
+  };
 
   // --- 2. FETCH DATA ---
 
@@ -99,16 +117,20 @@ export default function QuizPage() {
 
         const result = await getExerciseByLesson(slug);
 
-        if(!result){
+        if (!result) {
           setLoading(false);
           return;
         }
 
-        if (result.lesson){
-          setLessonId(result.lesson.id)
+        if (result.lesson) {
+          setLessonId(result.lesson.id);
+          setLessonInfo({
+            title: result.lesson.title,
+            courseSlug: result.lesson.courseSlug,
+            lessonSlug: slug,
+          });
         }
 
-        
         let rawExercises: any[] = [];
         // Kiểm tra kỹ cấu trúc trả về của API
         if (result && Array.isArray(result.exercises)) {
@@ -139,7 +161,7 @@ export default function QuizPage() {
 
   if (loading)
     return (
-      <div className="text-white p-10 text-center text-xl animate-pulse">
+      <div className="text-white p-10 text-center text-xl animate-pulse w-full">
         ⏳ Đang tải câu hỏi...
       </div>
     );
@@ -241,10 +263,10 @@ export default function QuizPage() {
       {/* --- KHUNG BUTTON CUỐI TRANG --- */}
       <div className="flex gap-4 mt-4">
         <button
-          onClick={() => router.back()}
-          className="px-6 py-2 text-lg bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors"
+          onClick={handleBack}
+          className="px-6 py-2 text-lg bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors cursor-pointer"
         >
-          Quay về
+          Quay về bài học
         </button>
 
         <button

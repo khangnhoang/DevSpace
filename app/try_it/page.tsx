@@ -38,16 +38,22 @@ export default function TryItPage(){
     
 
     return(
-        <div className="h-screen w-screen flex flex-col">
-            <header className="h-14 bg-gray-400 border-b border-gray-200 flex items-center justify-center">
-                <button onClick={handleRunCode} className="border bg-blue-500 text-2xl rounded-sm px-4 flex flex-row items-center cursor-pointer">Run<Play size={16} fill="currentColor" /></button>
+        <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#E7E9EB]">
+            <header className="h-14 bg-[#E7E9EB] border-b border-gray-200 flex items-center justify-center">
+                <button onClick={handleRunCode} className="bg-blue-500 text-2xl rounded-sm px-4 py-2 flex flex-row items-center cursor-pointer hover:opacity-20">Run<Play size={16} fill="currentColor" /></button>
             </header>
-            <div className="flex flex-row text-black relative h-full">
-                <div className="bg-gray-200 w-1/2 border-r flex flex-col">
-                    <Editor value = {code} onChange= {handleEditorChange} className="bg-transparent w-full h-full resize-none focus:ring-0 border-none outline-none focus:border-transparent"/>
+            <div className="flex flex-row text-black flex-1 min-h-0 gap-4 p-2">
+                <div className="bg-white w-1/2 flex flex-col h-full">
+                    <Editor value = {code} onChange= {handleEditorChange} options={{
+                            minimap: { enabled: false }, 
+                            fontSize: 14,
+                            scrollBeyondLastLine: false, // Ngăn cuộn quá dòng cuối cùng
+                            automaticLayout: true, // Tự động chỉnh lại kích thước khi layout thay đổi
+                            overviewRulerBorder: false,
+                        }}/>
                 </div>
-                <div className="bg-gray-200 w-1/2 flex flex-col">
-                    <iframe srcDoc={runCode} title="result"/>
+                <div className="bg-white w-1/2 flex flex-col h-full">
+                    <iframe className="h-full" srcDoc={runCode} title="result"/>
                 </div>
             </div>
         </div>

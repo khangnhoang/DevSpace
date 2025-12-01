@@ -205,3 +205,20 @@ export async function getDashboardData(): Promise<HomeCourseData[]> {
     }
   })
 }
+
+export async function searchLesson(query: string){
+  const {data, error} = await supabase
+    .from('lessons')
+    .select('id, title, course_id, slug, courses(id, slug)')
+    .or(`title.ilike.%${query}%`)
+
+
+  if (!query.trim()) return[];
+
+  if (error){
+    console.error("Lỗi tìm kiếm", error);
+    return [];
+  }
+
+  return data || [];
+}

@@ -18,7 +18,7 @@ export default async function CourseLayout({ children, params }: LayoutProps) {
   const { course } = await params;
   const lessons = await getLessonsByCourse(course);
   return (
-    <div className="flex flex-1 relative">
+    <div className="flex flex-1 relative w-full">
       {<Sidebar lessons={lessons} courseSlug={course}/>}
       {children}
     </div>

@@ -9,25 +9,24 @@ type SidebarProps = {
   courseSlug: string;
 };
 
-
-
 export default function Sidebar({ lessons, courseSlug }: SidebarProps) {
-  const [completedIds, setCompletedIds] = useState<number[]>([])
+  const [completedIds, setCompletedIds] = useState<number[]>([]);
   const pathName = usePathname();
-  
+
   useEffect(() => {
     const fetchProgress = async () => {
-      const {data: {session}} = await supabase.auth.getSession();
-      if (session?.user){
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.user) {
         const result = await getCompletedLessonIds(session.user.id);
-        setCompletedIds(result)
+        setCompletedIds(result);
       } else {
-        console.log("Bạn chưa đăng nhập")
+        console.log("Bạn chưa đăng nhập");
       }
-    }
-    fetchProgress() 
+    };
+    fetchProgress();
   }, []);
-
 
   return (
     <aside className="flex px-2 py-4 gap-3 w-1/4 bg-slate-50 min-h-screen">

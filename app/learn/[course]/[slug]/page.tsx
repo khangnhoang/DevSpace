@@ -39,7 +39,7 @@ export default async function LearnPage({ params }: Props) {
   const { content: cleanContent } = matter(lesson.content);
 
   return (
-    <div className="w-full p-8 min-h-screen bg-gray-50">
+    <div className="p-8 min-h-screen bg-gray-50 w-3/4">
       {/* Breadcrumb */}
       <div className="text-sm text-gray-500 mb-6">
         Home / Learn /{" "}

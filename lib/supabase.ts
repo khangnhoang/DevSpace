@@ -22,6 +22,18 @@ interface Progress {
   lesson_id: number;
 }
 
+export interface Chapter {
+  id: number,
+  title: string,
+  order_index: number
+  lessons: {
+    id: number,
+    title: string,
+    slug: string
+  }[]
+}
+
+
 // --------------------------------------------------------
 // SECTION A: LOGIC BÀI HỌC (LESSONS)
 // --------------------------------------------------------
@@ -37,13 +49,17 @@ export async function getLessonsByCourse(courseSlug: string) {
   if (!course) return [];
 
   // Bước 2: Lấy các bài học thuộc ID đó
-  const { data: lessons } = await supabase
-    .from('lessons')
-    .select('id, title, slug')
+  const { data: chapters, error } = await supabase
+    .from('chapters')
+    .select('id, title, order_index, lessons(id, title, slug)')
     .eq('course_id', course.id)
-    .order('id', { ascending: true });
-
-  return lessons || [];
+    .order('id', {referencedTable:'lessons' , ascending: true })
+    .order('order_index', {ascending: true})
+  if (error){
+    console.error("Lỗi khi lấy chương", error.message)
+    return []
+  }
+  return chapters as Chapter[];
 }
 
 // --------------------------------------------------------

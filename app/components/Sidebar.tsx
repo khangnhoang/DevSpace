@@ -1,16 +1,19 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { supabase, getCompletedLessonIds } from "@/lib/supabase";
+import { supabase, getCompletedLessonIds, type Chapter } from "@/lib/supabase";
 import { useEffect, useState } from "react";
+import { ChevronDown, ChevronRight, Check } from "lucide-react";
 
 type SidebarProps = {
-  lessons: { id: number; title: string; slug: string }[];
+  chapters: Chapter[];
   courseSlug: string;
 };
 
-export default function Sidebar({ lessons, courseSlug }: SidebarProps) {
+
+export default function Sidebar({ chapters, courseSlug }: SidebarProps) {
   const [completedIds, setCompletedIds] = useState<number[]>([]);
+  const [openChapters, setOpenChapters] = useState<Record<number, boolean>>({});
   const pathName = usePathname();
 
   useEffect(() => {
@@ -28,23 +31,38 @@ export default function Sidebar({ lessons, courseSlug }: SidebarProps) {
     fetchProgress();
   }, []);
 
-  const [isOpen, setIsOpen] = useState(false);
+  const toggleChapter = (id: number) => {
+    setOpenChapters((prev) => ({
+      ...prev, 
+      [id]: !prev[id],
+    }));
+  };
 
   return (
     <aside className="flex px-2 py-4 gap-3 w-1/4 bg-slate-50 min-h-screen">
       <div className="flex flex-col bg-gray-200 w-full rounded-xl shadow-2xl">
         <h1 className="p-4 text-2xl text-black">HTML & CSS</h1>
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="text-black cursor-pointer text-xl hover:bg-blue-500 p-3 hover:text-white"
-        >
-          Tên Chương {isOpen ? "🔽" : "▶️"}
-        </button>
-        {isOpen && (
-          <div className="flex flex-col">
-            {lessons.map((lesson) => {
-              const isActive = pathName === `/learn/${lesson.slug}`;
-              const isCompleted = completedIds.includes(lesson.id);
+        <div>
+            {chapters.map((chapter) => {
+              const isActiveChapter = chapter.lessons?.some((l) => pathName === `/learn/${courseSlug}/${l.slug}`) ?? false;
+              const isOpen = openChapters[chapter.id] ?? isActiveChapter;
+              return (<div key= {chapter.id} className="select-none">
+                <button type="button" onClick={() => toggleChapter(chapter.id)}>
+                  <span className="text-black">
+                    {chapter.title}
+                    {isOpen ? (
+                      <ChevronDown size={16} className="text-black"/>
+                    ) : (
+                      <ChevronRight size={16} className="text-black"/>
+                    )}
+                  </span>
+                </button>
+
+                {isOpen && (
+                  <div>
+                    {chapter.lessons.map((lesson) => {
+                      const isActive = pathName === `/learn/${courseSlug}/${lesson.slug}`;
+                      const isCompleted = completedIds.includes(lesson.id);
               return (
                 <Link
                   key={lesson.id}
@@ -55,15 +73,16 @@ export default function Sidebar({ lessons, courseSlug }: SidebarProps) {
                 >
                   <span>{lesson.title}</span>
                   {isCompleted && (
-                    <span className="text-green-500 font-bold ml-4 text-xl">
-                      ✓
-                    </span>
+                    <Check className="text-green-500 font-bold ml-4 text-xl" size={16} strokeWidth={3}/>                
                   )}
                 </Link>
               );
-            })}
-          </div>
-        )}
+                    })}
+                  </div>
+                )}
+              </div>)
+            })}     
+        </div>
       </div>
     </aside>
   );

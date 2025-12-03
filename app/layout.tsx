@@ -20,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi">
-      <body className={inter.className}>
+      <body className={`${inter.className} w-full`}>
         {" "}
         {<Header />}
         <div className="flex flex-1 relative">{children}</div>

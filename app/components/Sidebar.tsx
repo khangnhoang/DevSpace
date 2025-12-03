@@ -41,14 +41,14 @@ export default function Sidebar({ chapters, courseSlug }: SidebarProps) {
   return (
     <aside className="flex px-2 py-4 gap-3 w-1/4 bg-slate-50 min-h-screen">
       <div className="flex flex-col bg-gray-200 w-full rounded-xl shadow-2xl">
-        <h1 className="p-4 text-2xl text-black">HTML & CSS</h1>
-        <div>
+        <h1 className="p-4 text-3xl text-black font-bold">HTML & CSS</h1>
+        <div className="">
             {chapters.map((chapter) => {
               const isActiveChapter = chapter.lessons?.some((l) => pathName === `/learn/${courseSlug}/${l.slug}`) ?? false;
               const isOpen = openChapters[chapter.id] ?? isActiveChapter;
-              return (<div key= {chapter.id} className="select-none">
-                <button type="button" onClick={() => toggleChapter(chapter.id)}>
-                  <span className="text-black">
+              return (<div key= {chapter.id} className="select-none w-full">
+                <button type="button" onClick={() => toggleChapter(chapter.id)} className="w-full">
+                  <span className="text-black flex items-center hover:bg-gray-300 w-full p-3 text-md cursor-pointer">
                     {chapter.title}
                     {isOpen ? (
                       <ChevronDown size={16} className="text-black"/>
@@ -67,7 +67,7 @@ export default function Sidebar({ chapters, courseSlug }: SidebarProps) {
                 <Link
                   key={lesson.id}
                   href={`/learn/${courseSlug}/${lesson.slug}`}
-                  className={`hover:bg-blue-500 hover:text-white p-3 ${
+                  className={`hover:bg-gray-300 text-black p-3 flex ${
                     isActive ? "bg-blue-500 text-white font-bold" : "text-black"
                   }`}
                 >

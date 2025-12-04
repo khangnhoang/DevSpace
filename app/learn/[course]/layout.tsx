@@ -16,10 +16,10 @@ export const metadata: Metadata = {
 
 export default async function CourseLayout({ children, params }: LayoutProps) {
   const { course } = await params;
-  const lessons = await getLessonsByCourse(course);
+  const chapters = await getLessonsByCourse(course);
   return (
     <div className="flex flex-1 relative w-full">
-      {<Sidebar lessons={lessons} courseSlug={course}/>}
+      {<Sidebar chapters={chapters} courseSlug={course} />}
       {children}
     </div>
   );

@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
 // 1. Khởi tạo Client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -26,24 +26,37 @@ interface Progress {
 // SECTION A: LOGIC BÀI HỌC (LESSONS)
 // --------------------------------------------------------
 
+export interface Chapter {
+  id: number;
+  title: string;
+  order_index: number;
+  lessons: {
+    id: number;
+    title: string;
+    slug: string;
+    video_url: string | null;
+  }[];
+}
+
 export async function getLessonsByCourse(courseSlug: string) {
   // Bước 1: Tìm xem cái slug 'html-css' là ID số mấy?
   const { data: course } = await supabase
-    .from('courses')
-    .select('id')
-    .eq('slug', courseSlug)
+    .from("courses")
+    .select("id")
+    .eq("slug", courseSlug)
     .single();
 
   if (!course) return [];
 
   // Bước 2: Lấy các bài học thuộc ID đó
-  const { data: lessons } = await supabase
-    .from('lessons')
-    .select('id, title, slug')
-    .eq('course_id', course.id)
-    .order('id', { ascending: true });
+  const { data: chapters } = await supabase
+    .from("chapters")
+    .select(`id, title, order_index, lessons (id, title, slug, video_url)`)
+    .eq("course_id", course.id)
+    .order("order_index", { ascending: true })
+    .order("id", { referencedTable: "lessons", ascending: true });
 
-  return lessons || [];
+  return (chapters ?? []) as Chapter[];
 }
 
 // --------------------------------------------------------
@@ -53,19 +66,19 @@ export async function getLessonsByCourse(courseSlug: string) {
 export async function getExerciseByLesson(lessonSlug: string) {
   // 1. Lấy thông tin bài học + kèm theo slug của khóa học (Join bảng)
   const { data: lesson } = await supabase
-    .from('lessons')
-    .select('id, title, slug, course_id, courses ( slug )')
-    .eq('slug', lessonSlug)
+    .from("lessons")
+    .select("id, title, slug, course_id, courses ( slug )")
+    .eq("slug", lessonSlug)
     .single();
 
   if (!lesson) return null;
 
   // 2. Lấy danh sách câu hỏi trắc nghiệm
   const { data: exercises, error } = await supabase
-    .from('exercises')
-    .select('*')
-    .eq('lesson_id', lesson.id)
-    .order('id', { ascending: true });
+    .from("exercises")
+    .select("*")
+    .eq("lesson_id", lesson.id)
+    .order("id", { ascending: true });
 
   if (error) {
     console.error("Lỗi lấy bài tập:", error.message); // Dùng console thay vì alert
@@ -79,9 +92,9 @@ export async function getExerciseByLesson(lessonSlug: string) {
   return {
     lesson: {
       ...lesson,
-      courseSlug: courseSlug // Frontend cần cái này để tạo nút "Quay về"
+      courseSlug: courseSlug, // Frontend cần cái này để tạo nút "Quay về"
     },
-    exercises: exercises || []
+    exercises: exercises || [],
   };
 }
 
@@ -92,24 +105,24 @@ export async function getExerciseByLesson(lessonSlug: string) {
 // 1. Lưu tiến độ
 export async function saveUserProgress(userId: string, lessonId: number) {
   const { error } = await supabase
-    .from('user_progress')
+    .from("user_progress")
     .insert({ user_id: userId, lesson_id: lessonId });
 
   // Mã lỗi 23505: Unique violation (Đã lưu rồi) -> Bỏ qua, không báo lỗi
-  if (error && error.code !== '23505') {
-    console.error('Lỗi lưu tiến độ:', error.message);
+  if (error && error.code !== "23505") {
+    console.error("Lỗi lưu tiến độ:", error.message);
   }
 }
 
 // 2. Lấy danh sách ID các bài đã học
 export async function getCompletedLessonIds(userId: string) {
   const { data } = await supabase
-    .from('user_progress')
-    .select('lesson_id')
-    .eq('user_id', userId);
+    .from("user_progress")
+    .select("lesson_id")
+    .eq("user_id", userId);
 
   if (!data) return [];
-  return data.map(item => item.lesson_id); // Trả về mảng số [1, 2, 5...]
+  return data.map((item) => item.lesson_id); // Trả về mảng số [1, 2, 5...]
 }
 
 // --------------------------------------------------------
@@ -117,45 +130,47 @@ export async function getCompletedLessonIds(userId: string) {
 // --------------------------------------------------------
 
 export async function getUserDashboardData(userId: string) {
-  
   // 1. Lấy danh sách Khóa học (Courses)
   const { data: allCourses } = await supabase
-    .from('courses')
-    .select('id, name, slug') // Lưu ý: DB bạn là 'name', code cũ là 'title' -> phải lấy 'name'
+    .from("courses")
+    .select("id, name, slug") // Lưu ý: DB bạn là 'name', code cũ là 'title' -> phải lấy 'name'
     .returns<Course[]>();
 
   if (!allCourses || allCourses.length === 0) return [];
 
   // 2. Lấy danh sách Bài học (Lessons) để tính tổng số bài
   const { data: allLessons } = await supabase
-    .from('lessons')
-    .select('id, course_id')
+    .from("lessons")
+    .select("id, course_id")
     .returns<Lesson[]>();
 
   // 3. Lấy Tiến độ của User (Progress)
   const { data: progressData } = await supabase
-    .from('user_progress')
-    .select('lesson_id')
-    .eq('user_id', userId)
+    .from("user_progress")
+    .select("lesson_id")
+    .eq("user_id", userId)
     .returns<Progress[]>();
 
   // Chuyển đổi dữ liệu progress thành mảng ID cho dễ so sánh
-  const completedLessonIds = progressData?.map(p => p.lesson_id) || [];
+  const completedLessonIds = progressData?.map((p) => p.lesson_id) || [];
 
   // 4. Tính toán phần trăm (Mapping)
   const dashboardData = allCourses.map((course) => {
-    
     // Lọc ra các bài học thuộc khóa này
-    const lessonsOfCourse = allLessons?.filter(l => l.course_id === course.id) || [];
+    const lessonsOfCourse =
+      allLessons?.filter((l) => l.course_id === course.id) || [];
     const totalLessons = lessonsOfCourse.length;
 
     // Đếm số bài user đã hoàn thành trong khóa này
-    const userCompletedCount = lessonsOfCourse.filter(l => 
+    const userCompletedCount = lessonsOfCourse.filter((l) =>
       completedLessonIds.includes(l.id)
     ).length;
 
     // Tính % (Tránh chia cho 0)
-    const percent = totalLessons > 0 ? Math.round((userCompletedCount / totalLessons) * 100) : 0;
+    const percent =
+      totalLessons > 0
+        ? Math.round((userCompletedCount / totalLessons) * 100)
+        : 0;
 
     return {
       id: course.id,
@@ -164,14 +179,16 @@ export async function getUserDashboardData(userId: string) {
       total: totalLessons,
       completed: userCompletedCount,
       percent: percent,
-      isStarted: userCompletedCount > 0
+      isStarted: userCompletedCount > 0,
     };
   });
 
-  return dashboardData.filter(course => course.isStarted); // Chỉ trả về các khóa đã bắt đầu
+  return dashboardData.filter((course) => course.isStarted); // Chỉ trả về các khóa đã bắt đầu
 }
 
-export type HomeCourseData = DashboardCourse & { firstLessonSlug: string | null};
+export type HomeCourseData = DashboardCourse & {
+  firstLessonSlug: string | null;
+};
 
 type DashboardCourse = {
   id: number;
@@ -180,17 +197,17 @@ type DashboardCourse = {
   description: string;
   image_url: string;
   lessons?: { slug: string; id: number }[] | null;
-}
+};
 
 export async function getDashboardData(): Promise<HomeCourseData[]> {
   const { data: courses, error } = await supabase
-    .from('courses')
-    .select('id, name, slug, description, image_url, lessons (slug, id)')
-    .order('id', { ascending: true })
-    .order('id', { referencedTable: 'lessons', ascending: true });
+    .from("courses")
+    .select("id, name, slug, description, image_url, lessons (slug, id)")
+    .order("id", { ascending: true })
+    .order("id", { referencedTable: "lessons", ascending: true });
 
   if (error) {
-    console.error('Lỗi lấy khóa học ', error.message);
+    console.error("Lỗi lấy khóa học ", error.message);
     return [];
   }
 
@@ -200,22 +217,21 @@ export async function getDashboardData(): Promise<HomeCourseData[]> {
     const firstLesson = course.lessons?.[0];
 
     return {
-      ...course, 
-      firstLessonSlug: firstLesson?.slug || null
-    }
-  })
+      ...course,
+      firstLessonSlug: firstLesson?.slug || null,
+    };
+  });
 }
 
-export async function searchLesson(query: string){
-  const {data, error} = await supabase
-    .from('lessons')
-    .select('id, title, course_id, slug, courses(id, slug)')
-    .or(`title.ilike.%${query}%`)
+export async function searchLesson(query: string) {
+  const { data, error } = await supabase
+    .from("lessons")
+    .select("id, title, course_id, slug, courses(id, slug)")
+    .or(`title.ilike.%${query}%`);
 
+  if (!query.trim()) return [];
 
-  if (!query.trim()) return[];
-
-  if (error){
+  if (error) {
     console.error("Lỗi tìm kiếm", error);
     return [];
   }

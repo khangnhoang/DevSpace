@@ -19,7 +19,7 @@ export default async function CourseLayout({ children, params }: LayoutProps) {
   const chapters = await getLessonsByCourse(course);
   return (
     <div className="flex flex-1 relative w-full">
-      {<Sidebar chapters={chapters} courseSlug={course} />}
+      {<Sidebar chapters={chapters} courseSlug={course}/>}
       {children}
     </div>
   );

@@ -22,6 +22,18 @@ interface Progress {
   lesson_id: number;
 }
 
+export interface Chapter {
+  id: number,
+  title: string,
+  order_index: number
+  lessons: {
+    id: number,
+    title: string,
+    slug: string
+  }[]
+}
+
+
 // --------------------------------------------------------
 // SECTION A: LOGIC BÀI HỌC (LESSONS)
 // --------------------------------------------------------

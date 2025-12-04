@@ -128,3 +128,4 @@ export default function Sidebar({ chapters, courseSlug }: SidebarProps) {
     </aside>
   );
 }
+

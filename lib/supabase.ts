@@ -21,19 +21,6 @@ interface Lesson {
 interface Progress {
   lesson_id: number;
 }
-
-export interface Chapter {
-  id: number,
-  title: string,
-  order_index: number
-  lessons: {
-    id: number,
-    title: string,
-    slug: string
-  }[]
-}
-
-
 // --------------------------------------------------------
 // SECTION A: LOGIC BÀI HỌC (LESSONS)
 // --------------------------------------------------------
@@ -249,4 +236,80 @@ export async function searchLesson(query: string) {
   }
 
   return data || [];
+}
+
+// --------------------------------------------------------
+// SECTION E: LOGIC THỐNG KÊ (ADMIN DASHBOARD)
+// --------------------------------------------------------
+
+export interface DashboardStats {
+  students: number;
+  lessons: number;
+  exercises: number;
+  completed: number;
+}
+
+export async function getAdminDashboardStats() {
+  try {
+    const [
+      { count: studentsCount },
+      { count: lessonsCount },
+      { count: exercisesCount },
+      { count: completedCount },
+    ] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("role", "user"),
+
+      supabase.from("lessons").select("*", { count: "exact", head: true }),
+
+      supabase.from("exercises").select("*", { count: "exact", head: true }),
+
+      supabase
+        .from("user_progress")
+        .select("*", { count: "exact", head: true }),
+    ]);
+
+    return {
+      students: studentsCount || 0,
+      lessons: lessonsCount || 0,
+      exercises: exercisesCount || 0,
+      completed: completedCount || 0,
+    } as DashboardStats;
+  } catch (error) {
+    console.error("Lỗi lấy thống kê admin dashboard: ", error);
+    return null;
+  }
+}
+
+const CHART_COLORS = [
+  "#00d25b", // Xanh lá (Giống Paypal trong ảnh)
+  "#ffab00", // Vàng (Giống Stripe)
+  "#0090e7", // Xanh dương
+  "#fc424a", // Đỏ
+  "#8f5fe8", // Tím
+];
+
+export async function getAdminCourseChartData() {
+  const { data: courses, error } = await supabase
+    .from('courses')
+    .select('name, lessons (id)')
+
+  if (error) {
+    console.error('Lỗi lấy dữ liệu khóa học cho biểu đồ: ', error.message);
+    return [];
+  }
+
+  const chartData = courses?.map((course: any, index: number) => {
+    const lessonCount = course.lessons?.length || 0;
+
+    return {
+      name: course.name,
+      value: lessonCount,
+      color: CHART_COLORS[index % CHART_COLORS.length],
+    };
+  });
+
+  return chartData.filter(item => item.value > 0);
 }

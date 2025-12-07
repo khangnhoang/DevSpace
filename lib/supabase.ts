@@ -313,3 +313,34 @@ export async function getAdminCourseChartData() {
 
   return chartData.filter(item => item.value > 0);
 }
+
+export interface AdminCourseData {
+  id: number;
+  name: string;
+  description: string;
+  image_url: string;
+  lessonCount: number;
+}
+
+export async function getAdminCourseData() {
+  const { data: courses, error } = await supabase
+    .from('courses')
+    .select('id, name, description, image_url, lessons (id)')
+    .order('id', { ascending: true});
+
+  if (error) {
+    console.error('Lỗi lấy dữ liệu khóa học cho admin: ', error.message);
+    return [];
+  }
+
+  const formattedData = courses?.map((course: any) => {
+    const { lessons, ...rest } = course;
+    return {
+      ...rest,
+    lessonCount: lessons.length || 0
+    }
+    
+  });
+
+  return formattedData as AdminCourseData[];
+}

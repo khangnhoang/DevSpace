@@ -374,17 +374,17 @@ export async function updateCourse(
     finalImageUrl = data.publicUrl;
   }
 
-  const { error } = await supabase 
-    .from('courses')
+  const { error } = await supabase
+    .from("courses")
     .update({
       name: courseData.name,
       slug: courseData.slug,
       description: courseData.description,
       image_url: finalImageUrl,
     })
-    .eq('id', id);
+    .eq("id", id);
 
-    return { error };
+  return { error };
 }
 
 export async function addCourse(
@@ -400,7 +400,7 @@ export async function addCourse(
   if (imageFile){
     const fileName = `course_new_${Date.now()}`
     const {error: uploadError} = await supabase.storage
-      .from("avatar")
+      .from("avatars")
       .upload(fileName, imageFile)
 
     if (uploadError){

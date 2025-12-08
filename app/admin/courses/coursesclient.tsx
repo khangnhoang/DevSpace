@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { SquarePen, X, Trash } from "lucide-react";
 import Image from "next/image";
-import { type AdminCourseData, updateCourse } from "@/lib/supabase";
+import { type AdminCourseData, updateCourse, addCourse, deleteCourse } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
 interface CoursesClientProps {
@@ -45,6 +45,19 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
     setPreviewUrl(course.image_url);
     setSelectedFile(null);
     setIsOpenForm(true);
+  };
+
+  const handleDelete = async (id: number, courseName: string) => {
+    const confirmDelete = confirm(`CẢNH BÁO: Bạn có chắc muốn xoá khoá học "${courseName}" không?\n (Tất cả bài học và chương sẽ bị xoá vĩnh viễn)`);
+    if (confirmDelete){
+      const {error} = await deleteCourse(id);
+      if (error){
+        alert("Lỗi khi xoá:" + error.message)
+      } else {
+        alert("Xoá thành công");
+        router.refresh();
+      }
+    }
   };
 
   const handleSave = async () => {

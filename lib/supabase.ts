@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { Cousine } from "next/font/google";
 
 // 1. Khởi tạo Client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -384,4 +385,44 @@ export async function updateCourse(
     .eq('id', id);
 
     return { error };
+}
+
+export async function addCourse(
+  coursesData:{
+    name: string,
+    slug: string,
+    description: string,
+  },
+  imageFile?: File | null
+) {
+  let imageUrl = "";
+
+  if (imageFile){
+    const fileName = `course_new_${Date.now()}`
+    const {error: uploadError} = await supabase.storage
+      .from("avatar")
+      .upload(fileName, imageFile)
+
+    if (uploadError){
+      console.log("Lỗi khi thêm:", uploadError.message)
+      return {error: uploadError}
+    }
+
+    const {data} = supabase.storage.from("avatars").getPublicUrl(fileName);
+    imageUrl = data.publicUrl;
+  }
+
+  const {error: insertError} = await supabase.from("courses").insert({
+    name: coursesData.name,
+    slug: coursesData.slug,
+    description: coursesData.description,
+    image_url: imageUrl
+  });
+
+  return {insertError};
+}
+
+export async function deleteCourse(id: number){
+  const {error} = await supabase.from("courses").delete().eq("id", id);
+  return {error}
 }

@@ -2,25 +2,70 @@
 import { useState } from "react";
 import { SquarePen, X } from "lucide-react";
 import Image from "next/image";
-import { type AdminCourseData } from "@/lib/supabase";
+import { type AdminCourseData, updateCourse } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
 interface CoursesClientProps {
   courses: AdminCourseData[];
 }
 
 export default function CoursesClientPage({ courses }: CoursesClientProps) {
+  const router = useRouter();
   const [isOpenForm, setIsOpenForm] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [desc, setDesc] = useState("");
+  const [currentImageUrl, setCurrentImageUrl] = useState("");
+  const [previewUrl, setPreviewUrl] = useState<
+    string | null
+  >(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const imageUrl = URL.createObjectURL(file);
-      setSelectedImage(imageUrl);
+      setSelectedFile(file);
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
     }
   };
   const handleClose = () => {
     setIsOpenForm(false);
-    setSelectedImage(null);
+    setPreviewUrl(null);
+    setSelectedFile(null);
+  };
+
+  const handleOpenEdit = (course: any) => {
+    setEditId(course.id);
+    setName(course.name);
+    setSlug(course.slug);
+    setDesc(course.description || "");
+    setCurrentImageUrl(course.image_url || "");
+    setPreviewUrl(course.image_url);
+    setSelectedFile(null);
+    setIsOpenForm(true);
+  };
+
+  const handleSave = async () => {
+    if (!editId) return;
+    setIsSaving(true);
+
+    const { error } = await updateCourse(
+      editId,
+      { name, slug, description: desc, image_url: currentImageUrl },
+      selectedFile
+    );
+
+    setIsSaving(false);
+
+    if (error) {
+      alert("Lỗi cập nhật: " + error.message);
+    } else {
+      alert("Cập nhật thành công");
+      setIsOpenForm(false);
+      router.refresh();
+    }
   };
 
   return (
@@ -50,7 +95,7 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
                 <SquarePen
                   size={20}
                   className="cursor-pointer hover:opacity-80"
-                  onClick={() => setIsOpenForm(true)}
+                  onClick={() => handleOpenEdit(course)}
                 />
               </div>
             </div>
@@ -64,8 +109,12 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
                     Chỉnh sửa khóa học
                   </h1>
                   <div className="flex items-center gap-4">
-                    <button className="bg-[#4A5565] p-1 rounded-md cursor-pointer hover:opacity-80">
-                      Lưu thay đổi
+                    <button
+                      className="bg-[#4A5565] p-1 rounded-md cursor-pointer hover:opacity-80"
+                      onClick={handleSave}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
                     </button>
                     <button
                       className=" text-gray-400 hover:text-white cursor-pointer"
@@ -81,6 +130,8 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
                   <input
                     type="text"
                     className="border border-[#4A5565] rounded-md p-2 w-full focus:outline-none"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                   />
                 </div>
                 <div className="flex flex-col p-2 gap-2">
@@ -88,6 +139,8 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
                   <input
                     type="text"
                     className="border border-[#4A5565] rounded-md p-2 w-full focus:outline-none"
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value)}
                   />
                 </div>
                 <div className="flex flex-col p-2 gap-2">
@@ -95,6 +148,8 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
                   <input
                     type="text"
                     className="border border-[#4A5565] rounded-md p-2 w-full focus:outline-none"
+                    value={desc}
+                    onChange={(e) => setDesc(e.target.value)}
                   />
                 </div>
                 <div className="flex flex-col p-2 gap-2">
@@ -105,12 +160,12 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
                     onChange={handleImageChange}
                     className="text-white border border-gray-500 rounded-md p-2 w-full cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-600 file:text-white hover:file:bg-gray-500"
                   />
-                  {selectedImage && (
+                  {previewUrl && (
                     <div className="mt-2">
                       <p className="text-sm text-gray-400 mb-1">Xem trước:</p>
                       <div className="w-full h-40 relative">
                         <Image
-                          src={selectedImage}
+                          src={previewUrl}
                           alt="Preview"
                           fill
                           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

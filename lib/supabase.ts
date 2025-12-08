@@ -293,11 +293,11 @@ const CHART_COLORS = [
 
 export async function getAdminCourseChartData() {
   const { data: courses, error } = await supabase
-    .from('courses')
-    .select('name, lessons (id)')
+    .from("courses")
+    .select("name, lessons (id)");
 
   if (error) {
-    console.error('Lỗi lấy dữ liệu khóa học cho biểu đồ: ', error.message);
+    console.error("Lỗi lấy dữ liệu khóa học cho biểu đồ: ", error.message);
     return [];
   }
 
@@ -311,25 +311,26 @@ export async function getAdminCourseChartData() {
     };
   });
 
-  return chartData.filter(item => item.value > 0);
+  return chartData.filter((item) => item.value > 0);
 }
 
 export interface AdminCourseData {
   id: number;
   name: string;
   description: string;
+  slug: string;
   image_url: string;
   lessonCount: number;
 }
 
 export async function getAdminCourseData() {
   const { data: courses, error } = await supabase
-    .from('courses')
-    .select('id, name, description, image_url, lessons (id)')
-    .order('id', { ascending: true});
+    .from("courses")
+    .select("id, name, description, slug, image_url, lessons (id)")
+    .order("id", { ascending: true });
 
   if (error) {
-    console.error('Lỗi lấy dữ liệu khóa học cho admin: ', error.message);
+    console.error("Lỗi lấy dữ liệu khóa học cho admin: ", error.message);
     return [];
   }
 
@@ -337,10 +338,50 @@ export async function getAdminCourseData() {
     const { lessons, ...rest } = course;
     return {
       ...rest,
-    lessonCount: lessons.length || 0
-    }
-    
+      lessonCount: lessons.length || 0,
+    };
   });
 
   return formattedData as AdminCourseData[];
+}
+
+export async function updateCourse(
+  id: number,
+  courseData: {
+    name: string;
+    slug: string;
+    description: string;
+    image_url: string;
+  },
+  newImageFile?: File | null
+) {
+  let finalImageUrl = courseData.image_url;
+
+  if (newImageFile) {
+    const fileName = `course_${id}_${Date.now()}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(fileName, newImageFile);
+
+    if (uploadError) {
+      console.error("Lỗi upload ảnh: ", uploadError.message);
+      return { error: uploadError };
+    }
+
+    const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
+    finalImageUrl = data.publicUrl;
+  }
+
+  const { error } = await supabase 
+    .from('courses')
+    .update({
+      name: courseData.name,
+      slug: courseData.slug,
+      description: courseData.description,
+      image_url: finalImageUrl,
+    })
+    .eq('id', id);
+
+    return { error };
 }

@@ -373,15 +373,15 @@ export async function updateCourse(
     finalImageUrl = data.publicUrl;
   }
 
-  const { error } = await supabase 
-    .from('courses')
+  const { error } = await supabase
+    .from("courses")
     .update({
       name: courseData.name,
       slug: courseData.slug,
       description: courseData.description,
       image_url: finalImageUrl,
     })
-    .eq('id', id);
+    .eq("id", id);
 
-    return { error };
+  return { error };
 }

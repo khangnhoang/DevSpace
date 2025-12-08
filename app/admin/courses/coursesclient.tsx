@@ -12,7 +12,7 @@ interface CoursesClientProps {
 export default function CoursesClientPage({ courses }: CoursesClientProps) {
   const router = useRouter();
   const [isOpenForm, setIsOpenForm] = useState(false);
- 
+
   const [editId, setEditId] = useState<number | null>(null);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -37,6 +37,17 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
     setSelectedFile(null);
   };
 
+  const handleOpenAdd = (course: any) => {
+    setEditId(null);
+    setName("");
+    setSlug("");
+    setDesc("");
+    setCurrentImageUrl("");
+    setPreviewUrl(null);
+    setSelectedFile(null);
+    setIsOpenForm(true);
+  };
+
   const handleOpenEdit = (course: any) => {
     setEditId(course.id);
     setName(course.name);
@@ -49,21 +60,25 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
   };
 
   const handleSave = async () => {
-    if (!editId) return;
     setIsSaving(true);
+    let result;
 
-    const { error } = await updateCourse(
-      editId,
-      { name, slug, description: desc, image_url: currentImageUrl },
-      selectedFile
-    );
+    if (editId) {
+      result = await updateCourse(
+        editId,
+        { name, slug, description: desc, image_url: currentImageUrl },
+        selectedFile
+      );
+    } else {
+      /// gọi hàm thêm khóa học
+    }
 
     setIsSaving(false);
 
-    if (error) {
-      alert("Lỗi cập nhật: " + error.message);
+    if (result?.error) {
+      alert("Lỗi cập nhật: " + result.error.message);
     } else {
-      alert("Cập nhật thành công");
+      alert(editId ? "Cập nhật thành công" : "Thêm khóa học thành công");
       setIsOpenForm(false);
       router.refresh();
     }
@@ -74,7 +89,12 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
       <div className="w-full p-4">
         <div className="flex justify-between">
           <h1 className="font-bold text-2xl">Các khóa học hiện có: </h1>
-          <button className="text-md font-bold bg-[#191C24] p-2 rounded-md hover:opacity-80 cursor-pointer">Thêm khóa học</button>
+          <button
+            onClick={handleOpenAdd}
+            className="text-md font-bold bg-[#191C24] p-2 rounded-md hover:opacity-80 cursor-pointer"
+          >
+            Thêm khóa học
+          </button>
         </div>
         <div className="flex gap-4 py-4 px-2">
           {courses.map((course) => (
@@ -116,7 +136,7 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
               <div className="bg-[#191C24] w-1/2 rounded-xl p-4 shadow-lg border-gray-700 relative flex flex-col">
                 <div className="flex items-center justify-between">
                   <h1 className="text-xl font-bold text-white mb-4">
-                    Chỉnh sửa khóa học
+                    {editId ? "Chỉnh sửa khóa học" : "Thêm khóa học mới"}
                   </h1>
                   <div className="flex items-center gap-4">
                     <button
@@ -124,7 +144,11 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
                       onClick={handleSave}
                       disabled={isSaving}
                     >
-                      {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
+                      {isSaving
+                        ? "Đang lưu..."
+                        : editId
+                        ? "Lưu thay đổi"
+                        : "Thêm khóa học"}
                     </button>
                     <button
                       className=" text-gray-400 hover:text-white cursor-pointer"

@@ -12,6 +12,7 @@ interface CoursesClientProps {
 export default function CoursesClientPage({ courses }: CoursesClientProps) {
   const router = useRouter();
   const [isOpenForm, setIsOpenForm] = useState(false);
+ 
   const [editId, setEditId] = useState<number | null>(null);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -71,7 +72,10 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
   return (
     <div>
       <div className="w-full p-4">
-        <h1 className="font-bold text-2xl">Các khóa học hiện có: </h1>
+        <div className="flex justify-between">
+          <h1 className="font-bold text-2xl">Các khóa học hiện có: </h1>
+          <button className="text-md font-bold bg-[#191C24] p-2 rounded-md hover:opacity-80 cursor-pointer">Thêm khóa học</button>
+        </div>
         <div className="flex gap-4 py-4 px-2">
           {courses.map((course) => (
             <div

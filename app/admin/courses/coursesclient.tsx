@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { SquarePen, X } from "lucide-react";
+import { SquarePen, X, Trash } from "lucide-react";
 import Image from "next/image";
 import { type AdminCourseData, updateCourse } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -17,11 +17,10 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
   const [slug, setSlug] = useState("");
   const [desc, setDesc] = useState("");
   const [currentImageUrl, setCurrentImageUrl] = useState("");
-  const [previewUrl, setPreviewUrl] = useState<
-    string | null
-  >(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -30,6 +29,7 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
       setPreviewUrl(objectUrl);
     }
   };
+
   const handleClose = () => {
     setIsOpenForm(false);
     setPreviewUrl(null);
@@ -92,11 +92,17 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
               </p>
               <div className="flex justify-between p-3 w-full border-t border-gray-400">
                 <p className="">{course.lessonCount} bài học</p>
-                <SquarePen
-                  size={20}
-                  className="cursor-pointer hover:opacity-80"
-                  onClick={() => handleOpenEdit(course)}
-                />
+                <div className="flex items-center gap-3">
+                  <Trash
+                    size={20}
+                    className="cursor-pointer hover:opacity-80"
+                  />
+                  <SquarePen
+                    size={20}
+                    className="cursor-pointer hover:opacity-80"
+                    onClick={() => handleOpenEdit(course)}
+                  />
+                </div>
               </div>
             </div>
           ))}

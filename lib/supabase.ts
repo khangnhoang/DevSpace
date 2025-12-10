@@ -426,3 +426,32 @@ export async function deleteCourse(id: number){
   const {error} = await supabase.from("courses").delete().eq("id", id);
   return {error}
 }
+
+export async function getCoursesForSelect(){
+  const {data, error} = await supabase
+    .from("courses")
+    .select("id, name")
+    .order('id', {ascending: true});
+  
+  if (error) {
+    console.error('Lỗi lấy dữ liệu khóa học cho form thêm: ', error.message);
+    return [];
+  }
+
+  return data || [];
+}
+
+export async function getChaptersByCourseId(courseId: number){
+  const {data, error} = await supabase
+    .from("chapters")
+    .select("id, title")
+    .eq("course_id", courseId)
+    .order('id', {ascending: true});
+
+  if (error) {
+    console.error('Lỗi lấy chương theo khóa học: ', error.message);
+    return [];
+  }
+
+  return data || [];
+}

@@ -37,7 +37,7 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
     setSelectedFile(null);
   };
 
-  const handleOpenAdd = (course: any) => {
+  const handleOpenAdd = () => {
     setEditId(null);
     setName("");
     setSlug("");

@@ -1,5 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import { Cousine } from "next/font/google";
 
 // 1. Khởi tạo Client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -388,70 +387,115 @@ export async function updateCourse(
 }
 
 export async function addCourse(
-  coursesData:{
-    name: string,
-    slug: string,
-    description: string,
+  coursesData: {
+    name: string;
+    slug: string;
+    description: string;
   },
   imageFile?: File | null
 ) {
   let imageUrl = "";
 
-  if (imageFile){
-    const fileName = `course_new_${Date.now()}`
-    const {error: uploadError} = await supabase.storage
+  if (imageFile) {
+    const fileName = `course_new_${Date.now()}`;
+    const { error: uploadError } = await supabase.storage
       .from("avatars")
-      .upload(fileName, imageFile)
+      .upload(fileName, imageFile);
 
-    if (uploadError){
-      console.log("Lỗi khi thêm:", uploadError.message)
-      return {error: uploadError}
+    if (uploadError) {
+      console.log("Lỗi khi thêm:", uploadError.message);
+      return { error: uploadError };
     }
 
-    const {data} = supabase.storage.from("avatars").getPublicUrl(fileName);
+    const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
     imageUrl = data.publicUrl;
   }
 
-  const {error: insertError} = await supabase.from("courses").insert({
+  const { error: insertError } = await supabase.from("courses").insert({
     name: coursesData.name,
     slug: coursesData.slug,
     description: coursesData.description,
-    image_url: imageUrl
+    image_url: imageUrl,
   });
 
-  return {insertError};
+  return { insertError };
 }
 
-export async function deleteCourse(id: number){
-  const {error} = await supabase.from("courses").delete().eq("id", id);
-  return {error}
+export async function deleteCourse(id: number) {
+  const { error } = await supabase.from("courses").delete().eq("id", id);
+  return { error };
 }
 
-export async function getCoursesForSelect(){
-  const {data, error} = await supabase
+export async function getCoursesForSelect() {
+  const { data, error } = await supabase
     .from("courses")
     .select("id, name")
-    .order('id', {ascending: true});
-  
+    .order("id", { ascending: true });
+
   if (error) {
-    console.error('Lỗi lấy dữ liệu khóa học cho form thêm: ', error.message);
+    console.error("Lỗi lấy dữ liệu khóa học cho form thêm: ", error.message);
     return [];
   }
 
   return data || [];
 }
 
-export async function getChaptersByCourseId(courseId: number){
-  const {data, error} = await supabase
+export async function getChaptersByCourseId(courseId: number) {
+  const { data, error } = await supabase
     .from("chapters")
     .select("id, title")
     .eq("course_id", courseId)
-    .order('id', {ascending: true});
+    .order("id", { ascending: true });
 
   if (error) {
-    console.error('Lỗi lấy chương theo khóa học: ', error.message);
+    console.error("Lỗi lấy chương theo khóa học: ", error.message);
     return [];
   }
 
   return data || [];
+}
+
+export async function getLessons() {
+  const { data, error } = await supabase
+    .from("lessons")
+    .select(
+      "id, title, slug, content, course_id, chapter_id, video_url, courses (id, name), chapters (id, title)"
+    )
+    .order("id", { ascending: true });
+
+  if (error) {
+    console.error("Lỗi lấy danh sách bài học: ", error.message);
+    return [];
+  }
+
+  return data || [];
+}
+
+export async function addLesson(lessonData: {
+  title: string;
+  slug: string;
+  content: string;
+  course_id: number;
+  chapter_id: number;
+  video_url?: string;
+}) {
+  const { error } = await supabase.from("lessons").insert({
+    title: lessonData.title,
+    slug: lessonData.slug,
+    content: lessonData.content,
+    course_id: lessonData.course_id,
+    chapter_id: lessonData.chapter_id,
+    video_url: lessonData.video_url || null,
+  });
+
+  return { error };
+}
+
+export async function deleteLesson(id: number){
+  const {error} = await supabase
+    .from('lessons')
+    .delete()
+    .eq('id', id);
+
+  return {error};
 }

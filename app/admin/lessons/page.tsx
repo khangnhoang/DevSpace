@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 export default function LessonsManagerPage() {
   const router = useRouter();
   const [isOpenForm, setIsOpenForm] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -28,6 +29,12 @@ export default function LessonsManagerPage() {
   );
   const [lessons, setLessons] = useState<Array<any>>([]);
   const handleOpenForm = () => {
+    setTitle("");
+    setSlug("");
+    setVideoUrl("");
+    setSelectedCourseId(null);
+    setSelectedChapterId(null);
+    setContent("**Viết nội dung bài học ở đây...**");
     setIsOpenForm(true);
   };
 
@@ -46,7 +53,7 @@ export default function LessonsManagerPage() {
     } else {
       alert("Lưu bài học thành công!");
       setIsOpenForm(false);
-      router.refresh();
+      setRefreshKey((prev) => prev + 1);
     }
   };
 
@@ -59,7 +66,7 @@ export default function LessonsManagerPage() {
       alert("Xoá bài học thất bại: " + error.message);
     } else {
       alert("Xoá bài học thành công!");
-      router.refresh();
+      setRefreshKey((prev) => prev + 1);
     }
   };
 
@@ -86,12 +93,12 @@ export default function LessonsManagerPage() {
   }, [selectedCourseId]);
 
   useEffect(() => {
-    const fetchLessons = async () => {
+    const fetchLessonsData = async () => {
       const data = await getLessons();
       setLessons(data);
     };
-    fetchLessons();
-  }, []);
+    fetchLessonsData();
+  }, [refreshKey]);
 
   return (
     <div className="p-4">

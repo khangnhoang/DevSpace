@@ -7,6 +7,7 @@ import {
   getLessons,
   addLesson,
   deleteLesson,
+  editLesson
 } from "@/lib/supabase";
 import MdxEditor from "@/app/components/MdxEditor";
 import { useRouter } from "next/navigation";
@@ -15,6 +16,7 @@ export default function LessonsManagerPage() {
   const router = useRouter();
   const [isOpenForm, setIsOpenForm] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [editLessonId, setEditLessonId] = useState<number | null>(null);
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -28,7 +30,8 @@ export default function LessonsManagerPage() {
     "**Viết nội dung bài học ở đây...**"
   );
   const [lessons, setLessons] = useState<Array<any>>([]);
-  const handleOpenForm = () => {
+  const handleOpenAddForm = () => {
+    setEditLessonId(null);
     setTitle("");
     setSlug("");
     setVideoUrl("");
@@ -38,20 +41,45 @@ export default function LessonsManagerPage() {
     setIsOpenForm(true);
   };
 
+  const handOpenEditForm = (lesson: any) => {
+    setEditLessonId(lesson.id);
+    setTitle(lesson.title);
+    setSlug(lesson.slug);
+    setVideoUrl(lesson.video_url || "");
+    setSelectedCourseId(lesson.course_id);
+    setSelectedChapterId(lesson.chapter_id);
+    setContent(lesson.content || "");
+    setIsOpenForm(true);
+  }
+
   const handleSave = async () => {
-    const result = await addLesson({
+    if (!title || !slug || !selectedCourseId || !selectedChapterId) {
+      alert("Vui lòng điền đầy đủ thông tin bắt buộc.");
+      return;
+    }
+
+    const lessonPayload = {
       title,
       slug,
       content: content || "",
       course_id: selectedCourseId!,
       chapter_id: selectedChapterId!,
       video_url: videoUrl,
-    });
+    }
+
+    let result;
+
+    if(editLessonId){
+      result = await editLesson(editLessonId, lessonPayload);
+    }
+    else{
+      result = await addLesson(lessonPayload);
+    }
 
     if (result.error) {
       alert("Lưu bài học thất bại: " + result.error.message);
     } else {
-      alert("Lưu bài học thành công!");
+      alert(editLessonId ? "Cập nhật thành công" : "Lưu bài học thành công!");
       setIsOpenForm(false);
       setRefreshKey((prev) => prev + 1);
     }
@@ -106,7 +134,7 @@ export default function LessonsManagerPage() {
         <h1>Quản lí bài học</h1>
         <button
           className="bg-green-500 rounded-md p-2 hover:opacity-80 cursor-pointer"
-          onClick={handleOpenForm}
+          onClick={handleOpenAddForm}
         >
           Thêm bài học mới
         </button>
@@ -199,7 +227,7 @@ export default function LessonsManagerPage() {
                     onClick={handleSave}
                     className="py-2 px-4 bg-[#222732] rounded-md hover:opacity-80 cursor-pointer"
                   >
-                    Thêm
+                    {editLessonId ? "Lưu thay đổi" : "Thêm bài học"}
                   </button>
                   <X
                     className="cursor-pointer"
@@ -252,7 +280,7 @@ export default function LessonsManagerPage() {
                 {lesson.chapters.title || "Chưa có chương"}
               </td>
               <td className="flex py-4 w-full justify-center gap-2">
-                <button className="cursor-pointer">
+                <button onClick={() => handOpenEditForm(lesson)} className="cursor-pointer">
                   <SquarePen size={20} />
                 </button>
                 <button

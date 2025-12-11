@@ -499,3 +499,26 @@ export async function deleteLesson(id: number){
 
   return {error};
 }
+
+export async function editLesson(id: number, lessonData: {
+  title: string;
+  slug: string;
+  content: string;
+  course_id: number;
+  chapter_id: number;
+  video_url?: string | null;
+}){
+  const {error} = await supabase
+    .from('lessons')
+    .update({
+      title: lessonData.title,
+      slug: lessonData.slug,
+      content: lessonData.content,
+      course_id: lessonData.course_id,
+      chapter_id: lessonData.chapter_id,
+      video_url: lessonData.video_url || null,
+    })
+    .eq('id', id);
+
+  return {error};
+}

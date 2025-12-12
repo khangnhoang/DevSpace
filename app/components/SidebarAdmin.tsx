@@ -10,7 +10,13 @@ export default function SidebarAdmin() {
           </div>
           <span>Thống Kê</span>
         </Link>
-        <Link href="#" className="flex gap-2 items-center py-2 px-4 rounded-r-full hover:bg-gray-400">
+        <Link href="/admin/courses" className="flex gap-2 items-center py-2 px-4 border-blue-500 rounded-r-full hover:bg-gray-400">
+          <div className="flex items-center rounded-full justify-center p-2 bg-[#22242E]">
+            <ChartPie size={15} className="text-purple-500" />
+          </div>
+          <span>Quản lý khóa học</span>
+        </Link>
+        <Link href="/admin/lessons" className="flex gap-2 items-center py-2 px-4 rounded-r-full hover:bg-gray-400">
           <div className="flex items-center rounded-full justify-center p-2 bg-[#22242E]">
             <SquareChartGantt size={15} className="text-orange-500" />
           </div>

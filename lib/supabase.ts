@@ -461,6 +461,8 @@ export async function getLessons() {
     .select(
       "id, title, slug, content, course_id, chapter_id, video_url, courses (id, name), chapters (id, title)"
     )
+    .order("course_id", { ascending: true })
+    .order("chapter_id", { ascending: true })
     .order("id", { ascending: true });
 
   if (error) {
@@ -491,25 +493,25 @@ export async function addLesson(lessonData: {
   return { error };
 }
 
-export async function deleteLesson(id: number){
-  const {error} = await supabase
-    .from('lessons')
-    .delete()
-    .eq('id', id);
+export async function deleteLesson(id: number) {
+  const { error } = await supabase.from("lessons").delete().eq("id", id);
 
-  return {error};
+  return { error };
 }
 
-export async function editLesson(id: number, lessonData: {
-  title: string;
-  slug: string;
-  content: string;
-  course_id: number;
-  chapter_id: number;
-  video_url?: string | null;
-}){
-  const {error} = await supabase
-    .from('lessons')
+export async function editLesson(
+  id: number,
+  lessonData: {
+    title: string;
+    slug: string;
+    content: string;
+    course_id: number;
+    chapter_id: number;
+    video_url?: string | null;
+  }
+) {
+  const { error } = await supabase
+    .from("lessons")
     .update({
       title: lessonData.title,
       slug: lessonData.slug,
@@ -518,7 +520,7 @@ export async function editLesson(id: number, lessonData: {
       chapter_id: lessonData.chapter_id,
       video_url: lessonData.video_url || null,
     })
-    .eq('id', id);
+    .eq("id", id);
 
-  return {error};
+  return { error };
 }

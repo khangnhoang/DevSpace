@@ -1,4 +1,4 @@
-import { ChartPie, SquareChartGantt, Users, SquareKanban } from "lucide-react";
+import { ChartPie, SquareChartGantt, Users, SquareKanban, BookOpenText } from "lucide-react";
 import Link from "next/link";
 export default function SidebarAdmin() {
   return (
@@ -12,7 +12,7 @@ export default function SidebarAdmin() {
         </Link>
         <Link href="/admin/courses" className="flex gap-2 items-center py-2 px-4 border-blue-500 rounded-r-full hover:bg-gray-400">
           <div className="flex items-center rounded-full justify-center p-2 bg-[#22242E]">
-            <ChartPie size={15} className="text-purple-500" />
+            <BookOpenText size={15} className="text-green-500" />
           </div>
           <span>Quản lý khóa học</span>
         </Link>

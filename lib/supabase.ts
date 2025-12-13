@@ -495,7 +495,6 @@ export async function addLesson(lessonData: {
 
 export async function deleteLesson(id: number) {
   const { error } = await supabase.from("lessons").delete().eq("id", id);
-
   return { error };
 }
 
@@ -524,3 +523,32 @@ export async function editLesson(
 
   return { error };
 }
+
+export async function getCourseChapterManager() {
+  const {data, error} = await supabase
+    .from("courses")
+    .select("id, name, slug")
+    .order("id", {ascending: true})
+
+  if (error){
+    console.error("Lỗi khi tải khoá học", error.message)
+    return []
+  }
+
+  return data || []
+}
+
+export async function getChapterForChapterManager() {
+  const {data, error} = await supabase
+    .from("chapters")
+    .select("id, course_id, title, order_index, created_at")
+    .order("order_index", {ascending: true})
+
+  if (error){
+    console.error("Lỗi khi tải chương", error.message)
+    return []
+  }
+
+  return data || []
+}
+

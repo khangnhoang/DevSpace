@@ -1,5 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import { title } from "process";
 
 // 1. Khởi tạo Client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;

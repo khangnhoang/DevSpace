@@ -18,12 +18,10 @@ import {
   editLesson,
 } from "@/lib/supabase";
 import MdxEditor from "@/app/components/MdxEditor";
-import { useRouter } from "next/navigation";
 
 const ITEMS_PER_PAGE = 10;
 
 export default function LessonsManagerPage() {
-  const router = useRouter();
   const [isOpenForm, setIsOpenForm] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [editLessonId, setEditLessonId] = useState<number | null>(null);

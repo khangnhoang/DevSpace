@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { title } from "process";
 
 // 1. Khởi tạo Client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -552,3 +553,40 @@ export async function getChapterForChapterManager() {
   return data || []
 }
 
+export async function deleteChapter(id: number){
+  const {error} =  await supabase.from("chapters").delete().eq("id", id);
+  return {error};
+}
+
+export async function addChapter(dataChapter:{
+  course_id: number,
+  title: string,
+  order_index: number,
+}) {
+  const {error} = await supabase.from("chapters").insert({
+    course_id: dataChapter.course_id,
+    title: dataChapter.title,
+    order_index: dataChapter.order_index
+  });
+
+  return {error};
+}
+
+export async function editChapter(
+  id: number, 
+  dataChapter:{
+    course_id: number,
+    title: string,
+    order_index: number
+}) {
+  const {error} = await supabase
+    .from("chapters")
+    .update({
+      course_id: dataChapter.course_id,
+      title: dataChapter.title,
+      order_index: dataChapter.order_index
+  })
+    .eq("id", id)
+
+  return {error};
+}

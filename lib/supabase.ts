@@ -612,3 +612,83 @@ export async function getAllUsersForUsersManager(){
 
   return data as UserProfile[];
 }
+
+export async function deleteUser(id: number){
+  const {error} = await supabase.from("profiles").delete().eq("id", id);
+  return {error};
+}
+
+export async function addUser(
+  dataUser:{
+    id: number,
+    email: string,
+    full_name: string | null,
+    role: string
+  },
+  imageFile?: File | null
+){
+  let imageUrl = "";
+
+  if (imageFile) {
+    const fileName = `users_new_${Date.now()}`;
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(fileName, imageFile);
+
+    if (uploadError) {
+      console.log("Lỗi khi thêm:", uploadError.message);
+      return { error: uploadError };
+    }
+
+    const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
+    imageUrl = data.publicUrl;
+  }
+
+  const {error: insertError} = await supabase.from("profiles").insert({
+    id: dataUser.id,
+    email: dataUser.email,
+    full_name: dataUser.full_name,
+    avatar_url: imageUrl,
+    role: dataUser.role
+  });
+
+  return {insertError};
+}
+
+export async function editUser(
+  id: number,
+  dataUser:{
+    full_name: string | null;
+    avatar_url: string;
+  },
+  newImageFile?: File | null
+) {
+  let finalImageUrl = dataUser.avatar_url;
+
+  if (newImageFile) {
+    const fileName = `users_${id}_${Date.now()}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(fileName, newImageFile);
+
+    if (uploadError) {
+      console.error("Lỗi upload ảnh: ", uploadError.message);
+      return { error: uploadError };
+    }
+
+    const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
+    finalImageUrl = data.publicUrl;
+  }
+
+
+  const {error} = await supabase
+    .from("profiles")
+    .update({
+      full_name: dataUser.full_name,
+      avatar_url: finalImageUrl
+  })
+    .eq("id", id)
+
+  return {error};
+}

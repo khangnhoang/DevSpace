@@ -16,6 +16,8 @@ import {
   MoreVertical,
   SquarePen,
   Trash,
+  X,
+  Save
 } from "lucide-react";
 import { type UserProfile, getAllUsersForUsersManager } from "@/lib/supabase";
 
@@ -23,6 +25,18 @@ export default function UsersManagerPage() {
   const [user, setUser] = useState<UserProfile[] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [isOpenAddForm, setIsOpenAddForm] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null)
+  
+  const handleOpenAddForm = () => {
+    setEditingUser(null)
+    setIsOpenAddForm(true)
+  }
+
+  const handleOpenEditForm = (u: UserProfile) => {
+    setEditingUser(u)
+    setIsOpenAddForm(true)
+  }
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
@@ -106,7 +120,7 @@ export default function UsersManagerPage() {
           </p>
         </div>
 
-        <button className="bg-[#3B81F4] p-2 rounded-xl hover:bg-[#2563EB] cursor-pointer flex items-center">
+        <button onClick={handleOpenAddForm} className="bg-[#3B81F4] p-2 rounded-xl hover:bg-[#2563EB] cursor-pointer flex items-center">
           <Plus></Plus>Thêm thành viên
         </button>
       </div>
@@ -224,7 +238,7 @@ export default function UsersManagerPage() {
                     <td className="px-6 py-4">
                       <div className="flex">
                         <button className="cursor-pointer hover:bg-blue-500 hover:text-white p-2 rounded-md text-[#979EAA]">
-                          <SquarePen size={20} />
+                          <SquarePen size={20} onClick={()=>handleOpenEditForm(u)}/>
                         </button>
                         <button className="cursor-pointer hover:bg-red-500 hover:text-white p-2 rounded-md text-[#979EAA]">
                           <Trash size={20} />
@@ -270,6 +284,50 @@ export default function UsersManagerPage() {
           </div>
         </div>
       </div>
+      {isOpenAddForm && (
+        <div className="flex flex-col justify-center items-center fixed inset-0 z-50">
+          <div className="w-1/2 bg-[#222732] flex justify-between items-center p-4 rounded-t-md">
+            <div className="text-xl flex items-center gap-2">
+              {editingUser ? (
+                    <>
+                        <SquarePen size={20} className="text-[#3B81F4]" />
+                        <h1>Cập Nhật Thông Tin</h1>
+                    </>
+                ) : (
+                    <>
+                        <Plus size={20} className="text-[#3B81F4]" />
+                        <h1>Thêm Thành Viên Mới</h1>
+                    </>
+                )}
+            </div>
+              <X size={35} onClick={() => setIsOpenAddForm(false)} className="hover:bg-[#374151] cursor-pointer rounded-md p-2"/>
+          </div>
+          <div className="flex flex-col bg-[#191C24] w-1/2 gap-2 p-3">
+            <span>EMAIL</span>
+            <input type="text" name="" id="" className="p-2 bg-[#2C3039] rounded-md" placeholder="helo@gmail.com"/>
+            <span>HỌ VÀ TÊN</span>
+            <input type="text" name="" id="" className="p-2 bg-[#2C3039] rounded-md" placeholder="Nguyen Van A"/>
+            <span>ẢNH ĐẠI DIỆN</span>
+            <input type="file" name="" id="" className="p-2 bg-[#2C3039] rounded-md"/>
+            <span>VAI TRÒ</span>
+            <select name="" id="" className="p-2 bg-[#2C3039] rounded-md"><option></option></select>
+          </div>
+          <div className="w-1/2 bg-[#222732] flex justify-end items-center p-4 rounded-b-md gap-4">
+            <button onClick={() => setIsOpenAddForm(false)} className="hover:bg-[#374151] cursor-pointer p-2 rounded-md text-sm">Hủy Bỏ</button>
+            <button className="hover:bg-[#2563eb] cursor-pointer p-2 rounded-md text-sm bg-blue-400 flex items-center gap-2">
+              {editingUser ? (
+                    <>
+                        <Save size={16} /> Lưu Thay Đổi
+                    </>
+                 ) : (
+                    <>
+                        <Plus size={16} /> Thêm Tài Khoản
+                    </>
+                 )}
+              </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

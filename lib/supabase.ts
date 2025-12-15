@@ -589,3 +589,26 @@ export async function editChapter(
 
   return {error};
 }
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  role: string;
+  created_at: string
+}
+
+export async function getAllUsersForUsersManager(){
+  const {data, error} = await supabase
+    .from('profiles')
+    .select('id, email, full_name, avatar_url, role, created_at')
+    .order('id', {ascending: true});
+
+  if (error){
+    console.error("Lỗi khi tải người dùng", error.message);
+    return [];
+  }
+
+  return data as UserProfile[];
+}

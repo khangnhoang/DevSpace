@@ -525,69 +525,70 @@ export async function editLesson(
 }
 
 export async function getCourseChapterManager() {
-  const {data, error} = await supabase
+  const { data, error } = await supabase
     .from("courses")
     .select("id, name, slug")
-    .order("id", {ascending: true})
+    .order("id", { ascending: true });
 
-  if (error){
-    console.error("Lỗi khi tải khoá học", error.message)
-    return []
+  if (error) {
+    console.error("Lỗi khi tải khoá học", error.message);
+    return [];
   }
 
-  return data || []
+  return data || [];
 }
 
 export async function getChapterForChapterManager() {
-  const {data, error} = await supabase
+  const { data, error } = await supabase
     .from("chapters")
     .select("id, course_id, title, order_index, created_at")
-    .order("order_index", {ascending: true})
+    .order("order_index", { ascending: true });
 
-  if (error){
-    console.error("Lỗi khi tải chương", error.message)
-    return []
+  if (error) {
+    console.error("Lỗi khi tải chương", error.message);
+    return [];
   }
 
-  return data || []
+  return data || [];
 }
 
-export async function deleteChapter(id: number){
-  const {error} =  await supabase.from("chapters").delete().eq("id", id);
-  return {error};
+export async function deleteChapter(id: number) {
+  const { error } = await supabase.from("chapters").delete().eq("id", id);
+  return { error };
 }
 
-export async function addChapter(dataChapter:{
-  course_id: number,
-  title: string,
-  order_index: number,
+export async function addChapter(dataChapter: {
+  course_id: number;
+  title: string;
+  order_index: number;
 }) {
-  const {error} = await supabase.from("chapters").insert({
+  const { error } = await supabase.from("chapters").insert({
     course_id: dataChapter.course_id,
     title: dataChapter.title,
-    order_index: dataChapter.order_index
+    order_index: dataChapter.order_index,
   });
 
-  return {error};
+  return { error };
 }
 
 export async function editChapter(
-  id: number, 
-  dataChapter:{
-    course_id: number,
-    title: string,
-    order_index: number
-}) {
-  const {error} = await supabase
+  id: number,
+  dataChapter: {
+    course_id: number;
+    title: string;
+    order_index: number;
+  }
+) {
+  const { error } = await supabase
     .from("chapters")
     .update({
       course_id: dataChapter.course_id,
       title: dataChapter.title,
-      order_index: dataChapter.order_index
-  })
-    .eq("id", id)
+      order_index: dataChapter.order_index,
+    })
+    .eq("id", id);
 
-  return {error};
+  return { error };
 }
 
 export interface UserProfile {
@@ -596,16 +597,16 @@ export interface UserProfile {
   full_name: string | null;
   avatar_url: string | null;
   role: string;
-  created_at: string
+  created_at: string;
 }
 
-export async function getAllUsersForUsersManager(){
-  const {data, error} = await supabase
-    .from('profiles')
-    .select('id, email, full_name, avatar_url, role, created_at')
-    .order('id', {ascending: true});
+export async function getAllUsersForUsersManager() {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, email, full_name, avatar_url, role, created_at")
+    .order("id", { ascending: false });
 
-  if (error){
+  if (error) {
     console.error("Lỗi khi tải người dùng", error.message);
     return [];
   }
@@ -613,82 +614,56 @@ export async function getAllUsersForUsersManager(){
   return data as UserProfile[];
 }
 
-export async function deleteUser(id: number){
-  const {error} = await supabase.from("profiles").delete().eq("id", id);
-  return {error};
+export async function deleteUser(id: string) {
+  const { error } = await supabase.from("profiles").delete().eq("id", id);
+  return { error };
 }
 
-export async function addUser(
-  dataUser:{
-    id: number,
-    email: string,
-    full_name: string | null,
-    role: string
-  },
-  imageFile?: File | null
-){
-  let imageUrl = "";
+export async function uploadUserAvatar(file: File) {
+  const fileName = `avatar_${Date.now()}_${file.name.replace(/\s/g, '_')}`;
+  
+  const { error: uploadError } = await supabase.storage
+    .from("avatars")
+    .upload(fileName, file);
 
-  if (imageFile) {
-    const fileName = `users_new_${Date.now()}`;
-    const { error: uploadError } = await supabase.storage
-      .from("avatars")
-      .upload(fileName, imageFile);
-
-    if (uploadError) {
-      console.log("Lỗi khi thêm:", uploadError.message);
-      return { error: uploadError };
-    }
-
-    const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
-    imageUrl = data.publicUrl;
+  if (uploadError) {
+    console.error("Lỗi upload ảnh:", uploadError.message);
+    return null;
   }
 
-  const {error: insertError} = await supabase.from("profiles").insert({
-    id: dataUser.id,
-    email: dataUser.email,
-    full_name: dataUser.full_name,
-    avatar_url: imageUrl,
-    role: dataUser.role
-  });
-
-  return {insertError};
+  const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
+  return data.publicUrl;
 }
 
+
 export async function editUser(
-  id: number,
-  dataUser:{
+  id: string,
+  dataUser: {
     full_name: string | null;
-    avatar_url: string;
+    avatar_url: string | null;
+    role: string;
   },
   newImageFile?: File | null
 ) {
   let finalImageUrl = dataUser.avatar_url;
 
   if (newImageFile) {
-    const fileName = `users_${id}_${Date.now()}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("avatars")
-      .upload(fileName, newImageFile);
-
-    if (uploadError) {
-      console.error("Lỗi upload ảnh: ", uploadError.message);
-      return { error: uploadError };
+    const uploadedUrl = await uploadUserAvatar(newImageFile);
+    if(uploadedUrl){
+      finalImageUrl = uploadedUrl
+    }else{
+      return {error : {message: 'Lỗi khi upload avatar user'}};
     }
-
-    const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
-    finalImageUrl = data.publicUrl;
   }
 
-
-  const {error} = await supabase
+  const { error } = await supabase
     .from("profiles")
     .update({
       full_name: dataUser.full_name,
-      avatar_url: finalImageUrl
-  })
-    .eq("id", id)
+      avatar_url: finalImageUrl,
+      role: dataUser.role
+    })
+    .eq("id", id);
 
-  return {error};
+  return { error };
 }

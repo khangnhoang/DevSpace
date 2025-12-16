@@ -1,42 +1,135 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Users,
   Search,
-  Filter,
-  Trash2,
   Plus,
   ChevronLeft,
   ChevronRight,
-  Mail,
   Shield,
   Calendar,
-  Loader2,
-  Edit,
-  MoreVertical,
   SquarePen,
   Trash,
   X,
-  Save
+  Save,
+  Upload,
 } from "lucide-react";
-import { type UserProfile, getAllUsersForUsersManager } from "@/lib/supabase";
+import {
+  type UserProfile,
+  getAllUsersForUsersManager,
+  editUser,
+  deleteUser,
+  uploadUserAvatar,
+} from "@/lib/supabase";
+import { createNewUser } from "@/app/action/user";
 
 export default function UsersManagerPage() {
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState<UserProfile[] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
-  const [isOpenAddForm, setIsOpenAddForm] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserProfile | null>(null)
-  
-  const handleOpenAddForm = () => {
-    setEditingUser(null)
-    setIsOpenAddForm(true)
-  }
+  const [isOpenForm, setIsOpenForm] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleOpenForm = () => {
+    setEditingUser(null);
+    setEmail("");
+    setName("");
+    setRole("user");
+    setPreviewUrl(null);
+    setSelectedFile(null);
+    setIsOpenForm(true);
+  };
 
   const handleOpenEditForm = (u: UserProfile) => {
-    setEditingUser(u)
-    setIsOpenAddForm(true)
+    setEditingUser(u);
+    setEmail(u.email);
+    setName(u.full_name || "");
+    setRole(u.role);
+    setPreviewUrl(u.avatar_url);
+    setSelectedFile(null);
+    setIsOpenForm(true);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string | null) => {
+    if(!confirm(`Bạn có chắc chắn muốn xóa người dùng ${name} không?`))
+      return
+
+    const {error} = await deleteUser(id);
+
+    if(error){
+      alert('xóa người dùng thất bại' + error.message)
+    }else{
+      alert('Xóa thành công người dùng')
+      setRefreshKey((prev) => prev + 1)
+    }
   }
+
+  const handleSave = async () => {
+    if (!email) {
+      alert("Vui lòng nhập email");
+      return;
+    }
+    setIsLoading(true);
+
+    let finalAvatarURL = previewUrl || "";
+    if (selectedFile) {
+      const uploadedURL = await uploadUserAvatar(selectedFile);
+      if (uploadedURL) {
+        finalAvatarURL = uploadedURL;
+      } else {
+        alert("Lỗi khi upload avatar user");
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    let result;
+
+    if (editingUser) {
+      result = await editUser(
+        editingUser.id,
+        {
+          full_name: name,
+          avatar_url: finalAvatarURL,
+          role,
+        },
+        null
+      );
+    } else {
+      result = await createNewUser({
+        email: email,
+        fullName: name,
+        role: role,
+        avatarUrl: finalAvatarURL,
+        password: "123123",
+      });
+    }
+
+    if (result.error) {
+      alert("Lưu người dùng thất bại" + result.error);
+    } else {
+      alert(editingUser ? "Sửa thành công" : "Thêm thành công");
+      setIsOpenForm(false);
+      setRefreshKey((prev) => prev + 1);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
@@ -57,7 +150,7 @@ export default function UsersManagerPage() {
       setUser(data);
     };
     fetchUsers();
-  }, []);
+  }, [refreshKey]);
 
   const filteredUsers = useMemo(() => {
     if (!user) return [];
@@ -120,7 +213,10 @@ export default function UsersManagerPage() {
           </p>
         </div>
 
-        <button onClick={handleOpenAddForm} className="bg-[#3B81F4] p-2 rounded-xl hover:bg-[#2563EB] cursor-pointer flex items-center">
+        <button
+          onClick={handleOpenForm}
+          className="bg-[#3B81F4] p-2 rounded-xl hover:bg-[#2563EB] cursor-pointer flex items-center"
+        >
           <Plus></Plus>Thêm thành viên
         </button>
       </div>
@@ -200,7 +296,7 @@ export default function UsersManagerPage() {
                           <img
                             src={u.avatar_url}
                             alt="Avatar"
-                            className="h-full w-full object-cover"
+                            className="h-12 w-12 object-cover rounded-full"
                           />
                         ) : (
                           <span className="text-lg font-bold text-white select-none bg-[#3B81F4] rounded-full py-1 px-3 flex items-center">
@@ -238,9 +334,12 @@ export default function UsersManagerPage() {
                     <td className="px-6 py-4">
                       <div className="flex">
                         <button className="cursor-pointer hover:bg-blue-500 hover:text-white p-2 rounded-md text-[#979EAA]">
-                          <SquarePen size={20} onClick={()=>handleOpenEditForm(u)}/>
+                          <SquarePen
+                            size={20}
+                            onClick={() => handleOpenEditForm(u)}
+                          />
                         </button>
-                        <button className="cursor-pointer hover:bg-red-500 hover:text-white p-2 rounded-md text-[#979EAA]">
+                        <button onClick={() => handleDelete(u.id, u.full_name)} className="cursor-pointer hover:bg-red-500 hover:text-white p-2 rounded-md text-[#979EAA]">
                           <Trash size={20} />
                         </button>
                       </div>
@@ -284,47 +383,115 @@ export default function UsersManagerPage() {
           </div>
         </div>
       </div>
-      {isOpenAddForm && (
+      {isOpenForm && (
         <div className="flex flex-col justify-center items-center fixed inset-0 z-50">
           <div className="w-1/2 bg-[#222732] flex justify-between items-center p-4 rounded-t-md">
             <div className="text-xl flex items-center gap-2">
               {editingUser ? (
-                    <>
-                        <SquarePen size={20} className="text-[#3B81F4]" />
-                        <h1>Cập Nhật Thông Tin</h1>
-                    </>
-                ) : (
-                    <>
-                        <Plus size={20} className="text-[#3B81F4]" />
-                        <h1>Thêm Thành Viên Mới</h1>
-                    </>
-                )}
+                <>
+                  <SquarePen size={20} className="text-[#3B81F4]" />
+                  <h1>Cập Nhật Thông Tin</h1>
+                </>
+              ) : (
+                <>
+                  <Plus size={20} className="text-[#3B81F4]" />
+                  <h1>Thêm Thành Viên Mới</h1>
+                </>
+              )}
             </div>
-              <X size={35} onClick={() => setIsOpenAddForm(false)} className="hover:bg-[#374151] cursor-pointer rounded-md p-2"/>
+            <X
+              size={35}
+              onClick={() => setIsOpenForm(false)}
+              className="hover:bg-[#374151] cursor-pointer rounded-md p-2"
+            />
           </div>
           <div className="flex flex-col bg-[#191C24] w-1/2 gap-2 p-3">
             <span>EMAIL</span>
-            <input type="text" name="" id="" className="p-2 bg-[#2C3039] rounded-md" placeholder="helo@gmail.com"/>
+            <input
+              type="text"
+              name=""
+              id=""
+              className={`p-2 bg-[#2C3039] rounded-md ${editingUser ? "cursor-not-allowed opacity-35" : ""}`}
+              placeholder="helo@gmail.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled ={!!editingUser}
+            />
             <span>HỌ VÀ TÊN</span>
-            <input type="text" name="" id="" className="p-2 bg-[#2C3039] rounded-md" placeholder="Nguyen Van A"/>
-            <span>ẢNH ĐẠI DIỆN</span>
-            <input type="file" name="" id="" className="p-2 bg-[#2C3039] rounded-md"/>
+            <input
+              type="text"
+              name=""
+              id=""
+              className="p-2 bg-[#2C3039] rounded-md"
+              placeholder="Nguyen Van A"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <div className="flex ">
+                <div 
+                  className="relative group w-28 h-28 rounded-full border-2 border-dashed border-gray-600 flex items-center justify-center cursor-pointer overflow-hidden hover:border-[#3B81F4] transition-all bg-[#2C3039]"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {previewUrl ? (
+                    <img src={previewUrl} alt="Avatar Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-gray-500 group-hover:text-[#3B81F4]">
+                      <Upload size={32} />
+                      <span className="text-xs mt-1">Upload</span>
+                    </div>
+                  )}
+                  
+                  {/* Overlay khi hover */}
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <SquarePen className="text-white" size={24} />
+                  </div>
+                </div>
+                {/* Input ẩn */}
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileChange} 
+                  className="hidden" 
+                  accept="image/*"
+                />
+              </div>
             <span>VAI TRÒ</span>
-            <select name="" id="" className="p-2 bg-[#2C3039] rounded-md"><option></option></select>
+            <select
+              name=""
+              id=""
+              className="p-2 bg-[#2C3039] rounded-md"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+            >
+              <option>Chọn vai trò</option>
+              {[
+                { id: 1, role: "user" },
+                { id: 2, role: "admin" },
+              ].map((o) => (
+                <option value={o.role} key={o.id}>
+                  {o.role}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="w-1/2 bg-[#222732] flex justify-end items-center p-4 rounded-b-md gap-4">
-            <button onClick={() => setIsOpenAddForm(false)} className="hover:bg-[#374151] cursor-pointer p-2 rounded-md text-sm">Hủy Bỏ</button>
-            <button className="hover:bg-[#2563eb] cursor-pointer p-2 rounded-md text-sm bg-blue-400 flex items-center gap-2">
+            <button
+              onClick={() => setIsOpenForm(false)}
+              className="hover:bg-[#374151] cursor-pointer p-2 rounded-md text-sm"
+            >
+              Hủy Bỏ
+            </button>
+            <button onClick={handleSave} className="hover:bg-[#2563eb] cursor-pointer p-2 rounded-md text-sm bg-blue-400 flex items-center gap-2">
               {editingUser ? (
-                    <>
-                        <Save size={16} /> Lưu Thay Đổi
-                    </>
-                 ) : (
-                    <>
-                        <Plus size={16} /> Thêm Tài Khoản
-                    </>
-                 )}
-              </button>
+                <>
+                  <Save size={16} /> Lưu Thay Đổi
+                </>
+              ) : (
+                <>
+                  <Plus size={16} /> Thêm Tài Khoản
+                </>
+              )}
+            </button>
           </div>
         </div>
       )}

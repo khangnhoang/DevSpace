@@ -90,6 +90,17 @@ export default function LessonsManagerPage() {
     setExplanation(exercise.explanation);
   };
 
+  const handleInActiveEditExerciseForm = (exercise: any) => {
+    setEditExerciseId(null);
+    setQuestion("");
+    setOptionA("");
+    setOptionB("");
+    setOptionC("");
+    setOptionD("");
+    setCorrectAnswer("");
+    setExplanation("");
+  };
+
   const handleSave = async () => {
     if (!title || !slug || !selectedCourseId || !selectedChapterId) {
       alert("Vui lòng điền đầy đủ thông tin bắt buộc.");
@@ -575,10 +586,21 @@ export default function LessonsManagerPage() {
             )}
             {activeTab === "exercise" && (
               <div className="w-full bg-[#191C24] flex flex-col items-center gap-3 p-4 rounded-xl overflow-auto">
-                <div className="w-1/2 flex flex-col gap-3">
+                <div className="flex justify-between w-1/2 items-center">
                   <p className="font-bold">
                     {editExerciseId ? "Cập nhật câu hỏi" : "Thêm câu hỏi mới"}
                   </p>
+
+                  <button
+                    onClick={handleInActiveEditExerciseForm}
+                    className={`${
+                      editExerciseId ? "display" : "hidden"
+                    } bg-blue-500 p-2 rounded-md cursor-pointer hover:bg-blue-700`}
+                  >
+                    Thêm bài tập
+                  </button>
+                </div>
+                <div className="w-1/2">
                   <input
                     className="w-full p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
                     type="text"

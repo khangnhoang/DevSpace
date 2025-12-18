@@ -620,8 +620,8 @@ export async function deleteUser(id: string) {
 }
 
 export async function uploadUserAvatar(file: File) {
-  const fileName = `avatar_${Date.now()}_${file.name.replace(/\s/g, '_')}`;
-  
+  const fileName = `avatar_${Date.now()}_${file.name.replace(/\s/g, "_")}`;
+
   const { error: uploadError } = await supabase.storage
     .from("avatars")
     .upload(fileName, file);
@@ -634,7 +634,6 @@ export async function uploadUserAvatar(file: File) {
   const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
   return data.publicUrl;
 }
-
 
 export async function editUser(
   id: string,
@@ -649,10 +648,10 @@ export async function editUser(
 
   if (newImageFile) {
     const uploadedUrl = await uploadUserAvatar(newImageFile);
-    if(uploadedUrl){
-      finalImageUrl = uploadedUrl
-    }else{
-      return {error : {message: 'Lỗi khi upload avatar user'}};
+    if (uploadedUrl) {
+      finalImageUrl = uploadedUrl;
+    } else {
+      return { error: { message: "Lỗi khi upload avatar user" } };
     }
   }
 
@@ -661,9 +660,88 @@ export async function editUser(
     .update({
       full_name: dataUser.full_name,
       avatar_url: finalImageUrl,
-      role: dataUser.role
+      role: dataUser.role,
     })
     .eq("id", id);
+
+  return { error };
+}
+
+export async function getExerciseByLessonId(lessonId: number) {
+  const { data, error } = await supabase
+    .from("exercises")
+    .select(
+      "id, lesson_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation"
+    )
+    .eq("lesson_id", lessonId)
+    .order("id", { ascending: true });
+
+  if (error) {
+    console.error("Lỗi khi lấy bài tập", error.message);
+    return [];
+  }
+
+  return data || [];
+}
+
+export interface exerciseData {
+  question: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_answer: string;
+  explanation: string | "";
+}
+
+export async function addExercise(
+  lessonId: number,
+  exerciseData: exerciseData
+) {
+  const { error } = await supabase
+    .from("exercises")
+    .insert({
+      lesson_id: lessonId,
+      question: exerciseData.question,
+      option_a: exerciseData.option_a,
+      option_b: exerciseData.option_b,
+      option_c: exerciseData.option_c,
+      option_d: exerciseData.option_d,
+      correct_answer: exerciseData.correct_answer,
+      explanation: exerciseData.explanation || "",
+    })
+    .select();
+
+  return { error };
+}
+
+export async function deleteExercise(exerciseId: number) {
+  const { error } = await supabase
+    .from("exercises")
+    .delete()
+    .eq("id", exerciseId)
+    .select();
+
+  return { error };
+}
+
+export async function editExercise(
+  exerciseId: number,
+  exerciseData: exerciseData
+) {
+  const { error } = await supabase
+    .from("exercises")
+    .update({
+      question: exerciseData.question,
+      option_a: exerciseData.option_a,
+      option_b: exerciseData.option_b,
+      option_c: exerciseData.option_c,
+      option_d: exerciseData.option_d,
+      correct_answer: exerciseData.correct_answer,
+      explanation: exerciseData.explanation || "",
+    })
+    .eq("id", exerciseId)
+    .select();
 
   return { error };
 }

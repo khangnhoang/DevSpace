@@ -20,6 +20,32 @@ import {
 import MdxEditor from "@/app/components/MdxEditor";
 
 const ITEMS_PER_PAGE = 10;
+const MOCK_COURSES = [
+  {
+    id: 1,
+    name: "Lập trình Web Fullstack Cơ bản",
+    slug: "lap-trinh-web-fullstack-co-ban",
+    description: "Khóa học nhập môn HTML, CSS và Javascript.",
+    image_url: "https://placehold.co/600x400/png?text=Fullstack",
+    created_at: "2023-10-01T08:00:00Z",
+  },
+  {
+    id: 2,
+    name: "ReactJS Chuyên sâu",
+    slug: "reactjs-chuyen-sau",
+    description: "Học React từ cơ bản đến nâng cao với Redux, Hooks.",
+    image_url: "https://placehold.co/600x400/png?text=ReactJS",
+    created_at: "2023-11-15T08:00:00Z",
+  },
+  {
+    id: 3,
+    name: "Backend với Node.js & Express",
+    slug: "backend-nodejs-express",
+    description: "Xây dựng RESTful API mạnh mẽ.",
+    image_url: "https://placehold.co/600x400/png?text=NodeJS",
+    created_at: "2023-12-01T08:00:00Z",
+  },
+];
 
 export default function LessonsManagerPage() {
   const [isOpenForm, setIsOpenForm] = useState(false);
@@ -42,6 +68,7 @@ export default function LessonsManagerPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCourse, setFilterCourse] = useState<number | 0>(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeTab, setActiveTab] = useState<"infor" | "exercise">("infor");
 
   const handleOpenAddForm = () => {
     setEditLessonId(null);
@@ -346,112 +373,251 @@ export default function LessonsManagerPage() {
 
       {isOpenForm && (
         <div className="flex fixed inset-0 z-50 items-center justify-center p-2 ">
-          <div className="w-4/5 flex h-[85vh]">
-            <div className="w-1/3 bg-[#364153] p-2 rounded-l-md flex flex-col gap-2">
-              <div className="flex flex-col gap-2">
-                <label className="font-bold">Tên bài</label>
-                <input
-                  type="text"
-                  name=""
-                  id=""
-                  className="bg-[#2C3039] border border-[#4B5563] rounded-md p-2 focus:outline-none"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label htmlFor="" className="font-bold">
-                  Khóa học
-                </label>
-                <select
-                  name=""
-                  id=""
-                  className="bg-[#2C3039] text-white p-2 rounded border border-[#4B5563] focus:outline-none focus:border-blue-500"
-                  value={selectedCourseId || ""}
-                  onChange={(e) => {
-                    setSelectedCourseId(Number(e.target.value));
-                    setSelectedChapterId(null);
-                  }}
+          <div className="flex bg-[#364153] p-3 rounded-l-md h-[85vh] overflow-y-hidden flex-col w-full">
+            <div className="flex items-center gap-2 justify-between w-full">
+              <div className="flex text-md gap-3 items-center">
+                <p className="text-xl">{editLessonId ? "Chỉnh sửa" : "Thêm"}</p>
+                <button
+                  onClick={() => setActiveTab("infor")}
+                  className={`cursor-pointer hover:opacity-80 rounded-md p-2 ${
+                    activeTab === "infor" ? "bg-blue-500" : "bg-[#222732]"
+                  }`}
                 >
-                  <option value="">Chọn khóa học</option>
-                  {courses.map((course) => (
-                    <option key={course.id} value={course.id}>
-                      {course.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-col  gap-2">
-                <label htmlFor="" className="font-bold">
-                  Chương
-                </label>
-                <select
-                  name=""
-                  id=""
-                  className="bg-[#2C3039] border border-[#4B5563] text-white p-2 rounded focus:outline-none focus:border-blue-500"
-                  value={selectedChapterId || ""}
-                  onChange={(e) => setSelectedChapterId(Number(e.target.value))}
+                  Thông tin
+                </button>
+                <button
+                  onClick={() => setActiveTab("exercise")}
+                  className={`cursor-pointer hover:opacity-80 rounded-md p-2 ${
+                    activeTab === "exercise" ? "bg-blue-500" : "bg-[#222732]"
+                  }`}
                 >
-                  <option value="">Chọn chương</option>
-                  {chapters.map((chapter) => (
-                    <option key={chapter.id} value={chapter.id}>
-                      {chapter.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-col gap-2">
-                <label htmlFor="" className="font-bold">
-                  Đường dẫn
-                </label>
-                <input
-                  type="text"
-                  name=""
-                  id=""
-                  className="bg-[#2C3039] border border-[#4B5563] rounded-md p-2 focus:outline-none"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label htmlFor="" className="font-bold">
-                  Đường dẫn video
-                </label>
-                <input
-                  type="text"
-                  name=""
-                  id=""
-                  className="bg-[#2C3039] border border-[#4B5563] rounded-md p-2 focus:outline-none"
-                  value={videoUrl}
-                  onChange={(e) => setVideoUrl(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="w-2/3 bg-[#364153] p-2 rounded-r-md flex flex-col gap-2">
-              <div className="flex justify-between items-center">
-                <p className="font-bold">Viết Content MDX </p>
-                <div className="flex items-center gap-2 ">
-                  <button
-                    onClick={handleSave}
-                    className="py-2 px-4 bg-[#222732] rounded-md hover:opacity-80 cursor-pointer"
-                  >
-                    {editLessonId ? "Lưu thay đổi" : "Thêm bài học"}
-                  </button>
-                  <X
-                    className="cursor-pointer"
-                    scale={20}
-                    onClick={() => setIsOpenForm(false)}
-                  />
-                </div>
+                  Trắc nghiệm
+                </button>
               </div>
 
-              <div className="flex-1 p-0 overflow-hidden">
-                <MdxEditor
-                  value={content}
-                  onChange={(val) => setContent(val || "")}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSave}
+                  disabled={activeTab === 'exercise'}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    activeTab === 'exercise' 
+                      ? "bg-gray-600 text-gray-400 cursor-not-allowed" 
+                      : "bg-green-600 hover:bg-green-500 text-white cursor-pointer"
+                  }`}
+                >
+                  {editLessonId ? "Lưu thay đổi" : "Thêm bài học"}
+                  
+                </button>
+                <X
+                  className="cursor-pointer"
+                  scale={20}
+                  onClick={() => setIsOpenForm(false)}
                 />
               </div>
             </div>
+            {activeTab === "infor" && (
+              <div className="w-full flex h-[85vh]">
+                <div className="flex w-full">
+                  <div className="w-1/3 flex flex-col gap-3">
+                    <div className="flex flex-col gap-2">
+                      <label className="font-bold">Tên bài</label>
+                      <input
+                        type="text"
+                        name=""
+                        id=""
+                        className="bg-[#2C3039] border border-[#4B5563] rounded-md p-2 focus:outline-none"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label htmlFor="" className="font-bold">
+                        Khóa học
+                      </label>
+                      <select
+                        name=""
+                        id=""
+                        className="bg-[#2C3039] text-white p-2 rounded border border-[#4B5563] focus:outline-none focus:border-blue-500"
+                        value={selectedCourseId || ""}
+                        onChange={(e) => {
+                          setSelectedCourseId(Number(e.target.value));
+                          setSelectedChapterId(null);
+                        }}
+                      >
+                        <option value="">Chọn khóa học</option>
+                        {courses.map((course) => (
+                          <option key={course.id} value={course.id}>
+                            {course.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex flex-col  gap-2">
+                      <label htmlFor="" className="font-bold">
+                        Chương
+                      </label>
+                      <select
+                        name=""
+                        id=""
+                        className="bg-[#2C3039] border border-[#4B5563] text-white p-2 rounded focus:outline-none focus:border-blue-500"
+                        value={selectedChapterId || ""}
+                        onChange={(e) =>
+                          setSelectedChapterId(Number(e.target.value))
+                        }
+                      >
+                        <option value="">Chọn chương</option>
+                        {chapters.map((chapter) => (
+                          <option key={chapter.id} value={chapter.id}>
+                            {chapter.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label htmlFor="" className="font-bold">
+                        Đường dẫn
+                      </label>
+                      <input
+                        type="text"
+                        name=""
+                        id=""
+                        className="bg-[#2C3039] border border-[#4B5563] rounded-md p-2 focus:outline-none"
+                        value={slug}
+                        onChange={(e) => setSlug(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label htmlFor="" className="font-bold">
+                        Đường dẫn video
+                      </label>
+                      <input
+                        type="text"
+                        name=""
+                        id=""
+                        className="bg-[#2C3039] border border-[#4B5563] rounded-md p-2 focus:outline-none"
+                        value={videoUrl}
+                        onChange={(e) => setVideoUrl(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="w-2/3 bg-[#364153] p-2 rounded-r-md flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                      <p className="font-bold">Viết Content MDX </p>
+                    </div>
+
+                    <div className="flex-1 p-0 overflow-hidden">
+                      <MdxEditor
+                        value={content}
+                        onChange={(val) => setContent(val || "")}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {activeTab === "exercise" && (
+              <div className="w-full bg-[#191C24] flex flex-col items-center gap-3 p-4 rounded-xl">
+                <div className="w-1/2 flex flex-col gap-3">
+                  <p className="font-bold">Thêm câu hỏi mới</p>
+                  <input
+                    className="w-full p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
+                    type="text"
+                    placeholder="Nhập nội dung câu hỏi?"
+                  />
+                </div>
+                <div className="grid grid-cols-2 w-1/2 gap-3">
+                  <input
+                    type="text"
+                    name=""
+                    id=""
+                    placeholder="Đáp Án A"
+                    className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    name=""
+                    id=""
+                    placeholder="Đáp Án A"
+                    className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    name=""
+                    id=""
+                    placeholder="Đáp Án A"
+                    className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    name=""
+                    id=""
+                    placeholder="Đáp Án A"
+                    className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
+                  />
+                </div>
+                <div className="flex gap-2 item-center w-1/2">
+                  <select
+                    name=""
+                    id=""
+                    className="w-1/3 p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
+                  >
+                    <option value="">Chọn đáp án đúng</option>
+                    {[{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }].map(
+                      (o) => (
+                        <option value={o.id} key={o.id}>
+                          {o.id}
+                        </option>
+                      )
+                    )}
+                  </select>
+                  <input
+                    type="text"
+                    name=""
+                    id=""
+                    placeholder="Giải thích tại sao đúng?"
+                    className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none w-2/3"
+                  />
+                </div>
+                <div className="w-1/2 flex items-center justify-center">
+                  <button className="bg-blue-500 p-2 font-bold w-full rounded-md cursor-pointer hover:bg-blue-700">
+                    Thêm câu hỏi
+                  </button>
+                </div>
+                <div className="border w-1/2 border-gray-500"></div>
+                <div className="w-1/2 flex flex-col gap-2">
+                  <h1 className="font-bold text-md">Danh sách câu hỏi(1)</h1>
+                  <div className="bg-[#2C3039] w-full p-2 rounded-md">
+                    <div className="flex flex-col gap-2 p-2 w-full">
+                      <h1 className="font-bold flex justify-between">
+                        Câu hỏi 1: Thẻ nào đại diện cho phần đầu trang{" "}
+                        <div>
+                          <Trash
+                            size={17}
+                            className="text-red-500 cursor-pointer hover:text-red-200"
+                          />
+                        </div>
+                      </h1>
+                      <div className="flex w-full justify-between">
+                        <div className="grid grid-cols-2 text-sm gap-1 text-gray-400 w-full">
+                          <p>A.footer</p>
+                          <p>A.footer</p>
+                          <p>A.footer</p>
+                          <p className="text-green-500">A.footer</p>
+                        </div>
+                      </div>
+                      <div className="border border-gray-500"></div>
+                      <div>
+                        <p className="text-[12px] text-gray-500">
+                          Giải thích: header thường dùng cho phần đầu trang hoặc
+                          đầu section.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div></div>
           </div>
         </div>
       )}

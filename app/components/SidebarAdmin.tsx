@@ -39,7 +39,7 @@ export default function SidebarAdmin() {
           <span>Quản lí bài học</span>
         </Link>
         <Link
-          href="#"
+          href="/admin/users"
           className="flex gap-2 items-center py-2 px-4 rounded-r-full hover:bg-gray-400"
         >
           <div className="flex items-center rounded-full justify-center p-2 bg-[#22242E]">
@@ -57,7 +57,7 @@ export default function SidebarAdmin() {
           <span>Biểu đồ chi tiết</span>
         </Link>
         <Link
-          href="#"
+          href="/admin/chapters"
           className="flex gap-2 items-center py-2 px-4 rounded-r-full hover:bg-gray-400"
         >
           <div className="flex items-center rounded-full justify-center p-2 bg-[#22242E]">

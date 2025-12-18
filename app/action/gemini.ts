@@ -1,16 +1,19 @@
 "use server";
 
-import {GoogleGenAI} from '@google/genai';
+import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-export async function generateQuizFromContent(content: string, quantity: number = 1){
-    try{
-        if(!content || content.length < 50){
-            return {error: 'Nội dung quá ngắn'}
-        }
+export async function generateQuizFromContent(
+  content: string,
+  quantity: number = 1
+) {
+  try {
+    if (!content || content.length < 50) {
+      return { error: "Nội dung quá ngắn" };
+    }
 
-        const promt = `
+    const promt = `
         Bạn là trợ lý AI tạo câu hỏi trắc nghiệm.
       Dựa vào nội dung:
       ---
@@ -34,6 +37,22 @@ export async function generateQuizFromContent(content: string, quantity: number 
       ]
         `;
 
-        const response = await ai.models.generateContent
-    }
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash-exp",
+      contents: promt,
+      config: { responseMimeType: "application/json" },
+    });
+
+    const text = response.text;
+    if (!text) return { error: "Lỗi AI" };
+
+    const cleanedText = text
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
+    return { data: JSON.parse(cleanedText) };
+  } catch (error: any) {
+    console.error("Lỗi ", error);
+    return { error: error.message };
+  }
 }

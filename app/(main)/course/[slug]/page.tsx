@@ -48,7 +48,7 @@ export default function DetailPage(){
                 <div className='flex flex-col gap-3 w-full justify-center items-center'>
                     <img src="https://files.fullstack.edu.vn/f8-prod/courses/1.png" alt="" className='w-90 rounded-xl'/>
                     <h1 className='text-3xl text-green-400'>MIỄN PHÍ</h1>
-                    <button className='p-2 bg-blue-500 rounded-md'>ĐĂNG KÝ HỌC</button>
+                    <button className='p-2 bg-blue-500 rounded-md cursor-pointer'>ĐĂNG KÝ HỌC</button>
                 </div>
             </div>
         </div>

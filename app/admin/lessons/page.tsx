@@ -16,36 +16,14 @@ import {
   addLesson,
   deleteLesson,
   editLesson,
+  getExerciseByLessonId,
+  addExercise,
+  deleteExercise,
+  editExercise,
 } from "@/lib/supabase";
 import MdxEditor from "@/app/components/MdxEditor";
 
 const ITEMS_PER_PAGE = 10;
-const MOCK_COURSES = [
-  {
-    id: 1,
-    name: "Lập trình Web Fullstack Cơ bản",
-    slug: "lap-trinh-web-fullstack-co-ban",
-    description: "Khóa học nhập môn HTML, CSS và Javascript.",
-    image_url: "https://placehold.co/600x400/png?text=Fullstack",
-    created_at: "2023-10-01T08:00:00Z",
-  },
-  {
-    id: 2,
-    name: "ReactJS Chuyên sâu",
-    slug: "reactjs-chuyen-sau",
-    description: "Học React từ cơ bản đến nâng cao với Redux, Hooks.",
-    image_url: "https://placehold.co/600x400/png?text=ReactJS",
-    created_at: "2023-11-15T08:00:00Z",
-  },
-  {
-    id: 3,
-    name: "Backend với Node.js & Express",
-    slug: "backend-nodejs-express",
-    description: "Xây dựng RESTful API mạnh mẽ.",
-    image_url: "https://placehold.co/600x400/png?text=NodeJS",
-    created_at: "2023-12-01T08:00:00Z",
-  },
-];
 
 export default function LessonsManagerPage() {
   const [isOpenForm, setIsOpenForm] = useState(false);
@@ -58,12 +36,21 @@ export default function LessonsManagerPage() {
   const [selectedChapterId, setSelectedChapterId] = useState<number | null>(
     null
   );
+  const [editExerciseId, setEditExerciseId] = useState<number | null>(null);
+  const [question, setQuestion] = useState("");
+  const [optionA, setOptionA] = useState("");
+  const [optionB, setOptionB] = useState("");
+  const [optionC, setOptionC] = useState("");
+  const [optionD, setOptionD] = useState("");
+  const [correctAnswer, setCorrectAnswer] = useState("");
+  const [explanation, setExplanation] = useState("");
   const [courses, setCourses] = useState<{ id: number; name: string }[]>([]);
   const [chapters, setChapters] = useState<{ id: number; title: string }[]>([]);
   const [content, setContent] = useState<string>(
     "**Viết nội dung bài học ở đây...**"
   );
   const [lessons, setLessons] = useState<Array<any>>([]);
+  const [exercise, setExercise] = useState<Array<any>>([]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCourse, setFilterCourse] = useState<number | 0>(0);
@@ -90,6 +77,17 @@ export default function LessonsManagerPage() {
     setSelectedChapterId(lesson.chapter_id);
     setContent(lesson.content || "");
     setIsOpenForm(true);
+  };
+
+  const handleOpenEditExerciseForm = (exercise: any) => {
+    setEditExerciseId(exercise.id);
+    setQuestion(exercise.question);
+    setOptionA(exercise.option_a);
+    setOptionB(exercise.option_b);
+    setOptionC(exercise.option_c);
+    setOptionD(exercise.option_d);
+    setCorrectAnswer(exercise.correct_answer);
+    setExplanation(exercise.explanation);
   };
 
   const handleSave = async () => {
@@ -137,6 +135,59 @@ export default function LessonsManagerPage() {
     }
   };
 
+  const handleExerciseSave = async () => {
+    if (
+      !question ||
+      !optionA ||
+      !optionB ||
+      !optionC ||
+      !optionD ||
+      !correctAnswer
+    ) {
+      alert("Bạn chưa điền đầy đủ thông tin bài tập");
+      return;
+    }
+
+    const exercisePayload = {
+      question,
+      option_a: optionA,
+      option_b: optionB,
+      option_c: optionC,
+      option_d: optionD,
+      correct_answer: correctAnswer,
+      explanation,
+    };
+
+    let result;
+
+    if (editExerciseId) {
+      result = await editExercise(editExerciseId, exercisePayload);
+    } else {
+      result = await addExercise(editLessonId, exercisePayload);
+    }
+
+    if (result.error) {
+      alert("Đã có lỗi xảy ra: " + result.error.message);
+    } else {
+      alert(editExerciseId ? "Cập nhật thành công" : "Thêm thành công");
+    }
+  };
+
+  const handleDeleteExercise = async (exercise: any) => {
+    const confirmDelete = confirm(
+      `Bạn có chắc chắn muốn xóa câu hỏi "${exercise.question}" không?`
+    );
+    if (!confirmDelete) return;
+
+    const result = await deleteExercise(exercise.id);
+
+    if (result.error) {
+      alert("Đã có lỗi xảy ra: " + result.error.message);
+    } else {
+      alert("Xóa câu hỏi thành công!");
+    }
+  };
+
   useEffect(() => {
     const fetchCourses = async () => {
       const data = await getCoursesForSelect();
@@ -165,6 +216,14 @@ export default function LessonsManagerPage() {
     };
     fetchLessonsData();
   }, [refreshKey]);
+
+  useEffect(() => {
+    const fetchExerciseByLessonId = async () => {
+      const data = await getExerciseByLessonId(editLessonId);
+      setExercise(data);
+    };
+    fetchExerciseByLessonId();
+  }, [editLessonId]);
 
   const filteredLessons = useMemo(() => {
     return lessons.filter((lesson) => {
@@ -373,7 +432,7 @@ export default function LessonsManagerPage() {
 
       {isOpenForm && (
         <div className="flex fixed inset-0 z-50 items-center justify-center p-2 ">
-          <div className="flex bg-[#364153] p-3 rounded-l-md h-[85vh] overflow-y-hidden flex-col w-full">
+          <div className="flex bg-[#364153] p-3 rounded-l-md h-[85vh] overflow-y-hidden flex-col w-full gap-3">
             <div className="flex items-center gap-2 justify-between w-full">
               <div className="flex text-md gap-3 items-center">
                 <p className="text-xl">{editLessonId ? "Chỉnh sửa" : "Thêm"}</p>
@@ -398,15 +457,14 @@ export default function LessonsManagerPage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleSave}
-                  disabled={activeTab === 'exercise'}
+                  disabled={activeTab === "exercise"}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                    activeTab === 'exercise' 
-                      ? "bg-gray-600 text-gray-400 cursor-not-allowed" 
+                    activeTab === "exercise"
+                      ? "bg-gray-600 text-gray-400 cursor-not-allowed"
                       : "bg-green-600 hover:bg-green-500 text-white cursor-pointer"
                   }`}
                 >
                   {editLessonId ? "Lưu thay đổi" : "Thêm bài học"}
-                  
                 </button>
                 <X
                   className="cursor-pointer"
@@ -516,13 +574,17 @@ export default function LessonsManagerPage() {
               </div>
             )}
             {activeTab === "exercise" && (
-              <div className="w-full bg-[#191C24] flex flex-col items-center gap-3 p-4 rounded-xl">
+              <div className="w-full bg-[#191C24] flex flex-col items-center gap-3 p-4 rounded-xl overflow-auto">
                 <div className="w-1/2 flex flex-col gap-3">
-                  <p className="font-bold">Thêm câu hỏi mới</p>
+                  <p className="font-bold">
+                    {editExerciseId ? "Cập nhật câu hỏi" : "Thêm câu hỏi mới"}
+                  </p>
                   <input
                     className="w-full p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
                     type="text"
                     placeholder="Nhập nội dung câu hỏi?"
+                    value={question}
+                    onChange={(e) => setQuestion(e.target.value)}
                   />
                 </div>
                 <div className="grid grid-cols-2 w-1/2 gap-3">
@@ -532,27 +594,35 @@ export default function LessonsManagerPage() {
                     id=""
                     placeholder="Đáp Án A"
                     className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
+                    value={optionA}
+                    onChange={(e) => setOptionA(e.target.value)}
                   />
                   <input
                     type="text"
                     name=""
                     id=""
-                    placeholder="Đáp Án A"
+                    placeholder="Đáp Án B"
                     className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
+                    value={optionB}
+                    onChange={(e) => setOptionB(e.target.value)}
                   />
                   <input
                     type="text"
                     name=""
                     id=""
-                    placeholder="Đáp Án A"
+                    placeholder="Đáp Án C"
                     className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
+                    value={optionC}
+                    onChange={(e) => setOptionC(e.target.value)}
                   />
                   <input
                     type="text"
                     name=""
                     id=""
-                    placeholder="Đáp Án A"
+                    placeholder="Đáp Án D"
                     className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
+                    value={optionD}
+                    onChange={(e) => setOptionD(e.target.value)}
                   />
                 </div>
                 <div className="flex gap-2 item-center w-1/2">
@@ -560,6 +630,8 @@ export default function LessonsManagerPage() {
                     name=""
                     id=""
                     className="w-1/3 p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
+                    value={correctAnswer}
+                    onChange={(e) => setCorrectAnswer(e.target.value)}
                   >
                     <option value="">Chọn đáp án đúng</option>
                     {[{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }].map(
@@ -576,48 +648,91 @@ export default function LessonsManagerPage() {
                     id=""
                     placeholder="Giải thích tại sao đúng?"
                     className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none w-2/3"
+                    value={explanation || ""}
+                    onChange={(e) => setExplanation(e.target.value)}
                   />
                 </div>
                 <div className="w-1/2 flex items-center justify-center">
-                  <button className="bg-blue-500 p-2 font-bold w-full rounded-md cursor-pointer hover:bg-blue-700">
-                    Thêm câu hỏi
+                  <button
+                    onClick={handleExerciseSave}
+                    className="bg-blue-500 p-2 font-bold w-full rounded-md cursor-pointer hover:bg-blue-700"
+                  >
+                    {editExerciseId ? "Cập nhật câu hỏi" : "Thêm câu hỏi"}
                   </button>
                 </div>
                 <div className="border w-1/2 border-gray-500"></div>
                 <div className="w-1/2 flex flex-col gap-2">
-                  <h1 className="font-bold text-md">Danh sách câu hỏi(1)</h1>
-                  <div className="bg-[#2C3039] w-full p-2 rounded-md">
-                    <div className="flex flex-col gap-2 p-2 w-full">
-                      <h1 className="font-bold flex justify-between">
-                        Câu hỏi 1: Thẻ nào đại diện cho phần đầu trang{" "}
+                  <h1 className="font-bold text-md">
+                    Đã tải được {exercise.length} câu hỏi:{" "}
+                  </h1>
+                  {exercise.map((e, index) => (
+                    <div
+                      className="bg-[#2C3039] w-full p-2 rounded-md overflow-hidden"
+                      key={e.id}
+                    >
+                      <div className="flex flex-col gap-2 p-2 w-full">
+                        <h1 className="font-bold flex justify-between">
+                          Câu hỏi số {index + 1}: {e.question}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleOpenEditExerciseForm(e)}
+                              className="text-blue-500 cursor-pointer hover:bg-blue-300 p-1 rounded-md"
+                            >
+                              <SquarePen size={17}></SquarePen>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteExercise(e)}
+                              className="text-red-500 cursor-pointer hover:bg-red-200 p-1 rounded-md"
+                            >
+                              <Trash size={17} />
+                            </button>
+                          </div>
+                        </h1>
+                        <div className="flex w-full justify-between">
+                          <div className="grid grid-cols-2 text-sm gap-1 text-gray-400 w-full">
+                            <p
+                              className={`${
+                                e.correct_answer === "a" ? "text-blue-400" : ""
+                              }`}
+                            >
+                              {e.option_a}
+                            </p>
+                            <p
+                              className={`${
+                                e.correct_answer === "b" ? "text-blue-400" : ""
+                              }`}
+                            >
+                              {e.option_b}
+                            </p>
+                            <p
+                              className={`${
+                                e.correct_answer === "c" ? "text-blue-400" : ""
+                              }`}
+                            >
+                              {e.option_c}
+                            </p>
+                            <p
+                              className={`${
+                                e.correct_answer === "d" ? "text-blue-400" : ""
+                              }`}
+                            >
+                              {e.option_d}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="border border-gray-500"></div>
                         <div>
-                          <Trash
-                            size={17}
-                            className="text-red-500 cursor-pointer hover:text-red-200"
-                          />
+                          <p className="text-[12px] text-gray-500">
+                            Giải thích: header thường dùng cho phần đầu trang
+                            hoặc đầu section.
+                          </p>
                         </div>
-                      </h1>
-                      <div className="flex w-full justify-between">
-                        <div className="grid grid-cols-2 text-sm gap-1 text-gray-400 w-full">
-                          <p>A.footer</p>
-                          <p>A.footer</p>
-                          <p>A.footer</p>
-                          <p className="text-green-500">A.footer</p>
-                        </div>
-                      </div>
-                      <div className="border border-gray-500"></div>
-                      <div>
-                        <p className="text-[12px] text-gray-500">
-                          Giải thích: header thường dùng cho phần đầu trang hoặc
-                          đầu section.
-                        </p>
                       </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             )}
-            <div></div>
           </div>
         </div>
       )}

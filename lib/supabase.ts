@@ -667,7 +667,11 @@ export async function editUser(
   return { error };
 }
 
-export async function getExerciseByLessonId(lessonId: number) {
+export async function getExerciseByLessonId(lessonId: number | null) {
+  if(!lessonId){
+    return [];
+  }
+
   const { data, error } = await supabase
     .from("exercises")
     .select(
@@ -695,9 +699,21 @@ export interface exerciseData {
 }
 
 export async function addExercise(
-  lessonId: number,
+  lessonId: number | null,
   exerciseData: exerciseData
 ) {
+  if (!lessonId){
+    console.error('Chưa có mã bài học, không thể lấy bài tập');
+    return { 
+      error: { 
+        message: "Chưa có mã bài học", 
+        details: "", 
+        hint: "", 
+        code: "MISSING_LESSON_ID" 
+      } 
+    };
+  }
+
   const { error } = await supabase
     .from("exercises")
     .insert({

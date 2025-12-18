@@ -398,9 +398,15 @@ export default function LessonsManagerPage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleSave}
-                  className="py-2 px-4 bg-[#222732] rounded-md hover:opacity-80 cursor-pointer"
+                  disabled={activeTab === 'exercise'}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    activeTab === 'exercise' 
+                      ? "bg-gray-600 text-gray-400 cursor-not-allowed" 
+                      : "bg-green-600 hover:bg-green-500 text-white cursor-pointer"
+                  }`}
                 >
                   {editLessonId ? "Lưu thay đổi" : "Thêm bài học"}
+                  
                 </button>
                 <X
                   className="cursor-pointer"
@@ -510,7 +516,7 @@ export default function LessonsManagerPage() {
               </div>
             )}
             {activeTab === "exercise" && (
-              <div className="w-full bg-[#191C24] flex flex-col items-center gap-3 p-4">
+              <div className="w-full bg-[#191C24] flex flex-col items-center gap-3 p-4 rounded-xl">
                 <div className="w-1/2 flex flex-col gap-3">
                   <p className="font-bold">Thêm câu hỏi mới</p>
                   <input

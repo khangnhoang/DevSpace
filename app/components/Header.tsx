@@ -67,17 +67,19 @@ export default function Header(){
     };
 
     return (
-        <header className="flex gap-4 bg-white text-black h-16 items-center pr-4 shadow-xl">
+        <header className="relative flex bg-white text-black h-16 items-center md:pr-4 shadow-xl px-2 md:px-4 z-50 min-w-full">
             {/* --- PHẦN GIAO DIỆN CŨ CỦA BẠN (GIỮ NGUYÊN) --- */}
             <div className="h-full flex items-center">
-                <Link href="/" className="p-4 text-blue-500 text-lg font-bold">W3schools Clone</Link>
-                <Link href="/learn/html-css/html-intro" className="hover:bg-blue-500 hover:text-white cursor-pointer p-4 h-full flex items-center transition-colors">HTML & CSS</Link>
-                <Link href="/quiz/html-intro" className="hover:bg-blue-500 hover:text-white cursor-pointer p-4 h-full flex items-center transition-colors">BÀI TẬP</Link>
-                <Link href="/try_it" className="hover:bg-blue-500 hover:text-white cursor-pointer p-4 h-full flex items-center transition-colors">TRY IT YOURSELF</Link>
+                <Link href="/" className="p-2 md:p-4 text-blue-500 text-base md:text-lg font-bold whitespace-nowrap">W3schools Clone</Link>
+                <div className='hidden md:flex h-full items-center'>
+                    <Link href="/learn/html-css/html-intro" className="hover:bg-blue-500 hover:text-white cursor-pointer px-3 lg:px-4 h-full flex items-center transition-colors text-sm lg:text-base whitespace-nowrap">HTML & CSS</Link>
+                    <Link href="/quiz/html-intro" className="hover:bg-blue-500 hover:text-white cursor-pointer px-3 lg:px-4 h-full flex items-center transition-colors text-sm lg:text-base whitespace-nowrap">BÀI TẬP</Link>
+                    <Link href="/try_it" className="hover:bg-blue-500 hover:text-white cursor-pointer px-3 lg:px-4 h-full flex items-center transition-colors text-sm lg:text-base whitespace-nowrap">TRY IT YOURSELF</Link>
+                </div>
             </div>
 
             {/* --- SEARCH BAR (CHÈN VÀO GIỮA) --- */}
-            <div ref={searchRef} className="flex-1 max-w-md mx-auto relative">
+            <div ref={searchRef} className="flex-1 min-w-0 md:max-w-md mx-2 relative max-w-xs">
                 <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <Search className="h-4 w-4 text-gray-400 group-focus-within:text-blue-500" />
@@ -99,7 +101,7 @@ export default function Header(){
 
                 {/* Dropdown Kết quả */}
                 {showDropdown && results.length > 0 && (
-                    <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-2xl overflow-hidden z-50">
+                    <div className="absolute top-full mt-2 w-full min-w-[200px] right-0 md:left-0 bg-white border border-gray-200 rounded-lg shadow-2xl overflow-hidden z-50 max-h-[60vh]">
                         {results.map((lesson) => (
                             <Link
                                 key={lesson.id}
@@ -129,16 +131,16 @@ export default function Header(){
             </div>
 
             {/* --- PHẦN AUTH MỚI THÊM VÀO (Tự đẩy sang phải nhờ ml-auto) --- */}
-            <div className="ml-auto">
+            <div className="ml-auto text-xs md:text-md lg:text-lg xl:text-lg">
                 {user ? (
                     // Trạng thái ĐÃ ĐĂNG NHẬP
-                    <div className="flex gap-3 items-center">
-                        <Link href={`/profile`} className="text-lg font-medium cursor-pointer"> {"xin chào "}
+                    <div className="flex gap-1 items-center">
+                        <Link href={`/profile`} className="cursor-pointer"> {"xin chào "}
                             {user.email?.split('@')[0]} {/* Hiện tên email */}
                         </Link>
                         <button 
                             onClick={handleLogout}
-                            className="text-lg text-blue-500 hover:opacity-70 font-bold cursor-pointer"
+                            className="text-blue-500 hover:opacity-70 font-bold cursor-pointer"
                         >
                             Đăng xuất
                         </button>
@@ -147,7 +149,7 @@ export default function Header(){
                     // Trạng thái CHƯA ĐĂNG NHẬP
                     <Link 
                         href="/login" 
-                        className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors font-bold text-lg"
+                        className="px-3 py-1.5 lg:px-4 lg:py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors font-bold lg:text-lg whitespace-nowrap"
                     >
                         Đăng nhập
                     </Link>

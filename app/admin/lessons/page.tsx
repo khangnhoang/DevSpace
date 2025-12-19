@@ -8,6 +8,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  ChevronDown,
+  Sparkles,
+  Bolt,
 } from "lucide-react";
 import {
   getCoursesForSelect,
@@ -22,6 +25,7 @@ import {
   editExercise,
 } from "@/lib/supabase";
 import MdxEditor from "@/app/components/MdxEditor";
+import { generateQuizFromContent } from "@/app/action/gemini";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -56,6 +60,9 @@ export default function LessonsManagerPage() {
   const [filterCourse, setFilterCourse] = useState<number | 0>(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState<"infor" | "exercise">("infor");
+
+  const [showAiMenu, setShowAiMenu] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const handleOpenAddForm = () => {
     setEditLessonId(null);
@@ -196,6 +203,69 @@ export default function LessonsManagerPage() {
       alert("Đã có lỗi xảy ra: " + result.error.message);
     } else {
       alert("Xóa câu hỏi thành công!");
+    }
+  };
+
+  const handleAiFillForm = async () => {
+    if (!content) return alert("Chưa có nội dung bài học");
+    setIsGenerating(true);
+    setShowAiMenu(false);
+
+    const res = await generateQuizFromContent(content, 1);
+
+    setIsGenerating(false);
+    if (res.error) return alert(res.error.message);
+
+    if (res.data && res.data.length > 0) {
+      const q = res.data[0];
+      setQuestion(q.question);
+      setOptionA(q.option_a);
+      setOptionB(q.option_b);
+      setOptionC(q.option_c);
+      setOptionD(q.option_d);
+      setCorrectAnswer(q.correct_answer);
+      setExplanation(q.explanation);
+    }
+  };
+
+  const handleAiBulkCreate = async () => {
+    if (!editLessonId) return alert("Chưa lưu bài học");
+    if (!content) return alert("Nội dung trống");
+
+    const confirmBulk = confirm("AI sẽ tự động lưu 3 câu hỏi vào bài này");
+    if (!confirmBulk) return;
+
+    setIsGenerating(true);
+    setShowAiMenu(false);
+
+    const res = await generateQuizFromContent(content, 3);
+
+    if (res.error) {
+      setIsGenerating(false);
+      return alert(res.error.message);
+    }
+
+    try {
+      await Promise.all(
+        res.data.map((q) => {
+          addExercise(editLessonId, {
+            question: q.question,
+            option_a: q.option_a,
+            option_b: q.option_b,
+            option_c: q.option_c,
+            option_d: q.option_d,
+            correct_answer: q.correct_answer,
+            explanation: q.explanation,
+          });
+        })
+      );
+
+      alert("Đã thêm thành công 3 câu hỏi!");
+      setRefreshKey((prev) => prev + 1);
+    } catch (e) {
+      alert("Có lỗi khi lưu vào db" + e);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -752,6 +822,62 @@ export default function LessonsManagerPage() {
                       </div>
                     </div>
                   ))}
+                  <div className="flex flex-row-reverse relative">
+                    <button
+                      onClick={() => setShowAiMenu(!showAiMenu)}
+                      disabled={isGenerating}
+                      className="cursor-pointer bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-all shadow-lg shadow-purple-500/30"
+                    >
+                      {isGenerating ? (
+                        <span className="animate-pulse">Đang AI...</span>
+                      ) : (
+                        <>
+                          <Sparkles size={18} />
+                          AI Magic
+                          <ChevronDown size={16} />
+                        </>
+                      )}
+                    </button>
+
+                    {showAiMenu && !isGenerating && (
+                      <div className="absolute bottom-full left-auto w-56 bg-[#2C3039] border border-gray-600 rounded-lg shadow-xl overflow-hidden z-50 flex flex-col items-center">
+                        <button
+                          onClick={handleAiFillForm}
+                          className="w-full text-left px-4 py-3 hover:bg-[#364153] flex items-center gap-2 border-b border-gray-700 transition-colors text-sm cursor-pointer"
+                        >
+                          <Sparkles size={16} className="text-yellow-400" />
+                          <div>
+                            <p className="font-semibold text-white">
+                              Điền vào form
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              Tạo 1 câu để chỉnh sửa
+                            </p>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={handleAiBulkCreate}
+                          className="w-full text-left px-4 py-3 hover:bg-[#364153] flex items-center gap-2 transition-colors text-sm group cursor-pointer"
+                        >
+                          <Bolt
+                            size={16}
+                            className="text-blue-400 group-hover:animate-pulse"
+                          />
+                          <div>
+                            <p className="font-semibold text-white">
+                              Tự động thêm 3 câu
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              Lưu thẳng vào danh sách
+                            </p>
+                          </div>
+                        </button>
+
+                        
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

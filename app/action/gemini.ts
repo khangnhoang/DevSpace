@@ -1,29 +1,34 @@
+// action/ai.ts
 "use server";
 
-import { GoogleGenAI } from "@google/genai";
+/* * LƯU Ý: Dùng thư viện @google/generative-ai (Bản ổn định)
+ * Thay vì @google/genai (Bản beta hay lỗi)
+ */
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-export async function generateQuizFromContent(
-  content: string,
-  quantity: number = 1
-) {
+export async function generateQuizFromContent(content: string, quantity: number = 1) {
   try {
     if (!content || content.length < 50) {
-      return { error: "Nội dung quá ngắn" };
+      return { error: "Nội dung quá ngắn (cần > 50 ký tự)." };
     }
 
-    const promt = `
-        Bạn là trợ lý AI tạo câu hỏi trắc nghiệm.
+    // Sử dụng model 1.5 Flash - Bản quốc dân, miễn phí và ổn định nhất hiện nay
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `
+      Bạn là trợ lý AI tạo câu hỏi trắc nghiệm.
       Dựa vào nội dung:
       ---
       ${content}
       ---
       Hãy tạo đúng ${quantity} câu hỏi trắc nghiệm tiếng Việt.
       
-      YÊU CẦU:
-      1. Trả về JSON thuần.
-      2. Cấu trúc mảng JSON:
+      YÊU CẦU QUAN TRỌNG:
+      1. Trả về format JSON thuần (Raw JSON string).
+      2. KHÔNG được bọc trong markdown (không dùng \`\`\`json).
+      3. Cấu trúc mảng JSON bắt buộc:
       [
         {
           "question": "Câu hỏi?",
@@ -35,24 +40,21 @@ export async function generateQuizFromContent(
           "explanation": "Giải thích ngắn gọn"
         }
       ]
-        `;
+    `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-exp",
-      contents: promt,
-      config: { responseMimeType: "application/json" },
-    });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
 
-    const text = response.text;
-    if (!text) return { error: "Lỗi AI" };
+    if (!text) return { error: "AI không trả về kết quả" };
 
-    const cleanedText = text
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
+    // Vệ sinh chuỗi JSON (đề phòng AI vẫn quen thói thêm markdown)
+    const cleanedText = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    
     return { data: JSON.parse(cleanedText) };
+
   } catch (error: any) {
-    console.error("Lỗi ", error);
-    return { error: error.message };
+    console.error("Lỗi AI:", error);
+    return { error: `Lỗi: ${error.message}` };
   }
 }

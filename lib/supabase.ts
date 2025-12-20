@@ -668,7 +668,7 @@ export async function editUser(
 }
 
 export async function getExerciseByLessonId(lessonId: number | null) {
-  if(!lessonId){
+  if (!lessonId) {
     return [];
   }
 
@@ -702,15 +702,15 @@ export async function addExercise(
   lessonId: number | null,
   exerciseData: exerciseData
 ) {
-  if (!lessonId){
-    console.error('Chưa có mã bài học, không thể lấy bài tập');
-    return { 
-      error: { 
-        message: "Chưa có mã bài học", 
-        details: "", 
-        hint: "", 
-        code: "MISSING_LESSON_ID" 
-      } 
+  if (!lessonId) {
+    console.error("Chưa có mã bài học, không thể lấy bài tập");
+    return {
+      error: {
+        message: "Chưa có mã bài học",
+        details: "",
+        hint: "",
+        code: "MISSING_LESSON_ID",
+      },
     };
   }
 
@@ -760,4 +760,130 @@ export async function editExercise(
     .select();
 
   return { error };
+}
+
+export interface LessonItem {
+  id: number;
+  title: string;
+  slug: string;
+  duration_display: string;
+  video_url: string | null;
+  has_exercise: boolean;
+}
+
+export interface ChapterItem {
+  id: number;
+  title: string;
+  lessons: LessonItem[];
+}
+
+export interface CourseDetail {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  image_url: string;
+  price_text: string;
+  stats: {
+    level: string;
+    lesson_count: number;
+    duration: string;
+    accessibility: string;
+  };
+  learning_outcomes: string[];
+  chapters: ChapterItem[];
+}
+
+function estimateTime(content: string | null, hasVideo: boolean): number {
+  if (hasVideo) return 600;
+  if (!content) return 60;
+
+  const words = content
+    .replace(/<[^>]*>?/gm, "")
+    .trim()
+    .split(/\s+/).length;
+  return Math.max(60, Math.ceil((words / 200) * 60));
+}
+
+export async function getFullCourseDetail(
+  slug: string
+): Promise<CourseDetail | null> {
+  const { data: course } = await supabase
+    .from("courses")
+    .select("id, name, slug, description, image_url, price")
+    .eq("slug", slug)
+    .single();
+
+  if (!course) {
+    console.error("Lỗi khi lấy khóa học");
+    return null;
+  }
+
+  const { data: chapter } = await supabase
+    .from("chapters")
+    .select(
+      "id, title, order_index, lessons (id, title, slug, video_url, content, exercises (count))"
+    )
+    .eq("course_id", course.id)
+    .order("order_index", { ascending: true })
+    .order("id", { referencedTable: "lessons", ascending: true });
+
+  let totalSeconds = 0;
+  let lessonCount = 0;
+
+  const formattedChapters = (chapter || []).map((ch: any) => ({
+    id: ch.id,
+    title: ch.title,
+    lessons: (ch.lessons || []).map((l: any) => {
+      lessonCount++;
+      const hasVideo = !!l.video_url;
+      const duration = estimateTime(l.content, hasVideo);
+      totalSeconds += duration;
+
+      const hasExercise = l.exercises?.[0]?.count > 0;
+
+      return {
+        id: l.id,
+        title: l.title,
+        slug: l.slug,
+        video_url: l.video_url,
+        type: hasVideo ? "video" : "reading",
+        duration_display: `${Math.floor(duration / 60)
+          .toString()
+          .padStart(2, "0")}:${(duration % 60).toString().padStart(2, "0")}`,
+        has_exercise: hasExercise,
+      };
+    }),
+  }));
+
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+  return {
+    id: course.id,
+    name: course.name,
+    slug: course.slug,
+    description: course.description || "",
+    image_url: course.image_url || "",
+    price_text:
+      course.price === 0
+        ? "Miễn phí"
+        : new Intl.NumberFormat("vi-VN", {
+            style: "currency",
+            currency: "VND",
+          }).format(course.price),
+    stats: {
+      level: "cơ bản",
+      lesson_count: lessonCount,
+      duration: hours > 0 ? `${hours} giờ ${minutes} phút` : `${minutes} phút`,
+      accessibility: "Học mọi lúc, mọi nơi",
+    },
+    learning_outcomes: [
+      "Kiến thức nền tảng",
+      "Tư duy logic",
+      "Thực hành dự án",
+      "Giải quyết vấn đề",
+    ],
+    chapters: formattedChapters,
+  };
 }

@@ -214,7 +214,7 @@ export default function LessonsManagerPage() {
     const res = await generateQuizFromContent(content, 1);
 
     setIsGenerating(false);
-    if (res.error) return alert(res.error.message);
+    if (res.error) return alert(res.error);
 
     if (res.data && res.data.length > 0) {
       const q = res.data[0];
@@ -242,7 +242,7 @@ export default function LessonsManagerPage() {
 
     if (res.error) {
       setIsGenerating(false);
-      return alert(res.error.message);
+      return alert(res.error);
     }
 
     try {

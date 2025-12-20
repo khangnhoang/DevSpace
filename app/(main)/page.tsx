@@ -18,7 +18,7 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center text-xl">
+      <div className="h-screen flex justify-center text-xl">
         Đang tải khóa học...
       </div>
     );
@@ -26,26 +26,31 @@ export default function Home() {
 
   return (
     <div className="bg-white min-h-screen w-full p-2 text-black flex flex-col gap-4 overflow-x-hidden">
-      
       <div className="w-full bg-white flex justify-center px-2 md:px-5">
-      <div className="w-full h-auto md:h-64 lg:h-40 bg-[#1D2731] flex flex-col md:flex-row items-center justify-between p-5 rounded-2xl md:gap-4 transition-all duration-300">
-        <div className="flex flex-col w-full text-white md:w-2/3 justify-center gap-3 text-center md:text-left">
-          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold leading-tight">Mở bán khóa học HTML & CSS Pro</h1>
-          <span className="text-sm md:text-base">
-            Từ ngày 02/12/2025 Khóa học sẽ có giá trị 1.000k. Khi khóa học hoàn
-            thiện sẽ trở về giá gốc.
-          </span>
-          <button className="border border-white/30 w-full md:w-fit px-6 hover:bg-blue-500 hover:border-transparent rounded-full cursor-pointer py-2 mt-2 md:mt-0 mx-auto md:mx-0 transition-all duration-200">HỌC THỬ MIỄN PHÍ</button>
+        <div className="w-full h-auto md:h-64 lg:h-40 bg-[#1D2731] flex flex-col md:flex-row items-center justify-between p-5 rounded-2xl md:gap-4 transition-all duration-300">
+          <div className="flex flex-col w-full text-white md:w-2/3 justify-center gap-3 text-center md:text-left">
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold leading-tight">
+              Mở bán khóa học HTML & CSS Pro
+            </h1>
+            <span className="text-sm md:text-base">
+              Từ ngày 02/12/2025 Khóa học sẽ có giá trị 1.000k. Khi khóa học
+              hoàn thiện sẽ trở về giá gốc.
+            </span>
+            <button className="border border-white/30 w-full md:w-fit px-6 hover:bg-blue-500 hover:border-transparent rounded-full cursor-pointer py-2 mt-2 md:mt-0 mx-auto md:mx-0 transition-all duration-200">
+              HỌC THỬ MIỄN PHÍ
+            </button>
+          </div>
+          <img
+            src="https://khoahocsinhvien.com/wp-content/uploads/2023/05/Khoa-hoc-HTML-CSS-Master-from-Zero-to-Hero.jpg"
+            alt=""
+            className="w-full md:w-1/3 lg:w-auto h-48 md:h-full object-cover rounded-xl"
+          />
         </div>
-        <img
-          src="https://khoahocsinhvien.com/wp-content/uploads/2023/05/Khoa-hoc-HTML-CSS-Master-from-Zero-to-Hero.jpg"
-          alt=""
-          className="w-full md:w-1/3 lg:w-auto h-48 md:h-full object-cover rounded-xl"
-        />
-      </div>
       </div>
 
-      <h1 className="text-2xl md:text-4xl px-2 md:px-5 font-bold mt-4">Danh sách khóa học:</h1>
+      <h1 className="text-2xl md:text-4xl px-2 md:px-5 font-bold mt-4">
+        Danh sách khóa học:
+      </h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10 px-2 md:px-5">
         {courses.map((course) => (
           <div
@@ -61,13 +66,18 @@ export default function Home() {
               <span className="uppercase text-2xl">{course.name}</span>
               <span className="italic text-lg">{course.description}</span>
               <div className="flex justify-between">
-                <span>Miễn phí</span>
+                <span>
+                  {course.price === 0
+                    ? "Miễn phí"
+                    : new Intl.NumberFormat("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      }).format(course.price)}
+                </span>
                 {course.firstLessonSlug ? (
-                  <Link
-                    href={`/course/${course.slug}`}
-                  >
+                  <Link href={`/course/${course.slug}`}>
                     <button className="rounded-full px-2 bg-blue-400 text-white cursor-pointer hover:animate-pulse">
-                      Học ngay
+                      Xem chi tiết
                     </button>
                   </Link>
                 ) : (

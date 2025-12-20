@@ -195,13 +195,14 @@ type DashboardCourse = {
   slug: string;
   description: string;
   image_url: string;
+  price: number;
   lessons?: { slug: string; id: number }[] | null;
 };
 
 export async function getDashboardData(): Promise<HomeCourseData[]> {
   const { data: courses, error } = await supabase
     .from("courses")
-    .select("id, name, slug, description, image_url, lessons (slug, id)")
+    .select("id, name, slug, description, image_url, price, lessons (slug, id)")
     .order("id", { ascending: true })
     .order("id", { referencedTable: "lessons", ascending: true });
 
@@ -783,6 +784,7 @@ export interface CourseDetail {
   slug: string;
   description: string;
   image_url: string;
+  price: number;
   price_text: string;
   stats: {
     level: string;
@@ -865,6 +867,7 @@ export async function getFullCourseDetail(
     slug: course.slug,
     description: course.description || "",
     image_url: course.image_url || "",
+    price: course.price,
     price_text:
       course.price === 0
         ? "Miễn phí"
@@ -905,7 +908,6 @@ export async function checkHasEnroll(slug: string) {
   } = await supabase.auth.getUser();
   if (!user) return false;
 
-
   const { data: enrollment } = await supabase
     .from("enrollments")
     .select("id")
@@ -914,4 +916,31 @@ export async function checkHasEnroll(slug: string) {
     .single();
 
   return !!enrollment;
+}
+
+export async function getLastAccessedLessonSlug(userId: string, courseId: number){
+  const {data, error} = await supabase
+    .from('user_progress')
+    .select(`completed_at, lessons!inner (slug, course_id)`)
+    .eq('user_id', userId)
+    .eq('lessons.course_id', courseId)
+    .order('completed_at', {ascending: false})
+    .limit(1)
+
+  if(error){
+    console.error('Đã xảy ra lỗi khi lấy đường dẫn bài học mới nhất', error.message);
+    return null;
+  }
+
+  const firstItem = data[0];
+
+  if (!data || data.length === 0) return null;
+
+  const lessonData = firstItem.lessons as any;
+
+  if (Array.isArray(lessonData)) {
+    return lessonData[0]?.slug || null;
+  }
+
+  return lessonData.slug || null;
 }

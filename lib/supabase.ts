@@ -887,3 +887,31 @@ export async function getFullCourseDetail(
     chapters: formattedChapters,
   };
 }
+
+export async function checkHasEnroll(slug: string) {
+  const { data: course } = await supabase
+    .from("courses")
+    .select("id")
+    .eq("slug", slug)
+    .single();
+
+  if (!course) {
+    console.error("Lỗi khi lấy khóa học");
+    return false;
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return false;
+
+
+  const { data: enrollment } = await supabase
+    .from("enrollments")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("course_id", course.id)
+    .single();
+
+  return !!enrollment;
+}

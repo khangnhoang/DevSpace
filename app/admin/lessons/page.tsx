@@ -26,6 +26,7 @@ import {
 } from "@/lib/supabase";
 import MdxEditor from "@/app/components/MdxEditor";
 import { generateQuizFromContent } from "@/app/action/gemini";
+import { toast } from "sonner";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -110,7 +111,7 @@ export default function LessonsManagerPage() {
 
   const handleSave = async () => {
     if (!title || !slug || !selectedCourseId || !selectedChapterId) {
-      alert("Vui lòng điền đầy đủ thông tin bắt buộc.");
+      toast("Vui lòng điền đầy đủ thông tin bắt buộc.");
       return;
     }
 
@@ -132,9 +133,9 @@ export default function LessonsManagerPage() {
     }
 
     if (result.error) {
-      alert("Lưu bài học thất bại: " + result.error.message);
+      toast("Lưu bài học thất bại: " + result.error.message);
     } else {
-      alert(editLessonId ? "Cập nhật thành công" : "Lưu bài học thành công!");
+      toast(editLessonId ? "Cập nhật thành công" : "Lưu bài học thành công!");
       setIsOpenForm(false);
       setRefreshKey((prev) => prev + 1);
     }
@@ -146,9 +147,9 @@ export default function LessonsManagerPage() {
     const { error } = await deleteLesson(id);
 
     if (error) {
-      alert("Xoá bài học thất bại: " + error.message);
+      toast("Xoá bài học thất bại: " + error.message);
     } else {
-      alert("Xoá bài học thành công!");
+      toast("Xoá bài học thành công!");
       setRefreshKey((prev) => prev + 1);
     }
   };
@@ -162,7 +163,7 @@ export default function LessonsManagerPage() {
       !optionD ||
       !correctAnswer
     ) {
-      alert("Bạn chưa điền đầy đủ thông tin bài tập");
+      toast("Bạn chưa điền đầy đủ thông tin bài tập");
       return;
     }
 
@@ -185,9 +186,9 @@ export default function LessonsManagerPage() {
     }
 
     if (result.error) {
-      alert("Đã có lỗi xảy ra: " + result.error.message);
+      toast("Đã có lỗi xảy ra: " + result.error.message);
     } else {
-      alert(editExerciseId ? "Cập nhật thành công" : "Thêm thành công");
+      toast(editExerciseId ? "Cập nhật thành công" : "Thêm thành công");
     }
   };
 
@@ -200,21 +201,21 @@ export default function LessonsManagerPage() {
     const result = await deleteExercise(exercise.id);
 
     if (result.error) {
-      alert("Đã có lỗi xảy ra: " + result.error.message);
+      toast("Đã có lỗi xảy ra: " + result.error.message);
     } else {
-      alert("Xóa câu hỏi thành công!");
+      toast("Xóa câu hỏi thành công!");
     }
   };
 
   const handleAiFillForm = async () => {
-    if (!content) return alert("Chưa có nội dung bài học");
+    if (!content) return toast("Chưa có nội dung bài học");
     setIsGenerating(true);
     setShowAiMenu(false);
 
     const res = await generateQuizFromContent(content, 1);
 
     setIsGenerating(false);
-    if (res.error) return alert(res.error);
+    if (res.error) return toast(res.error);
 
     if (res.data && res.data.length > 0) {
       const q = res.data[0];
@@ -229,8 +230,8 @@ export default function LessonsManagerPage() {
   };
 
   const handleAiBulkCreate = async () => {
-    if (!editLessonId) return alert("Chưa lưu bài học");
-    if (!content) return alert("Nội dung trống");
+    if (!editLessonId) return toast("Chưa lưu bài học");
+    if (!content) return toast("Nội dung trống");
 
     const confirmBulk = confirm("AI sẽ tự động lưu 3 câu hỏi vào bài này");
     if (!confirmBulk) return;
@@ -242,7 +243,7 @@ export default function LessonsManagerPage() {
 
     if (res.error) {
       setIsGenerating(false);
-      return alert(res.error);
+      return toast(res.error);
     }
 
     try {
@@ -260,10 +261,10 @@ export default function LessonsManagerPage() {
         })
       );
 
-      alert("Đã thêm thành công 3 câu hỏi!");
+      toast("Đã thêm thành công 3 câu hỏi!");
       setRefreshKey((prev) => prev + 1);
     } catch (e) {
-      alert("Có lỗi khi lưu vào db" + e);
+      toast("Có lỗi khi lưu vào db" + e);
     } finally {
       setIsGenerating(false);
     }

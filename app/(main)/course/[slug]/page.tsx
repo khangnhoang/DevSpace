@@ -12,14 +12,25 @@ import {
   Minus,
   Loader2,
 } from "lucide-react";
-import { getFullCourseDetail, type CourseDetail } from "@/lib/supabase";
+import {
+  getFullCourseDetail,
+  type CourseDetail,
+  checkHasEnroll,
+} from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
-export default function DetailPage({ params }: { params: Promise<{ slug: string }> }) {
+export default function DetailPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const router = useRouter();
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [expandedChapters, setExpandedChapters] = useState<number[]>([]);
+  const [hasEnrolled, setHasEnrolled] = useState(false);
 
-  const {slug} = use(params);
+  const { slug } = use(params);
 
   useEffect(() => {
     const fetchCourseDetail = async () => {
@@ -39,6 +50,21 @@ export default function DetailPage({ params }: { params: Promise<{ slug: string 
       }
     };
     fetchCourseDetail();
+  }, [slug]);
+
+  useEffect(() => {
+    const checkUserHasEnrolled = async () => {
+      setLoading(true);
+      try {
+        const data = await checkHasEnroll(slug);
+        setHasEnrolled(data);
+      } catch (e) {
+        console.error("Lỗi khi kiểm tra đăng ký khóa học", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkUserHasEnrolled();
   }, [slug]);
 
   const toggleChapter = (id: number) => {
@@ -70,6 +96,10 @@ export default function DetailPage({ params }: { params: Promise<{ slug: string 
         <p>Không tìm thấy khóa học.</p>
       </div>
     );
+
+  if(hasEnrolled){
+    router.push(`learn/${slug}/html-intro`)
+  }
 
   return (
     <div className="bg-[#111827] w-full min-h-screen p-4 flex md:p-8 flex-col lg:flex-row gap-8 justify-center">
@@ -180,11 +210,7 @@ export default function DetailPage({ params }: { params: Promise<{ slug: string 
       </div>
       <div className="w-full lg:w-1/3">
         <div className="flex flex-col gap-4 w-full justify-center items-center bg-[#1f2937] p-4 rounded-xl border border-gray-700 lg:sticky lg:top-4">
-          <img
-            src={course.image_url}
-            alt=""
-            className="w-90 rounded-xl"
-          />
+          <img src={course.image_url} alt="" className="w-90 rounded-xl" />
           <h1 className="text-3xl text-green-400">{course.price_text}</h1>
           <button className="px-4 py-2 bg-blue-500 rounded-full cursor-pointer hover:bg-blue-400">
             ĐĂNG KÝ HỌC

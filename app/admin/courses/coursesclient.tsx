@@ -4,6 +4,7 @@ import { SquarePen, X, Trash } from "lucide-react";
 import Image from "next/image";
 import { type AdminCourseData, updateCourse, addCourse, deleteCourse } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface CoursesClientProps {
   courses: AdminCourseData[];
@@ -64,9 +65,9 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
     if (confirmDelete){
       const {error} = await deleteCourse(id);
       if (error){
-        alert("Lỗi khi xoá:" + error.message)
+        toast("Lỗi khi xoá:" + error.message)
       } else {
-        alert("Xoá thành công");
+        toast("Xoá thành công");
         router.refresh();
       }
     }
@@ -91,9 +92,9 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
     setIsSaving(false);
 
     if (result?.error) {
-      alert("Lỗi cập nhật: " + result.error.message);
+      toast("Lỗi cập nhật: " + result.error.message);
     } else {
-      alert(editId ? "Cập nhật thành công" : "Thêm khóa học thành công");
+      toast(editId ? "Cập nhật thành công" : "Thêm khóa học thành công");
       setIsOpenForm(false);
       router.refresh();
     }

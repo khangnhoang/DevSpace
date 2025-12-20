@@ -64,7 +64,7 @@ export default function Home() {
                 <span>Miễn phí</span>
                 {course.firstLessonSlug ? (
                   <Link
-                    href={`/learn/${course.slug}/${course.firstLessonSlug}`}
+                    href={`/course/${course.slug}`}
                   >
                     <button className="rounded-full px-2 bg-blue-400 text-white cursor-pointer hover:animate-pulse">
                       Học ngay

@@ -247,7 +247,7 @@ export default function LessonsManagerPage() {
 
     try {
       await Promise.all(
-        res.data.map((q) => {
+        res.data.map((q: any) => {
           addExercise(editLessonId, {
             question: q.question,
             option_a: q.option_a,

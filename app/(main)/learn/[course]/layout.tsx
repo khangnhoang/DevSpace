@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "@/app/globals.css";
 
 import Sidebar from "@/app/components/Sidebar";
+import MobileSidebar from "@/app/components/MobileSidebar";
 import { getLessonsByCourse } from "@/lib/supabase";
 
 interface LayoutProps {
@@ -20,6 +21,7 @@ export default async function CourseLayout({ children, params }: LayoutProps) {
   return (
     <div className="flex flex-1 relative w-full">
       {<Sidebar chapters={chapters} courseSlug={course}/>}
+      {<MobileSidebar chapters={chapters} courseSlug={course}/>}
       {children}
     </div>
   );

@@ -52,7 +52,8 @@ export default async function LearnPage({ params }: Props) {
   const videoId = getYouTubeId(lesson.video_url);
 
   return (
-    <div className="p-8 min-h-screen bg-gray-50 w-3/4">
+    //className="md:p-8 min-h-screen p-4 w-full bg-gray-50 lg:w-3/4 mx-auto"
+    <div className="md:p-8 min-h-screen p-4 w-full bg-gray-50 lg:w-3/4 mx-auto pt-16">
       {/* Breadcrumb */}
       <div className="text-sm text-gray-500 mb-6">
         Home / Learn /{" "}
@@ -60,10 +61,10 @@ export default async function LearnPage({ params }: Props) {
       </div>
 
       {/* Khung nội dung chính */}
-      <div className="bg-white p-10 rounded-xl shadow-sm border border-gray-200">
+      <div className="bg-white p-4 md:p-10 rounded-xl shadow-sm border border-gray-200">
         
         {/* Tiêu đề bài học */}
-        <h1 className="text-3xl font-bold text-gray-900 mb-6 pb-4 border-b">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6 pb-4 border-b">
           {lesson.title}
         </h1>
 
@@ -84,11 +85,11 @@ export default async function LearnPage({ params }: Props) {
         <LessonContent content={cleanContent} />
 
         {/* Nút điều hướng */}
-        <div className="flex gap-4 justify-center justify-items-center mt-10 pt-6 border-t border-gray-100">
+        <div className="flex flex-col md:flex-row gap-4 justify-center justify-items-center mt-10 pt-6 border-t border-gray-100">
           {prevLesson ? (
             <Link
               href={`/learn/${course}/${prevLesson.slug}`}
-              className="border border-gray-300 text-black rounded-md p-4 hover:bg-blue-500 hover:text-white hover:border-blue-500 flex items-center gap-2 transition-colors"
+              className="w-full md:w-auto border border-gray-300 text-black rounded-md p-4 hover:bg-blue-500 hover:text-white hover:border-blue-500 flex items-center gap-2 transition-colors"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />

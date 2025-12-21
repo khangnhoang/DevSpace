@@ -22,6 +22,7 @@ import {
   uploadUserAvatar,
 } from "@/lib/supabase";
 import { createNewUser } from "@/app/action/user";
+import { toast } from "sonner";
 
 export default function UsersManagerPage() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -74,16 +75,16 @@ export default function UsersManagerPage() {
     const {error} = await deleteUser(id);
 
     if(error){
-      alert('xóa người dùng thất bại' + error.message)
+      toast('xóa người dùng thất bại' + error.message)
     }else{
-      alert('Xóa thành công người dùng')
+      toast('Xóa thành công người dùng')
       setRefreshKey((prev) => prev + 1)
     }
   }
 
   const handleSave = async () => {
     if (!email) {
-      alert("Vui lòng nhập email");
+      toast("Vui lòng nhập email");
       return;
     }
     setIsLoading(true);
@@ -94,7 +95,7 @@ export default function UsersManagerPage() {
       if (uploadedURL) {
         finalAvatarURL = uploadedURL;
       } else {
-        alert("Lỗi khi upload avatar user");
+        toast("Lỗi khi upload avatar user");
         setIsLoading(false);
         return;
       }
@@ -123,9 +124,9 @@ export default function UsersManagerPage() {
     }
 
     if (result.error) {
-      alert("Lưu người dùng thất bại" + result.error);
+      toast("Lưu người dùng thất bại" + result.error);
     } else {
-      alert(editingUser ? "Sửa thành công" : "Thêm thành công");
+      toast(editingUser ? "Sửa thành công" : "Thêm thành công");
       setIsOpenForm(false);
       setRefreshKey((prev) => prev + 1);
     }

@@ -8,6 +8,7 @@ import {
   addChapter,
   deleteChapter,
 } from "@/lib/supabase";
+import { toast } from "sonner";
 
 interface Course {
   id: number;
@@ -37,7 +38,7 @@ export default function ChaptersManagerPage() {
 
   const handleOpenAdd = () => {
     if (!selectedCourseId) {
-      alert("Vui lòng chọn khóa học trước khi thêm chương!");
+      toast("Vui lòng chọn khóa học trước khi thêm chương!");
       return;
     }
     setEditingChapterId(null);
@@ -60,7 +61,7 @@ export default function ChaptersManagerPage() {
 
   const handleSave = async () => {
     if (!title || orderIndex === null || !selectedEditCourseId) {
-      alert("Vui lòng điền đầy đủ thông tin!");
+      toast("Vui lòng điền đầy đủ thông tin!");
       return;
     }
 
@@ -79,9 +80,9 @@ export default function ChaptersManagerPage() {
     }
 
     if (result.error) {
-      alert("Đã có lỗi xảy ra: " + result.error.message);
+      toast("Đã có lỗi xảy ra: " + result.error.message);
     } else {
-      alert(
+      toast(
         editingChapterId
           ? "Cập nhật chương thành công!"
           : "Thêm chương thành công!"
@@ -102,9 +103,9 @@ export default function ChaptersManagerPage() {
     const result = await deleteChapter(chapter.id);
 
     if (result.error) {
-      alert("Đã có lỗi xảy ra: " + result.error.message);
+      toast("Đã có lỗi xảy ra: " + result.error.message);
     } else {
-      alert("Xóa chương thành công!");
+      toast("Xóa chương thành công!");
       const data = await getChapterForChapterManager();
       setChapters(data);
     }

@@ -6,6 +6,7 @@ import {
   saveUserProgress,
   supabase,
 } from "@/lib/supabase";
+import { toast } from "sonner";
 
 type QuizQuestion = {
   id: number;
@@ -54,7 +55,7 @@ export default function QuizPage() {
         console.log("Lỗi lưu tiến trình");
       }
 
-      alert("Chúc mừng! Bạn đã hoàn thành tất cả bài tập 🎉");
+      toast("Chúc mừng! Bạn đã hoàn thành tất cả bài tập 🎉");
       // TODO: Gọi API lưu tiến độ ở đây (Buổi sau làm)
       router.refresh();
       router.push("/"); // Hoặc router.back() để về bài học
@@ -69,7 +70,7 @@ export default function QuizPage() {
 
   const handleSubmit = () => {
     if (selectedOption === null) {
-      alert("Vui lòng chọn đáp án trước khi gửi!");
+      toast("Vui lòng chọn đáp án trước khi gửi!");
       return;
     }
 

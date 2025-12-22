@@ -98,7 +98,7 @@ export default function LessonsManagerPage() {
     setExplanation(exercise.explanation);
   };
 
-  const handleInActiveEditExerciseForm = (exercise: any) => {
+  const handleInActiveEditExerciseForm = () => {
     setEditExerciseId(null);
     setQuestion("");
     setOptionA("");
@@ -212,7 +212,12 @@ export default function LessonsManagerPage() {
     setIsGenerating(true);
     setShowAiMenu(false);
 
-    const res = await generateQuizFromContent(content, 1);
+    const res = await generateQuizFromContent(content, 1, exercise);
+
+    if (!res) {
+      toast.error("Lỗi lấy câu trả lời từ AI");
+      return;
+    }
 
     setIsGenerating(false);
     if (res.error) return toast(res.error);
@@ -239,7 +244,11 @@ export default function LessonsManagerPage() {
     setIsGenerating(true);
     setShowAiMenu(false);
 
-    const res = await generateQuizFromContent(content, 3);
+    const res = await generateQuizFromContent(content, 3, exercise);
+    if (!res) {
+      toast.error("Lỗi lấy câu trả lời từ AI");
+      return;
+    }
 
     if (res.error) {
       setIsGenerating(false);
@@ -874,8 +883,6 @@ export default function LessonsManagerPage() {
                             </p>
                           </div>
                         </button>
-
-                        
                       </div>
                     )}
                   </div>

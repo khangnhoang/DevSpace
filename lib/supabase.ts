@@ -918,17 +918,23 @@ export async function checkHasEnroll(slug: string) {
   return !!enrollment;
 }
 
-export async function getLastAccessedLessonSlug(userId: string, courseId: number){
-  const {data, error} = await supabase
-    .from('user_progress')
+export async function getLastAccessedLessonSlug(
+  userId: string,
+  courseId: number
+) {
+  const { data, error } = await supabase
+    .from("user_progress")
     .select(`completed_at, lessons!inner (slug, course_id)`)
-    .eq('user_id', userId)
-    .eq('lessons.course_id', courseId)
-    .order('completed_at', {ascending: false})
-    .limit(1)
+    .eq("user_id", userId)
+    .eq("lessons.course_id", courseId)
+    .order("completed_at", { ascending: false })
+    .limit(1);
 
-  if(error){
-    console.error('Đã xảy ra lỗi khi lấy đường dẫn bài học mới nhất', error.message);
+  if (error) {
+    console.error(
+      "Đã xảy ra lỗi khi lấy đường dẫn bài học mới nhất",
+      error.message
+    );
     return null;
   }
 

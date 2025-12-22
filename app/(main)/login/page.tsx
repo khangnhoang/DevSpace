@@ -73,25 +73,25 @@ export default function LoginPage() {
 
   }
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen w-full">
-      <form onSubmit={handleAuthentication} className="p-8 bg-white rounded shadow-md w-96">
+    <div className="flex flex-col items-center justify-center min-h-screen w-full px-4 bg-gray-50">
+      <form onSubmit={handleAuthentication} className="p-8 bg-white rounded shadow-lg w-full max-w-sm">
         <h1 className="text-2xl font-bold mb-6 text-center text-green-600">{view==='login'?'Đăng nhập':'Đăng ký'}</h1>
         
         <input 
-          className="w-full p-2 mb-4 border rounded placeholder-gray-500 text-gray-500" 
+          className="w-full p-2 mb-4 border rounded placeholder-gray-500 text-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition" 
           placeholder="Email..." 
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
         <input 
-          className="w-full p-2 mb-4 border rounded placeholder-gray-500 text-gray-500" 
+          className="w-full p-2 mb-4 border rounded placeholder-gray-500 text-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition" 
           type="password" 
           placeholder="Mật khẩu..."
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
         <input 
-          className={`w-full p-2 mb-4 border rounded placeholder-gray-500 text-gray-500 ${view==='register'?'block':'hidden'}`}
+          className={`w-full mb-3 p-2 border rounded placeholder-gray-500 text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition ${view==='register'?'block':'hidden'}`}
           type="password" 
           placeholder="Xác nhận Mật khẩu..."
           value={confirmPassword}
@@ -101,13 +101,13 @@ export default function LoginPage() {
         <button 
           onClick={handleAuthentication}
           disabled={loading}
-          className="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700 disabled:opacity-50"
+          className="w-full mt-4 bg-green-600 text-white p-2 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200"
           type='button'
         >
           {view==='login'?'Đăng nhập':'Đăng ký'}
         </button>
         
-        <button className="mt-4 text-sm text-blue-600 w-full text-center cursor-pointer" onClick={changeUI} type='button'>
+        <button className="mt-4 text-sm text-blue-600 w-full text-center cursor-pointer hover:underline focus:outline-none" onClick={changeUI} type='button'>
             {view==='register'?'Đã có tài khoản? Đăng nhập': 'Chưa có tài khoản? Đăng ký'}
         </button>
       </form>

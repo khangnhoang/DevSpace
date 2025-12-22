@@ -73,17 +73,17 @@ function TryItEditor() {
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#E7E9EB]">
-      <header className="h-14 bg-[#E7E9EB] border-b border-gray-200 flex items-center justify-center">
+      <header className="h-14 bg-[#E7E9EB] border-b border-gray-200 flex items-center justify-center shrink-0">
         <button
           onClick={handleRunCode}
-          className="bg-blue-500 text-white rounded-sm px-4 py-2 flex flex-row items-center gap-2 cursor-pointer hover:bg-blue-600 transition-colors"
+          className="bg-blue-500 text-white rounded-sm px-4 py-2 flex flex-row items-center gap-2 cursor-pointer hover:bg-blue-600 transition-colors shadow-sm"
         >
           Run
           <Play size={16} fill="currentColor" />
         </button>
       </header>
-      <div className="flex flex-row text-black flex-1 min-h-0 gap-4 p-2">
-        <div className="bg-white w-1/2 flex flex-col h-full shadow-sm rounded-md overflow-hidden">
+      <div className="flex flex-col md:flex-row text-black flex-1 min-h-0 gap-4 p-2">
+        <div className="bg-white w-full md:w-1/2 flex-1 flex flex-col h-full shadow-sm rounded-md overflow-hidden border border-gray-500">
           <Editor
             height="100%"
             defaultLanguage="html"

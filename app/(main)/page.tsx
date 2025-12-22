@@ -55,7 +55,7 @@ export default function Home() {
         {courses.map((course) => (
           <div
             key={course.id}
-            className="w-full bg-gray-200 border border-r-gray-200 flex flex-col rounded-2xl overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group"
+            className="w-full bg-gray-200 shadow-xl flex flex-col rounded-2xl overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group"
           >
             <img
               src={course.image_url}

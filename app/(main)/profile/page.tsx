@@ -40,10 +40,10 @@ export default function ProfilePage() {
   const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0];
 
   return (
-    <div className="bg-[#F9FAFB] min-h-screen w-full flex p-4 gap-4">
+    <div className="bg-[#F9FAFB] min-h-screen w-full flex flex-col md:flex-row p-4 gap-4">
       {/* CỘT TRÁI */}
-      <div className="w-1/4 flex flex-col items-center gap-4 bg-white border border-gray-200 p-6 rounded-xl h-fit shadow-sm">
-        <div className="w-32 h-32 rounded-full bg-blue-600 flex items-center justify-center text-white text-5xl font-bold shadow-inner">
+      <div className="w-full md:w-1/4 flex flex-col items-center gap-4 bg-white border border-gray-200 p-6 rounded-xl h-fit shadow-sm transition-all hover:shadow-md">
+        <div className="w-32 h-32 rounded-full bg-blue-600 flex items-center justify-center text-white text-5xl font-bold shadow-inner ring-4 ring-blue-50">
           {firstLetter}
         </div>
         <div className="text-center">
@@ -53,8 +53,8 @@ export default function ProfilePage() {
       </div>
 
       {/* CỘT PHẢI */}
-      <div className="w-3/4 flex flex-col gap-6">
-        <h2 className="text-2xl font-bold text-gray-800">Khóa học của tôi</h2>
+      <div className="w-full md:w-3/4 flex flex-col gap-6">
+        <h2 className="text-2xl font-bold text-gray-800 text-center md:text-left flex items-center justify-center md:justify-start gap-2">Khóa học của tôi</h2>
         
         {myCourses.length > 0 ? (
           myCourses.map((course: any) => (

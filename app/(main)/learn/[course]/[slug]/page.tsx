@@ -106,10 +106,10 @@ export default async function LearnPage({ params }: Props) {
           {nextLesson ? (
             <Link
               href={`/learn/${course}/${nextLesson.slug}`}
-              className="border border-gray-300 text-black rounded-md p-4 hover:bg-blue-500 hover:text-white hover:border-blue-500 flex items-center gap-2 transition-colors text-right"
+              className="text-left border border-gray-300 text-black rounded-md p-4 hover:bg-blue-500 hover:text-white hover:border-blue-500 flex items-center gap-2 transition-colors justify-center"
             >
               <div>
-                <div className="text-xs opacity-60 text-right">Bài sau</div>
+                <div className="text-xs opacity-60">Bài sau</div>
                 <div className="font-semibold">{nextLesson.title}</div>
               </div>
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-5">
@@ -119,12 +119,6 @@ export default async function LearnPage({ params }: Props) {
           ) : (
             <div />
           )}
-          
-          <Link href={`/quiz/${slug}`}>
-            <button className="border border-gray-300 rounded-md text-black hover:bg-blue-500 hover:text-white gap-1 p-5 text-2xl cursor-pointer">
-              Bài tập
-            </button>
-          </Link>
         </div>
       </div>
     </div>

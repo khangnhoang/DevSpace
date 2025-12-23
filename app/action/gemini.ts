@@ -55,8 +55,6 @@ export async function generateQuizFromContent(content: string, quantity: number 
       return;
     }
 
-    console.log("✅ AI Response Raw:", text.slice(0, 100) + "..."); // Log để debug
-
     if (!text) return { error: "AI trả về rỗng." };
 
     // Vệ sinh JSON (kỹ hơn)

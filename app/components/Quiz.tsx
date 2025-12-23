@@ -16,7 +16,7 @@ type Props = {
   questions: QuizQuestion[];
   lessonId: number;
   userId: string | undefined;
-  nextLessonPath: string;
+  nextLessonPath: string | null;
 };
 
 export default function Quiz({
@@ -57,7 +57,7 @@ export default function Quiz({
       toast("Chúc mừng! Bạn đã hoàn thành tất cả bài tập 🎉");
       router.refresh();
       setTimeout(() => {
-        router.push(nextLessonPath); // Hoặc router.back() để về bài học
+        router.push(nextLessonPath || "/"); 
       }, 1500);
       return;
     }

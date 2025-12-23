@@ -34,6 +34,7 @@ export interface Chapter {
     title: string;
     slug: string;
     video_url: string | null;
+    has_exercise: boolean;
   }[];
 }
 
@@ -50,12 +51,21 @@ export async function getLessonsByCourse(courseSlug: string) {
   // Bước 2: Lấy các bài học thuộc ID đó
   const { data: chapters } = await supabase
     .from("chapters")
-    .select(`id, title, order_index, lessons (id, title, slug, video_url)`)
+    .select(`id, title, order_index, lessons (id, title, slug, video_url, exercises (count))`)
     .eq("course_id", course.id)
     .order("order_index", { ascending: true })
     .order("id", { referencedTable: "lessons", ascending: true });
 
-  return (chapters ?? []) as Chapter[];
+  const formattedChapters = (chapters || []).map((ch: any) => ({
+    ...ch,
+    lessons: (ch.lessons || []).map((l: any) => ({
+      ...l,
+      has_exercise: l.exercises && l.exercises[0]?.count > 0,
+      exercises: undefined
+    }))
+  }))
+
+  return formattedChapters as Chapter[];
 }
 
 // --------------------------------------------------------

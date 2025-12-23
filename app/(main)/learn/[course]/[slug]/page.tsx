@@ -1,10 +1,9 @@
 // app/learn/[course]/[slug]/page.tsx
-import { getLessonsByCourse, supabase } from "@/lib/supabase";
+import { getLessonsByCourse, supabase} from "@/lib/supabase";
 import LessonContent from "@/app/components/LessonContent";
 import NotFoundLesson from "@/app/components/NotFoundLesson";
 import Link from "next/link";
 import matter from "gray-matter";
-
 interface Props {
   params: Promise<{ course: string; slug: string }>;
 }

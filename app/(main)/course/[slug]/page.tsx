@@ -30,25 +30,21 @@ export default function DetailPage({
   const router = useRouter();
   const { slug } = use(params);
 
-  // --- STATE ---
   const [course, setCourse] = useState<CourseDetail | null>(null);
-  const [loading, setLoading] = useState(true); // Mặc định true để chặn render lung tung
+  const [loading, setLoading] = useState(true);
   const [expandedChapters, setExpandedChapters] = useState<number[]>([]);
   const [hasEnrolled, setHasEnrolled] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState(false);
 
-  // --- LOGIC TÌM ĐÍCH ĐẾN (HỌC TIẾP HAY HỌC MỚI) ---
   const getDestinationRoute = async (
     currentCourse: CourseDetail,
     userId: string
   ) => {
-    // 1. Ưu tiên 1: Tìm bài học gần nhất (Resume)
     const lastSlug = await getLastAccessedLessonSlug(userId, currentCourse.id);
     if (lastSlug) {
       return `/learn/${currentCourse.slug}/${lastSlug}`;
     }
 
-    // 2. Ưu tiên 2: Bài học đầu tiên (Start new)
     if (
       currentCourse.chapters.length > 0 &&
       currentCourse.chapters[0].lessons.length > 0
@@ -57,22 +53,18 @@ export default function DetailPage({
       return `/learn/${currentCourse.slug}/${firstSlug}`;
     }
 
-    // 3. Fallback: Không có bài nào
     return null;
   };
 
-  // --- USE EFFECT DUY NHẤT (GỘP TẤT CẢ LOGIC FETCH & REDIRECT) ---
   useEffect(() => {
     const initPageData = async () => {
       setLoading(true);
       try {
-        // 1. Chạy song song lấy Course + Trạng thái Enroll
         const [courseData, enrollmentStatus] = await Promise.all([
           getFullCourseDetail(slug),
           checkHasEnroll(slug),
         ]);
 
-        // 2. Cập nhật State dữ liệu
         if (courseData) {
           setCourse(courseData);
           if (courseData.chapters.length > 0) {
@@ -81,18 +73,15 @@ export default function DetailPage({
         }
         setHasEnrolled(enrollmentStatus);
 
-        // 3. LOGIC TỰ ĐỘNG CHUYỂN TRANG (Nếu đã mua)
         if (enrollmentStatus && courseData) {
           const {
             data: { user },
           } = await supabase.auth.getUser();
 
           if (user) {
-            // Tìm đích đến thông minh (Bài cũ hoặc Bài đầu)
             const destination = await getDestinationRoute(courseData, user.id);
 
             if (destination) {
-              // Redirect luôn và KHÔNG tắt loading (để UI không bị nháy)
               router.push(destination);
               return;
             }
@@ -102,17 +91,12 @@ export default function DetailPage({
         console.error("Failed to fetch course data:", error);
         toast.error("Không thể tải thông tin khóa học");
       } finally {
-        // Chỉ tắt loading nếu KHÔNG redirect (để user xem trang detail)
-        // Logic: Nếu đã enroll thì router.push ở trên đã return rồi, hàm này không chạy xuống đây
-        // Nhưng an toàn thì cứ set false, vì router.push sẽ unmount component này.
         setLoading(false);
       }
     };
 
     if (slug) initPageData();
   }, [slug, router]);
-
-  // --- EVENT HANDLERS ---
 
   const toggleChapter = (id: number) => {
     setExpandedChapters((prev) =>
@@ -131,7 +115,6 @@ export default function DetailPage({
   const handleEnrollment = async () => {
     if (!course) return;
 
-    // 1. Check Login
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -140,7 +123,6 @@ export default function DetailPage({
       return;
     }
 
-    // 2. Confirm nếu có phí
     if (course.price > 0) {
       const confirmBuy = confirm(
         `Bạn có muốn mua khóa học ${course.name} với giá: ${course.price_text} không?`
@@ -151,7 +133,6 @@ export default function DetailPage({
     setIsEnrolling(true);
 
     try {
-      // 3. Gọi Server Action
       const result = await enrollCourse(course.id, user.id, course.price);
 
       if (result.error) {
@@ -165,8 +146,6 @@ export default function DetailPage({
         );
         setHasEnrolled(true);
 
-        // 4. Tìm đích đến sau khi mua
-        // Vì mới mua nên chắc chắn chưa có lịch sử -> Vào bài đầu tiên
         let destUrl = "";
         if (
           course.chapters.length > 0 &&
@@ -177,7 +156,6 @@ export default function DetailPage({
         }
 
         if (destUrl) {
-          // Delay 2s để user đọc thông báo rồi chuyển
           setTimeout(() => {
             router.push(destUrl);
           }, 2000);
@@ -191,8 +169,6 @@ export default function DetailPage({
       setIsEnrolling(false);
     }
   };
-
-  // --- RENDER ---
 
   if (loading)
     return (
@@ -215,10 +191,6 @@ export default function DetailPage({
         </div>
       </div>
     );
-
-  // Nếu đã đăng ký và đang chờ redirect (hoặc lỗi redirect), có thể hiện loader
-  // Nhưng ở trên ta đã xử lý trong useEffect, nếu xuống đây nghĩa là user F5 lại trang
-  // và useEffect chưa chạy xong.
 
   return (
     <div className="bg-[#111827] w-full min-h-screen p-4 flex md:p-8 flex-col lg:flex-row gap-8 justify-center">
@@ -358,12 +330,7 @@ export default function DetailPage({
             onClick={
               hasEnrolled
                 ? () => {
-                    // Nếu đã đăng ký nhưng vì lý do nào đó chưa redirect, bấm nút này để vào học tiếp
-                    // Logic y hệt redirect tự động: ưu tiên bài cũ -> bài mới
                     getDestinationRoute(course, "").then((url) => {
-                      // userId rỗng ở đây cũng ko sao, hàm getDestinationRoute sẽ fallback về bài đầu
-                      // Nhưng tốt nhất nên lấy user.id thật nếu có thể.
-                      // Ở đây ta có thể tạm fallback về bài đầu tiên cho nhanh
                       if (url) router.push(url);
                       else {
                         if (course.chapters[0]?.lessons[0])

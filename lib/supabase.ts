@@ -1002,5 +1002,5 @@ export async function checkAndSaveProgress(userId: string, lessonId: number) {
     return {hasExercise: false, saved: true};
   } 
 
-  return {has_exercise: true, saved: false};
+  return {hasExercise: true, saved: false};
 }

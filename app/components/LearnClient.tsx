@@ -108,6 +108,7 @@ export default function LearnClient({
             lessonId={lesson.id}
             nextLessonSlug={nextLesson?.slug || null}
             courseSlug={course}
+            currentLessonSlug={lesson.slug}
           />
 
           {nextLesson ? (

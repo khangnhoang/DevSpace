@@ -11,9 +11,16 @@ interface Props {
   lessonId: number;
   nextLessonSlug: string | null;
   courseSlug: string;
+  currentLessonSlug: string;
 }
 
-export default function CompleteLessonBtn({ userId, lessonId, nextLessonSlug, courseSlug }: Props) {
+export default function CompleteLessonBtn({
+  userId,
+  lessonId,
+  nextLessonSlug,
+  courseSlug,
+  currentLessonSlug,
+}: Props) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -28,15 +35,24 @@ export default function CompleteLessonBtn({ userId, lessonId, nextLessonSlug, co
 
       if (result?.error) {
         toast.error("Có lỗi khi lưu tiến độ");
-      } else {
+        return;
+      }
+
+      if (result?.hasExercise) {
+        toast.info("Bạn cần hoàn thành bài tập trước!");
+        // Redirect sang trang làm bài tập (Quiz)
+        // Giả sử đường dẫn quiz của bạn là /learn/[course]/[lesson]/quiz
+        // Bạn thay đường dẫn bên dưới cho đúng với router của bạn nhé
+        router.push(`/learn/${courseSlug}/${currentLessonSlug}/quiz`);
+        return; // Dừng lại, không chạy logic bên dưới
+      }
+
+      if (result?.saved) {
         toast.success("Đã hoàn thành bài học!");
-        
-        // Chuyển trang sau khi lưu xong
         if (nextLessonSlug) {
           router.push(`/learn/${courseSlug}/${nextLessonSlug}`);
         } else {
-          // Nếu là bài cuối cùng
-          router.push(`/learn/${courseSlug}`); // Hoặc trang chúc mừng
+          router.push(`/learn/${courseSlug}`);
         }
       }
     } catch (error) {
@@ -51,7 +67,7 @@ export default function CompleteLessonBtn({ userId, lessonId, nextLessonSlug, co
     <button
       onClick={handleFinishLesson}
       disabled={isLoading}
-      className="text-left border border-gray-300 text-black rounded-md p-4 hover:bg-blue-500 hover:text-white hover:border-blue-500 flex items-center gap-2 transition-colors justify-center min-w-[140px]"
+      className="cursor-pointer text-left border border-gray-300 text-black rounded-md p-4 hover:bg-blue-500 hover:text-white hover:border-blue-500 flex items-center gap-2 transition-colors justify-center min-w-[140px]"
     >
       {isLoading ? (
         <Loader2 className="animate-spin" size={26} />

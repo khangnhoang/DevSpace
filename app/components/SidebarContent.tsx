@@ -3,13 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { supabase, getCompletedLessonIds, type Chapter } from "@/lib/supabase";
+import {
+  supabase,
+  getCompletedLessonIds,
+  type Chapter,
+  getLastAccessedLessonId,
+} from "@/lib/supabase";
 import {
   ChevronDown,
   ChevronRight,
   Check,
   FileQuestion,
-  BookOpen,
 } from "lucide-react";
 
 type SidebarContentProps = {
@@ -29,6 +33,9 @@ export default function SidebarContent({
 
   // State chỉ lưu các chapter user đã TỰ toggle (true/false)
   const [openChapters, setOpenChapters] = useState<Record<number, boolean>>({});
+  const [lastAccessLessonId, setLastAccessLessonId] = useState<number | null>(
+    null
+  );
 
   // Toggle mở/đóng chapter
   const toggleChapter = (id: number) => {
@@ -42,19 +49,28 @@ export default function SidebarContent({
   useEffect(() => {
     const fetchProgress = async () => {
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      if (session?.user) {
-        const result = await getCompletedLessonIds(session.user.id);
+      if (user) {
+        const result = await getCompletedLessonIds(user.id);
         setCompletedIds(result);
       } else {
-        console.log("Bạn chưa đăng nhập");
+        return;
+      }
+
+      const lessonId = await getLastAccessedLessonId(user.id, courseSlug);
+
+      if (!lessonId) {
+        console.error("Lỗi khi lấy id bài học mới nhất");
+        return;
+      } else {
+        setLastAccessLessonId(lessonId);
       }
     };
 
     fetchProgress();
-  }, []);
+  }, [courseSlug]);
 
   return (
     <div className="flex flex-col bg-gray-100 w-full rounded-xl shadow-2xl overflow-hidden">
@@ -104,6 +120,10 @@ export default function SidebarContent({
 
                     const isQuizActive = pathName === quizUrl;
                     const isCompleted = completedIds.includes(lesson.id);
+                    const safeLastId = lastAccessLessonId ?? 0;
+                    const isLastAccessLesson =
+                      lesson.id <= safeLastId ||
+                      lesson.id === safeLastId + 1;
 
                     return (
                       <div key={lesson.id} className="flex flex-col">
@@ -113,6 +133,10 @@ export default function SidebarContent({
                             isActive
                               ? "bg-blue-100 text-blue-700 font-semibold"
                               : "text-gray-700 hover:bg-gray-100 hover:text-black"
+                          } ${
+                            isLastAccessLesson
+                              ? ""
+                              : `cursor-not-allowed opacity-50 pointer-events-none`
                           }`}
                         >
                           <span className="truncate mr-2">{lesson.title}</span>
@@ -120,7 +144,7 @@ export default function SidebarContent({
                           {isCompleted && (
                             <Check
                               size={16}
-                              className="text-green-600 flex-shrink-0"
+                              className="text-green-600 shrink-0"
                               strokeWidth={3}
                             />
                           )}
@@ -133,9 +157,16 @@ export default function SidebarContent({
                               isQuizActive
                                 ? "bg-purple-100 text-purple-800 font-medium border border-purple-200"
                                 : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-                            }`}
+                            } ${isLastAccessLesson ? '' : "cursor-not-allowed opacity-50 pointer-events-none"}`}
                           >
-                            <FileQuestion size={12} className={isQuizActive ? "text-purple-600" : "text-gray-400"} />
+                            <FileQuestion
+                              size={12}
+                              className={
+                                isQuizActive
+                                  ? "text-purple-600"
+                                  : "text-gray-400"
+                              }
+                            />
                             <span>Bài tập thực hành</span>
                           </Link>
                         )}

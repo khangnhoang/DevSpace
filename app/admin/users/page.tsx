@@ -202,7 +202,7 @@ export default function UsersManagerPage() {
   ];
 
   return (
-    <div className="md:ml-2">
+    <div className="lg:ml-6 md:ml-2">
     <div className="bg-[#0f1116] min-h-screen h-full p-3 md:p-3 flex flex-col gap-4 text-white font-sans rounded-md w-full">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex flex-col gap-1">
@@ -298,7 +298,7 @@ export default function UsersManagerPage() {
                           <img
                             src={u.avatar_url}
                             alt="Avatar"
-                            className="h-10 w-10 md:h-12 md:w-12 object-cover rounded-full flex-shrink-0"
+                            className="h-10 w-10 md:h-12 md:w-12 object-cover rounded-full shrink-0"
                           />
                         ) : (
                           <span className="h-10 w-10 md:h-12 md:w-12 text-base md:text-lg font-bold text-white select-none bg-[#3B81F4] rounded-full flex items-center justify-center">

@@ -6,7 +6,7 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-export interface Lessons{
+export interface Lessons {
   id: number;
   title: string;
   slug: string;
@@ -981,26 +981,67 @@ export async function checkAndSaveProgress(userId: string, lessonId: number) {
     .eq("lesson_id", lessonId)
     .limit(1);
 
-  if(exError){
-    console.error('Lỗi khi kiểm tra bài tập', exError);
-    return {hasExercise: false, error: exError};
+  if (exError) {
+    console.error("Lỗi khi kiểm tra bài tập", exError);
+    return { hasExercise: false, error: exError };
   }
 
   const hasExercise = exercise && exercise.length > 0;
 
   if (!hasExercise) {
-    const { error: saveError } = await supabase
-      .from("user_progress")
-      .insert({
-        user_id: userId,
-        lesson_id: lessonId,
-      })
+    const { error: saveError } = await supabase.from("user_progress").insert({
+      user_id: userId,
+      lesson_id: lessonId,
+    });
 
-    if (saveError && saveError.code !== '23505') {
-      console.log({hasExercise: false, saved: false, error: saveError});
+    if (saveError && saveError.code !== "23505") {
+      console.log({ hasExercise: false, saved: false, error: saveError });
     }
-    return {hasExercise: false, saved: true};
-  } 
+    return { hasExercise: false, saved: true };
+  }
 
-  return {hasExercise: true, saved: false};
+  return { hasExercise: true, saved: false };
+}
+
+export async function getLastAccessedLessonId(
+  userId: string,
+  courseSlug: string
+) {
+  const { data: courseData, error: courseError } = await supabase
+    .from("courses")
+    .select("id")
+    .eq("slug", courseSlug)
+    .single();
+
+  if (!courseData || courseError) {
+    console.error("Lỗi khi lấy Id khóa học", courseError);
+    return;
+  }
+
+  const courseId = courseData.id;
+
+  const { data, error } = await supabase
+    .from("user_progress")
+    .select(`completed_at, lessons!inner (id, course_id)`)
+    .eq("user_id", userId)
+    .eq("lessons.course_id", courseId)
+    .order("completed_at", { ascending: false })
+    .limit(1);
+
+  if (error) {
+    console.error("Đã xảy ra lỗi khi lấy id bài học mới nhất", error.message);
+    return null;
+  }
+
+  const firstItem = data[0];
+
+  if (!data || data.length === 0) return null;
+
+  const lessonData = firstItem.lessons as any;
+
+  if (Array.isArray(lessonData)) {
+    return lessonData[0]?.id || null;
+  }
+
+  return lessonData.id || null;
 }

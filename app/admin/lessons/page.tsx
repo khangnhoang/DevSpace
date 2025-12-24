@@ -334,7 +334,7 @@ export default function LessonsManagerPage() {
   );
 
   return (
-    <div className="p-6 text-white min-h-screen">
+    <div className="lg:ml-6 p-6 text-white min-h-screen">
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <h1 className="font-bold text-2xl">Quản lí bài học</h1>
         <button

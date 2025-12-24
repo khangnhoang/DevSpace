@@ -20,7 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       {/* pt-16: Tránh header che */}
       {/* md:pl-56: Tránh sidebar che */}
       <main className="h-full pt-16 md:pl-56">
-        <div className="h-full overflow-y-auto p-4"> {/* Cho phép cuộn nội dung riêng */}
+        <div className="h-full overflow-y-auto p-4 bg-[#0F1116]"> {/* Cho phép cuộn nội dung riêng */}
            {children}
         </div>
       </main>

@@ -98,7 +98,7 @@ export default function LessonsManagerPage() {
     setExplanation(exercise.explanation);
   };
 
-  const handleInActiveEditExerciseForm = (exercise: any) => {
+  const handleInActiveEditExerciseForm = () => {
     setEditExerciseId(null);
     setQuestion("");
     setOptionA("");
@@ -212,7 +212,12 @@ export default function LessonsManagerPage() {
     setIsGenerating(true);
     setShowAiMenu(false);
 
-    const res = await generateQuizFromContent(content, 1);
+    const res = await generateQuizFromContent(content, 1, exercise);
+
+    if (!res) {
+      toast.error("Lỗi lấy câu trả lời từ AI");
+      return;
+    }
 
     setIsGenerating(false);
     if (res.error) return toast(res.error);
@@ -239,7 +244,11 @@ export default function LessonsManagerPage() {
     setIsGenerating(true);
     setShowAiMenu(false);
 
-    const res = await generateQuizFromContent(content, 3);
+    const res = await generateQuizFromContent(content, 3, exercise);
+    if (!res) {
+      toast.error("Lỗi lấy câu trả lời từ AI");
+      return;
+    }
 
     if (res.error) {
       setIsGenerating(false);
@@ -681,42 +690,57 @@ export default function LessonsManagerPage() {
                   />
                 </div>
                 <div className="grid grid-cols-2 w-1/2 gap-3">
-                  <input
-                    type="text"
-                    name=""
-                    id=""
-                    placeholder="Đáp Án A"
-                    className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
-                    value={optionA}
-                    onChange={(e) => setOptionA(e.target.value)}
-                  />
-                  <input
-                    type="text"
-                    name=""
-                    id=""
-                    placeholder="Đáp Án B"
-                    className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
-                    value={optionB}
-                    onChange={(e) => setOptionB(e.target.value)}
-                  />
-                  <input
-                    type="text"
-                    name=""
-                    id=""
-                    placeholder="Đáp Án C"
-                    className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
-                    value={optionC}
-                    onChange={(e) => setOptionC(e.target.value)}
-                  />
-                  <input
-                    type="text"
-                    name=""
-                    id=""
-                    placeholder="Đáp Án D"
-                    className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
-                    value={optionD}
-                    onChange={(e) => setOptionD(e.target.value)}
-                  />
+                  <div className="flex flex-col gap-2">
+                    <span className="text-white text-md uppercase font-bold">a</span>
+                    <input
+                      type="text"
+                      name=""
+                      id=""
+                      placeholder="Đáp Án A"
+                      className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
+                      value={optionA}
+                      onChange={(e) => setOptionA(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {" "}
+                    <span className="text-white text-md uppercase font-bold">b</span>
+                    <input
+                      type="text"
+                      name=""
+                      id=""
+                      placeholder="Đáp Án B"
+                      className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
+                      value={optionB}
+                      onChange={(e) => setOptionB(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {" "}
+                    <span className="text-white text-md uppercase font-bold">C</span>
+                    <input
+                      type="text"
+                      name=""
+                      id=""
+                      placeholder="Đáp Án C"
+                      className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
+                      value={optionC}
+                      onChange={(e) => setOptionC(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {" "}
+                    <span className="text-white text-md uppercase font-bold">D</span>
+                    <input
+                      type="text"
+                      name=""
+                      id=""
+                      placeholder="Đáp Án D"
+                      className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
+                      value={optionD}
+                      onChange={(e) => setOptionD(e.target.value)}
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-2 item-center w-1/2">
                   <select
@@ -874,8 +898,6 @@ export default function LessonsManagerPage() {
                             </p>
                           </div>
                         </button>
-
-                        
                       </div>
                     )}
                   </div>

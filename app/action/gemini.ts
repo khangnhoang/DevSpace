@@ -1,60 +1,84 @@
 // action/ai.ts
 "use server";
 
-/* * LƯU Ý: Dùng thư viện @google/generative-ai (Bản ổn định)
- * Thay vì @google/genai (Bản beta hay lỗi)
- */
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+export async function generateQuizFromContent(content: string, quantity: number = 1, previousQuestion: any[]) {
+  // 1. Kiểm tra xem Key có nhận không
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.error("❌ LỖI: Không tìm thấy GEMINI_API_KEY trong biến môi trường.");
+    return { error: "Server chưa cấu hình API Key." };
+  }
 
-export async function generateQuizFromContent(content: string, quantity: number = 1) {
+  let prevQuestion = '';
+  if(previousQuestion.length > 0 && previousQuestion){
+    prevQuestion = previousQuestion.map((pq) => `${pq.question}`).join('; ');
+  }
+
+  const ai = new GoogleGenAI({apiKey});
+
   try {
     if (!content || content.length < 50) {
       return { error: "Nội dung quá ngắn (cần > 50 ký tự)." };
     }
 
-    // Sử dụng model 1.5 Flash - Bản quốc dân, miễn phí và ổn định nhất hiện nay
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
     const prompt = `
-      Bạn là trợ lý AI tạo câu hỏi trắc nghiệm.
-      Dựa vào nội dung:
-      ---
-      ${content}
-      ---
-      Hãy tạo đúng ${quantity} câu hỏi trắc nghiệm tiếng Việt.
+      Bạn là một API trả về JSON. Nhiệm vụ: Tạo ${quantity} câu hỏi trắc nghiệm khác với các câu hỏi trước đó (nếu có) ${prevQuestion} từ nội dung sau.
       
-      YÊU CẦU QUAN TRỌNG:
-      1. Trả về format JSON thuần (Raw JSON string).
-      2. KHÔNG được bọc trong markdown (không dùng \`\`\`json).
-      3. Cấu trúc mảng JSON bắt buộc:
+      Nội dung: """${content}""", 
+      
+      Yêu cầu Output: Chỉ trả về một mảng JSON (Array of Objects), không Markdown, không lời dẫn.
+      Schema bắt buộc:
       [
         {
-          "question": "Câu hỏi?",
-          "option_a": "A",
-          "option_b": "B",
-          "option_c": "C",
-          "option_d": "D",
-          "correct_answer": "a", 
-          "explanation": "Giải thích ngắn gọn"
+          "question": "Câu hỏi",
+          "option_a": "...",
+          "option_b": "...",
+          "option_c": "...",
+          "option_d": "...",
+          "correct_answer": "a/b/c/d",
+          "explanation": "..."
         }
       ]
     `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: {responseMimeType: 'application/json'}
+    })
 
-    if (!text) return { error: "AI không trả về kết quả" };
+    const text = response.text;
 
-    // Vệ sinh chuỗi JSON (đề phòng AI vẫn quen thói thêm markdown)
-    const cleanedText = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    if(!text){
+      return;
+    }
+
+    if (!text) return { error: "AI trả về rỗng." };
+
+    // Vệ sinh JSON (kỹ hơn)
+    // Đôi khi AI trả về: "Here is JSON: ```json ... ```" -> Cần lọc kỹ
+    let jsonString = text.replace(/```json/g, "").replace(/```/g, "").trim();
     
-    return { data: JSON.parse(cleanedText) };
+    // Tìm điểm bắt đầu [ và kết thúc ] để cắt chuỗi thừa nếu có
+    const firstBracket = jsonString.indexOf("[");
+    const lastBracket = jsonString.lastIndexOf("]");
+    if (firstBracket !== -1 && lastBracket !== -1) {
+        jsonString = jsonString.substring(firstBracket, lastBracket + 1);
+    }
+
+    const data = JSON.parse(jsonString);
+    return { data };
 
   } catch (error: any) {
-    console.error("Lỗi AI:", error);
-    return { error: `Lỗi: ${error.message}` };
+    // Log lỗi chi tiết ra terminal của VS Code để bạn đọc
+    console.error("❌ LỖI GOOGLE GEMINI:", error);
+    
+    // Check lỗi phổ biến
+    if (error.message?.includes("API key not valid")) {
+        return { error: "API Key không hợp lệ hoặc tài khoản bị khóa." };
+    }
+    return { error: `Lỗi xử lý: ${error.message}` };
   }
 }

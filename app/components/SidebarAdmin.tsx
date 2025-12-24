@@ -8,9 +8,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 interface SidebarAdminProps {
-  isOpen: boolean;
+  isOpen?: boolean;
 }
-export default function SidebarAdmin({isOpen}:SidebarAdminProps) {
+export default function SidebarAdmin({isOpen = true}:SidebarAdminProps) {
   return (
     <div className={`
         fixed left-0 top-16 bottom-0 bg-[#191C24] overflow-y-auto transition-all duration-300 ease-in-out z-40 border-t border-gray-700 shadow-2xl

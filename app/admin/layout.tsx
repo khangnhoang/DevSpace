@@ -13,7 +13,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       {/* 2. SIDEBAR: Cố định bên trái, bắt đầu từ top-16 (dưới header) */}
       {/* Thay mt-16 bằng top-16 để căn chuẩn vị trí viewport */}
       <div className="hidden md:flex w-56 flex-col fixed inset-y-0 left-0 top-16 z-40 border-r border-gray-700">
-         <SidebarAdmin/>
+         <SidebarAdmin isOpen={true}/>
       </div>
 
       {/* 3. MAIN CONTENT: Đẩy nội dung xuống và sang phải để không bị che */}

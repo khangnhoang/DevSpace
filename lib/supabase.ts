@@ -6,6 +6,17 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
+export interface Lessons{
+  id: number;
+  title: string;
+  slug: string;
+  content: string | null;
+  course_id: number;
+  created_at: string;
+  chapter_id: number;
+  video_url: string | null;
+}
+
 // 2. Định nghĩa Types (Interface)
 interface Course {
   id: number;
@@ -51,7 +62,9 @@ export async function getLessonsByCourse(courseSlug: string) {
   // Bước 2: Lấy các bài học thuộc ID đó
   const { data: chapters } = await supabase
     .from("chapters")
-    .select(`id, title, order_index, lessons (id, title, slug, video_url, exercises (count))`)
+    .select(
+      `id, title, order_index, lessons (id, title, slug, video_url, exercises (count))`
+    )
     .eq("course_id", course.id)
     .order("order_index", { ascending: true })
     .order("id", { referencedTable: "lessons", ascending: true });
@@ -61,9 +74,9 @@ export async function getLessonsByCourse(courseSlug: string) {
     lessons: (ch.lessons || []).map((l: any) => ({
       ...l,
       has_exercise: l.exercises && l.exercises[0]?.count > 0,
-      exercises: undefined
-    }))
-  }))
+      exercises: undefined,
+    })),
+  }));
 
   return formattedChapters as Chapter[];
 }
@@ -959,4 +972,35 @@ export async function getLastAccessedLessonSlug(
   }
 
   return lessonData.slug || null;
+}
+
+export async function checkAndSaveProgress(userId: string, lessonId: number) {
+  const { data: exercise, error: exError } = await supabase
+    .from("exercises")
+    .select("*")
+    .eq("lesson_id", lessonId)
+    .limit(1);
+
+  if(exError){
+    console.error('Lỗi khi kiểm tra bài tập', exError);
+    return {hasExercise: false, error: exError};
+  }
+
+  const hasExercise = exercise && exercise.length > 0;
+
+  if (!hasExercise) {
+    const { error: saveError } = await supabase
+      .from("user_progress")
+      .insert({
+        user_id: userId,
+        lesson_id: lessonId,
+      })
+
+    if (saveError && saveError.code !== '23505') {
+      console.log({hasExercise: false, saved: false, error: saveError});
+    }
+    return {hasExercise: false, saved: true};
+  } 
+
+  return {has_exercise: true, saved: false};
 }

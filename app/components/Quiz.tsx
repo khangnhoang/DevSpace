@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { saveUserProgress } from "@/lib/supabase";
+import { saveUserProgress, supabase } from "@/lib/supabase";
 import { Check, ArrowRight, X, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
@@ -48,8 +48,13 @@ export default function Quiz({
 
   const handleNextQuestion = async () => {
     if (isLastQuestion) {
-      if (userId && lessonId) {
-        await saveUserProgress(userId, lessonId);
+      let currentUserId = userId;
+      if(!currentUserId){
+        const {data} = await supabase.auth.getUser();
+        currentUserId = data.user?.id;
+      }
+      if (currentUserId && lessonId) {
+        await saveUserProgress(currentUserId, lessonId);
       } else {
         console.log("Lỗi lưu tiến trình");
       }

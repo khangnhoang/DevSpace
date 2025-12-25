@@ -73,7 +73,7 @@ export default function SidebarContent({
   }, [courseSlug]);
 
   return (
-    <div className="flex flex-col bg-gray-100 w-full rounded-xl shadow-2xl overflow-hidden">
+    <div className="flex flex-col bg-gray-100 w-full rounded-xl overflow-hidden">
       {/* Tên khóa học */}
       <h1 className="p-4 text-2xl text-black font-bold uppercase tracking-wide">
         {courseSlug.replace("-", " ")}

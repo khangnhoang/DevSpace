@@ -100,12 +100,6 @@ export default function Header() {
             HTML & CSS
           </Link>
           <Link
-            href="/quiz/html-intro"
-            className="hover:bg-blue-500 hover:text-white cursor-pointer px-3 lg:px-4 h-full flex items-center transition-colors text-sm lg:text-base whitespace-nowrap"
-          >
-            BÀI TẬP
-          </Link>
-          <Link
             href="/try_it"
             className="hover:bg-blue-500 hover:text-white cursor-pointer px-3 lg:px-4 h-full flex items-center transition-colors text-sm lg:text-base whitespace-nowrap"
           >

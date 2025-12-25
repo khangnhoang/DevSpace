@@ -1003,7 +1003,55 @@ export async function checkAndSaveProgress(userId: string, lessonId: number) {
   return { hasExercise: true, saved: false };
 }
 
-export async function getLastAccessedLessonId(
+export async function getLastAccessedLessonId(userId: string, courseSlug: string) {
+  // 1. Lấy Course ID
+  const { data: courseData, error: courseError } = await supabase
+    .from("courses")
+    .select("id")
+    .eq("slug", courseSlug)
+    .single();
+
+  if (courseError || !courseData) {
+    console.error("Lỗi khi lấy Id khóa học", courseError);
+    return null;
+  }
+
+  const courseId = courseData.id;
+
+  // 2. Tìm bài học mới nhất đã hoàn thành trong bảng user_progress
+  const { data: progressData, error: progressError } = await supabase
+    .from("user_progress")
+    .select(`lessons!inner (id, course_id)`) // Chỉ cần lấy ID
+    .eq("user_id", userId)
+    .eq("lessons.course_id", courseId)
+    .order("completed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle(); // Dùng maybeSingle an toàn hơn (trả về null nếu không có thay vì báo lỗi)
+
+  // A. Nếu tìm thấy tiến độ -> Trả về bài đó
+  if (progressData && progressData.lessons) {
+    // Ép kiểu vì Supabase join trả về object/array tùy context
+    const lessonInfo = progressData.lessons as any; 
+    return Array.isArray(lessonInfo) ? lessonInfo[0].id : lessonInfo.id;
+  }
+
+  // B. Nếu chưa học bài nào (Fallback) -> Lấy bài đầu tiên CỦA KHÓA HỌC ĐÓ
+  const { data: firstLesson, error: firstLessonError } = await supabase
+    .from("lessons")
+    .select("id")
+    .eq("course_id", courseId) // <--- QUAN TRỌNG: Phải lọc theo khóa học
+    .order("id", { ascending: true }) // Hoặc order theo 'index' nếu bạn có cột đó
+    .limit(1)
+    .single();
+
+  if (firstLesson) {
+    return firstLesson.id;
+  }
+
+  return null;
+}
+
+export async function checkUserAndHasEnroll(
   userId: string,
   courseSlug: string
 ) {
@@ -1013,35 +1061,39 @@ export async function getLastAccessedLessonId(
     .eq("slug", courseSlug)
     .single();
 
-  if (!courseData || courseError) {
-    console.error("Lỗi khi lấy Id khóa học", courseError);
-    return;
+  if (courseError || !courseData) {
+    console.error(
+      "Lỗi khi lấy courseId cho việc kiểm tra user, đăng ký khóa học",
+      courseError
+    );
+    return { enrolled: false, error: courseError };
   }
 
   const courseId = courseData.id;
 
-  const { data, error } = await supabase
-    .from("user_progress")
-    .select(`completed_at, lessons!inner (id, course_id)`)
+  if (!userId) {
+    console.error("Chưa đăng nhập");
+    return { enrolled: false };
+  }
+
+  const { data: enrollmentData, error: enrollmentError } = await supabase
+    .from("enrollments")
+    .select("id")
+    .eq("course_id", courseId)
     .eq("user_id", userId)
-    .eq("lessons.course_id", courseId)
-    .order("completed_at", { ascending: false })
-    .limit(1);
+    .maybeSingle();
 
-  if (error) {
-    console.error("Đã xảy ra lỗi khi lấy id bài học mới nhất", error.message);
-    return null;
+  if (enrollmentError) {
+    console.error(
+      "Có lỗi khi kiểm tra người dùng đăng ký khóa học",
+      enrollmentError
+    );
+    return { enrolled: false, error: enrollmentError };
   }
 
-  const firstItem = data[0];
-
-  if (!data || data.length === 0) return null;
-
-  const lessonData = firstItem.lessons as any;
-
-  if (Array.isArray(lessonData)) {
-    return lessonData[0]?.id || null;
+  if (enrollmentData) {
+    return { enrolled: true, error: enrollmentError };
+  } else {
+    return { enrolled: false, error: enrollmentError };
   }
-
-  return lessonData.id || null;
 }

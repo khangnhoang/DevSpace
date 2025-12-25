@@ -1,11 +1,11 @@
 // app/components/LearnClient.tsx
 "use client"; // <--- Bắt buộc dòng này
-import { supabase, type Lessons, type Chapter } from "@/lib/supabase";
+import { supabase, type Lessons, type Chapter, checkUserAndHasEnroll } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import LessonContent from "@/app/components/LessonContent";
 import CompleteLessonBtn from "@/app/components/CompleteLessonButton";
+import { toast } from "sonner";
 
 // Import các interface cần thiết của bạn (Lesson, Chapter...)
 // Ví dụ giả định kiểu dữ liệu:
@@ -32,7 +32,7 @@ export default function LearnClient({
 }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [currentUser, setCurrentUserUser] = useState<any>(null);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -41,16 +41,34 @@ export default function LearnClient({
       } = await supabase.auth.getUser();
 
       if (!user) {
-        // Nếu không có user, đá về trang chủ ngay lập tức
         router.push("/");
+        return;
       } else {
-        setUser(user);
+        setCurrentUserUser(user);
         setLoading(false); // Đã có user, tắt loading để hiện nội dung
+      }
+
+      const result = await checkUserAndHasEnroll(user.id, course);
+      if(result.error){
+        toast.error('Có lỗi khi kiểm tra người dùng' + result.error);
+        router.push('/');
+        return;
+      }
+      else{
+        if(!result.enrolled){
+          toast.error('Người dùng chưa đăng ký khóa học');
+          router.push('/');
+          return;
+        }
+        else{
+          toast.success('Kiểm tra thành công');
+          return;
+        }
       }
     };
 
     checkUser();
-  }, [router]);
+  }, [router, course]);
 
   // Trong lúc đang check user, hiện màn hình Loading để tránh lộ nội dung
   if (loading) {
@@ -104,7 +122,7 @@ export default function LearnClient({
 
           {/* Truyền user.id đã lấy được từ client */}
           <CompleteLessonBtn
-            userId={user.id}
+            userId={currentUser.id}
             lessonId={lesson.id}
             nextLessonSlug={nextLesson?.slug || null}
             courseSlug={course}

@@ -36,6 +36,7 @@ export default function SidebarContent({
   const [lastAccessLessonId, setLastAccessLessonId] = useState<number | null>(
     null
   );
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Toggle mở/đóng chapter
   const toggleChapter = (id: number) => {
@@ -67,6 +68,7 @@ export default function SidebarContent({
       } else {
         setLastAccessLessonId(lessonId);
       }
+
     };
 
     fetchProgress();

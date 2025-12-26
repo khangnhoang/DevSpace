@@ -21,6 +21,7 @@ import {
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { enrollCourse } from "@/app/action/enroll";
+import CoursePaymentModal from "@/app/components/CoursePaymentModal";
 
 export default function DetailPage({
   params,
@@ -35,6 +36,8 @@ export default function DetailPage({
   const [expandedChapters, setExpandedChapters] = useState<number[]>([]);
   const [hasEnrolled, setHasEnrolled] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState(false);
+  const [isOpenPaymentForm, setIsOpenPaymentForm] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   const getDestinationRoute = async (
     currentCourse: CourseDetail,
@@ -112,7 +115,7 @@ export default function DetailPage({
     );
   };
 
-  const handleEnrollment = async () => {
+  const handleEnrollmentClick = async () => {
     if (!course) return;
 
     const {
@@ -122,51 +125,53 @@ export default function DetailPage({
       toast.warning("Bạn phải đăng nhập mới có thể đăng ký học");
       return;
     }
+    setCurrentUser(user);
 
     if (course.price > 0) {
-      const confirmBuy = confirm(
-        `Bạn có muốn mua khóa học ${course.name} với giá: ${course.price_text} không?`
-      );
-      if (!confirmBuy) return;
+      setIsOpenPaymentForm(true);
+    } else {
+      processFreeEnrollment(user.id);
     }
+  };
 
+  const processFreeEnrollment = async (userId: string) => {
     setIsEnrolling(true);
-
     try {
-      const result = await enrollCourse(course.id, user.id, course.price);
+      const result = await enrollCourse(course!.id, userId, 0);
 
       if (result.error) {
         toast.error(result.error);
         setIsEnrolling(false);
       } else if (result.success) {
-        toast.success(
-          `${
-            course.price === 0 ? "Đăng ký thành công!" : "Mua thành công!"
-          } Đang vào lớp học...`
-        );
-        setHasEnrolled(true);
-
-        let destUrl = "";
-        if (
-          course.chapters.length > 0 &&
-          course.chapters[0].lessons.length > 0
-        ) {
-          const firstSlug = course.chapters[0].lessons[0].slug;
-          destUrl = `/learn/${result.slug}/${firstSlug}`;
-        }
-
-        if (destUrl) {
-          setTimeout(() => {
-            router.push(destUrl);
-          }, 2000);
-        } else {
-          toast.warning("Khóa học này chưa cập nhật bài học nào.");
-          setIsEnrolling(false);
-        }
+        toast.success("Đăng ký thành công! Đang vào lớp học...");
+        handleEnrollmentSuccess(result.slug);
       }
     } catch (error) {
-      toast.error("Có lỗi xảy ra: " + error);
+      toast.error("Có lỗi xảy ra" + error);
       setIsEnrolling(false);
+    }
+  };
+
+  const handleEnrollmentSuccess = async (courseSlug: string) => {
+    setHasEnrolled(true);
+    setIsOpenPaymentForm(false);
+
+    let destUrl = "";
+    if (
+      course &&
+      course.chapters.length > 0 &&
+      course.chapters[0].lessons.length > 0
+    ) {
+      const firstSlug = course.chapters[0].lessons[0].slug;
+      destUrl = `/learn/${courseSlug}/${firstSlug}`;
+    }
+
+    if (destUrl) {
+      setTimeout(() => {
+        router.push(destUrl);
+      }, 1000); // Giảm delay xuống 1s cho nhanh
+    } else {
+      toast.warning("Khóa học này chưa cập nhật bài học nào.");
     }
   };
 
@@ -340,7 +345,7 @@ export default function DetailPage({
                       }
                     });
                   }
-                : handleEnrollment
+                : handleEnrollmentClick
             }
             disabled={isEnrolling || loading}
             className={`px-4 py-3 rounded-full cursor-pointer transition-all w-full font-bold text-lg
@@ -400,6 +405,15 @@ export default function DetailPage({
           </div>
         </div>
       </div>
+      {/* === THÊM MODAL VÀO CUỐI JSX (Trước thẻ đóng div ngoài cùng) === */}
+      {isOpenPaymentForm && course && currentUser && (
+        <CoursePaymentModal
+          course={course}
+          userId={currentUser.id}
+          onClose={() => setIsOpenPaymentForm(false)}
+          onSuccess={() => handleEnrollmentSuccess(course.slug)}
+        />
+      )}
     </div>
   );
 }

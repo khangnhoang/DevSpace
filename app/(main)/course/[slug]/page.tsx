@@ -202,7 +202,7 @@ export default function DetailPage({
       {/* CỘT TRÁI: NỘI DUNG KHÓA HỌC */}
       <div className="w-full lg:w-2/3 flex flex-col gap-8">
         <div className="w-full flex flex-col gap-4">
-          <h1 className="text-2xl md:text-3xl font-bold">{course.name}</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-white">{course.name}</h1>
           <p className="text-sm leading-relaxed text-gray-300">
             {course.description}
           </p>
@@ -211,7 +211,7 @@ export default function DetailPage({
         {/* Learning Outcomes */}
         {course.learning_outcomes && course.learning_outcomes.length > 0 && (
           <div className="flex flex-col gap-4">
-            <h1 className="text-xl md:text-2xl font-bold">
+            <h1 className="text-xl md:text-2xl font-bold text-white">
               Bạn sẽ học được gì?
             </h1>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -257,7 +257,7 @@ export default function DetailPage({
                 >
                   <div
                     onClick={() => toggleChapter(chapter.id)}
-                    className="flex justify-between items-center p-3 md:p-4 hover:bg-gray-700 select-none cursor-pointer"
+                    className="flex justify-between items-center p-3 md:p-4 hover:bg-gray-700 select-none cursor-pointer text-white"
                   >
                     <div className="flex items-center gap-3">
                       <div className="text-blue-400">

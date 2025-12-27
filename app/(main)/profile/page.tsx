@@ -32,7 +32,7 @@ export default function ProfilePage() {
   }, [router]);
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Đang tải hồ sơ...</div>;
+    return <div className="min-h-screen flex  justify-center">Đang tải hồ sơ...</div>;
   }
 
   // Logic hiển thị (Avatar giả)

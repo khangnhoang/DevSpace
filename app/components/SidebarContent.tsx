@@ -9,18 +9,32 @@ import {
   type Chapter,
   getLastAccessedLessonId,
 } from "@/lib/supabase";
-import {
-  ChevronDown,
-  ChevronRight,
-  Check,
-  FileQuestion,
-} from "lucide-react";
+import { ChevronDown, ChevronRight, Check, FileQuestion } from "lucide-react";
 
 type SidebarContentProps = {
-  chapters: Chapter[]; // ✅ nhận CHAPTER từ getLessonsByCourse
+  chapters: Chapter[];
   courseSlug: string;
   onLinkClick?: () => void;
 };
+
+// Component Skeleton (Khung xương loading)
+const SidebarSkeleton = () => (
+  <div className="p-4 space-y-4 animate-pulse w-full">
+    {/* Title Skeleton */}
+    <div className="h-8 bg-gray-300 rounded w-3/4 mb-6"></div>
+
+    {/* List Skeleton */}
+    {[1, 2, 3, 4].map((i) => (
+      <div key={i} className="space-y-2">
+        <div className="h-10 bg-gray-200 rounded w-full"></div>
+        <div className="pl-4 space-y-2">
+          <div className="h-8 bg-gray-100 rounded w-5/6"></div>
+          <div className="h-8 bg-gray-100 rounded w-4/6"></div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
 
 export default function SidebarContent({
   chapters,
@@ -28,15 +42,13 @@ export default function SidebarContent({
 }: SidebarContentProps) {
   const pathName = usePathname();
 
-  // Bài đã hoàn thành
+  // State
   const [completedIds, setCompletedIds] = useState<number[]>([]);
-
-  // State chỉ lưu các chapter user đã TỰ toggle (true/false)
   const [openChapters, setOpenChapters] = useState<Record<number, boolean>>({});
   const [lastAccessLessonId, setLastAccessLessonId] = useState<number | null>(
     null
   );
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [isLoading, setIsLoading] = useState(true); // Thêm state Loading
 
   // Toggle mở/đóng chapter
   const toggleChapter = (id: number) => {
@@ -46,51 +58,83 @@ export default function SidebarContent({
     }));
   };
 
-  // Lấy tiến độ học từ Supabase (ngoại hệ thống → dùng effect là đúng)
   useEffect(() => {
-    const fetchProgress = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    let channel: any;
 
-      if (user) {
-        const result = await getCompletedLessonIds(user.id);
-        setCompletedIds(result);
-      } else {
-        return;
+    const initDataAndRealtime = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) return;
+
+        // 1. Hàm lấy dữ liệu (Tách ra để tái sử dụng)
+        const fetchProgress = async () => {
+          const [completed, lastId] = await Promise.all([
+            getCompletedLessonIds(user.id),
+            getLastAccessedLessonId(user.id, courseSlug),
+          ]);
+
+          setCompletedIds(completed);
+          if (lastId) setLastAccessLessonId(lastId);
+        };
+
+        // Gọi lần đầu
+        await fetchProgress();
+        setIsLoading(false); // Tắt loading sau khi fetch xong
+
+        // 2. Đăng ký Realtime (Lắng nghe bảng user_progress)
+        channel = supabase
+          .channel("sidebar_progress_tracking")
+          .on(
+            "postgres_changes",
+            {
+              event: "*", // Nghe mọi sự kiện (INSERT, DELETE...)
+              schema: "public",
+              table: "user_progress",
+              filter: `user_id=eq.${user.id}`, // Chỉ nghe của user hiện tại
+            },
+            () => {
+              // Khi có thay đổi -> Gọi lại hàm fetchProgress để cập nhật UI
+              console.log("Detect change, refreshing sidebar...");
+              fetchProgress();
+            }
+          )
+          .subscribe();
+      } catch (error) {
+        console.error("Lỗi khởi tạo sidebar:", error);
+        setIsLoading(false);
       }
-
-      const lessonId = await getLastAccessedLessonId(user.id, courseSlug);
-
-      if (!lessonId) {
-        console.error("Lỗi khi lấy id bài học mới nhất");
-        return;
-      } else {
-        setLastAccessLessonId(lessonId);
-      }
-
     };
 
-    fetchProgress();
+    initDataAndRealtime();
+
+    // Cleanup khi unmount
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [courseSlug]);
 
+  // Render Skeleton nếu đang loading
+  if (isLoading) return <SidebarSkeleton />;
+
   return (
-    <div className="flex flex-col bg-gray-100 w-full rounded-xl overflow-hidden">
+    <div className="flex flex-col bg-gray-100 w-full rounded-xl overflow-hidden h-full">
       {/* Tên khóa học */}
-      <h1 className="p-4 text-2xl text-black font-bold uppercase tracking-wide">
+      <h1 className="p-4 text-2xl text-black font-bold uppercase tracking-wide border-b border-gray-200">
         {courseSlug.replace("-", " ")}
       </h1>
 
       {/* Danh sách chương + bài */}
       <div className="flex-1 overflow-y-auto p-2 space-y-2">
         {chapters.map((chapter) => {
-          // Chapter này có chứa bài đang active không?
+          // Logic xác định chapter active
           const isActiveChapter =
             chapter.lessons?.some(
               (l) => pathName === `/learn/${courseSlug}/${l.slug}`
             ) ?? false;
 
-          // Nếu user chưa toggle thì mặc định MỞ chapter đang active
           const isOpen = openChapters[chapter.id] ?? isActiveChapter;
 
           return (
@@ -99,9 +143,9 @@ export default function SidebarContent({
               <button
                 type="button"
                 onClick={() => toggleChapter(chapter.id)}
-                className="w-full flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-200 rounded-md transition-colors group"
+                className="w-full flex items-center justify-between px-3 py-3 cursor-pointer hover:bg-white hover:shadow-sm rounded-lg transition-all group"
               >
-                <span className="font-bold text-sm text-gray-700 group-hover:text-black">
+                <span className="font-bold text-sm text-gray-700 group-hover:text-blue-700">
                   {chapter.title}
                 </span>
                 {isOpen ? (
@@ -113,53 +157,64 @@ export default function SidebarContent({
 
               {/* Danh sách bài trong chương */}
               {isOpen && (
-                <div className="mt-1 ml-2 pl-2 border-l-2 border-gray-300 space-y-1">
+                <div className="mt-1 ml-2 pl-2 border-l-2 border-gray-300 space-y-1 animate-in slide-in-from-top-2 duration-200">
                   {chapter.lessons?.map((lesson) => {
                     const isActive =
                       pathName === `/learn/${courseSlug}/${lesson.slug}`;
-                    const lessonUrl = `/learn/${courseSlug}/${lesson.slug}`;
                     const quizUrl = `/learn/${courseSlug}/${lesson.slug}/quiz`;
-
                     const isQuizActive = pathName === quizUrl;
                     const isCompleted = completedIds.includes(lesson.id);
+
+                    // Logic khóa bài học
                     const safeLastId = lastAccessLessonId ?? 0;
                     const isLastAccessLesson =
-                      lesson.id <= safeLastId ||
-                      lesson.id === safeLastId + 1;
+                      lesson.id <= safeLastId || lesson.id === safeLastId + 1; // Mở khóa bài tiếp theo
+
+                    // Logic check hoàn thành Quiz (Optional - nếu bạn có bảng riêng cho quiz progress)
+                    // Hiện tại đang dùng chung completedIds
 
                     return (
-                      <div key={lesson.id} className="flex flex-col">
+                      <div key={lesson.id} className="flex flex-col mb-1">
                         <Link
                           href={`/learn/${courseSlug}/${lesson.slug}`}
                           className={`flex items-center justify-between px-3 py-2 rounded-md text-sm transition-all ${
                             isActive
-                              ? "bg-blue-100 text-blue-700 font-semibold"
-                              : "text-gray-700 hover:bg-gray-100 hover:text-black"
+                              ? "bg-blue-100 text-blue-700 font-semibold shadow-sm"
+                              : "text-gray-600 hover:bg-gray-200 hover:text-black"
                           } ${
                             isLastAccessLesson
                               ? ""
-                              : `cursor-not-allowed opacity-50 pointer-events-none`
+                              : `cursor-not-allowed opacity-50 pointer-events-none select-none grayscale`
                           }`}
                         >
-                          <span className="truncate mr-2">{lesson.title}</span>
+                          <span className="truncate mr-2 flex-1">
+                            {lesson.title}
+                          </span>
 
                           {isCompleted && (
-                            <Check
-                              size={16}
-                              className="text-green-600 shrink-0"
-                              strokeWidth={3}
-                            />
+                            <div className="bg-green-100 rounded-full p-0.5">
+                              <Check
+                                size={14}
+                                className="text-green-600 shrink-0"
+                                strokeWidth={3}
+                              />
+                            </div>
                           )}
                         </Link>
 
+                        {/* Link Quiz */}
                         {lesson.has_exercise && (
                           <Link
                             href={quizUrl}
                             className={`flex items-center gap-2 px-3 py-1.5 ml-4 mt-0.5 rounded-md text-xs transition-all duration-200 ${
                               isQuizActive
                                 ? "bg-purple-100 text-purple-800 font-medium border border-purple-200"
-                                : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-                            } ${isLastAccessLesson ? '' : "cursor-not-allowed opacity-50 pointer-events-none"}`}
+                                : "text-gray-500 hover:bg-white hover:shadow-sm"
+                            } ${
+                              isLastAccessLesson
+                                ? ""
+                                : "cursor-not-allowed opacity-50 pointer-events-none"
+                            }`}
                           >
                             <FileQuestion
                               size={12}

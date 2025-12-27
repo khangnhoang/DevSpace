@@ -112,7 +112,7 @@ export default function NoteManager({ userId, lessonId, player }: Props) {
                 <NotebookPen size={18} className="text-blue-600"/>
                 Ghi chú bài học
               </h3>
-              <button onClick={handleClose} className="p-1 hover:bg-gray-200 rounded-full text-gray-500">
+              <button onClick={handleClose} className="cursor-pointer p-1 hover:bg-gray-200 rounded-full text-gray-500">
                 <X size={20} />
               </button>
             </div>
@@ -131,11 +131,11 @@ export default function NoteManager({ userId, lessonId, player }: Props) {
                     <div className="flex justify-between items-start mb-2">
                       <button 
                         onClick={() => handleJump(note.timestamp)}
-                        className="flex items-center gap-1 text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded hover:bg-blue-100 transition-colors"
+                        className="cursor-pointer flex items-center gap-1 text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded hover:bg-blue-100 transition-colors"
                       >
                         <PlayCircle size={12}/> {formatTime(note.timestamp)}
                       </button>
-                      <button onClick={() => handleDelete(note.id)} className="text-gray-300 hover:text-red-500 transition-colors">
+                      <button onClick={() => handleDelete(note.id)} className="cursor-pointer text-gray-400 hover:text-red-500 transition-colors">
                         <Trash2 size={14}/>
                       </button>
                     </div>
@@ -158,13 +158,13 @@ export default function NoteManager({ userId, lessonId, player }: Props) {
                     onChange={(e) => setContent(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleAddNote()}
                     placeholder="Nhập ghi chú mới..."
-                    className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="text-gray-400 flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400"
                     autoFocus
                   />
                   <button 
                     onClick={handleAddNote}
                     disabled={isSaving}
-                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 transition-colors flex items-center justify-center min-w-[50px]"
+                    className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 transition-colors flex items-center justify-center min-w-[50px]"
                   >
                     {isSaving ? <Loader2 size={18} className="animate-spin"/> : <PlusCircle size={20}/>}
                   </button>

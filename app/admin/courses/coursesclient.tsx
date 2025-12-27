@@ -101,10 +101,10 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
   };
 
   return (
-    <div className="w-full lg:ml-6">
+    <div className="w-full">
       <div className="w-full h-screen">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <h1 className="font-bold text-2xl ml-6">Các khóa học hiện có: </h1>
+          <h1 className="font-bold text-2xl md:ml-10">Các khóa học hiện có: </h1>
           <button
             onClick={handleOpenAdd}
             className="text-md font-bold bg-[#191C24] p-2 rounded-md hover:opacity-80 cursor-pointer w-full sm:w-auto"
@@ -112,11 +112,11 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
             Thêm khóa học
           </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10 px-2 md:px-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10 px-4 md:px-10">
           {courses.map((course) => (
             <div
               key={course.id}
-              className="flex flex-col justify-center items-center bg-[#191C24] text-white rounded-xl w-full overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300"
+              className="flex flex-col justify-center items-center rounded-xl w-full overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300"
             >
               <div className="relative w-full h-48 sm:h-56 lg:h-60">
                 <Image

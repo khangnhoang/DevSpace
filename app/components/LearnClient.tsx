@@ -1,11 +1,18 @@
 // app/components/LearnClient.tsx
-"use client"; // <--- Bắt buộc dòng này
-import { supabase, type Lessons, type Chapter, checkUserAndHasEnroll } from "@/lib/supabase";
+"use client";
+import {
+  supabase,
+  type Lessons,
+  type Chapter,
+  checkUserAndHasEnroll,
+} from "@/lib/supabase";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import Link from "next/link";
 import CompleteLessonBtn from "@/app/components/CompleteLessonButton";
-import { toast } from "sonner";
+import NoteManager from "./NoteManager";
+import YouTube, { YouTubePlayer } from "react-youtube";
 
 // Import các interface cần thiết của bạn (Lesson, Chapter...)
 // Ví dụ giả định kiểu dữ liệu:
@@ -33,6 +40,7 @@ export default function LearnClient({
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUserUser] = useState<any>(null);
+  const [player, setPlayer] = useState<YouTubePlayer | null>(null);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -49,19 +57,17 @@ export default function LearnClient({
       }
 
       const result = await checkUserAndHasEnroll(user.id, course);
-      if(result.error){
-        toast.error('Có lỗi khi kiểm tra người dùng' + result.error);
-        router.push('/');
+      if (result.error) {
+        toast.error("Có lỗi khi kiểm tra người dùng" + result.error);
+        router.push("/");
         return;
-      }
-      else{
-        if(!result.enrolled){
-          toast.error('Người dùng chưa đăng ký khóa học');
-          router.push('/');
+      } else {
+        if (!result.enrolled) {
+          toast.error("Người dùng chưa đăng ký khóa học");
+          router.push("/");
           return;
-        }
-        else{
-          toast.success('Kiểm tra thành công');
+        } else {
+          toast.success("Kiểm tra thành công");
           return;
         }
       }
@@ -70,18 +76,46 @@ export default function LearnClient({
     checkUser();
   }, [router, course]);
 
-  // Trong lúc đang check user, hiện màn hình Loading để tránh lộ nội dung
+  const onPlayerReady = (event: any) => {
+    setPlayer(event.target);
+  };
+
+  // Trong LearnClient.tsx
+
   if (loading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-gray-50">
-        <div className="text-blue-600 font-semibold">
-          Đang kiểm tra quyền truy cập...
+      <div className="md:p-8 min-h-screen p-4 w-full bg-gray-50 lg:w-3/4 mx-auto pt-16">
+        {/* 1. Breadcrumb giả */}
+        <div className="h-4 w-48 bg-gray-200 rounded animate-pulse mb-6"></div>
+
+        <div className="bg-white p-4 md:p-10 rounded-xl shadow-sm border border-gray-200">
+          {/* 2. Header giả (Title + Nút Note) */}
+          <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
+            <div className="h-8 w-2/3 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-10 w-32 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+
+          {/* 3. Video giả (Cục to nhất) */}
+          <div className="mb-8 aspect-video w-full rounded-lg bg-gray-200 animate-pulse"></div>
+
+          {/* 4. Nội dung bài học giả (Mấy dòng text) */}
+          <div className="space-y-3">
+            <div className="h-4 w-full bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-4 w-5/6 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-4 w-4/6 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+
+          {/* 5. Nút điều hướng giả */}
+          <div className="flex justify-between mt-10 pt-6 border-t border-gray-100">
+            <div className="h-12 w-32 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-12 w-32 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-12 w-32 bg-gray-200 rounded animate-pulse"></div>
+          </div>
         </div>
       </div>
     );
   }
 
-  // --- PHẦN RENDER UI CŨ CỦA BẠN (Copy từ page.tsx cũ vào đây) ---
   return (
     <div className="md:p-8 min-h-screen p-4 w-full bg-gray-50 lg:w-3/4 mx-auto pt-16">
       <div className="text-sm text-gray-500 mb-6">
@@ -90,19 +124,36 @@ export default function LearnClient({
       </div>
 
       <div className="bg-white p-4 md:p-10 rounded-xl shadow-sm border border-gray-200">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6 pb-4 border-b">
-          {lesson.title}
-        </h1>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+            {lesson.title}
+          </h1>
+
+          {/* Component NoteManager nằm ở đây -> Sẽ hiện nút Ghi chú */}
+          <NoteManager
+            userId={currentUser.id}
+            lessonId={lesson.id}
+            player={player}
+          />
+        </div>
 
         {videoId && (
           <div className="mb-8 aspect-video w-full rounded-lg overflow-hidden border border-gray-200 shadow-sm">
-            <iframe
+            <YouTube
+              videoId={videoId}
+              onReady={onPlayerReady} // <--- QUAN TRỌNG NHẤT: Cái này giúp lấy player object lưu vào state
               className="w-full h-full"
-              src={`https://www.youtube.com/embed/${videoId}`}
-              title={lesson.title}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            ></iframe>
+              iframeClassName="w-full h-full"
+              opts={{
+                width: "100%",
+                height: "100%",
+                playerVars: {
+                  autoplay: 0,
+                  rel: 0, // Tắt video gợi ý liên quan khi hết bài
+                  modestbranding: 1,
+                },
+              }}
+            />
           </div>
         )}
 
@@ -112,7 +163,7 @@ export default function LearnClient({
           {prevLesson ? (
             <Link
               href={`/learn/${course}/${prevLesson.slug}`}
-              className="w-full md:w-auto border border-gray-300 text-black rounded-md p-4 hover:bg-blue-500 hover:text-white hover:border-blue-500 flex items-center gap-2 transition-colors"
+              className="w-full md:w-auto border border-gray-300 text-black rounded-md p-4 hover:bg-blue-500 hover:text-white hover:border-blue-500 flex items-center gap-2 transition-colors justify-center"
             >
               <div>Bài trước</div>
             </Link>

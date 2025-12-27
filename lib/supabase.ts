@@ -1097,3 +1097,46 @@ export async function checkUserAndHasEnroll(
     return { enrolled: false, error: enrollmentError };
   }
 }
+
+// lib/supabase.ts
+
+// 1. Hàm lấy danh sách ghi chú của bài học
+export async function getLessonNotes(userId: string, lessonId: number) {
+  const { data, error } = await supabase
+    .from("notes")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("lesson_id", lessonId)
+    .order("timestamp", { ascending: true }); // Sắp xếp theo thời gian video
+
+  if (error) {
+    console.error("Lỗi lấy notes:", error);
+    return [];
+  }
+  return data;
+}
+
+// 2. Hàm tạo ghi chú mới
+export async function createNote(userId: string, lessonId: number, content: string, timestamp: number) {
+  const { data, error } = await supabase
+    .from("notes")
+    .insert({
+      user_id: userId,
+      lesson_id: lessonId,
+      content: content,
+      timestamp: Math.floor(timestamp), // Làm tròn số giây (ví dụ 12.5s -> 12s)
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return { error: error.message };
+  }
+  return { data };
+}
+
+// 3. Hàm xóa ghi chú (Làm thêm cho đủ bộ)
+export async function deleteNote(noteId: number) {
+  const { error } = await supabase.from("notes").delete().eq("id", noteId);
+  return { error };
+}

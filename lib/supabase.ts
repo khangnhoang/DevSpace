@@ -461,7 +461,7 @@ export async function getCourseChapterManager() {
 export async function getChapterForChapterManager() {
   const { data, error } = await supabase
     .from("chapters")
-    .select("id, course_id, title, order_index")
+    .select("id, course_id, title, order_index, created_at")
     .order("order_index", { ascending: true });
 
   if (error) return [];

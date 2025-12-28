@@ -30,6 +30,7 @@ export interface DBChapter {
   title: string;
   course_id: number;
   order_index: number;
+  created_at: string;
   lessons?: DBLesson[];
 }
 

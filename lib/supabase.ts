@@ -783,25 +783,47 @@ export async function checkUserAndHasEnroll(
   userId: string,
   courseSlug: string
 ) {
-  const { data: courseData } = await supabase
+  const { data: courseData, error: courseError } = await supabase
     .from("courses")
     .select("id")
     .eq("slug", courseSlug)
     .single();
 
-  if (!courseData) return { enrolled: false };
+  if (courseError || !courseData) {
+    console.error(
+      "Lỗi khi lấy courseId cho việc kiểm tra user, đăng ký khóa học",
+      courseError
+    );
+    return { enrolled: false, error: courseError };
+  }
+
   const courseId = courseData.id;
 
-  if (!userId) return { enrolled: false };
+  if (!userId) {
+    console.error("Chưa đăng nhập");
+    return { enrolled: false };
+  }
 
-  const { data: enrollmentData } = await supabase
+  const { data: enrollmentData, error: enrollmentError } = await supabase
     .from("enrollments")
     .select("id")
     .eq("course_id", courseId)
     .eq("user_id", userId)
     .maybeSingle();
 
-  return { enrolled: !!enrollmentData };
+  if (enrollmentError) {
+    console.error(
+      "Có lỗi khi kiểm tra người dùng đăng ký khóa học",
+      enrollmentError
+    );
+    return { enrolled: false, error: enrollmentError };
+  }
+
+  if (enrollmentData) {
+    return { enrolled: true, error: enrollmentError };
+  } else {
+    return { enrolled: false, error: enrollmentError };
+  }
 }
 
 // Logic Notes

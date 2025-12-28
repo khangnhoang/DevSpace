@@ -1,53 +1,35 @@
 import { createClient } from "@supabase/supabase-js";
 
-// 1. Khởi tạo Client
+// ✅ 1. IMPORT & RE-EXPORT
+// Dòng này giúp các file khác vẫn import type từ đây được (không gãy code cũ)
+export * from "@/lib/types";
+
+// Import nội bộ để dùng trong file này
+import type {
+  DBCourse,
+  DBLesson,
+  DBProgress,
+  DBChapter,
+  DBProfile,
+  DashboardCourse,
+  HomeCourseData,
+  AdminCourseData,
+  DashboardStats,
+  CourseDetail,
+  ExerciseData,
+  LessonItem,
+  ChapterItem,
+} from "@/lib/types";
+
+// 2. Khởi tạo Client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-export interface Lessons {
-  id: number;
-  title: string;
-  slug: string;
-  content: string | null;
-  course_id: number;
-  created_at: string;
-  chapter_id: number;
-  video_url: string | null;
-}
-
-// 2. Định nghĩa Types (Interface)
-interface Course {
-  id: number;
-  name: string; // Trong DB là 'name'
-  slug: string;
-}
-
-interface Lesson {
-  id: number;
-  course_id: number;
-}
-
-interface Progress {
-  lesson_id: number;
-}
 // --------------------------------------------------------
 // SECTION A: LOGIC BÀI HỌC (LESSONS)
 // --------------------------------------------------------
-
-export interface Chapter {
-  id: number;
-  title: string;
-  order_index: number;
-  lessons: {
-    id: number;
-    title: string;
-    slug: string;
-    video_url: string | null;
-    has_exercise: boolean;
-  }[];
-}
 
 export async function getLessonsByCourse(courseSlug: string) {
   // Bước 1: Tìm xem cái slug 'html-css' là ID số mấy?
@@ -78,7 +60,7 @@ export async function getLessonsByCourse(courseSlug: string) {
     })),
   }));
 
-  return formattedChapters as Chapter[];
+  return formattedChapters as any[]; // Trả về Chapter[]
 }
 
 // --------------------------------------------------------
@@ -86,7 +68,7 @@ export async function getLessonsByCourse(courseSlug: string) {
 // --------------------------------------------------------
 
 export async function getExerciseByLesson(lessonSlug: string) {
-  // 1. Lấy thông tin bài học + kèm theo slug của khóa học (Join bảng)
+  // 1. Lấy thông tin bài học + kèm theo slug của khóa học
   const { data: lesson } = await supabase
     .from("lessons")
     .select("id, title, slug, course_id, courses ( slug )")
@@ -103,18 +85,17 @@ export async function getExerciseByLesson(lessonSlug: string) {
     .order("id", { ascending: true });
 
   if (error) {
-    console.error("Lỗi lấy bài tập:", error.message); // Dùng console thay vì alert
+    console.error("Lỗi lấy bài tập:", error.message);
     return null;
   }
 
-  // 3. Xử lý dữ liệu để trả về (Flatten structure)
-  // Ép kiểu 'as any' để TS không báo lỗi dòng lesson.courses
+  // 3. Xử lý dữ liệu
   const courseSlug = (lesson as any).courses?.slug;
 
   return {
     lesson: {
       ...lesson,
-      courseSlug: courseSlug, // Frontend cần cái này để tạo nút "Quay về"
+      courseSlug: courseSlug,
     },
     exercises: exercises || [],
   };
@@ -124,19 +105,17 @@ export async function getExerciseByLesson(lessonSlug: string) {
 // SECTION C: LOGIC TIẾN ĐỘ (USER PROGRESS)
 // --------------------------------------------------------
 
-// 1. Lưu tiến độ
 export async function saveUserProgress(userId: string, lessonId: number) {
   const { error } = await supabase
     .from("user_progress")
     .insert({ user_id: userId, lesson_id: lessonId });
 
-  // Mã lỗi 23505: Unique violation (Đã lưu rồi) -> Bỏ qua, không báo lỗi
+  // Mã lỗi 23505: Unique violation (Đã lưu rồi) -> Bỏ qua
   if (error && error.code !== "23505") {
     console.error("Lỗi lưu tiến độ:", error.message);
   }
 }
 
-// 2. Lấy danh sách ID các bài đã học
 export async function getCompletedLessonIds(userId: string) {
   const { data } = await supabase
     .from("user_progress")
@@ -144,51 +123,50 @@ export async function getCompletedLessonIds(userId: string) {
     .eq("user_id", userId);
 
   if (!data) return [];
-  return data.map((item) => item.lesson_id); // Trả về mảng số [1, 2, 5...]
+  return data.map((item) => item.lesson_id);
 }
 
 // --------------------------------------------------------
 // SECTION D: LOGIC DASHBOARD (PROFILE PAGE)
 // --------------------------------------------------------
 
-export async function getUserDashboardData(userId: string) {
-  // 1. Lấy danh sách Khóa học (Courses)
-  const { data: allCourses } = await supabase
+export async function getUserDashboardData(
+  userId: string
+): Promise<DashboardCourse[]> {
+  // 1. Lấy danh sách Khóa học
+  const { data: allCoursesData } = await supabase
     .from("courses")
-    .select("id, name, slug") // Lưu ý: DB bạn là 'name', code cũ là 'title' -> phải lấy 'name'
-    .returns<Course[]>();
+    .select("id, name, slug"); // Lấy 'name' từ DB
 
-  if (!allCourses || allCourses.length === 0) return [];
+  const allCourses = (allCoursesData || []) as DBCourse[];
+  if (allCourses.length === 0) return [];
 
-  // 2. Lấy danh sách Bài học (Lessons) để tính tổng số bài
-  const { data: allLessons } = await supabase
+  // 2. Lấy danh sách Bài học
+  const { data: allLessonsData } = await supabase
     .from("lessons")
-    .select("id, course_id")
-    .returns<Lesson[]>();
+    .select("id, course_id");
+  const allLessons = (allLessonsData || []) as DBLesson[];
 
-  // 3. Lấy Tiến độ của User (Progress)
+  // 3. Lấy Tiến độ của User
   const { data: progressData } = await supabase
     .from("user_progress")
     .select("lesson_id")
-    .eq("user_id", userId)
-    .returns<Progress[]>();
+    .eq("user_id", userId);
 
-  // Chuyển đổi dữ liệu progress thành mảng ID cho dễ so sánh
-  const completedLessonIds = progressData?.map((p) => p.lesson_id) || [];
+  const userProgress = (progressData || []) as DBProgress[];
 
-  // 4. Tính toán phần trăm (Mapping)
+  // Chuyển đổi dữ liệu progress thành mảng ID
+  const completedLessonIds = userProgress.map((p) => p.lesson_id);
+
+  // 4. Tính toán phần trăm
   const dashboardData = allCourses.map((course) => {
-    // Lọc ra các bài học thuộc khóa này
-    const lessonsOfCourse =
-      allLessons?.filter((l) => l.course_id === course.id) || [];
+    const lessonsOfCourse = allLessons.filter((l) => l.course_id === course.id);
     const totalLessons = lessonsOfCourse.length;
 
-    // Đếm số bài user đã hoàn thành trong khóa này
     const userCompletedCount = lessonsOfCourse.filter((l) =>
       completedLessonIds.includes(l.id)
     ).length;
 
-    // Tính % (Tránh chia cho 0)
     const percent =
       totalLessons > 0
         ? Math.round((userCompletedCount / totalLessons) * 100)
@@ -196,7 +174,7 @@ export async function getUserDashboardData(userId: string) {
 
     return {
       id: course.id,
-      title: course.name, // Mapping lại: DB là 'name' -> UI dùng 'title'
+      title: course.name, // ✅ Mapping: DB 'name' -> UI 'title'
       slug: course.slug,
       total: totalLessons,
       completed: userCompletedCount,
@@ -205,22 +183,8 @@ export async function getUserDashboardData(userId: string) {
     };
   });
 
-  return dashboardData.filter((course) => course.isStarted); // Chỉ trả về các khóa đã bắt đầu
+  return dashboardData.filter((course) => course.isStarted);
 }
-
-export type HomeCourseData = DashboardCourse & {
-  firstLessonSlug: string | null;
-};
-
-type DashboardCourse = {
-  id: number;
-  name: string;
-  slug: string;
-  description: string;
-  image_url: string;
-  price: number;
-  lessons?: { slug: string; id: number }[] | null;
-};
 
 export async function getDashboardData(): Promise<HomeCourseData[]> {
   const { data: courses, error } = await supabase
@@ -234,7 +198,8 @@ export async function getDashboardData(): Promise<HomeCourseData[]> {
     return [];
   }
 
-  const safeCourses = (courses || []) as DashboardCourse[];
+  // Ép kiểu sang DBCourse có kèm relation lessons
+  const safeCourses = (courses || []) as unknown as DBCourse[];
 
   return safeCourses.map((course) => {
     const firstLesson = course.lessons?.[0];
@@ -266,13 +231,6 @@ export async function searchLesson(query: string) {
 // SECTION E: LOGIC THỐNG KÊ (ADMIN DASHBOARD)
 // --------------------------------------------------------
 
-export interface DashboardStats {
-  students: number;
-  lessons: number;
-  exercises: number;
-  completed: number;
-}
-
 export async function getAdminDashboardStats() {
   try {
     const [
@@ -285,11 +243,8 @@ export async function getAdminDashboardStats() {
         .from("profiles")
         .select("*", { count: "exact", head: true })
         .eq("role", "user"),
-
       supabase.from("lessons").select("*", { count: "exact", head: true }),
-
       supabase.from("exercises").select("*", { count: "exact", head: true }),
-
       supabase
         .from("user_progress")
         .select("*", { count: "exact", head: true }),
@@ -307,13 +262,7 @@ export async function getAdminDashboardStats() {
   }
 }
 
-const CHART_COLORS = [
-  "#00d25b", // Xanh lá (Giống Paypal trong ảnh)
-  "#ffab00", // Vàng (Giống Stripe)
-  "#0090e7", // Xanh dương
-  "#fc424a", // Đỏ
-  "#8f5fe8", // Tím
-];
+const CHART_COLORS = ["#00d25b", "#ffab00", "#0090e7", "#fc424a", "#8f5fe8"];
 
 export async function getAdminCourseChartData() {
   const { data: courses, error } = await supabase
@@ -327,7 +276,6 @@ export async function getAdminCourseChartData() {
 
   const chartData = courses?.map((course: any, index: number) => {
     const lessonCount = course.lessons?.length || 0;
-
     return {
       name: course.name,
       value: lessonCount,
@@ -335,16 +283,7 @@ export async function getAdminCourseChartData() {
     };
   });
 
-  return chartData.filter((item) => item.value > 0);
-}
-
-export interface AdminCourseData {
-  id: number;
-  name: string;
-  description: string;
-  slug: string;
-  image_url: string;
-  lessonCount: number;
+  return chartData.filter((item: any) => item.value > 0);
 }
 
 export async function getAdminCourseData() {
@@ -383,15 +322,11 @@ export async function updateCourse(
 
   if (newImageFile) {
     const fileName = `course_${id}_${Date.now()}`;
-
     const { error: uploadError } = await supabase.storage
       .from("avatars")
       .upload(fileName, newImageFile);
 
-    if (uploadError) {
-      console.error("Lỗi upload ảnh: ", uploadError.message);
-      return { error: uploadError };
-    }
+    if (uploadError) return { error: uploadError };
 
     const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
     finalImageUrl = data.publicUrl;
@@ -411,11 +346,7 @@ export async function updateCourse(
 }
 
 export async function addCourse(
-  coursesData: {
-    name: string;
-    slug: string;
-    description: string;
-  },
+  coursesData: { name: string; slug: string; description: string },
   imageFile?: File | null
 ) {
   let imageUrl = "";
@@ -426,10 +357,7 @@ export async function addCourse(
       .from("avatars")
       .upload(fileName, imageFile);
 
-    if (uploadError) {
-      console.log("Lỗi khi thêm:", uploadError.message);
-      return { error: uploadError };
-    }
+    if (uploadError) return { error: uploadError };
 
     const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
     imageUrl = data.publicUrl;
@@ -457,11 +385,10 @@ export async function getCoursesForSelect() {
     .order("id", { ascending: true });
 
   if (error) {
-    console.error("Lỗi lấy dữ liệu khóa học cho form thêm: ", error.message);
+    console.error("Lỗi lấy dữ liệu khóa học: ", error.message);
     return [];
   }
-
-  return data || [];
+  return (data || []) as DBCourse[];
 }
 
 export async function getChaptersByCourseId(courseId: number) {
@@ -471,12 +398,8 @@ export async function getChaptersByCourseId(courseId: number) {
     .eq("course_id", courseId)
     .order("id", { ascending: true });
 
-  if (error) {
-    console.error("Lỗi lấy chương theo khóa học: ", error.message);
-    return [];
-  }
-
-  return data || [];
+  if (error) return [];
+  return (data || []) as DBChapter[];
 }
 
 export async function getLessons() {
@@ -489,22 +412,11 @@ export async function getLessons() {
     .order("chapter_id", { ascending: true })
     .order("id", { ascending: true });
 
-  if (error) {
-    console.error("Lỗi lấy danh sách bài học: ", error.message);
-    return [];
-  }
-
+  if (error) return [];
   return data || [];
 }
 
-export async function addLesson(lessonData: {
-  title: string;
-  slug: string;
-  content: string;
-  course_id: number;
-  chapter_id: number;
-  video_url?: string;
-}) {
+export async function addLesson(lessonData: any) {
   const { error } = await supabase.from("lessons").insert({
     title: lessonData.title,
     slug: lessonData.slug,
@@ -513,7 +425,6 @@ export async function addLesson(lessonData: {
     chapter_id: lessonData.chapter_id,
     video_url: lessonData.video_url || null,
   });
-
   return { error };
 }
 
@@ -522,17 +433,7 @@ export async function deleteLesson(id: number) {
   return { error };
 }
 
-export async function editLesson(
-  id: number,
-  lessonData: {
-    title: string;
-    slug: string;
-    content: string;
-    course_id: number;
-    chapter_id: number;
-    video_url?: string | null;
-  }
-) {
+export async function editLesson(id: number, lessonData: any) {
   const { error } = await supabase
     .from("lessons")
     .update({
@@ -544,7 +445,6 @@ export async function editLesson(
       video_url: lessonData.video_url || null,
     })
     .eq("id", id);
-
   return { error };
 }
 
@@ -554,26 +454,18 @@ export async function getCourseChapterManager() {
     .select("id, name, slug")
     .order("id", { ascending: true });
 
-  if (error) {
-    console.error("Lỗi khi tải khoá học", error.message);
-    return [];
-  }
-
-  return data || [];
+  if (error) return [];
+  return (data || []) as DBCourse[];
 }
 
 export async function getChapterForChapterManager() {
   const { data, error } = await supabase
     .from("chapters")
-    .select("id, course_id, title, order_index, created_at")
+    .select("id, course_id, title, order_index")
     .order("order_index", { ascending: true });
 
-  if (error) {
-    console.error("Lỗi khi tải chương", error.message);
-    return [];
-  }
-
-  return data || [];
+  if (error) return [];
+  return (data || []) as DBChapter[];
 }
 
 export async function deleteChapter(id: number) {
@@ -581,47 +473,17 @@ export async function deleteChapter(id: number) {
   return { error };
 }
 
-export async function addChapter(dataChapter: {
-  course_id: number;
-  title: string;
-  order_index: number;
-}) {
-  const { error } = await supabase.from("chapters").insert({
-    course_id: dataChapter.course_id,
-    title: dataChapter.title,
-    order_index: dataChapter.order_index,
-  });
-
+export async function addChapter(dataChapter: any) {
+  const { error } = await supabase.from("chapters").insert(dataChapter);
   return { error };
 }
 
-export async function editChapter(
-  id: number,
-  dataChapter: {
-    course_id: number;
-    title: string;
-    order_index: number;
-  }
-) {
+export async function editChapter(id: number, dataChapter: any) {
   const { error } = await supabase
     .from("chapters")
-    .update({
-      course_id: dataChapter.course_id,
-      title: dataChapter.title,
-      order_index: dataChapter.order_index,
-    })
+    .update(dataChapter)
     .eq("id", id);
-
   return { error };
-}
-
-export interface UserProfile {
-  id: string;
-  email: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  role: string;
-  created_at: string;
 }
 
 export async function getAllUsersForUsersManager() {
@@ -630,12 +492,8 @@ export async function getAllUsersForUsersManager() {
     .select("id, email, full_name, avatar_url, role, created_at")
     .order("id", { ascending: false });
 
-  if (error) {
-    console.error("Lỗi khi tải người dùng", error.message);
-    return [];
-  }
-
-  return data as UserProfile[];
+  if (error) return [];
+  return data as DBProfile[];
 }
 
 export async function deleteUser(id: string) {
@@ -645,113 +503,54 @@ export async function deleteUser(id: string) {
 
 export async function uploadUserAvatar(file: File) {
   const fileName = `avatar_${Date.now()}_${file.name.replace(/\s/g, "_")}`;
-
   const { error: uploadError } = await supabase.storage
     .from("avatars")
     .upload(fileName, file);
 
-  if (uploadError) {
-    console.error("Lỗi upload ảnh:", uploadError.message);
-    return null;
-  }
-
+  if (uploadError) return null;
   const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
   return data.publicUrl;
 }
 
 export async function editUser(
   id: string,
-  dataUser: {
-    full_name: string | null;
-    avatar_url: string | null;
-    role: string;
-  },
+  dataUser: any,
   newImageFile?: File | null
 ) {
   let finalImageUrl = dataUser.avatar_url;
-
   if (newImageFile) {
     const uploadedUrl = await uploadUserAvatar(newImageFile);
-    if (uploadedUrl) {
-      finalImageUrl = uploadedUrl;
-    } else {
-      return { error: { message: "Lỗi khi upload avatar user" } };
-    }
+    if (uploadedUrl) finalImageUrl = uploadedUrl;
+    else return { error: { message: "Lỗi upload avatar" } };
   }
-
   const { error } = await supabase
     .from("profiles")
-    .update({
-      full_name: dataUser.full_name,
-      avatar_url: finalImageUrl,
-      role: dataUser.role,
-    })
+    .update({ ...dataUser, avatar_url: finalImageUrl })
     .eq("id", id);
-
   return { error };
 }
 
 export async function getExerciseByLessonId(lessonId: number | null) {
-  if (!lessonId) {
-    return [];
-  }
-
+  if (!lessonId) return [];
   const { data, error } = await supabase
     .from("exercises")
-    .select(
-      "id, lesson_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation"
-    )
+    .select("*")
     .eq("lesson_id", lessonId)
     .order("id", { ascending: true });
 
-  if (error) {
-    console.error("Lỗi khi lấy bài tập", error.message);
-    return [];
-  }
-
+  if (error) return [];
   return data || [];
-}
-
-export interface exerciseData {
-  question: string;
-  option_a: string;
-  option_b: string;
-  option_c: string;
-  option_d: string;
-  correct_answer: string;
-  explanation: string | "";
 }
 
 export async function addExercise(
   lessonId: number | null,
-  exerciseData: exerciseData
+  exerciseData: ExerciseData
 ) {
-  if (!lessonId) {
-    console.error("Chưa có mã bài học, không thể lấy bài tập");
-    return {
-      error: {
-        message: "Chưa có mã bài học",
-        details: "",
-        hint: "",
-        code: "MISSING_LESSON_ID",
-      },
-    };
-  }
-
+  if (!lessonId) return { error: { message: "Thiếu ID bài học" } };
   const { error } = await supabase
     .from("exercises")
-    .insert({
-      lesson_id: lessonId,
-      question: exerciseData.question,
-      option_a: exerciseData.option_a,
-      option_b: exerciseData.option_b,
-      option_c: exerciseData.option_c,
-      option_d: exerciseData.option_d,
-      correct_answer: exerciseData.correct_answer,
-      explanation: exerciseData.explanation || "",
-    })
+    .insert({ lesson_id: lessonId, ...exerciseData })
     .select();
-
   return { error };
 }
 
@@ -759,70 +558,24 @@ export async function deleteExercise(exerciseId: number) {
   const { error } = await supabase
     .from("exercises")
     .delete()
-    .eq("id", exerciseId)
-    .select();
-
+    .eq("id", exerciseId);
   return { error };
 }
 
 export async function editExercise(
   exerciseId: number,
-  exerciseData: exerciseData
+  exerciseData: ExerciseData
 ) {
   const { error } = await supabase
     .from("exercises")
-    .update({
-      question: exerciseData.question,
-      option_a: exerciseData.option_a,
-      option_b: exerciseData.option_b,
-      option_c: exerciseData.option_c,
-      option_d: exerciseData.option_d,
-      correct_answer: exerciseData.correct_answer,
-      explanation: exerciseData.explanation || "",
-    })
-    .eq("id", exerciseId)
-    .select();
-
+    .update(exerciseData)
+    .eq("id", exerciseId);
   return { error };
-}
-
-export interface LessonItem {
-  id: number;
-  title: string;
-  slug: string;
-  duration_display: string;
-  video_url: string | null;
-  has_exercise: boolean;
-}
-
-export interface ChapterItem {
-  id: number;
-  title: string;
-  lessons: LessonItem[];
-}
-
-export interface CourseDetail {
-  id: number;
-  name: string;
-  slug: string;
-  description: string;
-  image_url: string;
-  price: number;
-  price_text: string;
-  stats: {
-    level: string;
-    lesson_count: number;
-    duration: string;
-    accessibility: string;
-  };
-  learning_outcomes: string[];
-  chapters: ChapterItem[];
 }
 
 function estimateTime(content: string | null, hasVideo: boolean): number {
   if (hasVideo) return 600;
   if (!content) return 60;
-
   const words = content
     .replace(/<[^>]*>?/gm, "")
     .trim()
@@ -864,7 +617,6 @@ export async function getFullCourseDetail(
       const hasVideo = !!l.video_url;
       const duration = estimateTime(l.content, hasVideo);
       totalSeconds += duration;
-
       const hasExercise = l.exercises?.[0]?.count > 0;
 
       return {
@@ -915,28 +667,25 @@ export async function getFullCourseDetail(
 }
 
 export async function checkHasEnroll(slug: string) {
-  const { data: course } = await supabase
-    .from("courses")
-    .select("id")
-    .eq("slug", slug)
-    .single();
-
-  if (!course) {
-    console.error("Lỗi khi lấy khóa học");
-    return false;
-  }
-
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return false;
+
+  const { data: course } = await supabase
+    .from("courses")
+    .select("id")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (!course) return false;
 
   const { data: enrollment } = await supabase
     .from("enrollments")
     .select("id")
     .eq("user_id", user.id)
     .eq("course_id", course.id)
-    .single();
+    .maybeSingle();
 
   return !!enrollment;
 }
@@ -953,38 +702,18 @@ export async function getLastAccessedLessonSlug(
     .order("completed_at", { ascending: false })
     .limit(1);
 
-  if (error) {
-    console.error(
-      "Đã xảy ra lỗi khi lấy đường dẫn bài học mới nhất",
-      error.message
-    );
-    return null;
-  }
+  if (error || !data || data.length === 0) return null;
 
-  const firstItem = data[0];
-
-  if (!data || data.length === 0) return null;
-
-  const lessonData = firstItem.lessons as any;
-
-  if (Array.isArray(lessonData)) {
-    return lessonData[0]?.slug || null;
-  }
-
-  return lessonData.slug || null;
+  const lessonData = data[0].lessons as any;
+  return Array.isArray(lessonData) ? lessonData[0]?.slug : lessonData?.slug;
 }
 
 export async function checkAndSaveProgress(userId: string, lessonId: number) {
-  const { data: exercise, error: exError } = await supabase
+  const { data: exercise } = await supabase
     .from("exercises")
     .select("*")
     .eq("lesson_id", lessonId)
     .limit(1);
-
-  if (exError) {
-    console.error("Lỗi khi kiểm tra bài tập", exError);
-    return { hasExercise: false, error: exError };
-  }
 
   const hasExercise = exercise && exercise.length > 0;
 
@@ -993,149 +722,112 @@ export async function checkAndSaveProgress(userId: string, lessonId: number) {
       user_id: userId,
       lesson_id: lessonId,
     });
-
-    if (saveError && saveError.code !== "23505") {
-      console.log({ hasExercise: false, saved: false, error: saveError });
-    }
-    return { hasExercise: false, saved: true };
+    return {
+      hasExercise: false,
+      saved: !saveError || saveError.code === "23505",
+    };
   }
 
   return { hasExercise: true, saved: false };
 }
 
-export async function getLastAccessedLessonId(userId: string, courseSlug: string) {
-  // 1. Lấy Course ID
-  const { data: courseData, error: courseError } = await supabase
+export async function getLastAccessedLessonId(
+  userId: string,
+  courseSlug: string
+) {
+  const { data: courseData } = await supabase
     .from("courses")
     .select("id")
     .eq("slug", courseSlug)
     .single();
 
-  if (courseError || !courseData) {
-    console.error("Lỗi khi lấy Id khóa học", courseError);
-    return null;
-  }
-
+  if (!courseData) return null;
   const courseId = courseData.id;
 
-  // 2. Tìm bài học mới nhất đã hoàn thành trong bảng user_progress
-  const { data: progressData, error: progressError } = await supabase
+  const { data: progressData } = await supabase
     .from("user_progress")
-    .select(`lessons!inner (id, course_id)`) // Chỉ cần lấy ID
+    .select(`lessons!inner (id, course_id)`)
     .eq("user_id", userId)
     .eq("lessons.course_id", courseId)
     .order("completed_at", { ascending: false })
     .limit(1)
-    .maybeSingle(); // Dùng maybeSingle an toàn hơn (trả về null nếu không có thay vì báo lỗi)
+    .maybeSingle();
 
-  // A. Nếu tìm thấy tiến độ -> Trả về bài đó
   if (progressData && progressData.lessons) {
-    // Ép kiểu vì Supabase join trả về object/array tùy context
-    const lessonInfo = progressData.lessons as any; 
+    const lessonInfo = progressData.lessons as any;
     return Array.isArray(lessonInfo) ? lessonInfo[0].id : lessonInfo.id;
   }
 
-  // B. Nếu chưa học bài nào (Fallback) -> Lấy bài đầu tiên CỦA KHÓA HỌC ĐÓ
-  const { data: firstLesson, error: firstLessonError } = await supabase
+  const { data: firstLesson } = await supabase
     .from("lessons")
     .select("id")
-    .eq("course_id", courseId) // <--- QUAN TRỌNG: Phải lọc theo khóa học
-    .order("id", { ascending: true }) // Hoặc order theo 'index' nếu bạn có cột đó
+    .eq("course_id", courseId)
+    .order("id", { ascending: true })
     .limit(1)
     .single();
 
-  if (firstLesson) {
-    return firstLesson.id;
-  }
-
-  return null;
+  return firstLesson ? firstLesson.id : null;
 }
 
 export async function checkUserAndHasEnroll(
   userId: string,
   courseSlug: string
 ) {
-  const { data: courseData, error: courseError } = await supabase
+  const { data: courseData } = await supabase
     .from("courses")
     .select("id")
     .eq("slug", courseSlug)
     .single();
 
-  if (courseError || !courseData) {
-    console.error(
-      "Lỗi khi lấy courseId cho việc kiểm tra user, đăng ký khóa học",
-      courseError
-    );
-    return { enrolled: false, error: courseError };
-  }
-
+  if (!courseData) return { enrolled: false };
   const courseId = courseData.id;
 
-  if (!userId) {
-    console.error("Chưa đăng nhập");
-    return { enrolled: false };
-  }
+  if (!userId) return { enrolled: false };
 
-  const { data: enrollmentData, error: enrollmentError } = await supabase
+  const { data: enrollmentData } = await supabase
     .from("enrollments")
     .select("id")
     .eq("course_id", courseId)
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (enrollmentError) {
-    console.error(
-      "Có lỗi khi kiểm tra người dùng đăng ký khóa học",
-      enrollmentError
-    );
-    return { enrolled: false, error: enrollmentError };
-  }
-
-  if (enrollmentData) {
-    return { enrolled: true, error: enrollmentError };
-  } else {
-    return { enrolled: false, error: enrollmentError };
-  }
+  return { enrolled: !!enrollmentData };
 }
 
-// lib/supabase.ts
-
-// 1. Hàm lấy danh sách ghi chú của bài học
+// Logic Notes
 export async function getLessonNotes(userId: string, lessonId: number) {
   const { data, error } = await supabase
     .from("notes")
     .select("*")
     .eq("user_id", userId)
     .eq("lesson_id", lessonId)
-    .order("timestamp", { ascending: true }); // Sắp xếp theo thời gian video
+    .order("timestamp", { ascending: true });
 
-  if (error) {
-    console.error("Lỗi lấy notes:", error);
-    return [];
-  }
+  if (error) return [];
   return data;
 }
 
-// 2. Hàm tạo ghi chú mới
-export async function createNote(userId: string, lessonId: number, content: string, timestamp: number) {
+export async function createNote(
+  userId: string,
+  lessonId: number,
+  content: string,
+  timestamp: number
+) {
   const { data, error } = await supabase
     .from("notes")
     .insert({
       user_id: userId,
       lesson_id: lessonId,
       content: content,
-      timestamp: Math.floor(timestamp), // Làm tròn số giây (ví dụ 12.5s -> 12s)
+      timestamp: Math.floor(timestamp),
     })
     .select()
     .single();
 
-  if (error) {
-    return { error: error.message };
-  }
+  if (error) return { error: error.message };
   return { data };
 }
 
-// 3. Hàm xóa ghi chú (Làm thêm cho đủ bộ)
 export async function deleteNote(noteId: number) {
   const { error } = await supabase.from("notes").delete().eq("id", noteId);
   return { error };

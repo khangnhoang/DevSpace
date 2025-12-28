@@ -6,6 +6,17 @@ import NotFoundLesson from "@/app/components/NotFoundLesson";
 import matter from "gray-matter";
 import LessonContent from "@/app/components/LessonContent";
 
+export interface lessonBasic {
+    id: number;
+    title: string;
+    slug: string;
+    video_url: string | null;
+    has_exercise: boolean;
+};
+
+export type NextLesson = lessonBasic | null;
+export type PrevLesson = lessonBasic | null;
+
 // Helper lấy ID Youtube
 function getYouTubeId(url: string | null) {
   if (!url) return null;

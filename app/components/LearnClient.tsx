@@ -12,7 +12,12 @@ import { toast } from "sonner";
 import Link from "next/link";
 import CompleteLessonBtn from "@/app/components/CompleteLessonButton";
 import NoteManager from "./NoteManager";
-import YouTube, { YouTubePlayer } from "react-youtube";
+import YouTube, { YouTubePlayer, YouTubeEvent } from "react-youtube";
+import {
+  type PrevLesson,
+  type NextLesson,
+} from "../(main)/learn/[course]/[slug]/page";
+import { User } from "@supabase/supabase-js";
 
 // Import các interface cần thiết của bạn (Lesson, Chapter...)
 // Ví dụ giả định kiểu dữ liệu:
@@ -21,17 +26,15 @@ interface Props {
   chapters: Chapter[];
   course: string;
   slug: string;
-  nextLesson: any;
-  prevLesson: any;
+  nextLesson: NextLesson;
+  prevLesson: PrevLesson;
   videoId: string | null;
   children: React.ReactNode;
 }
 
 export default function LearnClient({
   lesson,
-  chapters,
   course,
-  slug,
   nextLesson,
   prevLesson,
   videoId,
@@ -39,44 +42,59 @@ export default function LearnClient({
 }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUserUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [player, setPlayer] = useState<YouTubePlayer | null>(null);
 
   useEffect(() => {
-    const checkUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    let isMounted = true;
+    const checkUserAndEnrollment = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.push("/");
-        return;
-      } else {
-        setCurrentUserUser(user);
-        setLoading(false); // Đã có user, tắt loading để hiện nội dung
-      }
+        if (!isMounted) return;
 
-      const result = await checkUserAndHasEnroll(user.id, course);
-      if (result.error) {
-        toast.error("Có lỗi khi kiểm tra người dùng" + result.error);
-        router.push("/");
-        return;
-      } else {
-        if (!result.enrolled) {
-          toast.error("Người dùng chưa đăng ký khóa học");
+        if (!user) {
+          toast.warning("Bạn phải đăng nhập để vào học");
+          router.push("/login");
+          return;
+        }
+
+        const result = await checkUserAndHasEnroll(user.id, course);
+        if (result.error) {
+          toast.error("Có lỗi khi kiểm tra người dùng" + result.error);
           router.push("/");
           return;
-        } else {
-          toast.success("Kiểm tra thành công");
+        }
+
+        if (!isMounted) return;
+
+        if (!result.enrolled) {
+          toast.error("Bạn chưa đăng ký khóa học này!");
+          router.push("/");
           return;
+        }
+
+        setCurrentUser(user);
+        setLoading(false);
+      } catch (error) {
+        console.error(error);
+        if (isMounted) {
+          toast.error("Có lỗi xảy ra");
+          router.push("/");
         }
       }
     };
 
-    checkUser();
+    checkUserAndEnrollment();
+
+    return () => {
+      isMounted = false;
+    };
   }, [router, course]);
 
-  const onPlayerReady = (event: any) => {
+  const onPlayerReady = (event: YouTubeEvent) => {
     setPlayer(event.target);
   };
 
@@ -116,6 +134,10 @@ export default function LearnClient({
     );
   }
 
+  if (!currentUser) {
+    return null;
+  }
+
   return (
     <div className="md:p-8 min-h-screen p-4 w-full bg-gray-50 lg:w-3/4 mx-auto pt-16">
       <div className="text-sm text-gray-500 mb-6">
@@ -151,6 +173,7 @@ export default function LearnClient({
                   autoplay: 0,
                   rel: 0, // Tắt video gợi ý liên quan khi hết bài
                   modestbranding: 1,
+                  origin: typeof window !== 'undefined' ? window.location.origin : undefined,
                 },
               }}
             />

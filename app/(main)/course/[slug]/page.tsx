@@ -22,6 +22,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { enrollCourse } from "@/app/action/enroll";
 import CoursePaymentModal from "@/app/components/CoursePaymentModal";
+import { User } from "@supabase/supabase-js";
+import Image from "next/image";
 
 export default function DetailPage({
   params,
@@ -37,7 +39,7 @@ export default function DetailPage({
   const [hasEnrolled, setHasEnrolled] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [isOpenPaymentForm, setIsOpenPaymentForm] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const getDestinationRoute = async (
     currentCourse: CourseDetail,
@@ -310,10 +312,13 @@ export default function DetailPage({
       <div className="w-full lg:w-1/3">
         <div className="flex flex-col gap-5 w-full bg-[#1f2937] p-5 rounded-xl border border-gray-700 lg:sticky lg:top-8 shadow-xl">
           <div className="relative aspect-video w-full rounded-lg overflow-hidden group">
-            <img
+            <Image
               src={course.image_url}
               alt={course.name}
+              fill
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              priority
             />
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
               <PlayCircle size={48} className="text-white drop-shadow-lg" />

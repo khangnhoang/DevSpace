@@ -10,6 +10,7 @@ import {
   getLastAccessedLessonId,
 } from "@/lib/supabase";
 import { ChevronDown, ChevronRight, Check, FileQuestion } from "lucide-react";
+import { RealtimeChannel } from "@supabase/supabase-js";
 
 type SidebarContentProps = {
   chapters: Chapter[];
@@ -39,6 +40,7 @@ const SidebarSkeleton = () => (
 export default function SidebarContent({
   chapters,
   courseSlug,
+  onLinkClick,
 }: SidebarContentProps) {
   const pathName = usePathname();
 
@@ -59,7 +61,7 @@ export default function SidebarContent({
   };
 
   useEffect(() => {
-    let channel: any;
+    let channel: RealtimeChannel;
 
     const initDataAndRealtime = async () => {
       try {
@@ -129,11 +131,10 @@ export default function SidebarContent({
       {/* Danh sách chương + bài */}
       <div className="flex-1 overflow-y-auto p-2 space-y-2">
         {chapters.map((chapter) => {
-          // Logic xác định chapter active
-          const isActiveChapter =
-            chapter.lessons?.some(
-              (l) => pathName === `/learn/${courseSlug}/${l.slug}`
-            ) ?? false;
+          const isActiveChapter = chapter.lessons?.some((l) => {
+             const lessonUrl = `/learn/${courseSlug}/${l.slug}`;
+             return pathName.startsWith(lessonUrl); 
+          }) ?? false;
 
           const isOpen = openChapters[chapter.id] ?? isActiveChapter;
 
@@ -176,6 +177,7 @@ export default function SidebarContent({
                     return (
                       <div key={lesson.id} className="flex flex-col mb-1">
                         <Link
+                          onClick={onLinkClick}
                           href={`/learn/${courseSlug}/${lesson.slug}`}
                           className={`flex items-center justify-between px-3 py-2 rounded-md text-sm transition-all ${
                             isActive
@@ -206,6 +208,7 @@ export default function SidebarContent({
                         {lesson.has_exercise && (
                           <Link
                             href={quizUrl}
+                            onClick={onLinkClick}
                             className={`flex items-center gap-2 px-3 py-1.5 ml-4 mt-0.5 rounded-md text-xs transition-all duration-200 ${
                               isQuizActive
                                 ? "bg-purple-100 text-purple-800 font-medium border border-purple-200"

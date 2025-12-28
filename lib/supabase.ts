@@ -461,7 +461,7 @@ export async function getCourseChapterManager() {
 export async function getChapterForChapterManager() {
   const { data, error } = await supabase
     .from("chapters")
-    .select("id, course_id, title, order_index")
+    .select("id, course_id, title, order_index, created_at")
     .order("order_index", { ascending: true });
 
   if (error) return [];
@@ -649,7 +649,7 @@ export async function getFullCourseDetail(
         : new Intl.NumberFormat("vi-VN", {
             style: "currency",
             currency: "VND",
-          }).format(course.price),
+          }).format(course.price ?? 0),
     stats: {
       level: "cơ bản",
       lesson_count: lessonCount,
@@ -709,11 +709,17 @@ export async function getLastAccessedLessonSlug(
 }
 
 export async function checkAndSaveProgress(userId: string, lessonId: number) {
-  const { data: exercise } = await supabase
+  const { data: exercise, error: exError } = await supabase
     .from("exercises")
     .select("*")
     .eq("lesson_id", lessonId)
     .limit(1);
+
+  if (exError) {
+    console.error("Lỗi khi kiểm tra bài tập", exError);
+    // Thêm saved: false để đồng bộ cấu trúc object
+    return { hasExercise: false, error: exError, saved: false };
+  }
 
   const hasExercise = exercise && exercise.length > 0;
 
@@ -722,13 +728,17 @@ export async function checkAndSaveProgress(userId: string, lessonId: number) {
       user_id: userId,
       lesson_id: lessonId,
     });
-    return {
-      hasExercise: false,
-      saved: !saveError || saveError.code === "23505",
-    };
+
+    if (saveError && saveError.code !== "23505") {
+      console.log({ hasExercise: false, saved: false, error: saveError });
+      // Trả về error nếu lưu thất bại
+      return { hasExercise: false, saved: false, error: saveError };
+    }
+
+    return { hasExercise: false, saved: true, error: null };
   }
 
-  return { hasExercise: true, saved: false };
+  return { hasExercise: true, saved: false, error: null };
 }
 
 export async function getLastAccessedLessonId(
@@ -773,25 +783,47 @@ export async function checkUserAndHasEnroll(
   userId: string,
   courseSlug: string
 ) {
-  const { data: courseData } = await supabase
+  const { data: courseData, error: courseError } = await supabase
     .from("courses")
     .select("id")
     .eq("slug", courseSlug)
     .single();
 
-  if (!courseData) return { enrolled: false };
+  if (courseError || !courseData) {
+    console.error(
+      "Lỗi khi lấy courseId cho việc kiểm tra user, đăng ký khóa học",
+      courseError
+    );
+    return { enrolled: false, error: courseError };
+  }
+
   const courseId = courseData.id;
 
-  if (!userId) return { enrolled: false };
+  if (!userId) {
+    console.error("Chưa đăng nhập");
+    return { enrolled: false };
+  }
 
-  const { data: enrollmentData } = await supabase
+  const { data: enrollmentData, error: enrollmentError } = await supabase
     .from("enrollments")
     .select("id")
     .eq("course_id", courseId)
     .eq("user_id", userId)
     .maybeSingle();
 
-  return { enrolled: !!enrollmentData };
+  if (enrollmentError) {
+    console.error(
+      "Có lỗi khi kiểm tra người dùng đăng ký khóa học",
+      enrollmentError
+    );
+    return { enrolled: false, error: enrollmentError };
+  }
+
+  if (enrollmentData) {
+    return { enrolled: true, error: enrollmentError };
+  } else {
+    return { enrolled: false, error: enrollmentError };
+  }
 }
 
 // Logic Notes

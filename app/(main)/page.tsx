@@ -72,7 +72,7 @@ export default function Home() {
                     : new Intl.NumberFormat("vi-VN", {
                         style: "currency",
                         currency: "VND",
-                      }).format(course.price)}
+                      }).format(course.price ?? 0)}
                 </span>
                 {course.firstLessonSlug ? (
                   <Link href={`/course/${course.slug}`}>

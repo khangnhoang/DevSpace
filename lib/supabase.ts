@@ -649,7 +649,7 @@ export async function getFullCourseDetail(
         : new Intl.NumberFormat("vi-VN", {
             style: "currency",
             currency: "VND",
-          }).format(course.price),
+          }).format(course.price ?? 0),
     stats: {
       level: "cơ bản",
       lesson_count: lessonCount,

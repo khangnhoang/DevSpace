@@ -8,6 +8,7 @@ import {
   addChapter,
   deleteChapter,
 } from "@/lib/supabase";
+import { toast } from "sonner";
 
 interface Course {
   id: number;
@@ -37,7 +38,7 @@ export default function ChaptersManagerPage() {
 
   const handleOpenAdd = () => {
     if (!selectedCourseId) {
-      alert("Vui lòng chọn khóa học trước khi thêm chương!");
+      toast("Vui lòng chọn khóa học trước khi thêm chương!");
       return;
     }
     setEditingChapterId(null);
@@ -60,7 +61,7 @@ export default function ChaptersManagerPage() {
 
   const handleSave = async () => {
     if (!title || orderIndex === null || !selectedEditCourseId) {
-      alert("Vui lòng điền đầy đủ thông tin!");
+      toast("Vui lòng điền đầy đủ thông tin!");
       return;
     }
 
@@ -79,9 +80,9 @@ export default function ChaptersManagerPage() {
     }
 
     if (result.error) {
-      alert("Đã có lỗi xảy ra: " + result.error.message);
+      toast("Đã có lỗi xảy ra: " + result.error.message);
     } else {
-      alert(
+      toast(
         editingChapterId
           ? "Cập nhật chương thành công!"
           : "Thêm chương thành công!"
@@ -102,9 +103,9 @@ export default function ChaptersManagerPage() {
     const result = await deleteChapter(chapter.id);
 
     if (result.error) {
-      alert("Đã có lỗi xảy ra: " + result.error.message);
+      toast("Đã có lỗi xảy ra: " + result.error.message);
     } else {
-      alert("Xóa chương thành công!");
+      toast("Xóa chương thành công!");
       const data = await getChapterForChapterManager();
       setChapters(data);
     }
@@ -126,22 +127,35 @@ export default function ChaptersManagerPage() {
     fetchChapters();
   }, []);
 
+  // Chuyển đổi chuỗi ngày ISO sang định dạng dd/mm/yyyy dễ đọc cho người Việt
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+    } catch (e) {
+      return dateString;
+    }
+  };
+
   return (
-    <div className="bg-[#0F1116] w-full h-full">
-      <div className="p-4 flex flex-col gap-6">
-        <div className="flex justify-between">
+    <div className="lg:ml-6 bg-[#0F1116] w-full min-h-screen h-full font-sans text-slate-200">
+      <div className="p-4 md:p-6 flex flex-col gap-6 w-full mx-auto">
+        <div className="flex flex-col md:flex-row justify-between gap-4 md:gap-0 w-full">
           <div>
-            <h1 className="text-3xl flex items-center gap-2">
+            <h1 className="text-2xl md:text-3xl flex items-center gap-3 text-white font-bold tracking-tight">
               <Layers className="text-[#3B81F4]" size={30} />
               Quản lý chương học
             </h1>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-gray-400 mt-2 ml-1">
               Sắp xếp và tổ chức nội dung bài học theo cấu trúc.
             </p>
           </div>
           <div className="flex items-center">
             <button
-              className="bg-[#3B81F4] p-4 rounded-md hover:bg-[#2563EB] cursor-pointer flex items-center"
+              className="w-full md:w-auto bg-[#3B81F4] p-3 md:p-4 rounded-lg hover:bg-[#2563EB] cursor-pointer flex items-center justify-center gap-2 text-white transition-all shadow-lg shadow-blue-500/20 active:scale-95"
               onClick={handleOpenAdd}
             >
               <Plus size={20} />
@@ -149,30 +163,33 @@ export default function ChaptersManagerPage() {
             </button>
           </div>
         </div>
+        
         <div className="bg-[#0F1116]">
-          <div className="bg-[#191C24] flex p-4 gap-2 items-center rounded-xl">
-            <div className="flex items-center gap-2 w-1/2 bg-[#2C3039] h-1/2 p-4 rounded-xl">
+          <div className="bg-[#191C24] flex flex-col md:flex-row p-4 gap-4 items-center rounded-xl border border-gray-800">
+            <div className="flex items-center gap-2 bg-[#2C3039] h-1/2 p-4 rounded-xl w-full">
               <BookOpen className="text-[#3B81F4]" size={20} />
-              <div className="flex flex-col">
-                <p className="text-sm text-gray-400">KHÓA HỌC HIỆN TẠI</p>
+              <div className="flex flex-col overflow-hidden">
+                <p className="text-xs text-gray-400 font-semibold tracking-wider mb-1">KHÓA HỌC HIỆN TẠI</p>
                 <p className="text-md font-bold">HTML & CSS Cơ bản</p>
               </div>
             </div>
-            <div className="w-1/2 flex flex-col gap-3">
-              <p className="text-sm text-gray-400">CHUYỂN KHÓA HỌC</p>
-              <select
+
+            <div className="w-full md:w-1/2 flex flex-col gap-2">
+              <p className="text-xs text-gray-400 font-semibold tracking-wider px-1">CHUYỂN KHÓA HỌC</p>
+              <div className="relative">
+                <select
                 name=""
                 id=""
-                className="bg-[#2C3039] text-md p-3 rounded-md w-full uppercase"
+                className="appearance-none bg-[#2C3039] text-white text-md p-3 pr-8 rounded-lg w-full uppercase border border-gray-700 focus:border-[#3B81F4] outline-none transition-all cursor-pointer hover:bg-[#353a45]"
                 value={selectedCourseId || ""}
                 onChange={(e) => setSelectedCourseId(Number(e.target.value))}
               >
-                <option className="uppercase" value="">
+                <option className="uppercase text-gray-400" value="">
                   Chọn khóa học
                 </option>
                 {courses.map((course) => (
                   <option
-                    className="uppercase"
+                    className="uppercase text-white bg-[#2C3039] py-2"
                     value={course.id}
                     key={course.id}
                   >
@@ -180,54 +197,57 @@ export default function ChaptersManagerPage() {
                   </option>
                 ))}
               </select>
+              </div>
             </div>
           </div>
         </div>
       </div>
-      <div>
-        <div className="w-full p-4">
-          <table className="w-full rounded-xl border border-gray-700 overflow-hidden">
-            <thead className="text-left w-full">
+
+      <div className="p-6">
+        <div className="w-full rounded-xl border border-gray-800 overflow-hidden bg-[#191C24] shadow-xl">
+          <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full text-white min-w-[800px]">
+            <thead className="text-left w-full bg-[#222732] border-b border-gray-700">
               <tr className="bg-[#222732] text-[#999C9E]">
-                <th scope="col" className="px-6 py-6 text-md">
+                <th scope="col" className="px-6 py-4 text-xs font-bold uppercase tracking-wider">
                   ID
                 </th>
-                <th scope="col" className="px-6 py-6 text-md">
+                <th scope="col" className="px-6 py-4 text-xs font-bold uppercase tracking-wider">
                   TÊN CHƯƠNG
                 </th>
-                <th scope="col" className="px-6 py-6 text-md">
+                <th scope="col" className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-center">
                   THỨ TỰ
                 </th>
-                <th scope="col" className="px-6 py-6 text-md">
+                <th scope="col" className="px-6 py-4 text-xs font-bold uppercase tracking-wider">
                   NGÀY TẠO
                 </th>
-                <th scope="col" className="px-6 py-6 text-md">
+                <th scope="col" className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-right">
                   HÀNH ĐỘNG
                 </th>
               </tr>
             </thead>
             {
-              <tbody className="bg-[#191C24]">
+              <tbody className="divide-y divide-gray-800">
                 {filteredChapters.map((chapter) => (
-                  <tr key={chapter.id} className="border border-gray-700">
-                    <td className="px-6 py-6">
-                      <div className="border flex justify-center rounded-md border-gray-700 bg-[#2C3039]">
+                  <tr key={chapter.id} className="hover:bg-[#2C3039] transition-colors group">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="inline-block px-3 py-1 text-xs font-mono text-gray-400 bg-[#222732] rounded border border-gray-700 group-hover:border-gray-500 transition-colors">
                         {chapter.id}
                       </div>
                     </td>
                     <td className="px-6 py-6">{chapter.title}</td>
-                    <td className="px-6 py-6">{chapter.order_index}</td>
-                    <td className="px-6 py-6">{chapter.created_at}</td>
-                    <td className="px-6 py-6 flex items-center gap-2">
+                    <td className="px-6 py-6 flex justify-center">{chapter.order_index}</td>
+                    <td className="px-6 py-6">{formatDate(chapter.created_at)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
                       <button
                         onClick={() => handleOpenEdit(chapter)}
-                        className="cursor-pointer hover:bg-blue-500 hover:text-white p-2 rounded-md text-[#979EAA]"
+                        className= "p-2 rounded-lg hover:bg-blue-300 text-[#3B81F4] transition-all duration-200 cursor-pointer mr-3"
                       >
                         <SquarePen size={20} />
                       </button>
                       <button
                         onClick={() => handleDelete(chapter)}
-                        className="cursor-pointer hover:bg-red-500 hover:text-white p-2 rounded-md text-[#979EAA]"
+                        className="p-2 rounded-lg text-red-500 hover:bg-red-300  transition-all duration-200 cursor-pointer"
                       >
                         <Trash size={20} />
                       </button>
@@ -239,71 +259,93 @@ export default function ChaptersManagerPage() {
           </table>
         </div>
       </div>
-      {isOpenForm && (
-        <div className="flex flex-col justify-center items-center fixed inset-0 z-50">
-          <div className="w-1/2 bg-[#222732] flex justify-between items-center p-4 rounded-t-md">
-            <h1 className="text-xl flex items-center gap-2">
-              {editingChapterId ? (
-                <SquarePen className="" size={20} />
-              ) : (
-                <Plus className="text-green-400" size={20} />
-              )}
-              {editingChapterId ? "Chỉnh Sửa Chương" : "Thêm Chương Mới"}
-            </h1>
-            <button onClick={() => setIsOpenForm(false)}>
-              <X
-                size={30}
-                className="hover:bg-[#374151] cursor-pointer rounded-md p-1"
-              />
-            </button>
-          </div>
-          <div className="w-1/2 bg-[#191C24] flex flex-col gap-2 p-4 text-[#747985]">
-            <p className="text-sm">TÊN CHƯƠNG</p>
-            <input
-              type="text"
-              placeholder="Nhập tên chương..."
-              className="p-2 bg-[#2C3039] rounded-md"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-            <p className="text-sm">THỨ TỰ HIỂN THỊ</p>
-            <input
-              type="number"
-              name=""
-              id=""
-              className="p-2 bg-[#2C3039] rounded-md"
-              value={orderIndex || ""}
-              onChange={(e) => setOrderIndex(Number(e.target.value))}
-            />
-            <p className="text-sm">THUỘC KHÓA HỌC</p>
-            <select
-              className="p-2 bg-[#2C3039] rounded-md uppercase"
-              name=""
-              id=""
-              value={selectedEditCourseId || ""}
-              onChange={(e) => setSelectedEditCourseId(Number(e.target.value))}
-            >
-              <option value="">-- Chọn khóa học --</option>
-              {courses.map((course) => (
-                <option value={course.id} key={course.id}>
-                  {course.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="w-1/2 bg-[#222732] flex justify-end gap-2 p-3 rounded-b-md">
-            <button
-              className="hover:bg-[#374151] cursor-pointer p-2 rounded-md text-sm"
-              onClick={() => setIsOpenForm(false)}
-            >
-              HỦY
-            </button>
-            <button
-              onClick={handleSave}
-              className="hover:bg-[#2563eb] cursor-pointer p-2 rounded-md text-sm bg-blue-400"
-            >
-              {editingChapterId ? "Cập nhật" : "Thêm"}
-            </button>
+        
+        
+        </div>
+        {isOpenForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-lg md:w-1/2 lg:w-1/3 bg-[#191C24] rounded-2xl shadow-2xl border border-gray-700 flex flex-col overflow-hidden transform transition-all scale-100">
+            
+            {/* Modal Header */}
+            <div className="bg-[#222732] p-5 flex justify-between items-center border-b border-gray-700">
+              <h1 className="text-lg font-bold text-white flex items-center gap-2">
+                {editingChapterId ? (
+                  <SquarePen className="text-[#3B81F4]" size={20} />
+                ) : (
+                  <Plus className="text-green-500" size={20} />
+                )}
+                {editingChapterId ? "Chỉnh Sửa Chương" : "Thêm Chương Mới"}
+              </h1>
+              <button 
+                onClick={() => setIsOpenForm(false)}
+                className="text-gray-400 hover:text-white hover:bg-white/10 p-2 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 flex flex-col gap-5">
+              <div className="space-y-2">
+                 <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Tên chương</label>
+                 <input
+                    type="text"
+                    placeholder="Nhập tên chương..."
+                    className="w-full p-3 bg-[#2C3039] text-white rounded-lg border border-gray-700 focus:border-[#3B81F4] focus:ring-1 focus:ring-[#3B81F4] outline-none transition-all placeholder-gray-500"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    autoFocus
+                 />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Thứ tự hiển thị</label>
+                <input
+                    type="number"
+                    placeholder="Ví dụ: 1"
+                    className="w-full p-3 bg-[#2C3039] text-white rounded-lg border border-gray-700 focus:border-[#3B81F4] focus:ring-1 focus:ring-[#3B81F4] outline-none transition-all placeholder-gray-500"
+                    value={orderIndex || ""}
+                    onChange={(e) => setOrderIndex(Number(e.target.value))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Thuộc khóa học</label>
+                <div className="relative">
+                    <select
+                        className="w-full p-3 bg-[#2C3039] text-white rounded-lg uppercase border border-gray-700 focus:border-[#3B81F4] focus:ring-1 focus:ring-[#3B81F4] outline-none transition-all cursor-pointer appearance-none"
+                        value={selectedEditCourseId || ""}
+                        onChange={(e) => setSelectedEditCourseId(Number(e.target.value))}
+                    >
+                        <option value="">-- Chọn khóa học --</option>
+                        {courses.map((course) => (
+                        <option value={course.id} key={course.id} className="text-white bg-[#2C3039]">
+                            {course.name}
+                        </option>
+                        ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-white">
+                         <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-[#222732] p-5 flex justify-end gap-3 border-t border-gray-700">
+              <button
+                className="px-5 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-[#374151] transition-colors"
+                onClick={() => setIsOpenForm(false)}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleSave}
+                className="px-5 py-2.5 rounded-lg text-sm font-medium text-white bg-[#3B81F4] hover:bg-[#2563EB] shadow-lg shadow-blue-500/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                {editingChapterId ? "Lưu Thay Đổi" : "Thêm Mới"}
+              </button>
+            </div>
           </div>
         </div>
       )}

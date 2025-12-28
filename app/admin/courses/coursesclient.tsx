@@ -4,6 +4,7 @@ import { SquarePen, X, Trash } from "lucide-react";
 import Image from "next/image";
 import { type AdminCourseData, updateCourse, addCourse, deleteCourse } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface CoursesClientProps {
   courses: AdminCourseData[];
@@ -64,9 +65,9 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
     if (confirmDelete){
       const {error} = await deleteCourse(id);
       if (error){
-        alert("Lỗi khi xoá:" + error.message)
+        toast("Lỗi khi xoá:" + error.message)
       } else {
-        alert("Xoá thành công");
+        toast("Xoá thành công");
         router.refresh();
       }
     }
@@ -91,33 +92,33 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
     setIsSaving(false);
 
     if (result?.error) {
-      alert("Lỗi cập nhật: " + result.error.message);
+      toast("Lỗi cập nhật: " + result.error.message);
     } else {
-      alert(editId ? "Cập nhật thành công" : "Thêm khóa học thành công");
+      toast(editId ? "Cập nhật thành công" : "Thêm khóa học thành công");
       setIsOpenForm(false);
       router.refresh();
     }
   };
 
   return (
-    <div>
-      <div className="w-full p-4">
-        <div className="flex justify-between">
-          <h1 className="font-bold text-2xl">Các khóa học hiện có: </h1>
+    <div className="w-full">
+      <div className="w-full h-screen">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <h1 className="font-bold text-2xl md:ml-10">Các khóa học hiện có: </h1>
           <button
             onClick={handleOpenAdd}
-            className="text-md font-bold bg-[#191C24] p-2 rounded-md hover:opacity-80 cursor-pointer"
+            className="text-md font-bold bg-[#191C24] p-2 rounded-md hover:opacity-80 cursor-pointer w-full sm:w-auto"
           >
             Thêm khóa học
           </button>
         </div>
-        <div className="flex gap-4 py-4 px-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10 px-4 md:px-10">
           {courses.map((course) => (
             <div
               key={course.id}
-              className="flex flex-col justify-center items-center bg-[#191C24] text-white rounded-xl w-1/4"
+              className="flex flex-col justify-center items-center rounded-xl w-full overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300"
             >
-              <div className="relative w-full h-60">
+              <div className="relative w-full h-48 sm:h-56 lg:h-60">
                 <Image
                   src={course.image_url}
                   alt={course.name}
@@ -126,20 +127,20 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
               </div>
-              <p className="bg-[#191C24] text-white w-full flex justify-center rounded-b-xl p-2 uppercase">
+              <p className="bg-[#222630] text-white w-full flex justify-center p-3 uppercase font-semibold text-center truncate px-4">
                 {course.name}
               </p>
-              <div className="flex justify-between p-3 w-full border-t border-gray-400">
-                <p className="">{course.lessonCount} bài học</p>
+              <div className="flex justify-between items-center p-3 w-full border-t border-gray-600 bg-[#222630]">
+                <p className="text-sm text-gray-300">{course.lessonCount} bài học</p>
                 <div className="flex items-center gap-3">
                   <Trash
                     size={20}
-                    className="cursor-pointer hover:opacity-80"
+                    className="cursor-pointer hover:text-red-500 transition-colors"
                     onClick={() => handleDelete(course.id, course.name)}
                   />
                   <SquarePen
                     size={20}
-                    className="cursor-pointer hover:opacity-80"
+                    className="cursor-pointer hover:text-blue-500 transition-colors"
                     onClick={() => handleOpenEdit(course)}
                   />
                 </div>
@@ -148,9 +149,9 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
           ))}
 
           {isOpenForm && (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-              <div className="bg-[#191C24] w-1/2 rounded-xl p-4 shadow-lg border-gray-700 relative flex flex-col">
-                <div className="flex items-center justify-between">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-[#191C24] w-full sm:w-[80%] md:w-[60%] lg:w-[40%] rounded-xl p-5 shadow-2xl border border-gray-700 relative flex flex-col max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-5 top-0 bg-[#191C24] z-10 pb-2 border-b border-gray-700">
                   <h1 className="text-xl font-bold text-white mb-4">
                     {editId ? "Chỉnh sửa khóa học" : "Thêm khóa học mới"}
                   </h1>
@@ -212,8 +213,8 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
                   />
                   {previewUrl && (
                     <div className="mt-2">
-                      <p className="text-sm text-gray-400 mb-1">Xem trước:</p>
-                      <div className="w-full h-40 relative">
+                      <p className="text-sm text-gray-400 mb-1 uppercase">Xem trước:</p>
+                      <div className="w-full h-48 relative rounded-lg overflow-hidden border border-gray-600">
                         <Image
                           src={previewUrl}
                           alt="Preview"

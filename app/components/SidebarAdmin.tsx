@@ -7,12 +7,22 @@ import {
   TableOfContents
 } from "lucide-react";
 import Link from "next/link";
-export default function SidebarAdmin() {
+interface SidebarAdminProps {
+  isOpen?: boolean;
+}
+export default function SidebarAdmin({isOpen = true}:SidebarAdminProps) {
   return (
-    <div className="h-full bg-[#191C24]">
-      <div className="flex flex-col py-2 gap-4">
+    <div className={`
+        fixed left-0 top-16 bottom-0 bg-[#191C24] overflow-y-auto transition-all duration-300 ease-in-out z-40 border-t border-gray-700 shadow-2xl
+        ${isOpen 
+          ? "w-64 translate-x-0 opacity-100" // Khi mở (Mobile)
+          : "w-0 -translate-x-full opacity-0 md:w-64 md:translate-x-0 md:opacity-100" // Khi đóng: Ẩn trên Mobile NHƯNG Hiện trên PC (lg)
+        }
+      `}>
+
+      <div className="flex flex-col py-4 w-64 gap-4">
         <Link
-          href="#"
+          href="/admin"
           className="flex gap-2 items-center border-l-4 py-2 px-4 border-blue-500 rounded-r-full hover:bg-gray-400"
         >
           <div className="flex items-center rounded-full justify-center p-2 bg-[#22242E]">

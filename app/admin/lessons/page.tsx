@@ -26,6 +26,7 @@ import {
 } from "@/lib/supabase";
 import MdxEditor from "@/app/components/MdxEditor";
 import { generateQuizFromContent } from "@/app/action/gemini";
+import { toast } from "sonner";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -97,7 +98,7 @@ export default function LessonsManagerPage() {
     setExplanation(exercise.explanation);
   };
 
-  const handleInActiveEditExerciseForm = (exercise: any) => {
+  const handleInActiveEditExerciseForm = () => {
     setEditExerciseId(null);
     setQuestion("");
     setOptionA("");
@@ -110,7 +111,7 @@ export default function LessonsManagerPage() {
 
   const handleSave = async () => {
     if (!title || !slug || !selectedCourseId || !selectedChapterId) {
-      alert("Vui lòng điền đầy đủ thông tin bắt buộc.");
+      toast("Vui lòng điền đầy đủ thông tin bắt buộc.");
       return;
     }
 
@@ -132,9 +133,9 @@ export default function LessonsManagerPage() {
     }
 
     if (result.error) {
-      alert("Lưu bài học thất bại: " + result.error.message);
+      toast("Lưu bài học thất bại: " + result.error.message);
     } else {
-      alert(editLessonId ? "Cập nhật thành công" : "Lưu bài học thành công!");
+      toast(editLessonId ? "Cập nhật thành công" : "Lưu bài học thành công!");
       setIsOpenForm(false);
       setRefreshKey((prev) => prev + 1);
     }
@@ -146,9 +147,9 @@ export default function LessonsManagerPage() {
     const { error } = await deleteLesson(id);
 
     if (error) {
-      alert("Xoá bài học thất bại: " + error.message);
+      toast("Xoá bài học thất bại: " + error.message);
     } else {
-      alert("Xoá bài học thành công!");
+      toast("Xoá bài học thành công!");
       setRefreshKey((prev) => prev + 1);
     }
   };
@@ -162,7 +163,7 @@ export default function LessonsManagerPage() {
       !optionD ||
       !correctAnswer
     ) {
-      alert("Bạn chưa điền đầy đủ thông tin bài tập");
+      toast("Bạn chưa điền đầy đủ thông tin bài tập");
       return;
     }
 
@@ -185,9 +186,9 @@ export default function LessonsManagerPage() {
     }
 
     if (result.error) {
-      alert("Đã có lỗi xảy ra: " + result.error.message);
+      toast("Đã có lỗi xảy ra: " + result.error.message);
     } else {
-      alert(editExerciseId ? "Cập nhật thành công" : "Thêm thành công");
+      toast(editExerciseId ? "Cập nhật thành công" : "Thêm thành công");
     }
   };
 
@@ -200,21 +201,26 @@ export default function LessonsManagerPage() {
     const result = await deleteExercise(exercise.id);
 
     if (result.error) {
-      alert("Đã có lỗi xảy ra: " + result.error.message);
+      toast("Đã có lỗi xảy ra: " + result.error.message);
     } else {
-      alert("Xóa câu hỏi thành công!");
+      toast("Xóa câu hỏi thành công!");
     }
   };
 
   const handleAiFillForm = async () => {
-    if (!content) return alert("Chưa có nội dung bài học");
+    if (!content) return toast("Chưa có nội dung bài học");
     setIsGenerating(true);
     setShowAiMenu(false);
 
-    const res = await generateQuizFromContent(content, 1);
+    const res = await generateQuizFromContent(content, 1, exercise);
+
+    if (!res) {
+      toast.error("Lỗi lấy câu trả lời từ AI");
+      return;
+    }
 
     setIsGenerating(false);
-    if (res.error) return alert(res.error);
+    if (res.error) return toast(res.error);
 
     if (res.data && res.data.length > 0) {
       const q = res.data[0];
@@ -229,8 +235,8 @@ export default function LessonsManagerPage() {
   };
 
   const handleAiBulkCreate = async () => {
-    if (!editLessonId) return alert("Chưa lưu bài học");
-    if (!content) return alert("Nội dung trống");
+    if (!editLessonId) return toast("Chưa lưu bài học");
+    if (!content) return toast("Nội dung trống");
 
     const confirmBulk = confirm("AI sẽ tự động lưu 3 câu hỏi vào bài này");
     if (!confirmBulk) return;
@@ -238,11 +244,15 @@ export default function LessonsManagerPage() {
     setIsGenerating(true);
     setShowAiMenu(false);
 
-    const res = await generateQuizFromContent(content, 3);
+    const res = await generateQuizFromContent(content, 3, exercise);
+    if (!res) {
+      toast.error("Lỗi lấy câu trả lời từ AI");
+      return;
+    }
 
     if (res.error) {
       setIsGenerating(false);
-      return alert(res.error);
+      return toast(res.error);
     }
 
     try {
@@ -260,10 +270,10 @@ export default function LessonsManagerPage() {
         })
       );
 
-      alert("Đã thêm thành công 3 câu hỏi!");
+      toast("Đã thêm thành công 3 câu hỏi!");
       setRefreshKey((prev) => prev + 1);
     } catch (e) {
-      alert("Có lỗi khi lưu vào db" + e);
+      toast("Có lỗi khi lưu vào db" + e);
     } finally {
       setIsGenerating(false);
     }
@@ -324,7 +334,7 @@ export default function LessonsManagerPage() {
   );
 
   return (
-    <div className="p-6 text-white min-h-screen">
+    <div className="lg:ml-6 p-6 text-white min-h-screen">
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <h1 className="font-bold text-2xl">Quản lí bài học</h1>
         <button
@@ -680,42 +690,57 @@ export default function LessonsManagerPage() {
                   />
                 </div>
                 <div className="grid grid-cols-2 w-1/2 gap-3">
-                  <input
-                    type="text"
-                    name=""
-                    id=""
-                    placeholder="Đáp Án A"
-                    className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
-                    value={optionA}
-                    onChange={(e) => setOptionA(e.target.value)}
-                  />
-                  <input
-                    type="text"
-                    name=""
-                    id=""
-                    placeholder="Đáp Án B"
-                    className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
-                    value={optionB}
-                    onChange={(e) => setOptionB(e.target.value)}
-                  />
-                  <input
-                    type="text"
-                    name=""
-                    id=""
-                    placeholder="Đáp Án C"
-                    className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
-                    value={optionC}
-                    onChange={(e) => setOptionC(e.target.value)}
-                  />
-                  <input
-                    type="text"
-                    name=""
-                    id=""
-                    placeholder="Đáp Án D"
-                    className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
-                    value={optionD}
-                    onChange={(e) => setOptionD(e.target.value)}
-                  />
+                  <div className="flex flex-col gap-2">
+                    <span className="text-white text-md uppercase font-bold">a</span>
+                    <input
+                      type="text"
+                      name=""
+                      id=""
+                      placeholder="Đáp Án A"
+                      className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
+                      value={optionA}
+                      onChange={(e) => setOptionA(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {" "}
+                    <span className="text-white text-md uppercase font-bold">b</span>
+                    <input
+                      type="text"
+                      name=""
+                      id=""
+                      placeholder="Đáp Án B"
+                      className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
+                      value={optionB}
+                      onChange={(e) => setOptionB(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {" "}
+                    <span className="text-white text-md uppercase font-bold">C</span>
+                    <input
+                      type="text"
+                      name=""
+                      id=""
+                      placeholder="Đáp Án C"
+                      className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
+                      value={optionC}
+                      onChange={(e) => setOptionC(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {" "}
+                    <span className="text-white text-md uppercase font-bold">D</span>
+                    <input
+                      type="text"
+                      name=""
+                      id=""
+                      placeholder="Đáp Án D"
+                      className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
+                      value={optionD}
+                      onChange={(e) => setOptionD(e.target.value)}
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-2 item-center w-1/2">
                   <select
@@ -873,8 +898,6 @@ export default function LessonsManagerPage() {
                             </p>
                           </div>
                         </button>
-
-                        
                       </div>
                     )}
                   </div>

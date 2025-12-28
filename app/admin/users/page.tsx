@@ -22,6 +22,7 @@ import {
   uploadUserAvatar,
 } from "@/lib/supabase";
 import { createNewUser } from "@/app/action/user";
+import { toast } from "sonner";
 
 export default function UsersManagerPage() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -74,16 +75,16 @@ export default function UsersManagerPage() {
     const {error} = await deleteUser(id);
 
     if(error){
-      alert('xóa người dùng thất bại' + error.message)
+      toast('xóa người dùng thất bại' + error.message)
     }else{
-      alert('Xóa thành công người dùng')
+      toast('Xóa thành công người dùng')
       setRefreshKey((prev) => prev + 1)
     }
   }
 
   const handleSave = async () => {
     if (!email) {
-      alert("Vui lòng nhập email");
+      toast("Vui lòng nhập email");
       return;
     }
     setIsLoading(true);
@@ -94,7 +95,7 @@ export default function UsersManagerPage() {
       if (uploadedURL) {
         finalAvatarURL = uploadedURL;
       } else {
-        alert("Lỗi khi upload avatar user");
+        toast("Lỗi khi upload avatar user");
         setIsLoading(false);
         return;
       }
@@ -123,9 +124,9 @@ export default function UsersManagerPage() {
     }
 
     if (result.error) {
-      alert("Lưu người dùng thất bại" + result.error);
+      toast("Lưu người dùng thất bại" + result.error);
     } else {
-      alert(editingUser ? "Sửa thành công" : "Thêm thành công");
+      toast(editingUser ? "Sửa thành công" : "Thêm thành công");
       setIsOpenForm(false);
       setRefreshKey((prev) => prev + 1);
     }
@@ -201,11 +202,12 @@ export default function UsersManagerPage() {
   ];
 
   return (
-    <div className="bg-[#0f1116] h-full p-4 flex flex-col gap-4">
-      <div className="flex justify-between">
+    <div className="lg:ml-6 md:ml-2">
+    <div className="bg-[#0f1116] min-h-screen h-full p-3 md:p-3 flex flex-col gap-4 text-white font-sans rounded-md w-full">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-3">
-            <Users size={30} className="text-[#3B81F4]"></Users>
+            <Users size={30} className="text-[#3B81F4] md:w-[30px] md:h-[30px]"></Users>
             <h1 className="text-2xl font-bold">Quản lý người dùng</h1>
           </div>
           <p className="text-[#9CA3AF]">
@@ -215,20 +217,20 @@ export default function UsersManagerPage() {
 
         <button
           onClick={handleOpenForm}
-          className="bg-[#3B81F4] p-2 rounded-xl hover:bg-[#2563EB] cursor-pointer flex items-center"
+          className="w-full md:w-auto bg-[#3B81F4] p-2 md:py-2 md:px-4 rounded-xl hover:bg-[#2563EB] cursor-pointer flex items-center justify-center gap-2 transition-colors"
         >
           <Plus></Plus>Thêm thành viên
         </button>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-col md:flex-row gap-2 md:gap-4">
         {statCards.map((card, index) => (
           <div
-            className="flex flex-col w-1/3 p-3 bg-[#191c24] rounded-md"
+            className="flex flex-col w-full md:w-1/3 p-3 bg-[#191c24] rounded-md shadow-sm border border-transparent hover:border-gray-700 transition-colors"
             key={index}
           >
-            <h4 className="font-bold text-[#9CA3AF]">{card.label}</h4>
-            <div className="flex justify-between items-center">
+            <h4 className="font-bold text-[#9CA3AF] text-sm md:text-base">{card.label}</h4>
+            <div className="flex justify-between items-center mt-2">
               <span className={`${card.valueColor}`}>{card.value}</span>
               <div className="bg-[#2C3039] p-2 rounded-md">
                 <card.icon className={`${card.iconColor} `} />
@@ -238,19 +240,19 @@ export default function UsersManagerPage() {
         ))}
       </div>
 
-      <div className="flex bg-[#191c24] p-4 rounded-md gap-4">
-        <div className="flex gap-2 items-center bg-[#2C3039] p-3 rounded-md">
+      <div className="flex flex-col md:flex-row bg-[#191c24] p-3 md:p-4 rounded-md gap-3 md:gap-4">
+        <div className="flex flex-1 gap-2 items-center bg-[#2C3039] p-2 md:p-3 rounded-md border border-gray-700 focus-within:border-[#3B81F4] transition-colors">
           <Search size={20}></Search>
           <input
             type="text"
             placeholder="Tìm kiếm..."
-            className="focus:outline-none"
+            className="bg-transparent focus:outline-none w-full text-white placeholder-gray-500"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
           {[
             { id: "all", label: "tất cả" },
             { id: "admin", label: "Quản trị viên" },
@@ -259,7 +261,7 @@ export default function UsersManagerPage() {
             <button
               key={btn.id}
               onClick={() => setRoleFilter(btn.id)}
-              className={`cursor-pointer py-2 px-4 rounded-lg font-medium transition-colors whitespace-nowrap ${
+              className={`cursor-pointer py-2 px-3 md:px-4 rounded-lg font-medium transition-colors whitespace-nowrap text-sm md:text-base ${
                 roleFilter === btn.id
                   ? "bg-[#3B81F4] text-white shadow-md"
                   : "bg-[#2C3039] text-gray-400 hover:text-white hover:bg-[#323642]"
@@ -271,15 +273,15 @@ export default function UsersManagerPage() {
         </div>
       </div>
 
-      <div className="bg-[#191C24] rounded-xl overflow-hidden border border-gray-800/50 shadow-sm">
+      <div className="bg-[#191C24] rounded-xl overflow-hidden border border-gray-800/50 shadow-sm flex-1">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
-              <tr className="bg-[#222732] text-[#999C9E] text-sm uppercase tracking-wider border-b border-gray-800">
-                <th className="px-6 py-5 font-medium">Thành viên</th>
-                <th className="px-6 py-5 font-medium">Vai trò</th>
-                <th className="px-6 py-5 font-medium">Ngày tham gia</th>
-                <th className="px-6 py-5 font-medium text-right">Hành động</th>
+              <tr className="bg-[#222732] text-[#999C9E] text-xs md:text-sm uppercase tracking-wider border-b border-gray-800">
+                <th className="px-4 md:px-6 py-4 md:py-5 font-medium">Thành viên</th>
+                <th className="px-4 md:px-6 py-4 md:py-5 font-medium">Vai trò</th>
+                <th className="px-4 md:px-6 py-4 md:py-5 font-medium">Ngày tham gia</th>
+                <th className="px-4 md:px-6 py-4 md:py-5 font-medium text-right">Hành động</th>
               </tr>
             </thead>
 
@@ -290,22 +292,22 @@ export default function UsersManagerPage() {
                     key={u.id}
                     className="border-b border-gray-800 hover:bg-[#2C3039] transition-colors group"
                   >
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
+                    <td className="px-4 md:px-6 py-3 md:py-4">
+                      <div className="flex gap-3 items-center">
                         {u.avatar_url ? (
                           <img
                             src={u.avatar_url}
                             alt="Avatar"
-                            className="h-12 w-12 object-cover rounded-full"
+                            className="h-10 w-10 md:h-12 md:w-12 object-cover rounded-full shrink-0"
                           />
                         ) : (
-                          <span className="text-lg font-bold text-white select-none bg-[#3B81F4] rounded-full py-1 px-3 flex items-center">
+                          <span className="h-10 w-10 md:h-12 md:w-12 text-base md:text-lg font-bold text-white select-none bg-[#3B81F4] rounded-full flex items-center justify-center">
                             {u.email?.charAt(0).toUpperCase()}
                           </span>
                         )}
 
-                        <div className="flex flex-col">
-                          <span className="text-white font-bold">
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-white font-bold truncate">
                             {u.full_name ? u.full_name : "Chưa điền họ tên"}
                           </span>
                           <span className="text-[#6b7280]">{u.email}</span>
@@ -313,33 +315,33 @@ export default function UsersManagerPage() {
                       </div>
                     </td>
 
-                    <td className="px-6 py-4">
+                    <td className="px-4 md:px-6 py-3 md:py-4">
                       {u.role === "admin" ? (
-                        <span className="border-purple-400 border p-2 rounded-md text-purple-500 ">
+                        <span className="inline-block border border-purple-500/30 bg-purple-500/10 px-2 py-1 rounded text-xs md:text-sm text-purple-400 font-medium">
                           {u.role}
                         </span>
                       ) : (
-                        <span className="border-blue-400 border p-2 rounded-md text-blue-500">
+                        <span className="inline-block border border-blue-500/30 bg-blue-500/10 px-2 py-1 rounded text-xs md:text-sm text-blue-400 font-medium">
                           {u.role}
                         </span>
                       )}
                     </td>
 
-                    <td className="px-6 py-4">
-                      <span className="text-[#9CA3AF]">
+                    <td className="px-4 md:px-6 py-3 md:py-4">
+                      <span className="text-[#9CA3AF] text-sm md:text-base">
                         {formatDate(u.created_at)}
                       </span>
                     </td>
 
-                    <td className="px-6 py-4">
-                      <div className="flex">
-                        <button className="cursor-pointer hover:bg-blue-500 hover:text-white p-2 rounded-md text-[#979EAA]">
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button className="cursor-pointer hover:bg-blue-500/20 hover:text-blue-400 p-2 rounded-md text-[#979EAA] transition-colors">
                           <SquarePen
                             size={20}
                             onClick={() => handleOpenEditForm(u)}
                           />
                         </button>
-                        <button onClick={() => handleDelete(u.id, u.full_name)} className="cursor-pointer hover:bg-red-500 hover:text-white p-2 rounded-md text-[#979EAA]">
+                        <button onClick={() => handleDelete(u.id, u.full_name)} className="cursor-pointer hover:bg-red-500/20 hover:text-red-400 p-2 rounded-md text-[#979EAA] transition-colors">
                           <Trash size={20} />
                         </button>
                       </div>
@@ -363,20 +365,20 @@ export default function UsersManagerPage() {
           </table>
         </div>
 
-        <div className="flex justify-between items-center px-6 py-4 bg-[#191C24] border-t border-gray-800">
+        <div className="flex justify-between items-center px-4 md:px-6 py-4 bg-[#191C24] border-t border-gray-800">
           <span className="text-[#6b7280]">
             Đã hiển thị {filteredUsers.length} kết quả
           </span>
           <div className="flex gap-2">
             <button
               disabled
-              className="p-2 bg-[#2C3039] rounded-lg disabled:opacity-50 cursor-not-allowed text-gray-400"
+              className="p-1.5 md:p-2 bg-[#2C3039] rounded-lg disabled:opacity-50 cursor-not-allowed text-gray-400 hover:text-white transition-colors"
             >
               <ChevronLeft size={20} className="text-[#6b7280]"></ChevronLeft>
             </button>
             <button
               disabled
-              className="p-2 bg-[#2C3039] rounded-lg disabled:opacity-50 cursor-not-allowed text-gray-400"
+              className="p-1.5 md:p-2 bg-[#2C3039] rounded-lg disabled:opacity-50 cursor-not-allowed text-gray-400 hover:text-white transition-colors"
             >
               <ChevronRight size={20} className="text-[#6b7280]"></ChevronRight>
             </button>
@@ -384,9 +386,10 @@ export default function UsersManagerPage() {
         </div>
       </div>
       {isOpenForm && (
-        <div className="flex flex-col justify-center items-center fixed inset-0 z-50">
-          <div className="w-1/2 bg-[#222732] flex justify-between items-center p-4 rounded-t-md">
-            <div className="text-xl flex items-center gap-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div className="w-full max-w-lg md:w-[600px] flex flex-col bg-[#191C24] rounded-lg shadow-2xl border border-gray-800 animate-in fade-in zoom-in duration-200">
+          <div className="flex justify-between items-center p-4 border-b border-gray-800 bg-[#222732] rounded-t-lg">
+            <div className="text-lg md:text-xl flex items-center gap-2 font-semibold">
               {editingUser ? (
                 <>
                   <SquarePen size={20} className="text-[#3B81F4]" />
@@ -402,10 +405,10 @@ export default function UsersManagerPage() {
             <X
               size={35}
               onClick={() => setIsOpenForm(false)}
-              className="hover:bg-[#374151] cursor-pointer rounded-md p-2"
+              className="hover:bg-[#374151] cursor-pointer rounded-md p-1 transition-colors text-gray-400 hover:text-white"
             />
           </div>
-          <div className="flex flex-col bg-[#191C24] w-1/2 gap-2 p-3">
+          <div className="flex flex-col bg-[#191C24] w-full gap-2 p-3">
             <span>EMAIL</span>
             <input
               type="text"
@@ -474,7 +477,7 @@ export default function UsersManagerPage() {
               ))}
             </select>
           </div>
-          <div className="w-1/2 bg-[#222732] flex justify-end items-center p-4 rounded-b-md gap-4">
+          <div className="w-full bg-[#222732] flex justify-end items-center p-4 rounded-b-md gap-4">
             <button
               onClick={() => setIsOpenForm(false)}
               className="hover:bg-[#374151] cursor-pointer p-2 rounded-md text-sm"
@@ -494,7 +497,9 @@ export default function UsersManagerPage() {
             </button>
           </div>
         </div>
+        </div>
       )}
+    </div>
     </div>
   );
 }

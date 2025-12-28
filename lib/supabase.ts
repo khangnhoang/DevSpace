@@ -709,11 +709,17 @@ export async function getLastAccessedLessonSlug(
 }
 
 export async function checkAndSaveProgress(userId: string, lessonId: number) {
-  const { data: exercise } = await supabase
+  const { data: exercise, error: exError } = await supabase
     .from("exercises")
     .select("*")
     .eq("lesson_id", lessonId)
     .limit(1);
+
+  if (exError) {
+    console.error("Lỗi khi kiểm tra bài tập", exError);
+    // Thêm saved: false để đồng bộ cấu trúc object
+    return { hasExercise: false, error: exError, saved: false };
+  }
 
   const hasExercise = exercise && exercise.length > 0;
 
@@ -722,13 +728,17 @@ export async function checkAndSaveProgress(userId: string, lessonId: number) {
       user_id: userId,
       lesson_id: lessonId,
     });
-    return {
-      hasExercise: false,
-      saved: !saveError || saveError.code === "23505",
-    };
+
+    if (saveError && saveError.code !== "23505") {
+      console.log({ hasExercise: false, saved: false, error: saveError });
+      // Trả về error nếu lưu thất bại
+      return { hasExercise: false, saved: false, error: saveError };
+    }
+
+    return { hasExercise: false, saved: true, error: null };
   }
 
-  return { hasExercise: true, saved: false };
+  return { hasExercise: true, saved: false, error: null };
 }
 
 export async function getLastAccessedLessonId(

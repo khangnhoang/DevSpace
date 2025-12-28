@@ -66,6 +66,7 @@ export default function LessonsManagerPage() {
 
   const [showAiMenu, setShowAiMenu] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [refreshExerciseKey, setRefreshExerciseKey] = useState(0);
 
   const handleOpenAddForm = () => {
     setEditLessonId(null);
@@ -193,6 +194,7 @@ export default function LessonsManagerPage() {
       toast.error("Đã có lỗi xảy ra: " + result.error.message);
     } else {
       toast.success(editExerciseId ? "Cập nhật thành công" : "Thêm thành công");
+      setRefreshExerciseKey((prev) => prev + 1);
     }
   };
 
@@ -209,6 +211,7 @@ export default function LessonsManagerPage() {
     } else {
       toast.success("Xóa câu hỏi thành công!");
       router.refresh();
+      setRefreshExerciseKey((prev) => prev + 1);
     }
   };
 
@@ -276,7 +279,7 @@ export default function LessonsManagerPage() {
       );
 
       toast.success("Đã thêm thành công 3 câu hỏi!");
-      setRefreshKey((prev) => prev + 1);
+      setRefreshExerciseKey((prev) => prev + 1);
     } catch (e) {
       toast("Có lỗi khi lưu vào db" + e);
     } finally {
@@ -319,7 +322,7 @@ export default function LessonsManagerPage() {
       setExercise(data);
     };
     fetchExerciseByLessonId();
-  }, [editLessonId]);
+  }, [editLessonId, refreshExerciseKey]);
 
   const filteredLessons = useMemo(() => {
     return lessons.filter((lesson) => {

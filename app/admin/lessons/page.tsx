@@ -27,10 +27,12 @@ import {
 import MdxEditor from "@/app/components/MdxEditor";
 import { generateQuizFromContent } from "@/app/action/gemini";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const ITEMS_PER_PAGE = 10;
 
 export default function LessonsManagerPage() {
+  const router = useRouter();
   const [isOpenForm, setIsOpenForm] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [editLessonId, setEditLessonId] = useState<number | null>(null);
@@ -111,7 +113,7 @@ export default function LessonsManagerPage() {
 
   const handleSave = async () => {
     if (!title || !slug || !selectedCourseId || !selectedChapterId) {
-      toast("Vui lòng điền đầy đủ thông tin bắt buộc.");
+      toast.warning("Vui lòng điền đầy đủ thông tin bắt buộc.");
       return;
     }
 
@@ -133,10 +135,11 @@ export default function LessonsManagerPage() {
     }
 
     if (result.error) {
-      toast("Lưu bài học thất bại: " + result.error.message);
+      toast.error("Lưu bài học thất bại: " + result.error.message);
     } else {
-      toast(editLessonId ? "Cập nhật thành công" : "Lưu bài học thành công!");
+      toast.success(editLessonId ? "Cập nhật thành công" : "Lưu bài học thành công!");
       setIsOpenForm(false);
+      router.refresh();
       setRefreshKey((prev) => prev + 1);
     }
   };
@@ -147,9 +150,10 @@ export default function LessonsManagerPage() {
     const { error } = await deleteLesson(id);
 
     if (error) {
-      toast("Xoá bài học thất bại: " + error.message);
+      toast.error("Xoá bài học thất bại: " + error.message);
     } else {
-      toast("Xoá bài học thành công!");
+      toast.success("Xoá bài học thành công!");
+      router.refresh();
       setRefreshKey((prev) => prev + 1);
     }
   };
@@ -186,9 +190,9 @@ export default function LessonsManagerPage() {
     }
 
     if (result.error) {
-      toast("Đã có lỗi xảy ra: " + result.error.message);
+      toast.error("Đã có lỗi xảy ra: " + result.error.message);
     } else {
-      toast(editExerciseId ? "Cập nhật thành công" : "Thêm thành công");
+      toast.success(editExerciseId ? "Cập nhật thành công" : "Thêm thành công");
     }
   };
 
@@ -201,9 +205,10 @@ export default function LessonsManagerPage() {
     const result = await deleteExercise(exercise.id);
 
     if (result.error) {
-      toast("Đã có lỗi xảy ra: " + result.error.message);
+      toast.error("Đã có lỗi xảy ra: " + result.error.message);
     } else {
-      toast("Xóa câu hỏi thành công!");
+      toast.success("Xóa câu hỏi thành công!");
+      router.refresh();
     }
   };
 
@@ -235,8 +240,8 @@ export default function LessonsManagerPage() {
   };
 
   const handleAiBulkCreate = async () => {
-    if (!editLessonId) return toast("Chưa lưu bài học");
-    if (!content) return toast("Nội dung trống");
+    if (!editLessonId) return toast.error("Chưa lưu bài học");
+    if (!content) return toast.error("Nội dung trống");
 
     const confirmBulk = confirm("AI sẽ tự động lưu 3 câu hỏi vào bài này");
     if (!confirmBulk) return;
@@ -270,7 +275,7 @@ export default function LessonsManagerPage() {
         })
       );
 
-      toast("Đã thêm thành công 3 câu hỏi!");
+      toast.success("Đã thêm thành công 3 câu hỏi!");
       setRefreshKey((prev) => prev + 1);
     } catch (e) {
       toast("Có lỗi khi lưu vào db" + e);
@@ -840,8 +845,7 @@ export default function LessonsManagerPage() {
                         <div className="border border-gray-500"></div>
                         <div>
                           <p className="text-[12px] text-gray-500">
-                            Giải thích: header thường dùng cho phần đầu trang
-                            hoặc đầu section.
+                            {e.explanation}
                           </p>
                         </div>
                       </div>

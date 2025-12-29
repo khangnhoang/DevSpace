@@ -19,6 +19,7 @@ import type {
   ExerciseData,
   LessonItem,
   ChapterItem,
+  ProfileData,
 } from "@/lib/types";
 
 // 2. Khởi tạo Client
@@ -862,5 +863,52 @@ export async function createNote(
 
 export async function deleteNote(noteId: number) {
   const { error } = await supabase.from("notes").delete().eq("id", noteId);
+  return { error };
+}
+
+export async function getProfile(userId: string) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("full_name, avatar_url, dob, province, gender")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Lỗi khi lấy dữ liệu người dùng", error);
+    return;
+  }
+
+  return data as ProfileData;
+}
+
+export async function updateProfile(
+  userId: string,
+  dataUser: {
+    full_name: string;
+    gender: string;
+    dob: string;
+    province: string;
+    avatar_url: string;
+  },
+  newImageFile?: File | null
+) {
+  let finalImageUrl = dataUser.avatar_url;
+  if (newImageFile) {
+    const uploadedUrl = await uploadUserAvatar(newImageFile);
+    if (uploadedUrl) finalImageUrl = uploadedUrl;
+    else return { error: { message: "Lỗi upload avatar" } };
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      full_name: dataUser.full_name,
+      gender: dataUser.gender,
+      dob: dataUser.dob,
+      province: dataUser.province,
+      avatar_url: finalImageUrl,
+    })
+    .eq("id", userId);
+
   return { error };
 }

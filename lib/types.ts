@@ -143,6 +143,15 @@ export interface ExerciseData {
   explanation: string | "";
 }
 
+// Dùng cho trang profile
+export interface ProfileData {
+  full_name: string;
+  avatar_url: string;
+  gender: string;
+  dob: string;
+  province: string;
+}
+
 // --- 3. ALIAS (Giữ lại tên cũ để không gãy code đang dùng) ---
 export type Lessons = DBLesson;
 export type Chapter = DBChapter;

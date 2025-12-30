@@ -4,21 +4,21 @@ import { QRCodeSVG } from "qrcode.react";
 import { X, Loader2, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { enrollCourse } from "@/app/action/enroll"; // Import server action cũ của bạn
+import { cancelPayment, confirmPaymentAndEnroll } from "../action/payment";
 
 interface Props {
   course: any;
   userId: string;
+  paymentId: number | null;
   onClose: () => void;
   onSuccess: () => void; // Callback để báo cho trang cha biết là xong rồi
 }
 
-export default function CoursePaymentModal({ course, userId, onClose, onSuccess }: Props) {
+export default function CoursePaymentModal({ course, userId, paymentId, onClose, onSuccess }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [hasCopied, setHasCopied] = useState(false);
 
-  // Tạo nội dung chuyển khoản giả lập
-  // Cú pháp: HOCPHI <USER_ID_RÚT_GỌN> <COURSE_SLUG>
-  const transferContent = `HOCPHI ${userId.slice(0, 6)} ${course.slug}`.toUpperCase();
+  const transferContent = `HOCPHI ${userId.slice(0, 4)} PAY${paymentId} ${course.slug}`.toUpperCase();
   
   // Dùng link VietQR để app ngân hàng tự nhận diện (Ngon hơn text thuần)
   // Format: https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-<TEMPLATE>.png?addInfo=<CONTENT>
@@ -27,12 +27,9 @@ export default function CoursePaymentModal({ course, userId, onClose, onSuccess 
   const handleConfirmPayment = async () => {
     setIsLoading(true);
     try {
+      const result = await confirmPaymentAndEnroll(paymentId, course.id, userId);
       // 1. Giả lập độ trễ mạng/xử lý ngân hàng (2 giây)
       await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // 2. Gọi Server Action (Hàm enrollCourse cũ của bạn)
-      // Lưu ý: enrollCourse của bạn phải xử lý logic insert vào bảng enrollments
-      const result = await enrollCourse(course.id, userId, course.price);
 
       if (result.error) {
         toast.error(result.error);
@@ -45,6 +42,13 @@ export default function CoursePaymentModal({ course, userId, onClose, onSuccess 
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCancelPayment = async () => {
+    // Gọi action hủy payment
+    await cancelPayment(paymentId);
+    toast.info("Đã hủy giao dịch");
+    onClose();
   };
 
   const copyToClipboard = () => {
@@ -60,7 +64,7 @@ export default function CoursePaymentModal({ course, userId, onClose, onSuccess 
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b bg-gray-50">
           <h3 className="font-bold text-lg">Thanh toán khóa học</h3>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
+          <button onClick={handleCancelPayment} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -122,7 +126,7 @@ export default function CoursePaymentModal({ course, userId, onClose, onSuccess 
           </button>
           
           <button 
-            onClick={onClose}
+            onClick={handleCancelPayment}
             disabled={isLoading}
             className="cursor-pointer w-full text-gray-500 hover:text-gray-800 text-sm font-medium py-2"
           >

@@ -20,6 +20,7 @@ import {
 } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { createPendingPayment } from "@/app/action/payment";
 import { enrollCourse } from "@/app/action/enroll";
 import CoursePaymentModal from "@/app/components/CoursePaymentModal";
 import { User } from "@supabase/supabase-js";
@@ -34,6 +35,7 @@ export default function DetailPage({
   const { slug } = use(params);
 
   const [course, setCourse] = useState<CourseDetail | null>(null);
+  const [currentPaymentId, setCurrentPaymentId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedChapters, setExpandedChapters] = useState<number[]>([]);
   const [hasEnrolled, setHasEnrolled] = useState(false);
@@ -130,7 +132,19 @@ export default function DetailPage({
     setCurrentUser(user);
 
     if (course.price > 0) {
-      setIsOpenPaymentForm(true);
+      setIsEnrolling(true);
+      const res = await createPendingPayment(course.id, user.id);
+      setIsEnrolling(false);
+
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
+
+      if (res.success && res.paymentId) {
+        setCurrentPaymentId(res.paymentId);
+        setIsOpenPaymentForm(true);
+      }
     } else {
       processFreeEnrollment(user.id);
     }
@@ -204,7 +218,9 @@ export default function DetailPage({
       {/* CỘT TRÁI: NỘI DUNG KHÓA HỌC */}
       <div className="w-full lg:w-2/3 flex flex-col gap-8">
         <div className="w-full flex flex-col gap-4">
-          <h1 className="text-2xl md:text-3xl font-bold text-white">{course.name}</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-white">
+            {course.name}
+          </h1>
           <p className="text-sm leading-relaxed text-gray-300">
             {course.description}
           </p>
@@ -411,10 +427,11 @@ export default function DetailPage({
         </div>
       </div>
       {/* === THÊM MODAL VÀO CUỐI JSX (Trước thẻ đóng div ngoài cùng) === */}
-      {isOpenPaymentForm && course && currentUser && (
+      {isOpenPaymentForm && course && currentUser && currentPaymentId &&(
         <CoursePaymentModal
           course={course}
           userId={currentUser.id}
+          paymentId={currentPaymentId} 
           onClose={() => setIsOpenPaymentForm(false)}
           onSuccess={() => handleEnrollmentSuccess(course.slug)}
         />

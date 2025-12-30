@@ -130,6 +130,7 @@ export interface AdminCourseData {
   slug: string;
   image_url: string;
   lessonCount: number;
+  price: number;
 }
 
 // Dùng cho Form thêm/sửa bài tập

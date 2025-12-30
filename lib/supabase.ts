@@ -290,7 +290,7 @@ export async function getAdminCourseChartData() {
 export async function getAdminCourseData() {
   const { data: courses, error } = await supabase
     .from("courses")
-    .select("id, name, description, slug, image_url, lessons (id)")
+    .select("id, name, description, slug, image_url, price, lessons (id)")
     .order("id", { ascending: true });
 
   if (error) {
@@ -316,6 +316,7 @@ export async function updateCourse(
     slug: string;
     description: string;
     image_url: string;
+    price: number;
   },
   newImageFile?: File | null
 ) {
@@ -340,6 +341,7 @@ export async function updateCourse(
       slug: courseData.slug,
       description: courseData.description,
       image_url: finalImageUrl,
+      price: courseData.price
     })
     .eq("id", id);
 
@@ -347,7 +349,12 @@ export async function updateCourse(
 }
 
 export async function addCourse(
-  coursesData: { name: string; slug: string; description: string },
+  coursesData: {
+    name: string;
+    slug: string;
+    description: string;
+    price: number;
+  },
   imageFile?: File | null
 ) {
   let imageUrl = "";
@@ -369,6 +376,7 @@ export async function addCourse(
     slug: coursesData.slug,
     description: coursesData.description,
     image_url: imageUrl,
+    price: coursesData.price
   });
 
   return { insertError };

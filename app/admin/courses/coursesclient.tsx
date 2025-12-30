@@ -2,7 +2,12 @@
 import { useState } from "react";
 import { SquarePen, X, Trash } from "lucide-react";
 import Image from "next/image";
-import { type AdminCourseData, updateCourse, addCourse, deleteCourse } from "@/lib/supabase";
+import {
+  type AdminCourseData,
+  updateCourse,
+  addCourse,
+  deleteCourse,
+} from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -19,6 +24,7 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
   const [slug, setSlug] = useState("");
   const [desc, setDesc] = useState("");
   const [currentImageUrl, setCurrentImageUrl] = useState("");
+  const [price, setPrice] = useState<number>(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -44,6 +50,7 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
     setSlug("");
     setDesc("");
     setCurrentImageUrl("");
+    setPrice(0);
     setPreviewUrl(null);
     setSelectedFile(null);
     setIsOpenForm(true);
@@ -55,17 +62,46 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
     setSlug(course.slug);
     setDesc(course.description || "");
     setCurrentImageUrl(course.image_url || "");
+    setPrice(course.price);
     setPreviewUrl(course.image_url);
     setSelectedFile(null);
     setIsOpenForm(true);
   };
 
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // 1. Nếu xóa hết thì về 0 (tránh lỗi NaN)
+    if (value === "") {
+      setPrice(0);
+      return;
+    }
+
+    // 2. Chỉ lấy số (dùng parseFloat để an toàn hơn Number)
+    const numValue = parseFloat(value);
+
+    // 3. Nếu là số hợp lệ thì mới cập nhật state
+    if (!isNaN(numValue)) {
+      setPrice(numValue);
+    }
+  };
+
+  // Hàm format tiền tệ (VND) cho đẹp mắt
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(amount);
+  };
+
   const handleDelete = async (id: number, courseName: string) => {
-    const confirmDelete = confirm(`CẢNH BÁO: Bạn có chắc muốn xoá khoá học "${courseName}" không?\n (Tất cả bài học và chương sẽ bị xoá vĩnh viễn)`);
-    if (confirmDelete){
-      const {error} = await deleteCourse(id);
-      if (error){
-        toast("Lỗi khi xoá:" + error.message)
+    const confirmDelete = confirm(
+      `CẢNH BÁO: Bạn có chắc muốn xoá khoá học "${courseName}" không?\n (Tất cả bài học và chương sẽ bị xoá vĩnh viễn)`
+    );
+    if (confirmDelete) {
+      const { error } = await deleteCourse(id);
+      if (error) {
+        toast("Lỗi khi xoá:" + error.message);
       } else {
         toast("Xoá thành công");
         router.refresh();
@@ -80,13 +116,14 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
     if (editId) {
       result = await updateCourse(
         editId,
-        { name, slug, description: desc, image_url: currentImageUrl },
+        { name, slug, description: desc, image_url: currentImageUrl, price },
         selectedFile
       );
     } else {
       result = await addCourse(
-        {name, slug, description: desc}, selectedFile  
-      )
+        { name, slug, description: desc, price },
+        selectedFile
+      );
     }
 
     setIsSaving(false);
@@ -104,7 +141,9 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
     <div className="w-full">
       <div className="w-full h-screen">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <h1 className="font-bold text-2xl md:ml-10">Các khóa học hiện có: </h1>
+          <h1 className="font-bold text-2xl md:ml-10">
+            Các khóa học hiện có:{" "}
+          </h1>
           <button
             onClick={handleOpenAdd}
             className="text-md font-bold bg-[#191C24] p-2 rounded-md hover:opacity-80 cursor-pointer w-full sm:w-auto"
@@ -127,11 +166,19 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
               </div>
-              <p className="bg-[#222630] text-white w-full flex justify-center p-3 uppercase font-semibold text-center truncate px-4">
-                {course.name}
-              </p>
+              <div className="flex justify-between items-center w-full bg-[#222630]">
+                <p className="text-white p-3 uppercase font-semibold  truncate px-4">
+                  {course.name}
+                </p>
+
+                <p className="text-white p-3 font-semibold truncate px-4">
+                  {formatCurrency(course.price)}
+                </p>
+              </div>
               <div className="flex justify-between items-center p-3 w-full border-t border-gray-600 bg-[#222630]">
-                <p className="text-sm text-gray-300">{course.lessonCount} bài học</p>
+                <p className="text-sm text-gray-300">
+                  {course.lessonCount} bài học
+                </p>
                 <div className="flex items-center gap-3">
                   <Trash
                     size={20}
@@ -195,6 +242,21 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
                   />
                 </div>
                 <div className="flex flex-col p-2 gap-2">
+                  <p>Giá: </p>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    className="border border-[#4A5565] rounded-md p-2 w-full focus:outline-none"
+                    value={price}
+                    onChange={handlePriceChange}
+                    onWheel={(e) => e.currentTarget.blur()}
+                  />
+                  <p className="text-xs text-gray-400 italic">
+                    Hiển thị: {formatCurrency(price)}
+                  </p>
+                </div>
+                <div className="flex flex-col p-2 gap-2">
                   <p>Chú thích: </p>
                   <input
                     type="text"
@@ -213,7 +275,9 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
                   />
                   {previewUrl && (
                     <div className="mt-2">
-                      <p className="text-sm text-gray-400 mb-1 uppercase">Xem trước:</p>
+                      <p className="text-sm text-gray-400 mb-1 uppercase">
+                        Xem trước:
+                      </p>
                       <div className="w-full h-48 relative rounded-lg overflow-hidden border border-gray-600">
                         <Image
                           src={previewUrl}

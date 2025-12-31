@@ -141,7 +141,7 @@ export default function ChaptersManagerPage() {
   };
 
   return (
-    <div className="lg:ml-6 bg-[#0F1116] w-full min-h-screen h-full font-sans text-slate-200">
+    <div className="lg:px-3 bg-[#0F1116] w-full min-h-screen h-full font-sans text-slate-200">
       <div className="p-4 md:p-6 flex flex-col gap-6 w-full mx-auto">
         <div className="flex flex-col md:flex-row justify-between gap-4 md:gap-0 w-full">
           <div>

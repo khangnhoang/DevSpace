@@ -165,7 +165,7 @@ export default function Header() {
         </div>
         {/* Kết quả Search (Giữ nguyên logic của ông) */}
         {showDropdown && results.length > 0 && (
-          <div className="absolute top-full mt-2 w-full bg-white border border-gray-100 rounded-lg shadow-xl overflow-hidden z-50">
+          <div className="absolute top-full mt-2 w-full bg-white border border-gray-100 rounded-lg shadow-xl max-h-65 overflow-y-auto z-50">
             {results.map((lesson) => (
               <Link
                 key={lesson.id}

@@ -18,6 +18,7 @@ import {
   type NextLesson,
 } from "../(main)/learn/[course]/[slug]/page";
 import { User } from "@supabase/supabase-js";
+import { Code } from "lucide-react";
 
 // Import các interface cần thiết của bạn (Lesson, Chapter...)
 // Ví dụ giả định kiểu dữ liệu:
@@ -151,12 +152,24 @@ export default function LearnClient({
             {lesson.title}
           </h1>
 
-          {/* Component NoteManager nằm ở đây -> Sẽ hiện nút Ghi chú */}
-          <NoteManager
-            userId={currentUser.id}
-            lessonId={lesson.id}
-            player={player}
-          />
+          <div className="flex items-center gap-3">
+            {/* Nút Try It Yourself */}
+            <Link
+              href="/try_it"
+              target="_blank" // Mở tab mới để không mất video đang xem
+              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium text-sm shadow-sm"
+            >
+              <Code size={18} />
+              Try It
+            </Link>
+
+            {/* Nút Ghi chú cũ */}
+            <NoteManager
+              userId={currentUser.id}
+              lessonId={lesson.id}
+              player={player}
+            />
+          </div>
         </div>
 
         {videoId && (
@@ -173,7 +186,10 @@ export default function LearnClient({
                   autoplay: 0,
                   rel: 0, // Tắt video gợi ý liên quan khi hết bài
                   modestbranding: 1,
-                  origin: typeof window !== 'undefined' ? window.location.origin : undefined,
+                  origin:
+                    typeof window !== "undefined"
+                      ? window.location.origin
+                      : undefined,
                 },
               }}
             />

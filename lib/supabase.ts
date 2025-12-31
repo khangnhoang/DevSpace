@@ -214,9 +214,9 @@ export async function getDashboardData(): Promise<HomeCourseData[]> {
 
 export async function searchLesson(query: string) {
   const { data, error } = await supabase
-    .from("lessons")
-    .select("id, title, course_id, slug, courses(id, slug)")
-    .or(`title.ilike.%${query}%`);
+    .from("courses")
+    .select("id, name, slug, price, image_url")
+    .or(`name.ilike.%${query}%`);
 
   if (!query.trim()) return [];
 

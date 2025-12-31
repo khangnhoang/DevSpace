@@ -19,12 +19,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi">
-      <body className={`${inter.className} w-full`}>
-        {" "}
-        {<Header />}
-        <div className="flex flex-1 relative">{children}</div>
-      </body>
-    </html>
+    <div className={`${inter.className} w-full`}>
+      {" "}
+      {<Header />}
+      <div className="flex flex-1 relative">{children}</div>
+    </div>
   );
 }

@@ -18,7 +18,8 @@ import {
   type NextLesson,
 } from "../(main)/learn/[course]/[slug]/page";
 import { User } from "@supabase/supabase-js";
-import { Code } from "lucide-react";
+import { Code, MessageSquareText } from "lucide-react";
+import LessonComments from "./LessonComments";
 
 // Import các interface cần thiết của bạn (Lesson, Chapter...)
 // Ví dụ giả định kiểu dữ liệu:
@@ -45,6 +46,7 @@ export default function LearnClient({
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [player, setPlayer] = useState<YouTubePlayer | null>(null);
+  const [showComments, setShowComments] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -153,6 +155,18 @@ export default function LearnClient({
           </h1>
 
           <div className="flex items-center gap-3">
+            
+            <button
+              onClick={() => setShowComments(true)}
+              className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 hover:text-blue-600 hover:border-blue-400 transition-all font-medium text-sm shadow-sm group"
+            >
+              <MessageSquareText
+                size={18}
+                className="group-hover:scale-110 transition-transform"
+              />
+              <span className="hidden sm:inline">Thảo luận</span>
+            </button>
+
             {/* Nút Try It Yourself */}
             <Link
               href="/try_it"
@@ -231,6 +245,11 @@ export default function LearnClient({
           )}
         </div>
       </div>
+      <LessonComments
+        lessonId={lesson.id}
+        isOpen={showComments}
+        onClose={() => setShowComments(false)}
+      />
     </div>
   );
 }

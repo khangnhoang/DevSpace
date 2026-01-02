@@ -920,3 +920,18 @@ export async function updateProfile(
 
   return { error };
 }
+
+export async function getCommentByLesson(lessonId: number){
+  const {data, error} = await supabase
+    .from("comments")
+    .select("id, content, created_at, user_id, profiles(full_name, avatar_url, role)")
+    .eq("lesson_id", lessonId)
+    .is("deleted_at", null)
+    .order("created_at", {ascending: false})
+
+  if (error) {
+    console.error("Error fetching comments:", error);
+    return [];
+  }
+  return data;
+};

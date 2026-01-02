@@ -45,40 +45,46 @@ export default function Header() {
 
   // Logic User & Role (Giữ nguyên)
   useEffect(() => {
-    const getUserAndProfile = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const currentUser = session?.user || null;
-      setUser(currentUser);
+    const fetchUserProfile = async (userId: string) => {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, avatar")
+        .eq("id", userId)
+        .maybeSingle();
 
-      if (currentUser) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role, avatar_url")
-          .eq("id", currentUser.id)
-          .single();
-
-        if (profile) {
-          setUserRole(profile.role);
-          setUserAvatar(profile.avatar_url);
-        }
+      if (profile) {
+        setUserRole(profile.role);
+        setUserAvatar(profile.avatar);
       }
     };
 
-    getUserAndProfile();
+    const getInitialSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session && session.user) {
+        setUser(session.user);
+        await fetchUserProfile(session.user.id);
+      }
+    };
+
+    getInitialSession();
+
+    const {data: {subscription}} = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user || null);
-      if (!session) {
-        setUserRole("user");
+
+      if(session?.user){
+        await fetchUserProfile(session.user.id);
+      }else{
+        setUserRole('user')
         setUserAvatar(null);
       }
-    });
+    })
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    }
   }, []);
 
   // Logic Search (Giữ nguyên)

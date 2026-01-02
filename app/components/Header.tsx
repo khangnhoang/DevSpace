@@ -48,13 +48,13 @@ export default function Header() {
     const fetchUserProfile = async (userId: string) => {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, avatar")
+        .select("role, avatar_url")
         .eq("id", userId)
         .maybeSingle();
 
       if (profile) {
         setUserRole(profile.role);
-        setUserAvatar(profile.avatar);
+        setUserAvatar(profile.avatar_url);
       }
     };
 

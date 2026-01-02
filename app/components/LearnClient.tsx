@@ -140,7 +140,7 @@ export default function LearnClient({
   }
 
   return (
-    <div className="md:p-8 min-h-screen p-4 w-full bg-gray-50 lg:w-3/4 mx-auto pt-16">
+    <div className="w-full min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="text-sm text-gray-500 mb-6">
         Home / Learn /{" "}
         <span className="font-bold text-blue-600">{lesson.title}</span>

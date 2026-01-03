@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase, searchLesson } from "@/lib/supabase";
 import {
   Search,
@@ -18,6 +19,9 @@ import { User } from "@supabase/supabase-js";
 import CustomAvatar from "./CustomAvatar";
 
 export default function Header() {
+  const router = useRouter();
+
+  // --- STATE & REF (Giữ nguyên từ bản mới để đảm bảo logic) ---
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<string>("user");
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
@@ -27,10 +31,13 @@ export default function Header() {
   const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const [courses, setCourses] = useState<
-    { id: number; name: string; slug: string }[]
-  >([]);
+  // Mảng courses cho mobile menu (nếu cần fetch sau này, hiện tại để rỗng như logic cũ)
+  const [courses] = useState<{ id: number; name: string; slug: string }[]>([]);
+
+  const searchRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -39,72 +46,94 @@ export default function Header() {
     }).format(amount);
   };
 
-  const searchRef = useRef<HTMLDivElement>(null);
-  const userMenuRef = useRef<HTMLDivElement>(null);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  // Logic User & Role (Giữ nguyên)
+  // =========================
+  // 1. LOGIC AUTH + PROFILE (FIXED - TỪ BẢN MỚI)
+  // =========================
   useEffect(() => {
+    let isMounted = true;
+
     const fetchUserProfile = async (userId: string) => {
-      const { data: profile } = await supabase
+      const { data, error } = await supabase
         .from("profiles")
         .select("role, avatar_url")
         .eq("id", userId)
         .maybeSingle();
 
-      if (profile) {
-        setUserRole(profile.role);
-        setUserAvatar(profile.avatar_url);
+      if (!isMounted) return;
+
+      if (data && !error) {
+        setUserRole(data.role || "user");
+        setUserAvatar(data.avatar_url || null);
       }
     };
 
-    const getInitialSession = async () => {
+    const init = async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (session && session.user) {
+      if (!isMounted) return;
+
+      if (session?.user) {
         setUser(session.user);
-        await fetchUserProfile(session.user.id);
+        fetchUserProfile(session.user.id);
       }
     };
 
-    getInitialSession();
+    init();
 
-    const {data: {subscription}} = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user || null);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return;
 
-      if(session?.user){
-        await fetchUserProfile(session.user.id);
-      }else{
-        setUserRole('user')
+      if (session?.user) {
+        setUser(session.user);
+        fetchUserProfile(session.user.id);
+      } else {
+        setUser(null);
+        setUserRole("user");
         setUserAvatar(null);
       }
-    })
+    });
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
-    }
+    };
   }, []);
 
-  // Logic Search (Giữ nguyên)
+  // =========================
+  // 2. LOGIC SEARCH (FIXED LOADING - TỪ BẢN MỚI)
+  // =========================
   useEffect(() => {
     const timer = setTimeout(async () => {
-      if (query.trim().length > 1) {
+      if (query.trim().length <= 1) {
+        setResults([]);
+        setShowDropdown(false);
+        return;
+      }
+
+      try {
         setLoading(true);
         const data = await searchLesson(query);
         setResults(data || []);
-        setLoading(false);
         setShowDropdown(true);
-      } else {
+      } catch (err) {
+        console.error("Search error:", err);
         setResults([]);
         setShowDropdown(false);
+      } finally {
+        setLoading(false);
       }
     }, 500);
+
     return () => clearTimeout(timer);
   }, [query]);
 
-  // Click outside (Giữ nguyên)
+  // =========================
+  // 3. CLICK OUTSIDE (GIỮ NGUYÊN)
+  // =========================
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -124,18 +153,21 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // =========================
+  // 4. LOGOUT (FIX LOOP - TỪ BẢN MỚI)
+  // =========================
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.reload();
+    router.push("/login"); // Dùng router.push thay vì window.reload để mượt hơn
   };
 
+  // =========================
+  // 5. RENDER UI (TỪ BẢN HEADER_OLD)
+  // =========================
   return (
-    // THAY ĐỔI 1: Thêm justify-between để Logo trái, Avatar phải
     <header className="relative flex bg-white text-black h-16 items-center justify-between md:pr-4 shadow-sm border-b border-gray-200 px-2 md:px-4 z-50 min-w-full">
       {/* --- LEFT: LOGO --- */}
       <div className="flex items-center z-10">
-        {" "}
-        {/* z-10 để ko bị search đè */}
         <button
           className="p-2 mr-2 lg:hidden"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -156,11 +188,9 @@ export default function Header() {
             DevSpace
           </span>
         </Link>
-        {/* Đã xóa nút TRY IT YOURSELF ở đây */}
       </div>
 
-      {/* --- CENTER: SEARCH BAR (ABSOLUTE) --- */}
-      {/* THAY ĐỔI 2: Dùng Absolute để căn giữa màn hình */}
+      {/* --- CENTER: SEARCH BAR (ABSOLUTE & STYLING CŨ) --- */}
       <div
         ref={searchRef}
         className="hidden md:block absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md px-4"
@@ -186,13 +216,13 @@ export default function Header() {
           )}
         </div>
 
-        {/* Kết quả Search */}
+        {/* Kết quả Search (UI Cũ - Xử lý ảnh lỗi tốt hơn) */}
         {showDropdown && results.length > 0 && (
           <div className="absolute top-full mt-2 w-full bg-white border border-gray-100 rounded-lg shadow-xl max-h-65 overflow-y-auto z-50">
             {results.map((course) => (
               <Link
                 key={course.id}
-                href={`/course/${course.slug}`}
+                href={`/course/${course.slug}`} // Đã sửa lại đúng đường dẫn
                 className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-none cursor-pointer"
                 onClick={() => {
                   setShowDropdown(false);
@@ -200,7 +230,6 @@ export default function Header() {
                 }}
               >
                 <div className="relative w-14 h-9 shrink-0 rounded overflow-hidden border border-gray-200 bg-gray-100">
-                  {/* LOGIC KIỂM TRA: Có link ảnh thì hiện img, không thì hiện icon */}
                   {course.image_url ? (
                     <>
                       <img
@@ -208,20 +237,17 @@ export default function Header() {
                         alt={course.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          // Mẹo "Mì ăn liền": Nếu ảnh lỗi 404
-                          e.currentTarget.style.display = "none"; // 1. Ẩn cái ảnh đi
+                          e.currentTarget.style.display = "none";
                           e.currentTarget.nextElementSibling?.classList.remove(
                             "hidden"
-                          ); // 2. Hiện cái icon dự phòng bên dưới lên
+                          );
                         }}
                       />
-                      {/* Icon dự phòng (Mặc định ẩn - hidden, chỉ hiện khi ảnh trên bị lỗi) */}
                       <div className="hidden w-full h-full flex items-center justify-center bg-blue-50">
                         <FileText size={16} className="text-blue-500" />
                       </div>
                     </>
                   ) : (
-                    // Trường hợp data không có trường img
                     <div className="w-full h-full flex items-center justify-center bg-blue-50">
                       <FileText size={16} className="text-blue-500" />
                     </div>
@@ -241,10 +267,8 @@ export default function Header() {
         )}
       </div>
 
-      {/* --- RIGHT: USER MENU --- */}
+      {/* --- RIGHT: USER MENU (UI Cũ - Animation đẹp hơn) --- */}
       <div className="flex items-center gap-4 z-10 bg-white pl-2">
-        {" "}
-        {/* z-10 để nổi lên trên */}
         {user ? (
           <div className="relative" ref={userMenuRef}>
             <button

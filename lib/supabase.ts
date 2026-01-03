@@ -21,6 +21,7 @@ import type {
   ChapterItem,
   ProfileData,
 } from "@/lib/types";
+import { comment } from "@uiw/react-md-editor";
 
 // 2. Khởi tạo Client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -341,7 +342,7 @@ export async function updateCourse(
       slug: courseData.slug,
       description: courseData.description,
       image_url: finalImageUrl,
-      price: courseData.price
+      price: courseData.price,
     })
     .eq("id", id);
 
@@ -376,7 +377,7 @@ export async function addCourse(
     slug: coursesData.slug,
     description: coursesData.description,
     image_url: imageUrl,
-    price: coursesData.price
+    price: coursesData.price,
   });
 
   return { insertError };
@@ -921,17 +922,98 @@ export async function updateProfile(
   return { error };
 }
 
-export async function getCommentByLesson(lessonId: number){
-  const {data, error} = await supabase
+export async function getCommentByLesson(lessonId: number) {
+  const { data, error } = await supabase
     .from("comments")
-    .select("id, content, created_at, user_id, profiles(full_name, avatar_url, role)")
+    .select(
+      "id, content, created_at, deleted_at, user_id, profiles(full_name, avatar_url, role)"
+    )
     .eq("lesson_id", lessonId)
-    .is("deleted_at", null)
-    .order("created_at", {ascending: false})
+    .order("created_at", { ascending: false });
 
   if (error) {
     console.error("Error fetching comments:", error);
     return [];
   }
   return data;
-};
+}
+
+export async function addComment(
+  lessonId: number,
+  userId: string,
+  content: string
+) {
+  // --- LỚP BẢO VỆ 2: CHECK DB TRƯỚC KHI INSERT ---
+
+  // 1. Tạo mốc thời gian 5 phút trước
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+
+  // 2. Hỏi Database: "Ông này có comment nào y hệt trong 5 phút qua không?"
+  const { data: existed } = await supabase
+    .from("comments")
+    .select("id")
+    .eq("lesson_id", lessonId)
+    .eq("user_id", userId)
+    .eq("content", content.trim()) // Nội dung y hệt
+    .gte("created_at", fiveMinutesAgo) // Trong vòng 5 phút
+    .is("deleted_at", null) // Chưa xóa
+    .limit(1);
+
+  // 3. Nếu có -> Báo lỗi DUPLICATE luôn, không cho Insert
+  if (existed && existed.length > 0) {
+    return {
+      message: "Bạn thao tác quá nhanh! Vui lòng không spam nội dung cũ.",
+      code: "DUPLICATE_SPAM",
+    };
+  }
+
+  // --- NẾU ỔN THÌ MỚI INSERT ---
+  const { error } = await supabase.from("comments").insert({
+    user_id: userId,
+    content: content.trim(),
+    lesson_id: lessonId,
+  });
+
+  return error;
+}
+
+export async function editComment(
+  commentId: number,
+  userId: string,
+  content: string
+) {
+  const { error } = await supabase
+    .from("comments")
+    .update({
+      content: content.trim(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", commentId)
+    .eq("user_id", userId);
+
+  return error;
+}
+
+export async function deleteComment(commentId: number, userId: string) {
+  const { data, error } = await supabase
+    .from("comments")
+    .update({
+      deleted_at: new Date().toISOString(),
+    })
+    .eq("id", commentId)
+    .eq("user_id", userId)
+    .select("id"); // Cần Policy SELECT mới để dòng này chạy được
+
+  // Nếu có lỗi từ Supabase (VD: RLS chặn)
+  if (error) {
+    console.error("Supabase Error:", error);
+    return error;
+  }
+
+  // Nếu không tìm thấy comment (VD: Đã xóa rồi hoặc không phải chính chủ)
+  if (!data || data.length === 0) {
+    return { message: "Không tìm thấy bình luận hoặc bạn không có quyền xóa." };
+  }
+
+  return null; // Thành công
+}

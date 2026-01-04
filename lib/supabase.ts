@@ -21,6 +21,7 @@ import type {
   ChapterItem,
   ProfileData,
 } from "@/lib/types";
+import next from "next";
 
 // 2. Khởi tạo Client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -50,7 +51,12 @@ export async function getLessonsByCourse(courseSlug: string) {
     )
     .eq("course_id", course.id)
     .order("order_index", { ascending: true })
-    .order("id", { referencedTable: "lessons", ascending: true });
+    .order("order_index", {
+      referencedTable: "lessons",
+      ascending: true,
+      nullsFirst: false,
+    })
+    .order("created_at", { referencedTable: "lessons", ascending: true });
 
   const formattedChapters = (chapters || []).map((ch: any) => ({
     ...ch,
@@ -766,29 +772,37 @@ export async function getLastAccessedLessonId(
   if (!courseData) return null;
   const courseId = courseData.id;
 
-  const { data: progressData } = await supabase
-    .from("user_progress")
-    .select(`lessons!inner (id, course_id)`)
-    .eq("user_id", userId)
-    .eq("lessons.course_id", courseId)
-    .order("completed_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (progressData && progressData.lessons) {
-    const lessonInfo = progressData.lessons as any;
-    return Array.isArray(lessonInfo) ? lessonInfo[0].id : lessonInfo.id;
-  }
-
-  const { data: firstLesson } = await supabase
+  const { data: allLessons } = await supabase
     .from("lessons")
-    .select("id")
+    .select(
+      "id, chapter_id, order_index, created_at, chapters!inner (id, order_index)"
+    )
     .eq("course_id", courseId)
-    .order("id", { ascending: true })
-    .limit(1)
-    .single();
+    .order("order_index", { referencedTable: "chapters", ascending: true })
+    .order("order_index", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true });
 
-  return firstLesson ? firstLesson.id : null;
+  if (!allLessons || allLessons.length === 0) return null;
+
+  const { data: completedData } = await supabase
+    .from("user_progress")
+    .select("lesson_id, lessons!inner(course_id)")
+    .eq("user_id", userId)
+    .eq("lessons.course_id", courseId);
+
+  const completedLessonIds = new Set(
+    completedData?.map((item) => item.lesson_id || [])
+  );
+
+  const nextLesson = allLessons.find(
+    (lesson) => !completedLessonIds.has(lesson.id)
+  );
+
+  if (nextLesson) {
+    return nextLesson.id;
+  } else {
+    return allLessons[allLessons.length - 1].id;
+  }
 }
 
 export async function checkUserAndHasEnroll(

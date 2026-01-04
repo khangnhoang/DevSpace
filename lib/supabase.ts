@@ -763,6 +763,7 @@ export async function getLastAccessedLessonId(
   userId: string,
   courseSlug: string
 ) {
+  // 1. Lấy ID khóa học
   const { data: courseData } = await supabase
     .from("courses")
     .select("id")
@@ -772,37 +773,42 @@ export async function getLastAccessedLessonId(
   if (!courseData) return null;
   const courseId = courseData.id;
 
+  // 2. Lấy TOÀN BỘ bài học của khóa (Cái bản đồ)
+  // Quan trọng: Phải sort y hệt như Sidebar để logic đồng bộ
   const { data: allLessons } = await supabase
     .from("lessons")
-    .select(
-      "id, chapter_id, order_index, created_at, chapters!inner (id, order_index)"
-    )
+    .select("id, order_index, chapters!inner(id, order_index)")
     .eq("course_id", courseId)
+    // Sort theo Chương trước
     .order("order_index", { referencedTable: "chapters", ascending: true })
+    // Sort theo Bài sau (quan trọng: nullsFirst: false để bài chưa set index xuống đáy)
     .order("order_index", { ascending: true, nullsFirst: false })
+    // Sort fallback
     .order("created_at", { ascending: true });
 
   if (!allLessons || allLessons.length === 0) return null;
 
-  const { data: completedData } = await supabase
+  // 3. Lấy danh sách các bài ĐÃ HỌC (Vết tích)
+  const { data: progressData } = await supabase
     .from("user_progress")
-    .select("lesson_id, lessons!inner(course_id)")
+    .select("lesson_id, lessons!inner(course_id)") // inner join để chắc chắn đúng course
     .eq("user_id", userId)
     .eq("lessons.course_id", courseId);
 
-  const completedLessonIds = new Set(
-    completedData?.map((item) => item.lesson_id || [])
-  );
+  // Tạo Set để tra cứu cho lẹ (O(1))
+  const completedSet = new Set(progressData?.map((p) => p.lesson_id) || []);
 
-  const nextLesson = allLessons.find(
-    (lesson) => !completedLessonIds.has(lesson.id)
-  );
+  // 4. TÌM BÀI ĐẦU TIÊN CHƯA HỌC
+  // Chạy từ trên xuống dưới theo thứ tự đã sắp xếp
+  const nextLesson = allLessons.find((lesson) => !completedSet.has(lesson.id));
 
+  // Nếu tìm thấy -> Trả về bài đó
   if (nextLesson) {
     return nextLesson.id;
-  } else {
-    return allLessons[allLessons.length - 1].id;
-  }
+  } 
+  
+  // Nếu không tìm thấy (tức là học xong hết rồi) -> Trả về bài cuối cùng
+  return allLessons[allLessons.length - 1].id;
 }
 
 export async function checkUserAndHasEnroll(

@@ -50,7 +50,15 @@ export default function SidebarContent({
   const [lastAccessLessonId, setLastAccessLessonId] = useState<number | null>(
     null
   );
+  const allLessons = chapters.flatMap((c) => c.lessons || []);
   const [isLoading, setIsLoading] = useState(true); // Thêm state Loading
+
+  const nextLessonIndex = allLessons.findIndex(
+    (lesson) => !completedIds.includes(lesson.id)
+  );
+
+  const activeLessonId =
+    nextLessonIndex !== -1 ? allLessons[nextLessonIndex]?.id : null;
 
   // Toggle mở/đóng chapter
   const toggleChapter = (id: number) => {
@@ -131,10 +139,11 @@ export default function SidebarContent({
       {/* Danh sách chương + bài */}
       <div className="flex-1 overflow-y-auto p-2 space-y-2">
         {chapters.map((chapter) => {
-          const isActiveChapter = chapter.lessons?.some((l) => {
-             const lessonUrl = `/learn/${courseSlug}/${l.slug}`;
-             return pathName.startsWith(lessonUrl); 
-          }) ?? false;
+          const isActiveChapter =
+            chapter.lessons?.some((l) => {
+              const lessonUrl = `/learn/${courseSlug}/${l.slug}`;
+              return pathName.startsWith(lessonUrl);
+            }) ?? false;
 
           const isOpen = openChapters[chapter.id] ?? isActiveChapter;
 
@@ -167,10 +176,9 @@ export default function SidebarContent({
                     const isCompleted = completedIds.includes(lesson.id);
 
                     // Logic khóa bài học
-                    const safeLastId = lastAccessLessonId ?? 0;
-                    const isLastAccessLesson =
-                      lesson.id <= safeLastId || lesson.id === safeLastId + 1; // Mở khóa bài tiếp theo
 
+                    const isUnlocked =
+                      isCompleted || lesson.id === activeLessonId;
                     // Logic check hoàn thành Quiz (Optional - nếu bạn có bảng riêng cho quiz progress)
                     // Hiện tại đang dùng chung completedIds
 
@@ -184,7 +192,7 @@ export default function SidebarContent({
                               ? "bg-blue-100 text-blue-700 font-semibold shadow-sm"
                               : "text-gray-600 hover:bg-gray-200 hover:text-black"
                           } ${
-                            isLastAccessLesson
+                            isUnlocked
                               ? ""
                               : `cursor-not-allowed opacity-50 pointer-events-none select-none grayscale`
                           }`}
@@ -214,7 +222,7 @@ export default function SidebarContent({
                                 ? "bg-purple-100 text-purple-800 font-medium border border-purple-200"
                                 : "text-gray-500 hover:bg-white hover:shadow-sm"
                             } ${
-                              isLastAccessLesson
+                              isUnlocked
                                 ? ""
                                 : "cursor-not-allowed opacity-50 pointer-events-none"
                             }`}

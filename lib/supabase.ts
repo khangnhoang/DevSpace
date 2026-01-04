@@ -21,7 +21,6 @@ import type {
   ChapterItem,
   ProfileData,
 } from "@/lib/types";
-import { comment } from "@uiw/react-md-editor";
 
 // 2. Khởi tạo Client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -416,7 +415,7 @@ export async function getLessons() {
   const { data, error } = await supabase
     .from("lessons")
     .select(
-      "id, title, slug, content, course_id, chapter_id, video_url, courses (id, name), chapters (id, title)"
+      "id, title, slug, content, course_id, chapter_id, video_url, order_index, courses (id, name), chapters (id, title)"
     )
     .order("course_id", { ascending: true })
     .order("chapter_id", { ascending: true })
@@ -434,6 +433,7 @@ export async function addLesson(lessonData: any) {
     course_id: lessonData.course_id,
     chapter_id: lessonData.chapter_id,
     video_url: lessonData.video_url || null,
+    order_index: lessonData.order_index === "" ? null : lessonData.order_index,
   });
   return { error };
 }
@@ -453,6 +453,8 @@ export async function editLesson(id: number, lessonData: any) {
       course_id: lessonData.course_id,
       chapter_id: lessonData.chapter_id,
       video_url: lessonData.video_url || null,
+      order_index:
+        lessonData.order_index === "" ? null : lessonData.order_index,
     })
     .eq("id", id);
   return { error };

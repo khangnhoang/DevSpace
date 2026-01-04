@@ -56,6 +56,7 @@ export default function LessonsManagerPage() {
   const [content, setContent] = useState<string>(
     "**Viết nội dung bài học ở đây...**"
   );
+  const [orderIndex, setOrderIndex] = useState<number | "">("");
   const [lessons, setLessons] = useState<Array<any>>([]);
   const [exercise, setExercise] = useState<Array<any>>([]);
 
@@ -73,6 +74,7 @@ export default function LessonsManagerPage() {
     setTitle("");
     setSlug("");
     setVideoUrl("");
+    setOrderIndex("");
     setSelectedCourseId(null);
     setSelectedChapterId(null);
     setContent("**Viết nội dung bài học ở đây...**");
@@ -84,6 +86,7 @@ export default function LessonsManagerPage() {
     setTitle(lesson.title);
     setSlug(lesson.slug);
     setVideoUrl(lesson.video_url || "");
+    setOrderIndex(lesson.order_index ?? '');
     setSelectedCourseId(lesson.course_id);
     setSelectedChapterId(lesson.chapter_id);
     setContent(lesson.content || "");
@@ -125,6 +128,7 @@ export default function LessonsManagerPage() {
       course_id: selectedCourseId!,
       chapter_id: selectedChapterId!,
       video_url: videoUrl,
+      order_index: orderIndex,
     };
 
     let result;
@@ -138,7 +142,9 @@ export default function LessonsManagerPage() {
     if (result.error) {
       toast.error("Lưu bài học thất bại: " + result.error.message);
     } else {
-      toast.success(editLessonId ? "Cập nhật thành công" : "Lưu bài học thành công!");
+      toast.success(
+        editLessonId ? "Cập nhật thành công" : "Lưu bài học thành công!"
+      );
       setIsOpenForm(false);
       router.refresh();
       setRefreshKey((prev) => prev + 1);
@@ -417,6 +423,10 @@ export default function LessonsManagerPage() {
                   Chương
                 </th>
 
+                <th className="py-4 px-6 w-[20%] hidden lg:table-cell">
+                  Số thứ tự
+                </th>
+
                 {/* 4. CỘT HÀNH ĐỘNG (15%) - Cố định nhỏ gọn */}
                 <th className="py-4 px-6 w-[15%] text-center">Hành động</th>
               </tr>
@@ -466,6 +476,16 @@ export default function LessonsManagerPage() {
                         title={lesson.chapters?.title}
                       >
                         {lesson.chapters?.title || "N/A"}
+                      </div>
+                    </td>
+
+                    {/* CỘT SỐ THỨ TỰ */}
+                    <td className="py-3 px-6 hidden lg:table-cell align-middle text-gray-400 text-sm">
+                      <div
+                        className="truncate max-w-full"
+                        title={lesson.order_index}
+                      >
+                        {lesson.order_index || "N/A"}
                       </div>
                     </td>
 
@@ -656,6 +676,24 @@ export default function LessonsManagerPage() {
                         onChange={(e) => setVideoUrl(e.target.value)}
                       />
                     </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label htmlFor="" className="font-bold">
+                        Số thứ tự
+                      </label>
+                      <input
+                        type="number"
+                        name=""
+                        id=""
+                        className="bg-[#2C3039] border border-[#4B5563] rounded-md p-2 focus:outline-none"
+                        value={orderIndex}
+                        onChange={(e) =>
+                          setOrderIndex(
+                            e.target.value === "" ? "" : Number(e.target.value)
+                          )
+                        }
+                      />
+                    </div>
                   </div>
                   <div className="w-2/3 bg-[#364153] p-2 rounded-r-md flex flex-col gap-2">
                     <div className="flex justify-between items-center">
@@ -699,7 +737,9 @@ export default function LessonsManagerPage() {
                 </div>
                 <div className="grid grid-cols-2 w-1/2 gap-3">
                   <div className="flex flex-col gap-2">
-                    <span className="text-white text-md uppercase font-bold">a</span>
+                    <span className="text-white text-md uppercase font-bold">
+                      a
+                    </span>
                     <input
                       type="text"
                       name=""
@@ -712,7 +752,9 @@ export default function LessonsManagerPage() {
                   </div>
                   <div className="flex flex-col gap-2">
                     {" "}
-                    <span className="text-white text-md uppercase font-bold">b</span>
+                    <span className="text-white text-md uppercase font-bold">
+                      b
+                    </span>
                     <input
                       type="text"
                       name=""
@@ -725,7 +767,9 @@ export default function LessonsManagerPage() {
                   </div>
                   <div className="flex flex-col gap-2">
                     {" "}
-                    <span className="text-white text-md uppercase font-bold">C</span>
+                    <span className="text-white text-md uppercase font-bold">
+                      C
+                    </span>
                     <input
                       type="text"
                       name=""
@@ -738,7 +782,9 @@ export default function LessonsManagerPage() {
                   </div>
                   <div className="flex flex-col gap-2">
                     {" "}
-                    <span className="text-white text-md uppercase font-bold">D</span>
+                    <span className="text-white text-md uppercase font-bold">
+                      D
+                    </span>
                     <input
                       type="text"
                       name=""

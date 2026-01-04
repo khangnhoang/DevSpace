@@ -684,11 +684,8 @@ export async function getFullCourseDetail(
   };
 }
 
-export async function checkHasEnroll(slug: string) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return false;
+export async function checkHasEnroll(slug: string, userId: string | null) {
+  if (!userId) return false;
 
   const { data: course } = await supabase
     .from("courses")
@@ -701,7 +698,7 @@ export async function checkHasEnroll(slug: string) {
   const { data: enrollment } = await supabase
     .from("enrollments")
     .select("id")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("course_id", course.id)
     .maybeSingle();
 
@@ -759,6 +756,13 @@ export async function checkAndSaveProgress(userId: string, lessonId: number) {
   return { hasExercise: true, saved: false, error: null };
 }
 
+const getChapterOrder = (lesson: any) => {
+  if (Array.isArray(lesson.chapters)) {
+    return lesson.chapters[0]?.order_index ?? null;
+  }
+  return lesson.chapters?.order_index ?? null;
+};
+
 export async function getLastAccessedLessonId(
   userId: string,
   courseSlug: string
@@ -773,41 +777,60 @@ export async function getLastAccessedLessonId(
   if (!courseData) return null;
   const courseId = courseData.id;
 
-  // 2. Lấy TOÀN BỘ bài học của khóa (Cái bản đồ)
-  // Quan trọng: Phải sort y hệt như Sidebar để logic đồng bộ
-  const { data: allLessons } = await supabase
+  // 2. Lấy TOÀN BỘ bài học
+  const { data: rawLessons, error } = await supabase
     .from("lessons")
-    .select("id, order_index, chapters!inner(id, order_index)")
-    .eq("course_id", courseId)
-    // Sort theo Chương trước
-    .order("order_index", { referencedTable: "chapters", ascending: true })
-    // Sort theo Bài sau (quan trọng: nullsFirst: false để bài chưa set index xuống đáy)
-    .order("order_index", { ascending: true, nullsFirst: false })
-    // Sort fallback
-    .order("created_at", { ascending: true });
+    // Lấy đủ field cần thiết để sort
+    .select(
+      "id, title, order_index, created_at, chapters!inner(id, order_index)"
+    )
+    .eq("course_id", courseId);
 
-  if (!allLessons || allLessons.length === 0) return null;
+  if (error || !rawLessons || rawLessons.length === 0) {
+    console.error("Lỗi lấy bài học:", error);
+    return null;
+  }
 
-  // 3. Lấy danh sách các bài ĐÃ HỌC (Vết tích)
+  // 🔥 FIX CHUẨN: Sort logic NULLS LAST & Không mutate gốc
+  const allLessons = [...rawLessons].sort((a: any, b: any) => {
+    const chapA = getChapterOrder(a);
+    const chapB = getChapterOrder(b);
+
+    // 1️⃣ Sort theo chapter.order_index (NULLS LAST)
+    if (chapA !== chapB) {
+      if (chapA === null) return 1; // Null xuống cuối
+      if (chapB === null) return -1;
+      return chapA - chapB;
+    }
+
+    const orderA = a.order_index ?? null;
+    const orderB = b.order_index ?? null;
+
+    // 2️⃣ Sort theo lesson.order_index (NULLS LAST)
+    if (orderA !== orderB) {
+      if (orderA === null) return 1; // Null xuống cuối
+      if (orderB === null) return -1;
+      return orderA - orderB;
+    }
+
+    // 3️⃣ Fallback: created_at (Cũ lên trước)
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  });
+
+  // 3. Lấy danh sách đã học
   const { data: progressData } = await supabase
     .from("user_progress")
-    .select("lesson_id, lessons!inner(course_id)") // inner join để chắc chắn đúng course
+    .select("lesson_id, lessons!inner(course_id)")
     .eq("user_id", userId)
     .eq("lessons.course_id", courseId);
 
-  // Tạo Set để tra cứu cho lẹ (O(1))
   const completedSet = new Set(progressData?.map((p) => p.lesson_id) || []);
 
-  // 4. TÌM BÀI ĐẦU TIÊN CHƯA HỌC
-  // Chạy từ trên xuống dưới theo thứ tự đã sắp xếp
+  // 4. Tìm bài đầu tiên chưa học
   const nextLesson = allLessons.find((lesson) => !completedSet.has(lesson.id));
 
-  // Nếu tìm thấy -> Trả về bài đó
-  if (nextLesson) {
-    return nextLesson.id;
-  } 
-  
-  // Nếu không tìm thấy (tức là học xong hết rồi) -> Trả về bài cuối cùng
+  // Nếu học hết rồi thì trả về bài cuối cùng
+  if (nextLesson) return nextLesson.id;
   return allLessons[allLessons.length - 1].id;
 }
 

@@ -1,11 +1,10 @@
 // app/learn/[course]/[slug]/page.tsx
 import { getLessonsByCourse } from "@/lib/supabase";
-import { supabase, getLastAccessedLessonId } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import LearnClient from "@/app/components/LearnClient"; // Import component con
 import NotFoundLesson from "@/app/components/NotFoundLesson";
 import matter from "gray-matter";
 import LessonContent from "@/app/components/LessonContent";
-import { redirect } from "next/navigation";
 
 export interface lessonBasic {
   id: number;
@@ -32,13 +31,6 @@ export default async function LearnPage({
   params: Promise<{ course: string; slug: string }>;
 }) {
   const { course, slug } = await params;
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) {
-    redirect("/login");
-  }
 
   const { data: lesson, error } = await supabase
     .from("lessons")

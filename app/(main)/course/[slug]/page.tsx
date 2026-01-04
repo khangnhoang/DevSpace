@@ -67,9 +67,13 @@ export default function DetailPage({
     const initPageData = async () => {
       setLoading(true);
       try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
         const [courseData, enrollmentStatus] = await Promise.all([
           getFullCourseDetail(slug),
-          checkHasEnroll(slug),
+          checkHasEnroll(slug, user?.id || null),
         ]);
 
         if (courseData) {
@@ -427,11 +431,11 @@ export default function DetailPage({
         </div>
       </div>
       {/* === THÊM MODAL VÀO CUỐI JSX (Trước thẻ đóng div ngoài cùng) === */}
-      {isOpenPaymentForm && course && currentUser && currentPaymentId &&(
+      {isOpenPaymentForm && course && currentUser && currentPaymentId && (
         <CoursePaymentModal
           course={course}
           userId={currentUser.id}
-          paymentId={currentPaymentId} 
+          paymentId={currentPaymentId}
           onClose={() => setIsOpenPaymentForm(false)}
           onSuccess={() => handleEnrollmentSuccess(course.slug)}
         />

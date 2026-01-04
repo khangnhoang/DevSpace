@@ -5,6 +5,8 @@ import {
   type Lessons,
   type Chapter,
   checkUserAndHasEnroll,
+  getLastAccessedLessonId,
+  getCompletedLessonIds,
 } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -21,10 +23,8 @@ import { User } from "@supabase/supabase-js";
 import { Code, MessageSquareText } from "lucide-react";
 import LessonComments from "./LessonComments";
 
-// Import các interface cần thiết của bạn (Lesson, Chapter...)
-// Ví dụ giả định kiểu dữ liệu:
 interface Props {
-  lesson: Lessons; // Thay any bằng kiểu Lesson thực của bạn
+  lesson: Lessons;
   chapters: Chapter[];
   course: string;
   slug: string;
@@ -50,7 +50,7 @@ export default function LearnClient({
 
   useEffect(() => {
     let isMounted = true;
-    const checkUserAndEnrollment = async () => {
+    const checkAccess = async () => {
       try {
         const {
           data: { user },
@@ -79,6 +79,29 @@ export default function LearnClient({
           return;
         }
 
+        const [completedIds, allowedLessonId] = await Promise.all([
+          getCompletedLessonIds(user.id),
+          getLastAccessedLessonId(user.id, course),
+        ]);
+
+        const isCompleted = completedIds.includes(lesson.id);
+        const isAllowed = isCompleted || lesson.id === allowedLessonId;
+
+        if (!isAllowed && allowedLessonId) {
+          toast.error("Bạn chưa học đến bài này, vui lòng học theo khóa học");
+
+          const { data: allowedLessonData } = await supabase
+            .from("lessons")
+            .select("slug")
+            .eq("id", allowedLessonId)
+            .maybeSingle();
+
+          if (allowedLessonData) {
+            router.replace(`/learn/${course}/${allowedLessonData.slug}`);
+          }
+          return;
+        }
+
         setCurrentUser(user);
         setLoading(false);
       } catch (error) {
@@ -90,12 +113,12 @@ export default function LearnClient({
       }
     };
 
-    checkUserAndEnrollment();
+    checkAccess();
 
     return () => {
       isMounted = false;
     };
-  }, [router, course]);
+  }, [router, course, lesson.id]);
 
   const onPlayerReady = (event: YouTubeEvent) => {
     setPlayer(event.target);
@@ -155,7 +178,6 @@ export default function LearnClient({
           </h1>
 
           <div className="flex items-center gap-3">
-            
             <button
               onClick={() => setShowComments(true)}
               className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 hover:text-blue-600 hover:border-blue-400 transition-all font-medium text-sm shadow-sm group"

@@ -1,5 +1,5 @@
 // actions/admin-dashboard.ts
-"use server"; // 👈 BẮT BUỘC: Đánh dấu file này chỉ chạy trên server
+"use server";
 
 import { createClient } from "@supabase/supabase-js";
 
@@ -14,8 +14,6 @@ const supabaseAdmin = createClient(
     },
   }
 );
-
-// --- Bê toàn bộ hàm logic Admin vào đây ---
 
 export async function getAdminDashboardStats() {
   try {
@@ -96,10 +94,10 @@ export async function getTopStudents() {
       // 1. Ưu tiên dùng Full Name nếu có
       if (userProfile?.full_name && userProfile.full_name.trim() !== "") {
         displayName = userProfile.full_name;
-      } 
+      }
       // 2. Nếu không, dùng prefix của Email (trước @)
       else if (userProfile?.email) {
-        displayName = userProfile.email.split('@')[0];
+        displayName = userProfile.email.split("@")[0];
       }
       // -----------------------------
 
@@ -114,7 +112,6 @@ export async function getTopStudents() {
 
     // Lọc bỏ những user rác (không có email/profile)
     return result.filter((item) => item.email !== "");
-
   } catch (error) {
     console.error("Lỗi getTopStudents:", error);
     return [];

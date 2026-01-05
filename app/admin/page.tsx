@@ -1,11 +1,7 @@
-import {
-  Trophy,
-  Activity,
-  BookCheck,
-  User,
-  PenLine,
-  Book
-} from "lucide-react";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+import { Trophy, Activity, BookCheck, User, PenLine, Book } from "lucide-react";
 import {
   getAdminDashboardStats,
   getAdminCourseChartData,

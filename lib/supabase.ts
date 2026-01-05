@@ -27,6 +27,7 @@ import next from "next";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
 // --------------------------------------------------------
@@ -232,65 +233,6 @@ export async function searchLesson(query: string) {
   }
 
   return data || [];
-}
-
-// --------------------------------------------------------
-// SECTION E: LOGIC THỐNG KÊ (ADMIN DASHBOARD)
-// --------------------------------------------------------
-
-export async function getAdminDashboardStats() {
-  try {
-    const [
-      { count: studentsCount },
-      { count: lessonsCount },
-      { count: exercisesCount },
-      { count: completedCount },
-    ] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true })
-        .eq("role", "user"),
-      supabase.from("lessons").select("*", { count: "exact", head: true }),
-      supabase.from("exercises").select("*", { count: "exact", head: true }),
-      supabase
-        .from("user_progress")
-        .select("*", { count: "exact", head: true }),
-    ]);
-
-    return {
-      students: studentsCount || 0,
-      lessons: lessonsCount || 0,
-      exercises: exercisesCount || 0,
-      completed: completedCount || 0,
-    } as DashboardStats;
-  } catch (error) {
-    console.error("Lỗi lấy thống kê admin dashboard: ", error);
-    return null;
-  }
-}
-
-const CHART_COLORS = ["#00d25b", "#ffab00", "#0090e7", "#fc424a", "#8f5fe8"];
-
-export async function getAdminCourseChartData() {
-  const { data: courses, error } = await supabase
-    .from("courses")
-    .select("name, lessons (id)");
-
-  if (error) {
-    console.error("Lỗi lấy dữ liệu khóa học cho biểu đồ: ", error.message);
-    return [];
-  }
-
-  const chartData = courses?.map((course: any, index: number) => {
-    const lessonCount = course.lessons?.length || 0;
-    return {
-      name: course.name,
-      value: lessonCount,
-      color: CHART_COLORS[index % CHART_COLORS.length],
-    };
-  });
-
-  return chartData.filter((item: any) => item.value > 0);
 }
 
 export async function getAdminCourseData() {

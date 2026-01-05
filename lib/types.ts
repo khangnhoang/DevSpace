@@ -121,6 +121,7 @@ export interface DashboardStats {
   lessons: number;
   exercises: number;
   completed: number;
+  courses: number;
 }
 
 export interface AdminCourseData {

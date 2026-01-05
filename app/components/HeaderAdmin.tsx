@@ -13,7 +13,7 @@ export default function HeaderAdmin() {
     <>
     <header className="sticky top-0 z-50 flex justify-between bg-[#191C24] text-gray-400 h-16 items-center px-4 md:px-5 shadow-xl transition-all">
       <div className="flex items-center gap-2">
-          <h1 className="flex items-center text-white text-lg md:text-xl whitespace-nowrap">W3Schools Clone</h1>
+          <Link href="/" className="flex items-center text-white text-lg md:text-xl whitespace-nowrap">DevSpace Admin</Link>
       </div>
       
       <div className="flex md:gap-8 gap-4 flex-1 mr-4 justify-end items-center md:justify-start md:ml-10 md:mr-4">

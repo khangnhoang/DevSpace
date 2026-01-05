@@ -56,15 +56,14 @@ export async function getAdminDashboardStats() {
 
 export async function getTopStudents() {
   try {
-    // BƯỚC 1: Lấy dữ liệu từ bảng user_progress trước để đếm số bài đã học
-    // Chỉ lấy user_id để tối ưu performace
+    // BƯỚC 1: Lấy dữ liệu user_progress
     const { data: progressData, error } = await supabaseAdmin
       .from("user_progress")
       .select("user_id");
 
     if (error || !progressData) return [];
 
-    // BƯỚC 2: Tính toán thủ công (Group by user_id và Count)
+    // BƯỚC 2: Tính toán thủ công
     const leaderboard: Record<string, number> = {};
 
     progressData.forEach((row: any) => {
@@ -74,34 +73,48 @@ export async function getTopStudents() {
       }
     });
 
-    // BƯỚC 3: Sắp xếp giảm dần và lấy Top 5 user_id xuất sắc nhất
+    // BƯỚC 3: Sắp xếp giảm dần và lấy Top 5
     const topUserIds = Object.keys(leaderboard)
       .sort((a, b) => leaderboard[b] - leaderboard[a])
       .slice(0, 5);
 
     if (topUserIds.length === 0) return [];
 
-    // BƯỚC 4: Lấy thông tin chi tiết (Tên, Avatar) của Top 5 từ bảng profiles
+    // BƯỚC 4: Lấy thông tin chi tiết từ profiles
     const { data: profiles } = await supabaseAdmin
       .from("profiles")
       .select("id, full_name, email, avatar_url")
       .in("id", topUserIds);
 
-    // BƯỚC 5: Ghép dữ liệu lại để trả về format đúng cho Frontend
-    // Map lại theo thứ tự của topUserIds để đảm bảo người điểm cao nhất đứng đầu
+    // BƯỚC 5: Ghép dữ liệu & Xử lý tên hiển thị
     const result = topUserIds.map((id) => {
       const userProfile = profiles?.find((p) => p.id === id);
+
+      // --- LOGIC XỬ LÝ TÊN (MỚI) ---
+      let displayName = "Unknown User";
+
+      // 1. Ưu tiên dùng Full Name nếu có
+      if (userProfile?.full_name && userProfile.full_name.trim() !== "") {
+        displayName = userProfile.full_name;
+      } 
+      // 2. Nếu không, dùng prefix của Email (trước @)
+      else if (userProfile?.email) {
+        displayName = userProfile.email.split('@')[0];
+      }
+      // -----------------------------
+
       return {
         id: id,
-        full_name: userProfile?.full_name || "Unknown User",
+        full_name: displayName, // Trả về tên đã xử lý đẹp đẽ
         email: userProfile?.email || "",
         avatar_url: userProfile?.avatar_url || null,
-        progress_count: leaderboard[id], // Lấy số lượng bài đã tính ở Bước 2
+        progress_count: leaderboard[id],
       };
     });
 
-    // Lọc bỏ những user không tìm thấy profile (phòng hờ lỗi rác data)
+    // Lọc bỏ những user rác (không có email/profile)
     return result.filter((item) => item.email !== "");
+
   } catch (error) {
     console.error("Lỗi getTopStudents:", error);
     return [];

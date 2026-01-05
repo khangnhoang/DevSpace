@@ -1,10 +1,10 @@
 import {
-  ArrowUp,
-  ArrowDown,
-  BookOpen,
   Trophy,
   Activity,
-  CheckCircle,
+  BookCheck,
+  User,
+  PenLine,
+  Book
 } from "lucide-react";
 import {
   getAdminDashboardStats,
@@ -13,7 +13,6 @@ import {
   getRecentActivities,
 } from "@/app/action/admin-dashboard";
 import TransactionChart from "../components/TransactionChart";
-import Image from "next/image";
 import CustomAvatar from "../components/CustomAvatar";
 
 // Helper Component cho cái Card thống kê
@@ -57,28 +56,28 @@ export default async function AdminPage() {
         <StatCard
           title="Khóa học"
           value={stats?.courses}
-          icon={BookOpen}
+          icon={Book}
           colorClass="text-blue-500"
           bgIconClass="bg-blue-500/10"
         />
         <StatCard
           title="Bài học"
           value={stats?.lessons}
-          icon={ArrowUp}
+          icon={BookCheck}
           colorClass="text-green-500"
           bgIconClass="bg-green-500/10"
         />
         <StatCard
           title="Sinh viên"
           value={stats?.students}
-          icon={ArrowUp}
+          icon={User}
           colorClass="text-purple-500"
           bgIconClass="bg-purple-500/10"
         />
         <StatCard
           title="Bài tập"
           value={stats?.exercises}
-          icon={ArrowDown}
+          icon={PenLine}
           colorClass="text-orange-500"
           bgIconClass="bg-orange-500/10"
         />

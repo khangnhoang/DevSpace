@@ -1,12 +1,55 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { revalidatePath } from "next/cache";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+async function sendAdminNotification(userId: string, courseId: number) {
+  try {
+    const [adminRes, userRes, courseRes] = await Promise.all([
+      supabaseAdmin.from("profiles").select("id").eq("role", "admin"),
+      supabaseAdmin
+        .from("profiles")
+        .select("full_name")
+        .eq("id", userId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("courses")
+        .select("name")
+        .eq("id", courseId)
+        .maybeSingle(),
+    ]);
+
+    const admins = adminRes.data;
+    const user = userRes.data;
+    const course = courseRes.data;
+
+    if (!admins || !admins.length || !user || !course) {
+      console.error("Không tìm thấy admin, người dùng hoặc khóa học");
+      return;
+    }
+
+    const userName = user.full_name || "Một học viên";
+    const message = `${userName} đã đăng ký khóa học ${course.name}`;
+
+    const nofitications = admins.map((admin) => ({
+      receiver_id: admin.id,
+      actor_id: userId,
+      title: "Đăng ký khóa học mới",
+      message,
+      link: `/admin`,
+      type: "enrollment",
+      is_read: false,
+    }));
+
+    await supabaseAdmin.from("notifications").insert(nofitications);
+  } catch (error) {
+    console.error("Lỗi gửi thông báo đến admin:", error);
+  }
+}
 
 export async function createPendingPayment(courseId: number, userId: string) {
   try {
@@ -114,6 +157,8 @@ export async function confirmPaymentAndEnroll(
 
     if (enrollError)
       return { error: "Lỗi đăng ký khóa học" + enrollError.message };
+
+    await sendAdminNotification(userId, courseId);
 
     return { success: true };
   } catch (error) {

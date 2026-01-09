@@ -30,7 +30,7 @@ export default async function FinishCoursePage({
         </h2>
         <p className="text-gray-500 mb-6">This is to certify that</p>
         <p className="text-4xl font-bold text-blue-600 mb-6 font-serif">
-          Đinh Hoàng Quý
+          d
         </p>
         <p className="text-gray-500">Has successfully completed the course</p>
         {/* Dùng biến course đã await */}

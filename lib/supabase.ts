@@ -930,7 +930,6 @@ export async function addComment(
   userId: string,
   content: string
 ) {
-  // --- LỚP BẢO VỆ 2: CHECK DB TRƯỚC KHI INSERT ---
 
   // 1. Tạo mốc thời gian 5 phút trước
   const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();

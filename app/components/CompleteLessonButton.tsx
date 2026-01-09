@@ -60,7 +60,6 @@ export default function CompleteLessonBtn({
 
     try {
       // Gọi hàm lưu tiến độ
-      // Lưu ý: checkAndSaveProgress cần được sửa lại để nhận tham số userId, lessonId như thảo luận trước
       const result = await checkAndSaveProgress(userId, lessonId);
 
       if (result?.error) {

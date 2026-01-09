@@ -42,7 +42,7 @@ export default function AdminLayout({
         if (profile?.role === "admin") {
           setIsAuthorized(true); // Mở cổng
         } else {
-          toast.error("Mày đếch phải admin");
+          toast.error("Không có quyền truy cập");
           router.replace("/"); // Sút về trang chủ
         }
       } catch (error) {

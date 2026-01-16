@@ -223,7 +223,17 @@ export default async function AdminPage() {
 
                         <span className="text-[10px] text-gray-600 mt-1 block">
                           {act.date_string
-                            ? new Date(act.date_string).toLocaleString("vi-VN")
+                            ? new Date(act.date_string).toLocaleString(
+                                "vi-VN",
+                                {
+                                  timeZone: "Asia/Ho_Chi_Minh", // 👈 QUAN TRỌNG: Ép về giờ VN
+                                  hour: "2-digit", // Hiện giờ 2 số (09)
+                                  minute: "2-digit", // Hiện phút 2 số
+                                  day: "2-digit", // Ngày
+                                  month: "2-digit", // Tháng
+                                  year: "numeric", // Năm
+                                }
+                              )
                             : ""}
                         </span>
                       </div>

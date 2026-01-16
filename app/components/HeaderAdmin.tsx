@@ -1,10 +1,10 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import SidebarAdmin from "./SidebarAdmin";
-import { TextAlignJustify, Bell, Plus } from "lucide-react";
+import { TextAlignJustify, Bell, Home } from "lucide-react";
 import Link from "next/link";
-import { markAsRead } from "../action/get-notifications";
 import { supabase } from "@/lib/supabase";
+import CustomAvatar from "./CustomAvatar"; // Import component Avatar xịn
 
 function timeAgo(dateString: string) {
   const date = new Date(dateString);
@@ -24,7 +24,14 @@ export default function HeaderAdmin() {
   const [notifications, setNotifications] = useState<Array<any>>([]);
   const [showNotiDropdown, setShowNotiDropdown] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  
+  // State cho User Info
+  const [displayName, setDisplayName] = useState("");
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
   const notiRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const toggleSidebar = () => {
@@ -32,42 +39,61 @@ export default function HeaderAdmin() {
   };
 
   useEffect(() => {
-    const fetchNotifications = async () => {
+    const fetchData = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (!user) {
-        console.log("Chưa đăng nhập ở client");
         return;
       }
 
-      // Query trực tiếp DB
-      const { data, error } = await supabase
+      // 1. Lấy thông tin Profile (Tên, Avatar)
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, avatar_url")
+        .eq("id", user.id)
+        .single();
+
+      // Logic xử lý tên: Ưu tiên Fullname -> Email (bỏ domain) -> "Admin"
+      let name = "Admin";
+      if (profile?.full_name) {
+        name = profile.full_name;
+      } else if (user.email) {
+        name = user.email.split("@")[0];
+      }
+      setDisplayName(name);
+      setUserAvatar(profile?.avatar_url || null);
+
+      // 2. Lấy thông báo
+      const { data: notiData, error } = await supabase
         .from("notifications")
         .select("*")
-        .eq("receiver_id", user.id) // Lấy đúng của mình
+        .eq("receiver_id", user.id)
         .order("created_at", { ascending: false })
-        .limit(5); // Lấy 5 cái
+        .limit(5);
 
-      if (error) {
-        console.error("Lỗi fetch noti:", error);
-      } else {
-        setNotifications(data || []);
-        setUnreadCount(data?.filter((n) => !n.is_read).length || 0);
+      if (!error) {
+        setNotifications(notiData || []);
+        setUnreadCount(notiData?.filter((n) => !n.is_read).length || 0);
       }
     };
 
-    fetchNotifications();
+    fetchData();
 
-    const interval = setInterval(fetchNotifications, 30000);
+    // Polling thông báo mỗi 30s
+    const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, []);
 
+  // Xử lý click outside cho cả 2 dropdown
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (notiRef.current && !notiRef.current.contains(event.target as Node)) {
         setShowNotiDropdown(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -76,28 +102,40 @@ export default function HeaderAdmin() {
 
   const handleReadNotification = async (notification: any) => {
     if (!notification.is_read) {
-      await markAsRead(notification.id);
+      const { error } = await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("id", notification.id);
+
+      if (error) {
+        console.error("Lỗi update noti:", error);
+        return;
+      }
+
       setNotifications((prev) =>
         prev.map((noti) =>
           noti.id === notification.id ? { ...noti, is_read: true } : noti
         )
       );
-      setUnreadCount((prev) => prev - 1);
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     }
     setShowNotiDropdown(false);
   };
+
   return (
     <>
       <header className="sticky top-0 z-50 flex justify-between bg-[#191C24] text-gray-400 h-16 items-center px-4 md:px-5 shadow-xl transition-all">
+        {/* LOGO - Link về /admin */}
         <div className="flex items-center gap-2">
           <Link
-            href="/"
-            className="flex items-center text-white text-lg md:text-xl whitespace-nowrap"
+            href="/admin"
+            className="flex items-center text-white text-lg md:text-xl whitespace-nowrap font-bold"
           >
             DevSpace Admin
           </Link>
         </div>
 
+        {/* MENU TOGGLE (Mobile) */}
         <div className="flex md:gap-8 gap-4 flex-1 mr-4 justify-end items-center md:justify-start md:ml-10 md:mr-4">
           <button
             onClick={toggleSidebar}
@@ -108,25 +146,15 @@ export default function HeaderAdmin() {
               className={isSidebarOpen ? "text-blue-500" : ""}
             />
           </button>
-
-          <div className="hidden md:block w-full max-w-md relative">
-            <input
-              type="text"
-              placeholder="Tìm kiếm"
-              className="border w-full p-2 rounded-md focus:outline-none border-[#676D8C] py-1.5 px-4 focus:border-green-400 focus:ring-1 focus:ring-green-400 transition-all text-sm"
-            />
-          </div>
+          
+          {/* Đã XÓA Search Input ở đây */}
         </div>
-        <div className="flex items-center gap-3 md:gap-6 text-white">
-          <Link href="#">
-            <button className="flex items-center gap-2 cursor-pointer bg-green-600/20 hover:bg-green-500 hover:text-white text-green-400 border border-green-600/50 p-2 rounded-md text-sm transition-all">
-              <Plus size={14} />
-              <span className="hidden lg:inline font-medium">
-                Tạo khóa học mới
-              </span>
-            </button>
-          </Link>
 
+        {/* RIGHT ACTIONS */}
+        <div className="flex items-center gap-3 md:gap-6 text-white">
+          {/* Đã XÓA nút "Tạo khóa học mới" ở đây */}
+
+          {/* NOTIFICATION */}
           <div className="hidden md:flex items-center gap-5">
             <div className="relative" ref={notiRef}>
               <button
@@ -141,7 +169,6 @@ export default function HeaderAdmin() {
                 )}
               </button>
 
-              {/* DROPDOWN UI */}
               {showNotiDropdown && (
                 <div className="absolute right-0 mt-3 w-80 bg-[#191C24] border border-gray-700 rounded-lg shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in duration-200">
                   <div className="p-3 border-b border-gray-700 font-semibold text-white flex justify-between items-center">
@@ -207,18 +234,35 @@ export default function HeaderAdmin() {
               )}
             </div>
           </div>
-          <div>
-            <Link
-              href="#"
-              className="flex items-center gap-3 pl-2 md:border-l md:border-gray-700"
+
+          {/* USER PROFILE & DROPDOWN */}
+          <div className="relative" ref={userMenuRef}>
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center gap-3 pl-2 md:border-l md:border-gray-700 cursor-pointer focus:outline-none"
             >
-              <img
-                src="https://weart.vn/wp-content/uploads/2025/06/anh-avatar-vo-tri-don-gian-dang-yeu.jpg"
-                alt=""
-                className="h-8 w-8 md:h-10 md:w-10 rounded-full object-cover border-2 border-transparent hover:border-green-400 transition-all"
+              <CustomAvatar
+                src={userAvatar}
+                className="h-8 w-8 md:h-10 md:w-10 border-2 border-transparent hover:border-green-400 transition-all"
               />
-              <p className="text-sm font-medium hidden sm:block">Helen</p>
-            </Link>
+              <p className="text-sm font-medium hidden sm:block hover:text-green-400 transition-colors">
+                {displayName}
+              </p>
+            </button>
+
+            {/* User Dropdown */}
+            {showUserMenu && (
+              <div className="absolute right-0 mt-3 w-48 bg-[#191C24] border border-gray-700 rounded-lg shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in duration-200">
+                <Link
+                  href="/"
+                  className="flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+                >
+                  <Home size={16} />
+                  Về trang học tập
+                </Link>
+                {/* Có thể thêm nút Đăng xuất ở đây nếu muốn */}
+              </div>
+            )}
           </div>
         </div>
       </header>

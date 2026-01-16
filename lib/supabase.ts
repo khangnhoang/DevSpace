@@ -21,12 +21,10 @@ import type {
   ChapterItem,
   ProfileData,
 } from "@/lib/types";
-import next from "next";
 
 // 2. Khởi tạo Client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -647,22 +645,80 @@ export async function checkHasEnroll(slug: string, userId: string | null) {
   return !!enrollment;
 }
 
+// Hàm helper để lấy order index của chương an toàn (đặt ở ngoài hoặc trong file utils)
+const getChapterOrder = (lesson: any) => {
+  // Supabase trả về object hoặc mảng tùy vào quan hệ, handle cả 2 cho chắc
+  const chapter = Array.isArray(lesson.chapters)
+    ? lesson.chapters[0]
+    : lesson.chapters;
+  return chapter?.order_index ?? null;
+};
+
 export async function getLastAccessedLessonSlug(
   userId: string,
-  courseId: number
+  courseId: number // Nhận courseId luôn cho đỡ phải query lại từ slug
 ) {
-  const { data, error } = await supabase
+  // 1. Lấy TOÀN BỘ bài học của khóa đó kèm thông tin chương để sắp xếp
+  const { data: rawLessons, error } = await supabase
+    .from("lessons")
+    .select(
+      "id, slug, title, order_index, created_at, chapters(id, order_index)"
+    )
+    .eq("course_id", courseId);
+
+  if (error || !rawLessons || rawLessons.length === 0) {
+    console.error("Lỗi lấy danh sách bài học:", error);
+    return null;
+  }
+
+  // 2. Sắp xếp bài học chuẩn luồng: Chương trước -> Bài trước
+  const allLessons = [...rawLessons].sort((a: any, b: any) => {
+    const chapA = getChapterOrder(a);
+    const chapB = getChapterOrder(b);
+
+    // Ưu tiên 1: Sort theo thứ tự chương (Chapter Order)
+    if (chapA !== chapB) {
+      if (chapA === null) return 1; // Chương null đẩy xuống cuối
+      if (chapB === null) return -1;
+      return chapA - chapB;
+    }
+
+    const orderA = a.order_index ?? null;
+    const orderB = b.order_index ?? null;
+
+    // Ưu tiên 2: Sort theo thứ tự bài trong chương (Lesson Order)
+    if (orderA !== orderB) {
+      if (orderA === null) return 1;
+      if (orderB === null) return -1;
+      return orderA - orderB;
+    }
+
+    // Ưu tiên 3: Fallback theo ngày tạo
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  });
+
+  // 3. Lấy danh sách các bài User ĐÃ học xong
+  const { data: progressData } = await supabase
     .from("user_progress")
-    .select(`completed_at, lessons!inner (slug, course_id)`)
+    .select("lesson_id")
     .eq("user_id", userId)
-    .eq("lessons.course_id", courseId)
-    .order("completed_at", { ascending: false })
-    .limit(1);
+    .in(
+      "lesson_id",
+      allLessons.map((l) => l.id)
+    ); // Chỉ lấy progress của khóa này
 
-  if (error || !data || data.length === 0) return null;
+  const completedSet = new Set(progressData?.map((p) => p.lesson_id) || []);
 
-  const lessonData = data[0].lessons as any;
-  return Array.isArray(lessonData) ? lessonData[0]?.slug : lessonData?.slug;
+  // 4. Tìm bài đầu tiên TRONG DANH SÁCH ĐÃ SẮP XẾP mà User CHƯA học
+  const nextLesson = allLessons.find((lesson) => !completedSet.has(lesson.id));
+
+  // 5. Trả về kết quả
+  if (nextLesson) {
+    return nextLesson.slug; // Bài tiếp theo chưa học
+  }
+
+  // Trường hợp học xong hết rồi -> Trả về bài cuối cùng (hoặc bài đầu tiên tùy bạn chọn)
+  return allLessons[allLessons.length - 1].slug;
 }
 
 export async function checkAndSaveProgress(userId: string, lessonId: number) {
@@ -697,13 +753,6 @@ export async function checkAndSaveProgress(userId: string, lessonId: number) {
 
   return { hasExercise: true, saved: false, error: null };
 }
-
-const getChapterOrder = (lesson: any) => {
-  if (Array.isArray(lesson.chapters)) {
-    return lesson.chapters[0]?.order_index ?? null;
-  }
-  return lesson.chapters?.order_index ?? null;
-};
 
 export async function getLastAccessedLessonId(
   userId: string,
@@ -930,7 +979,6 @@ export async function addComment(
   userId: string,
   content: string
 ) {
-
   // 1. Tạo mốc thời gian 5 phút trước
   const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 

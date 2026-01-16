@@ -38,7 +38,7 @@ export default function ChaptersManagerPage() {
 
   const handleOpenAdd = () => {
     if (!selectedCourseId) {
-      toast("Vui lòng chọn khóa học trước khi thêm chương!");
+      toast.warning("Vui lòng chọn khóa học trước khi thêm chương!");
       return;
     }
     setEditingChapterId(null);
@@ -61,7 +61,7 @@ export default function ChaptersManagerPage() {
 
   const handleSave = async () => {
     if (!title || orderIndex === null || !selectedEditCourseId) {
-      toast("Vui lòng điền đầy đủ thông tin!");
+      toast.warning("Vui lòng điền đầy đủ thông tin!");
       return;
     }
 
@@ -80,9 +80,9 @@ export default function ChaptersManagerPage() {
     }
 
     if (result.error) {
-      toast("Đã có lỗi xảy ra: " + result.error.message);
+      toast.error("Đã có lỗi xảy ra: " + result.error.message);
     } else {
-      toast(
+      toast.success(
         editingChapterId
           ? "Cập nhật chương thành công!"
           : "Thêm chương thành công!"
@@ -103,9 +103,9 @@ export default function ChaptersManagerPage() {
     const result = await deleteChapter(chapter.id);
 
     if (result.error) {
-      toast("Đã có lỗi xảy ra: " + result.error.message);
+      toast.error("Đã có lỗi xảy ra: " + result.error.message);
     } else {
-      toast("Xóa chương thành công!");
+      toast.success("Xóa chương thành công!");
       const data = await getChapterForChapterManager();
       setChapters(data);
     }

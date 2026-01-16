@@ -9,8 +9,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "W3Schools Clone",
-  description: "Learn to code",
+  title: {
+    template: "%s | DevSpace LMS", // Các trang con sẽ điền vào chỗ %s
+    default: "DevSpace - Nền tảng Học Lập trình Trực tuyến", // Trang chủ hiện cái này
+  },
+  description:
+    "Hệ thống quản lý học tập tích hợp trình biên tập code trực tuyến và lộ trình thông minh.",
+  
 };
 
 export default function RootLayout({

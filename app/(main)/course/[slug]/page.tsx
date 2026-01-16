@@ -197,8 +197,72 @@ export default function DetailPage({
 
   if (loading)
     return (
-      <div className="bg-[#111827] w-full min-h-screen flex justify-center items-center">
-        <Loader2 className="animate-spin text-white" size={48} />
+      <div className="bg-[#111827] w-full min-h-screen p-4 flex md:p-8 flex-col lg:flex-row gap-8 justify-center animate-pulse">
+        {/* SKELETON CỘT TRÁI: NỘI DUNG */}
+        <div className="w-full lg:w-2/3 flex flex-col gap-8">
+          {/* Header Skeleton */}
+          <div className="w-full flex flex-col gap-4">
+            <div className="h-10 bg-gray-700 rounded-md w-3/4"></div>
+            <div className="h-4 bg-gray-700 rounded-md w-full"></div>
+            <div className="h-4 bg-gray-700 rounded-md w-5/6"></div>
+          </div>
+
+          {/* Learning Outcomes Skeleton */}
+          <div className="flex flex-col gap-4">
+            <div className="h-8 bg-gray-700 rounded-md w-1/3"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex gap-3 items-center">
+                  <div className="w-5 h-5 bg-gray-700 rounded-full shrink-0"></div>
+                  <div className="h-4 bg-gray-700 rounded-md w-full"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Chapter List Skeleton */}
+          <div className="flex flex-col gap-4">
+            <div className="flex justify-between items-center">
+              <div className="h-8 bg-gray-700 rounded-md w-1/4"></div>
+              <div className="h-6 bg-gray-700 rounded-md w-1/6"></div>
+            </div>
+            <div className="flex flex-col gap-2">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div
+                  key={i}
+                  className="h-14 bg-gray-700 rounded-lg w-full border border-gray-600"
+                ></div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* SKELETON CỘT PHẢI: SIDEBAR */}
+        <div className="w-full lg:w-1/3">
+          <div className="flex flex-col gap-5 w-full bg-[#1f2937] p-5 rounded-xl border border-gray-700 lg:sticky lg:top-8">
+            {/* Image Skeleton */}
+            <div className="aspect-video w-full bg-gray-700 rounded-lg"></div>
+
+            {/* Price Skeleton */}
+            <div className="flex flex-col gap-2 items-center">
+              <div className="h-10 bg-gray-700 rounded-md w-1/2"></div>
+              <div className="h-4 bg-gray-700 rounded-md w-1/3"></div>
+            </div>
+
+            {/* Button Skeleton */}
+            <div className="h-12 bg-gray-700 rounded-full w-full"></div>
+
+            {/* Stats Skeleton */}
+            <div className="flex flex-col gap-3 mt-2 border-t border-gray-700 pt-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex gap-3 items-center">
+                  <div className="w-5 h-5 bg-gray-700 rounded-full"></div>
+                  <div className="h-4 bg-gray-700 rounded-md w-2/3"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
 

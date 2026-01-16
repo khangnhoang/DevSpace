@@ -8,11 +8,6 @@ const inter = Inter({
   weight: ["400", "500", "600", "700", "800"], // Load các độ đậm cần thiết
 });
 
-export const metadata: Metadata = {
-  title: "W3Schools Clone",
-  description: "Learn to code",
-};
-
 export default function RootLayout({
   children,
 }: Readonly<{

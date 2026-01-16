@@ -8,8 +8,6 @@ import {
   Search,
   Loader2,
   FileText,
-  X,
-  Menu,
   LogOut,
   User as UserIcon,
   Shield,
@@ -21,7 +19,7 @@ import CustomAvatar from "./CustomAvatar";
 export default function Header() {
   const router = useRouter();
 
-  // --- STATE & REF (Giữ nguyên từ bản mới để đảm bảo logic) ---
+  // --- STATE & REF ---
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<string>("user");
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
@@ -31,10 +29,6 @@ export default function Header() {
   const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  // Mảng courses cho mobile menu (nếu cần fetch sau này, hiện tại để rỗng như logic cũ)
-  const [courses] = useState<{ id: number; name: string; slug: string }[]>([]);
 
   const searchRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -47,7 +41,7 @@ export default function Header() {
   };
 
   // =========================
-  // 1. LOGIC AUTH + PROFILE (FIXED - TỪ BẢN MỚI)
+  // 1. LOGIC AUTH + PROFILE
   // =========================
   useEffect(() => {
     let isMounted = true;
@@ -104,7 +98,7 @@ export default function Header() {
   }, []);
 
   // =========================
-  // 2. LOGIC SEARCH (FIXED LOADING - TỪ BẢN MỚI)
+  // 2. LOGIC SEARCH
   // =========================
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -132,7 +126,7 @@ export default function Header() {
   }, [query]);
 
   // =========================
-  // 3. CLICK OUTSIDE (GIỮ NGUYÊN)
+  // 3. CLICK OUTSIDE
   // =========================
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -154,29 +148,24 @@ export default function Header() {
   }, []);
 
   // =========================
-  // 4. LOGOUT (FIX LOOP - TỪ BẢN MỚI)
+  // 4. LOGOUT
   // =========================
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push("/login"); // Dùng router.push thay vì window.reload để mượt hơn
+    router.push("/login");
   };
 
   // =========================
-  // 5. RENDER UI (TỪ BẢN HEADER_OLD)
+  // 5. RENDER UI
   // =========================
   return (
-    <header className="relative flex bg-white text-black h-16 items-center justify-between md:pr-4 shadow-sm border-b border-gray-200 px-2 md:px-4 z-50 min-w-full">
+    <header className="relative flex bg-white text-black h-16 items-center justify-between md:pr-4 shadow-sm border-b border-gray-200 px-4 z-50 min-w-full">
       {/* --- LEFT: LOGO --- */}
       <div className="flex items-center z-10">
-        <button
-          className="p-2 mr-2 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        >
-          {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
+        {/* Đã xóa nút Menu Mobile ở đây */}
         <Link
           href="/"
-          className="flex items-center gap-2 px-2 py-1 group" // Group để hover hiệu ứng cả cụm
+          className="flex items-center gap-2 py-1 group"
         >
           {/* Logo Icon giả lập */}
           <div className="bg-blue-600 text-white p-1.5 md:p-2 rounded-lg shadow-sm group-hover:bg-blue-700 transition-colors duration-300">
@@ -190,7 +179,7 @@ export default function Header() {
         </Link>
       </div>
 
-      {/* --- CENTER: SEARCH BAR (ABSOLUTE & STYLING CŨ) --- */}
+      {/* --- CENTER: SEARCH BAR --- */}
       <div
         ref={searchRef}
         className="hidden md:block absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md px-4"
@@ -216,13 +205,13 @@ export default function Header() {
           )}
         </div>
 
-        {/* Kết quả Search (UI Cũ - Xử lý ảnh lỗi tốt hơn) */}
+        {/* Kết quả Search */}
         {showDropdown && results.length > 0 && (
           <div className="absolute top-full mt-2 w-full bg-white border border-gray-100 rounded-lg shadow-xl max-h-65 overflow-y-auto z-50">
             {results.map((course) => (
               <Link
                 key={course.id}
-                href={`/course/${course.slug}`} // Đã sửa lại đúng đường dẫn
+                href={`/course/${course.slug}`}
                 className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-none cursor-pointer"
                 onClick={() => {
                   setShowDropdown(false);
@@ -267,7 +256,7 @@ export default function Header() {
         )}
       </div>
 
-      {/* --- RIGHT: USER MENU (UI Cũ - Animation đẹp hơn) --- */}
+      {/* --- RIGHT: USER MENU --- */}
       <div className="flex items-center gap-4 z-10 bg-white pl-2">
         {user ? (
           <div className="relative" ref={userMenuRef}>
@@ -332,19 +321,7 @@ export default function Header() {
         )}
       </div>
 
-      {isMobileMenuOpen && (
-        <div className="lg:hidden absolute top-16 left-0 w-full bg-white border-t border-gray-200 shadow-xl flex flex-col text-gray-800 animate-in slide-in-from-top-5">
-          {courses.map((course) => (
-            <Link
-              key={course.id}
-              href={`/learn/${course.slug}`}
-              className="p-4 border-b border-gray-100 hover:bg-gray-50 font-medium uppercase"
-            >
-              {course.name}
-            </Link>
-          ))}
-        </div>
-      )}
+      {/* Đã xóa khối render mobile menu ở cuối */}
     </header>
   );
 }

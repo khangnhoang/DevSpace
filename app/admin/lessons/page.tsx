@@ -174,7 +174,7 @@ export default function LessonsManagerPage() {
       !optionD ||
       !correctAnswer
     ) {
-      toast("Bạn chưa điền đầy đủ thông tin bài tập");
+      toast.warning("Bạn chưa điền đầy đủ thông tin bài tập");
       return;
     }
 
@@ -222,7 +222,7 @@ export default function LessonsManagerPage() {
   };
 
   const handleAiFillForm = async () => {
-    if (!content) return toast("Chưa có nội dung bài học");
+    if (!content) return toast.warning("Chưa có nội dung bài học");
     setIsGenerating(true);
     setShowAiMenu(false);
 
@@ -234,7 +234,7 @@ export default function LessonsManagerPage() {
     }
 
     setIsGenerating(false);
-    if (res.error) return toast(res.error);
+    if (res.error) return toast.error(res.error);
 
     if (res.data && res.data.length > 0) {
       const q = res.data[0];
@@ -266,7 +266,7 @@ export default function LessonsManagerPage() {
 
     if (res.error) {
       setIsGenerating(false);
-      return toast(res.error);
+      return toast.error(res.error);
     }
 
     try {
@@ -287,7 +287,7 @@ export default function LessonsManagerPage() {
       toast.success("Đã thêm thành công 3 câu hỏi!");
       setRefreshExerciseKey((prev) => prev + 1);
     } catch (e) {
-      toast("Có lỗi khi lưu vào db" + e);
+      toast.error("Có lỗi khi lưu vào db" + e);
     } finally {
       setIsGenerating(false);
     }

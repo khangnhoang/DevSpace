@@ -192,8 +192,11 @@ export default function LearnClient({
             {/* Nút Try It Yourself */}
             <Link
               href="/try_it"
-              target="_blank" // Mở tab mới để không mất video đang xem
-              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium text-sm shadow-sm"
+              target="_blank"
+              // 👇 Thay đổi ở đây: Thêm 'hidden lg:flex'
+              // hidden: Ẩn trên Mobile và Tablet (sm, md)
+              // lg:flex: Chỉ hiện lại (dạng flex) trên màn hình Laptop/PC (>1024px)
+              className="hidden lg:flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium text-sm shadow-sm"
             >
               <Code size={18} />
               Try It

@@ -1,15 +1,49 @@
+"use client"; // 👈 1. Đánh dấu Client Component
+
+import React, { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { Home } from "lucide-react";
-import DownloadCertificateBtn from "@/app/components/DownloadCertificateBtn"; // Import cái nút vừa tạo
+import DownloadCertificateBtn from "@/app/components/DownloadCertificateBtn";
+import { supabase } from "@/lib/supabase"; // Import supabase client
 
-// 1. Định nghĩa kiểu cho params là Promise
-export default async function FinishCoursePage({
+export default function FinishCoursePage({
   params,
 }: {
   params: Promise<{ course: string }>;
 }) {
-  // 2. Phải await params trước khi dùng
-  const { course } = await params;
+  // 👈 2. Dùng hook use() để lấy data từ Promise params (thay vì await)
+  const { course } = use(params);
+
+  // State để lưu tên người dùng
+  const [studentName, setStudentName] = useState("Đang tải...");
+
+  // 👈 3. Dùng useEffect để lấy tên thật của user
+  useEffect(() => {
+    const getUserProfile = async () => {
+      // Lấy user hiện tại
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        // Lấy thông tin từ bảng profiles (nếu ông có lưu full_name ở đó)
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user.id)
+          .single();
+
+        // Ưu tiên lấy full_name trong profile, nếu không có thì lấy email
+        if (profile?.full_name) {
+          setStudentName(profile.full_name);
+        } else {
+          setStudentName(user.email?.split("@")[0] || "Học viên");
+        }
+      }
+    };
+
+    getUserProfile();
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white p-4 text-center">
@@ -22,20 +56,26 @@ export default async function FinishCoursePage({
         nỗ lực của bạn.
       </p>
 
-      {/* CÁI CHỨNG CHỈ FAKE */}
-      <div className="w-full max-w-2xl bg-slate-50 border-4 border-double border-yellow-400 p-10 rounded-lg shadow-xl mb-10 relative">
+      {/* CÁI CHỨNG CHỈ */}
+      {/* Thêm id để cái nút Download nó biết chụp khu vực nào */}
+      <div
+        id="certificate-area" 
+        className="w-full max-w-2xl bg-slate-50 border-4 border-double border-yellow-400 p-10 rounded-lg shadow-xl mb-10 relative text-center"
+      >
         <div className="absolute top-0 left-0 w-full h-full border border-gray-200 m-2 pointer-events-none"></div>
         <h2 className="text-3xl font-serif text-gray-800 mb-2">
           CERTIFICATE OF COMPLETION
         </h2>
         <p className="text-gray-500 mb-6">This is to certify that</p>
-        <p className="text-4xl font-bold text-blue-600 mb-6 font-serif">
-          d
+        
+        {/* Tên người dùng Dynamic */}
+        <p className="text-4xl font-bold text-blue-600 mb-6 font-serif uppercase">
+          {studentName}
         </p>
+        
         <p className="text-gray-500">Has successfully completed the course</p>
-        {/* Dùng biến course đã await */}
         <p className="text-xl font-bold text-gray-800 mt-2 uppercase">
-          {course}
+          {course.replace("-", " ")} {/* Fix nhẹ cái slug cho đẹp (vd: html-css -> html css) */}
         </p>
       </div>
 
@@ -47,7 +87,7 @@ export default async function FinishCoursePage({
           <Home size={20} /> Về trang chủ
         </Link>
 
-        {/* Nhét cái nút Client vào đây */}
+        {/* Nút download giữ nguyên */}
         <DownloadCertificateBtn />
       </div>
     </div>

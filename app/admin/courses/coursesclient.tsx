@@ -101,9 +101,9 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
     if (confirmDelete) {
       const { error } = await deleteCourse(id);
       if (error) {
-        toast("Lỗi khi xoá:" + error.message);
+        toast.error("Lỗi khi xoá:" + error.message);
       } else {
-        toast("Xoá thành công");
+        toast.success("Xoá thành công");
         router.refresh();
       }
     }
@@ -129,9 +129,9 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
     setIsSaving(false);
 
     if (result?.error) {
-      toast("Lỗi cập nhật: " + result.error.message);
+      toast.error("Lỗi cập nhật: " + result.error.message);
     } else {
-      toast(editId ? "Cập nhật thành công" : "Thêm khóa học thành công");
+      toast.success(editId ? "Cập nhật thành công" : "Thêm khóa học thành công");
       setIsOpenForm(false);
       router.refresh();
     }

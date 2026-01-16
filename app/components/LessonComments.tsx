@@ -246,10 +246,10 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
                           </span>
 
                           {/* MENU 3 CHẤM 
-                              - Chỉ hiện nếu là chủ comment 
-                              - Chỉ hiện khi chưa xóa (!isDeleted)
-                              - Không hiện khi đang sửa (!isEditing)
-                          */}
+    - Chỉ hiện nếu là chủ comment 
+    - Chỉ hiện khi chưa xóa (!isDeleted)
+    - Không hiện khi đang sửa (!isEditing)
+*/}
                           {isOwner && !isEditing && !isDeleted && (
                             <div className="relative">
                               <button
@@ -258,7 +258,11 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
                                     openMenuId === cmt.id ? null : cmt.id
                                   )
                                 }
-                                className="p-1 hover:bg-gray-200 rounded-full text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                // 👇 FIX Ở ĐÂY:
+                                // opacity-100: Mặc định hiện (cho Mobile/Tablet)
+                                // lg:opacity-0: Lên màn hình lớn (Desktop) thì ẩn đi
+                                // lg:group-hover:opacity-100: Di chuột vào dòng comment trên Desktop mới hiện lại
+                                className="p-1 hover:bg-gray-200 rounded-full text-gray-400 transition-opacity opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
                               >
                                 <MoreVertical size={14} />
                               </button>

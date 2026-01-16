@@ -1,4 +1,4 @@
-"use client"; // 👈 KHÓA CHỐT: Chuyển hẳn sang Client Side
+"use client"; 
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";

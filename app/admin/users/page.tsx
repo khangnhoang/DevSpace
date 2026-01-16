@@ -21,7 +21,7 @@ import {
   deleteUser,
   uploadUserAvatar,
 } from "@/lib/supabase";
-import { createNewUser } from "@/app/action/user";
+import { createNewUser, deleteUserAccount } from "@/app/action/user";
 import { toast } from "sonner";
 import CustomAvatar from "@/app/components/CustomAvatar";
 
@@ -78,12 +78,12 @@ export default function UsersManagerPage() {
   const handleDelete = async (id: string, name: string | null) => {
     if (!confirm(`Bạn có chắc chắn muốn xóa người dùng ${name} không?`)) return;
 
-    const { error } = await deleteUser(id);
+    const result = await deleteUserAccount(id);
 
-    if (error) {
-      toast.error("xóa người dùng thất bại" + error.message);
+    if (result.error) {
+      toast.error("Xóa người dùng thất bại: " + result.error);
     } else {
-      toast.success("Xóa thành công người dùng");
+      toast.success("Đã xóa vĩnh viễn người dùng khỏi hệ thống!");
       setRefreshKey((prev) => prev + 1);
     }
   };

@@ -62,7 +62,7 @@ export default function LoginPage() {
         },
         // Quan trọng: Redirect về trang nào sau khi bấm link trong mail?
         // Thường là trang login hoặc trang chủ
-        emailRedirectTo: `${location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 

@@ -6,6 +6,7 @@ import {
   Users,
   BookOpenText,
   TableOfContents,
+  BadgeDollarSign,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation"; // 👈 Hook lấy đường dẫn
@@ -48,6 +49,12 @@ export default function SidebarAdmin({ isOpen = true }: SidebarAdminProps) {
       label: "Quản lí chương",
       icon: TableOfContents,
       iconColor: "text-yellow-500",
+    },
+    {
+      href: "/admin/transactions",
+      label: "Quản lí giao dịch",
+      icon: BadgeDollarSign,
+      iconColor: "text-blue-500",
     },
   ];
 

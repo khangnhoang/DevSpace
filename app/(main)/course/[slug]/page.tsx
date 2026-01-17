@@ -38,14 +38,33 @@ export default function DetailPage({
   const [currentPaymentId, setCurrentPaymentId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedChapters, setExpandedChapters] = useState<number[]>([]);
+
   const [hasEnrolled, setHasEnrolled] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState(false);
+  const [hasPendingPayment, setHasPendingPayment] = useState(false); // Check đơn treo
+
   const [isOpenPaymentForm, setIsOpenPaymentForm] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
+  // Hàm check xem có đơn nào đang pending không (quan trọng để giữ state khi reload)
+  const checkPendingStatus = async (userId: string, courseId: number) => {
+    const { data, error } = await supabase
+      .from("payments")
+      .select("id, status") // Lấy thêm status để soi
+      .eq("user_id", userId)
+      .eq("course_id", courseId)
+      .eq("status", "pending")
+      .maybeSingle();
+    
+    // 👇 THÊM DÒNG NÀY ĐỂ DEBUG
+    console.log("Check Pending:", { userId, courseId, data, error });
+
+    return !!data;
+  };
+
   const getDestinationRoute = async (
     currentCourse: CourseDetail,
-    userId: string
+    userId: string,
   ) => {
     const lastSlug = await getLastAccessedLessonSlug(userId, currentCourse.id);
     if (lastSlug) {
@@ -71,6 +90,7 @@ export default function DetailPage({
           data: { user },
         } = await supabase.auth.getUser();
 
+        // Fetch song song: Info khóa học & Trạng thái Enrollment
         const [courseData, enrollmentStatus] = await Promise.all([
           getFullCourseDetail(slug),
           checkHasEnroll(slug, user?.id || null),
@@ -81,23 +101,15 @@ export default function DetailPage({
           if (courseData.chapters.length > 0) {
             setExpandedChapters([courseData.chapters[0].id]);
           }
-        }
-        setHasEnrolled(enrollmentStatus);
 
-        if (enrollmentStatus && courseData) {
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-
-          if (user) {
-            const destination = await getDestinationRoute(courseData, user.id);
-
-            if (destination) {
-              router.push(destination);
-              return;
-            }
+          // === LOGIC MỚI: Check thêm Pending Payment ===
+          if (user && !enrollmentStatus) {
+            // Chỉ check pending nếu chưa enroll (để tối ưu)
+            const isPending = await checkPendingStatus(user.id, courseData.id);
+            setHasPendingPayment(isPending);
           }
         }
+        setHasEnrolled(enrollmentStatus);
       } catch (error) {
         console.error("Failed to fetch course data:", error);
         toast.error("Không thể tải thông tin khóa học");
@@ -109,9 +121,30 @@ export default function DetailPage({
     if (slug) initPageData();
   }, [slug, router]);
 
+  const handleContinueLearning = async () => {
+    if (!course || !hasEnrolled) return;
+    setIsEnrolling(true);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const destination = await getDestinationRoute(course, user.id);
+        if (destination) {
+          router.push(destination);
+        } else {
+          toast.warning("Khóa học chưa có bài học nào.");
+          setIsEnrolling(false);
+        }
+      }
+    } catch (e) {
+      setIsEnrolling(false);
+    }
+  };
+
   const toggleChapter = (id: number) => {
     setExpandedChapters((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
     );
   };
 
@@ -119,13 +152,14 @@ export default function DetailPage({
     if (!course) return;
     const allIds = course.chapters.map((c) => c.id);
     setExpandedChapters(
-      expandedChapters.length === allIds.length ? [] : allIds
+      expandedChapters.length === allIds.length ? [] : allIds,
     );
   };
 
   const handleEnrollmentClick = async () => {
     if (!course) return;
 
+    // 1. Check lại user lần nữa cho chắc
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -135,6 +169,12 @@ export default function DetailPage({
     }
     setCurrentUser(user);
 
+    // 2. Nếu nút đang disable hoặc pending thì chặn luôn
+    if (hasPendingPayment) {
+      toast.info("Đơn hàng của bạn đang chờ duyệt. Vui lòng đợi.");
+      return;
+    }
+
     if (course.price > 0) {
       setIsEnrolling(true);
       const res = await createPendingPayment(course.id, user.id);
@@ -142,6 +182,10 @@ export default function DetailPage({
 
       if (res.error) {
         toast.error(res.error);
+        // Nếu lỗi báo là "đã tồn tại đơn pending" thì set state luôn để disable nút
+        if (res.error.includes("pending") || res.error.includes("chờ")) {
+          setHasPendingPayment(true);
+        }
         return;
       }
 
@@ -163,8 +207,9 @@ export default function DetailPage({
         toast.error(result.error);
         setIsEnrolling(false);
       } else if (result.success) {
-        toast.success("Đăng ký thành công! Đang vào lớp học...");
-        handleEnrollmentSuccess(result.slug);
+        toast.success("Đăng ký thành công!");
+        setHasEnrolled(true);
+        setIsEnrolling(false);
       }
     } catch (error) {
       toast.error("Có lỗi xảy ra" + error);
@@ -172,29 +217,13 @@ export default function DetailPage({
     }
   };
 
-  const handleEnrollmentSuccess = async (courseSlug: string) => {
-    setHasEnrolled(true);
+  const handlePaymentRequestSent = () => {
     setIsOpenPaymentForm(false);
-
-    let destUrl = "";
-    if (
-      course &&
-      course.chapters.length > 0 &&
-      course.chapters[0].lessons.length > 0
-    ) {
-      const firstSlug = course.chapters[0].lessons[0].slug;
-      destUrl = `/learn/${courseSlug}/${firstSlug}`;
-    }
-
-    if (destUrl) {
-      setTimeout(() => {
-        router.push(destUrl);
-      }, 1000); // Giảm delay xuống 1s cho nhanh
-    } else {
-      toast.warning("Khóa học này chưa cập nhật bài học nào.");
-    }
+    setHasPendingPayment(true); // Disable nút ngay lập tức
+    // Không cần reload trang, state đã chặn click rồi
   };
 
+  // === SKELETON ĐẦY ĐỦ (Đã khôi phục) ===
   if (loading)
     return (
       <div className="bg-[#111827] w-full min-h-screen p-4 flex md:p-8 flex-col lg:flex-row gap-8 justify-center animate-pulse">
@@ -240,19 +269,12 @@ export default function DetailPage({
         {/* SKELETON CỘT PHẢI: SIDEBAR */}
         <div className="w-full lg:w-1/3">
           <div className="flex flex-col gap-5 w-full bg-[#1f2937] p-5 rounded-xl border border-gray-700 lg:sticky lg:top-8">
-            {/* Image Skeleton */}
             <div className="aspect-video w-full bg-gray-700 rounded-lg"></div>
-
-            {/* Price Skeleton */}
             <div className="flex flex-col gap-2 items-center">
               <div className="h-10 bg-gray-700 rounded-md w-1/2"></div>
               <div className="h-4 bg-gray-700 rounded-md w-1/3"></div>
             </div>
-
-            {/* Button Skeleton */}
             <div className="h-12 bg-gray-700 rounded-full w-full"></div>
-
-            {/* Stats Skeleton */}
             <div className="flex flex-col gap-3 mt-2 border-t border-gray-700 pt-4">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="flex gap-3 items-center">
@@ -283,7 +305,7 @@ export default function DetailPage({
 
   return (
     <div className="bg-[#111827] w-full min-h-screen p-4 flex md:p-8 flex-col lg:flex-row gap-8 justify-center">
-      {/* CỘT TRÁI: NỘI DUNG KHÓA HỌC */}
+      {/* CỘT TRÁI: NỘI DUNG */}
       <div className="w-full lg:w-2/3 flex flex-col gap-8">
         <div className="w-full flex flex-col gap-4">
           <h1 className="text-2xl md:text-3xl font-bold text-white">
@@ -314,7 +336,9 @@ export default function DetailPage({
         {/* Danh sách bài học */}
         <div>
           <div className="flex flex-col gap-4">
-            <p className="text-xl md:text-2xl font-bold">Nội dung khóa học</p>
+            <p className="text-xl md:text-2xl font-bold text-white">
+              Nội dung khóa học
+            </p>
             <div className="flex justify-between items-end flex-wrap gap-2 text-gray-300">
               <div className="flex gap-2 text-sm flex-wrap items-center">
                 <p className="font-bold">{course.chapters.length}</p>{" "}
@@ -420,37 +444,33 @@ export default function DetailPage({
             )}
           </div>
 
+          {/* === NÚT BẤM CHÍNH (ĐÃ FIX LOGIC DISABLE) === */}
           <button
             onClick={
-              hasEnrolled
-                ? () => {
-                    getDestinationRoute(course, "").then((url) => {
-                      if (url) router.push(url);
-                      else {
-                        if (course.chapters[0]?.lessons[0])
-                          router.push(
-                            `/learn/${course.slug}/${course.chapters[0].lessons[0].slug}`
-                          );
-                      }
-                    });
-                  }
-                : handleEnrollmentClick
+              hasEnrolled ? handleContinueLearning : handleEnrollmentClick
             }
-            disabled={isEnrolling || loading}
-            className={`px-4 py-3 rounded-full cursor-pointer transition-all w-full font-bold text-lg
+            // Logic disable chặt chẽ hơn:
+            // 1. Đang loading xử lý
+            // 2. Đang fetch data (loading)
+            // 3. Đã có đơn pending (dù mới tạo hay load từ DB)
+            disabled={isEnrolling || loading || hasPendingPayment}
+            className={`px-4 py-3 rounded-full cursor-pointer transition-all w-full font-bold text-lg flex justify-center items-center
               ${
-                isEnrolling
+                isEnrolling || hasPendingPayment
                   ? "bg-gray-600 cursor-not-allowed text-gray-300"
                   : "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transform hover:-translate-y-0.5"
               }
             `}
           >
             {isEnrolling ? (
-              <div className="flex items-center justify-center gap-2">
-                <Loader2 className="animate-spin" size={24} /> Đang xử lý...
-              </div>
+              <>
+                <Loader2 className="animate-spin mr-2" size={24} /> Đang xử
+                lý...
+              </>
             ) : hasEnrolled ? (
               "Tiếp tục học ngay"
+            ) : hasPendingPayment ? (
+              "Đang chờ duyệt thanh toán..."
             ) : course.price === 0 ? (
               "Đăng ký học ngay"
             ) : (
@@ -494,14 +514,15 @@ export default function DetailPage({
           </div>
         </div>
       </div>
-      {/* === THÊM MODAL VÀO CUỐI JSX (Trước thẻ đóng div ngoài cùng) === */}
+
+      {/* MODAL THANH TOÁN */}
       {isOpenPaymentForm && course && currentUser && currentPaymentId && (
         <CoursePaymentModal
           course={course}
           userId={currentUser.id}
           paymentId={currentPaymentId}
           onClose={() => setIsOpenPaymentForm(false)}
-          onSuccess={() => handleEnrollmentSuccess(course.slug)}
+          onSuccess={handlePaymentRequestSent}
         />
       )}
     </div>

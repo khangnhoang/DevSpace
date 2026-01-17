@@ -14,31 +14,42 @@ interface Props {
   onSuccess: () => void; // Callback để báo cho trang cha biết là xong rồi
 }
 
-export default function CoursePaymentModal({ course, userId, paymentId, onClose, onSuccess }: Props) {
+export default function CoursePaymentModal({
+  course,
+  userId,
+  paymentId,
+  onClose,
+  onSuccess,
+}: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [hasCopied, setHasCopied] = useState(false);
 
-  const transferContent = `HOCPHI ${userId.slice(0, 4)} PAY${paymentId} ${course.slug}`.toUpperCase();
-  
-  // Dùng link VietQR để app ngân hàng tự nhận diện (Ngon hơn text thuần)
-  // Format: https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-<TEMPLATE>.png?addInfo=<CONTENT>
-  // Nhưng dùng thư viện qrcode.react để render text thuần cũng ok. Ở đây mình render Text để user quét.
+  const transferContent =
+    `HOCPHI ${userId.slice(0, 4)} PAY${paymentId} ${course.slug}`.toUpperCase();
 
   const handleConfirmPayment = async () => {
     setIsLoading(true);
     try {
-      const result = await confirmPaymentAndEnroll(paymentId, course.id, userId);
-      // 1. Giả lập độ trễ mạng/xử lý ngân hàng (2 giây)
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // 1. Giả lập delay cho user thấy có xử lý
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      if (result.error) {
-        toast.error(result.error);
-      } else if (result.success) {
-        toast.success("Thanh toán thành công! Đang vào lớp học...");
-        onSuccess(); // Báo cho trang cha để redirect
-      }
+      // 2. LOGIC MỚI: Không gọi server action enroll nữa
+      // Chỉ thông báo cho user biết là phải đợi
+      toast.success("Đã gửi xác nhận thanh toán!");
+      toast.info("Vui lòng đợi Admin duyệt trong giây lát để vào học.", {
+        duration: 5000, // Hiện lâu chút cho đọc
+      });
+
+      // 3. Đóng form
+      onClose();
+
+      // LƯU Ý QUAN TRỌNG:
+      // KHÔNG gọi onSuccess() ở đây nữa.
+      // Vì onSuccess() ở trang cha sẽ redirect vào trang học (mà chưa được duyệt thì vào làm gì).
+
+      onSuccess();
     } catch (error) {
-      toast.error("Có lỗi xảy ra: " + error);
+      toast.error("Có lỗi xảy ra");
     } finally {
       setIsLoading(false);
     }
@@ -64,7 +75,10 @@ export default function CoursePaymentModal({ course, userId, paymentId, onClose,
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b bg-gray-50">
           <h3 className="font-bold text-lg">Thanh toán khóa học</h3>
-          <button onClick={handleCancelPayment} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
+          <button
+            onClick={handleCancelPayment}
+            className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+          >
             <X size={20} />
           </button>
         </div>
@@ -72,7 +86,9 @@ export default function CoursePaymentModal({ course, userId, paymentId, onClose,
         {/* Body */}
         <div className="p-6 flex flex-col items-center gap-6 overflow-y-auto">
           <div className="text-center">
-            <p className="text-gray-500 text-sm mb-1">Thanh toán cho khóa học</p>
+            <p className="text-gray-500 text-sm mb-1">
+              Thanh toán cho khóa học
+            </p>
             <h2 className="text-xl font-bold text-blue-700">{course.name}</h2>
             <p className="text-2xl font-bold mt-2 text-red-600">
               {course.price_text}
@@ -91,17 +107,23 @@ export default function CoursePaymentModal({ course, userId, paymentId, onClose,
 
           {/* Transfer Content Info */}
           <div className="w-full bg-blue-50 border border-blue-100 p-4 rounded-lg">
-            <p className="text-xs text-blue-600 font-semibold mb-1 uppercase text-center">Nội dung chuyển khoản (Bắt buộc)</p>
-            <div 
-                onClick={copyToClipboard}
-                className="flex items-center justify-between bg-white border border-blue-200 rounded p-3 cursor-pointer hover:border-blue-400 transition-colors group"
+            <p className="text-xs text-blue-600 font-semibold mb-1 uppercase text-center">
+              Nội dung chuyển khoản (Bắt buộc)
+            </p>
+            <div
+              onClick={copyToClipboard}
+              className="flex items-center justify-between bg-white border border-blue-200 rounded p-3 cursor-pointer hover:border-blue-400 transition-colors group"
             >
-                <span className="font-mono font-bold text-lg text-gray-800 tracking-wider">
-                    {transferContent}
-                </span>
-                <div className="text-gray-400 group-hover:text-blue-600">
-                    {hasCopied ? <Check size={18} className="text-green-500"/> : <Copy size={18}/>}
-                </div>
+              <span className="font-mono font-bold text-lg text-gray-800 tracking-wider">
+                {transferContent}
+              </span>
+              <div className="text-gray-400 group-hover:text-blue-600">
+                {hasCopied ? (
+                  <Check size={18} className="text-green-500" />
+                ) : (
+                  <Copy size={18} />
+                )}
+              </div>
             </div>
             <p className="text-[10px] text-center text-gray-500 mt-2">
               *Hệ thống sẽ tự động kích hoạt sau khi bạn bấm xác nhận
@@ -124,8 +146,8 @@ export default function CoursePaymentModal({ course, userId, paymentId, onClose,
               "Tôi đã thanh toán"
             )}
           </button>
-          
-          <button 
+
+          <button
             onClick={handleCancelPayment}
             disabled={isLoading}
             className="cursor-pointer w-full text-gray-500 hover:text-gray-800 text-sm font-medium py-2"

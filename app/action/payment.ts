@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
+import { revalidatePath } from "next/cache";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -164,5 +165,115 @@ export async function confirmPaymentAndEnroll(
   } catch (error) {
     console.error(error);
     return { error: "Lỗi hệ thống trong quá trình xử lý" };
+  }
+}
+
+export async function getAllPayments() {
+
+  // BƯỚC 1: Lấy bảng Payments (Chỉ lấy user_id, không join users)
+  const { data: payments, error: paymentError } = await supabaseAdmin
+    .from("payments")
+    .select(
+      `
+      id, amount, status, created_at, user_id,
+      courses:course_id ( name, price )
+    `
+    )
+    .order("created_at", { ascending: false });
+
+  if (paymentError || !payments) return [];
+
+  // BƯỚC 2: Gom tất cả user_id lại
+  const userIds = payments.map((p) => p.user_id).filter(Boolean); // Lọc null
+
+  // BƯỚC 3: Lấy thông tin User từ bảng 'profiles' (Vì profiles nằm ở public, lấy dễ hơn auth.users)
+  // Lưu ý: Đảm bảo ông đã có bảng profiles sync với auth.users
+  const { data: users } = await supabaseAdmin
+    .from("profiles")
+    .select("id, full_name, email, avatar_url")
+    .in("id", userIds);
+
+  // BƯỚC 4: Manual Join (Gộp lại bằng cơm)
+  const paymentsWithUser = payments.map((p) => {
+    const user = users?.find((u) => u.id === p.user_id);
+    return {
+      ...p,
+      users: user || {
+        full_name: "Người dùng đã xóa",
+        email: "N/A",
+        avatar_url: null,
+      }, // Fallback nếu không tìm thấy
+    };
+  });
+
+  return paymentsWithUser;
+}
+
+// 👇 HÀM MỚI: Admin duyệt đơn (Manual Approve)
+export async function approvePayment(paymentId: number) {
+  try {
+    // 1. Lấy thông tin đơn hàng hiện tại
+    const { data: payment } = await supabaseAdmin
+      .from("payments")
+      .select("*")
+      .eq("id", paymentId)
+      .single();
+
+    if (!payment) return { error: "Không tìm thấy giao dịch" };
+
+    // 2. Cập nhật trạng thái thành success
+    const { error: updateError } = await supabaseAdmin
+      .from("payments")
+      .update({ status: "success", updated_at: new Date().toISOString() })
+      .eq("id", paymentId);
+
+    if (updateError) return { error: "Lỗi cập nhật trạng thái payment" };
+
+    // 3. Tự động thêm vào bảng Enrollments (Để user vào học được)
+    // Check xem đã enroll chưa để tránh lỗi duplicate
+    const { data: existingEnroll } = await supabaseAdmin
+      .from("enrollments")
+      .select("id")
+      .eq("user_id", payment.user_id)
+      .eq("course_id", payment.course_id)
+      .single();
+
+    if (!existingEnroll) {
+      const { error: enrollError } = await supabaseAdmin
+        .from("enrollments")
+        .insert({
+          user_id: payment.user_id,
+          course_id: payment.course_id,
+        });
+
+      if (enrollError)
+        return { error: "Lỗi kích hoạt khóa học: " + enrollError.message };
+    }
+
+    // 4. (Optional) Gửi thông báo cho User: "Admin đã duyệt đơn của bạn"
+    // Ông có thể tái sử dụng bảng notifications ở đây nếu muốn
+
+    revalidatePath("/admin/transactions"); // Refresh dữ liệu trang admin
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { error: "Lỗi hệ thống" };
+  }
+}
+
+// 👇 HÀM MỚI: Admin từ chối/Hủy đơn
+export async function rejectPayment(paymentId: number) {
+  try {
+    const { error } = await supabaseAdmin
+      .from("payments")
+      .update({ status: "failed", updated_at: new Date().toISOString() })
+      .eq("id", paymentId);
+
+    if (error) return { error: error.message };
+
+    revalidatePath("/admin/transactions");
+    return { success: true };
+  } catch (error) {
+    return { error: "Lỗi hủy đơn" };
   }
 }

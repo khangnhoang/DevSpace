@@ -357,7 +357,7 @@ export async function approvePayment(paymentId: number) {
 
     // 6. Gửi Email với link bài học chuẩn
     if (profile?.email) {
-      sendSuccessEmail(
+      await sendSuccessEmail(
         profile.email,
         profile.full_name || "Học viên",
         payment.courses?.name || "Khóa học",

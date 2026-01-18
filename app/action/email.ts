@@ -25,7 +25,7 @@ const getEmailTemplate = (userName: string, courseName: string, actionUrl: strin
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">E-Learning Platform</div>
+            <div class="logo">DevSpace LMS</div>
         </div>
         <div>
             <p>Xin chào <strong>${userName}</strong> 👋,</p>
@@ -63,7 +63,7 @@ export async function sendSuccessEmail(
     }
 
     const info = await transporter.sendMail({
-      from: `"E-Learning Admin" <${process.env.GMAIL_USER}>`,
+      from: `"DevSpace LMS Admin" <${process.env.GMAIL_USER}>`,
       to: userEmail,
       subject: `[Xác nhận] Kích hoạt thành công: ${courseName}`,
       html: getEmailTemplate(userName, courseName, actionUrl),

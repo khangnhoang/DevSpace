@@ -17,7 +17,7 @@ const supabaseAdmin = createClient(
 
 export async function getAdminDashboardStats() {
   try {
-    // Logic cũ của ông, dùng supabaseAdmin
+    // 1. Fetch các số liệu đếm (Count)
     const [
       { count: studentsCount },
       { count: lessonsCount },
@@ -39,12 +39,22 @@ export async function getAdminDashboardStats() {
       supabaseAdmin.from("courses").select("*", { count: "exact", head: true }),
     ]);
 
+    // 2. 👇 TÍNH DOANH THU (Chỉ lấy đơn thành công)
+    const { data: payments } = await supabaseAdmin
+      .from("payments")
+      .select("amount")
+      .eq("status", "success");
+
+    // Cộng dồn amount (Nếu null thì = 0)
+    const totalRevenue = payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
+
     return {
       students: studentsCount || 0,
       lessons: lessonsCount || 0,
       exercises: exercisesCount || 0,
       completed: completedCount || 0,
       courses: coursesCount || 0,
+      revenue: totalRevenue, // 👈 Trả thêm cục này
     };
   } catch (error) {
     console.error("Lỗi stats:", error);

@@ -97,6 +97,16 @@ export interface ChapterItem {
   lessons: LessonItem[];
 }
 
+export interface Instructor {
+  id: number;
+  bio: string;
+  job_title: string;
+  profiles: {
+    full_name: string;
+    avatar_url: string;
+  } | null;
+}
+
 export interface CourseDetail {
   id: number;
   name: string;
@@ -113,6 +123,7 @@ export interface CourseDetail {
   };
   learning_outcomes: string[];
   chapters: ChapterItem[];
+  instructors: Instructor | null;
 }
 
 // Dùng cho Admin

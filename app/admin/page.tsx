@@ -1,7 +1,18 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-import { Trophy, Activity, BookCheck, User, PenLine, Book } from "lucide-react";
+import {
+  Trophy,
+  Activity,
+  BookCheck,
+  User,
+  PenLine,
+  Book,
+  DollarSign,
+  TrendingUp,
+  Users,
+  FileCheck,
+} from "lucide-react";
 import {
   getAdminDashboardStats,
   getAdminCourseChartData,
@@ -11,33 +22,38 @@ import {
 import TransactionChart from "../components/TransactionChart";
 import CustomAvatar from "../components/CustomAvatar";
 
-// Helper Component cho cái Card thống kê
-const StatCard = ({
-  title,
-  value,
-  icon: Icon,
-  colorClass,
-  bgIconClass,
-}: any) => (
-  <div className="bg-[#191C24] flex p-4 justify-between rounded-xl border border-gray-800 w-full hover:border-gray-700 transition-all shadow-sm">
-    <div className="flex flex-col justify-between h-full">
-      <div className="text-3xl font-bold text-white mt-1">
-        {value}
-        <p className="text-sm text-[#676a86] font-medium mt-2 uppercase tracking-wide">
+// --- COMPONENT STAT CARD (PHIÊN BẢN MODERN) ---
+const StatCard = ({ title, value, icon: Icon, color, subValue }: any) => (
+  <div className="relative overflow-hidden rounded-2xl border border-gray-800 bg-[#1A1D24] p-6 hover:border-gray-600 transition-all duration-300 group shadow-lg">
+    <div className="flex items-center justify-between z-10 relative">
+      <div>
+        <p className="text-sm font-medium text-gray-400 mb-2 uppercase tracking-wider">
           {title}
         </p>
+        <h3 className="text-3xl font-bold text-white tracking-tight">
+          {value}
+        </h3>
+        {subValue && (
+          <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+            <TrendingUp size={12} className="text-green-500" /> {subValue}
+          </p>
+        )}
+      </div>
+      <div
+        className={`p-3 rounded-xl ${color} bg-opacity-10 backdrop-blur-sm shadow-inner`}
+      >
+        <Icon size={26} className="text-white" />
       </div>
     </div>
+
+    {/* Hiệu ứng Glow nền (Trang trí) */}
     <div
-      className={`h-12 w-12 flex items-center justify-center rounded-lg ${bgIconClass}`}
-    >
-      <Icon size={24} className={colorClass} />
-    </div>
+      className={`absolute -bottom-6 -right-6 w-24 h-24 rounded-full opacity-5 blur-2xl group-hover:opacity-15 transition-opacity duration-500 ${color.replace("bg-", "bg-")}`}
+    />
   </div>
 );
 
 export default async function AdminPage() {
-  // Fetch song song cho nhanh
   const [stats, chartData, topStudents, recentActivities] = await Promise.all([
     getAdminDashboardStats(),
     getAdminCourseChartData(),
@@ -45,58 +61,88 @@ export default async function AdminPage() {
     getRecentActivities(),
   ]);
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(amount);
+  };
+
   return (
-    <div className="lg:ml-6 p-4 md:p-6 flex flex-col gap-6 bg-[#0F1116] min-h-screen text-gray-200">
-      {/* --- HÀNG 1: STATS CARDS --- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="lg:ml-6 p-6 flex flex-col gap-8 bg-[#0F1116] min-h-screen text-gray-200">
+      {/* 1. HEADER */}
+      <div>
+        <h1 className="text-2xl font-bold text-white">Tổng quan hệ thống</h1>
+        <p className="text-gray-500 text-sm">
+          Chào mừng quay trở lại, Quản Trị Viên!
+        </p>
+      </div>
+
+      {/* 2. GRID THỐNG KÊ (3 Cột x 2 Hàng = 6 Thẻ cân đối) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* DOANH THU (Quan trọng nhất) */}
+        <StatCard
+          title="Tổng Doanh thu"
+          value={formatCurrency(stats?.revenue || 0)}
+          icon={DollarSign}
+          color="bg-emerald-500" // Xanh lá tiền tệ
+          subValue="Thực nhận"
+        />
+
+        {/* HỌC VIÊN */}
+        <StatCard
+          title="Học viên"
+          value={stats?.students}
+          icon={Users}
+          color="bg-purple-500" // Tím mộng mơ
+          subValue="Active users"
+        />
+
+        {/* KHÓA HỌC */}
         <StatCard
           title="Khóa học"
           value={stats?.courses}
           icon={Book}
-          colorClass="text-blue-500"
-          bgIconClass="bg-blue-500/10"
+          color="bg-blue-500" // Xanh tri thức
         />
+
+        {/* BÀI HỌC */}
         <StatCard
           title="Bài học"
           value={stats?.lessons}
           icon={BookCheck}
-          colorClass="text-green-500"
-          bgIconClass="bg-green-500/10"
+          color="bg-pink-500"
         />
-        <StatCard
-          title="Sinh viên"
-          value={stats?.students}
-          icon={User}
-          colorClass="text-purple-500"
-          bgIconClass="bg-purple-500/10"
-        />
+
+        {/* BÀI TẬP */}
         <StatCard
           title="Bài tập"
           value={stats?.exercises}
           icon={PenLine}
-          colorClass="text-orange-500"
-          bgIconClass="bg-orange-500/10"
+          color="bg-orange-500"
         />
+
+        {/* HOẠT ĐỘNG (Thay cho "Hoàn thành" chung chung) */}
         <StatCard
-          title="Hoàn thành"
+          title="Hoạt động học tập"
           value={stats?.completed}
-          icon={Trophy}
-          colorClass="text-yellow-500"
-          bgIconClass="bg-yellow-500/10"
+          icon={Activity}
+          color="bg-yellow-500"
+          subValue="Bài học đã xong"
         />
       </div>
 
-      {/* --- HÀNG 2: MAIN CONTENT --- */}
+      {/* 3. MAIN CONTENT (Biểu đồ & Danh sách) */}
       <div className="flex flex-col xl:flex-row gap-6">
-        {/* CỘT TRÁI: BIỂU ĐỒ (1/3) */}
-        <div className="w-full xl:w-1/3 min-h-[450px]">
+        {/* BIỂU ĐỒ (Chiếm 40%) */}
+        <div className="w-full xl:w-2/5 min-h-[450px]">
           <TransactionChart data={chartData} />
         </div>
 
-        {/* CỘT PHẢI: THỐNG KÊ CHI TIẾT (2/3) */}
-        <div className="w-full xl:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* WIDGET 1: BẢNG VÀNG HỌC TẬP */}
-          <div className="bg-[#191C24] p-6 rounded-xl border border-gray-800 flex flex-col h-full">
+        {/* DANH SÁCH (Chiếm 60%) */}
+        <div className="w-full xl:w-3/5 grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Widget 1: Top Học Viên */}
+          <div className="bg-[#1A1D24] p-6 rounded-2xl border border-gray-800 flex flex-col h-full shadow-lg">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <Trophy size={18} className="text-yellow-500" />
@@ -108,46 +154,36 @@ export default async function AdminPage() {
                 {topStudents?.map((student: any, index: number) => (
                   <li
                     key={student.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-[#0F1116]/50 hover:bg-[#0F1116] transition-colors border border-gray-800/50"
+                    className="flex items-center gap-3 p-3 rounded-xl bg-[#0F1116]/50 hover:bg-[#252830] transition-colors border border-gray-800/50"
                   >
-                    {/* Badge Rank */}
                     <div
-                      className={`flex items-center justify-center w-6 h-6 rounded text-xs font-bold shadow-sm
-                                    ${
-                                      index === 0
-                                        ? "bg-yellow-400 text-black"
-                                        : index === 1
-                                        ? "bg-gray-300 text-black"
-                                        : index === 2
-                                        ? "bg-orange-400 text-white"
-                                        : "bg-gray-700 text-gray-400"
-                                    }`}
+                      className={`flex items-center justify-center w-7 h-7 rounded-lg text-xs font-bold ${
+                        index === 0
+                          ? "bg-yellow-400 text-black"
+                          : index === 1
+                            ? "bg-gray-300 text-black"
+                            : index === 2
+                              ? "bg-orange-400 text-white"
+                              : "bg-gray-700 text-gray-400"
+                      }`}
                     >
                       {index + 1}
                     </div>
-
-                    {/* Avatar */}
-                    {/* Container giữ khung tròn */}
-                    <div className="h-10 w-10">
+                    <div className="h-9 w-9">
                       <CustomAvatar
-                        src={student.avatar_url} // Truyền link (hoặc null) vào đây
-                        // Không truyền fallbackText -> Nó sẽ tự lấy mặc định là "DS" như bạn muốn
-                        className="w-full h-full"
-                        fontSize="text-sm" // Chỉnh cỡ chữ DS cho vừa vặn
+                        src={student.avatar_url}
+                        className="w-full h-full rounded-full ring-2 ring-gray-800"
+                        fontSize="text-xs"
                       />
                     </div>
-
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-semibold text-white truncate">
-                        {student.full_name || "Học viên ẩn danh"}
+                        {student.full_name}
                       </h4>
                       <p className="text-xs text-gray-500 truncate">
                         {student.email}
                       </p>
                     </div>
-
-                    {/* Score */}
                     <div className="text-right">
                       <span className="block text-green-400 font-bold text-sm">
                         {student.progress_count}
@@ -156,17 +192,12 @@ export default async function AdminPage() {
                     </div>
                   </li>
                 ))}
-                {topStudents.length === 0 && (
-                  <p className="text-gray-500 text-center text-sm">
-                    Chưa có dữ liệu học tập
-                  </p>
-                )}
               </ul>
             </div>
           </div>
 
-          {/* WIDGET 2: HOẠT ĐỘNG GẦN ĐÂY */}
-          <div className="bg-[#191C24] p-6 rounded-xl border border-gray-800 flex flex-col h-full">
+          {/* Widget 2: Hoạt động */}
+          <div className="bg-[#1A1D24] p-6 rounded-2xl border border-gray-800 flex flex-col h-full shadow-lg">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <Activity size={18} className="text-blue-500" />
@@ -178,61 +209,35 @@ export default async function AdminPage() {
                 <ul className="relative border-l border-gray-700 ml-3 space-y-6">
                   {recentActivities.map((act: any, index: number) => (
                     <li key={index} className="pl-6 relative">
-                      {/* Dấu chấm tròn (Màu sắc thay đổi theo loại hoạt động) */}
                       <span
-                        className={`absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full ring-4 ring-[#191C24] 
-              ${act.type === "enrollment" ? "bg-green-500" : "bg-blue-500"}`}
+                        className={`absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full ring-4 ring-[#1A1D24] ${act.type === "enrollment" ? "bg-green-500" : "bg-blue-500"}`}
                       ></span>
-
                       <div className="flex flex-col gap-1">
                         <div className="text-sm text-gray-300">
-                          <span className="font-bold text-white hover:text-blue-400 cursor-pointer transition-colors mr-1">
+                          <span className="font-bold text-white mr-1">
                             {act.user_name}
                           </span>
-
-                          {/* Logic hiển thị text dựa theo Type */}
                           {act.type === "enrollment" ? (
-                            <span className="text-gray-400">
-                              đã tham gia khóa học
-                            </span>
+                            <span className="text-gray-400">đã tham gia</span>
                           ) : (
-                            <span className="text-gray-400">
-                              đã hoàn thành bài
-                            </span>
+                            <span className="text-gray-400">đã học xong</span>
                           )}
                         </div>
-
-                        {/* Tên Bài học hoặc Khóa học */}
                         <div
-                          className={`text-xs font-medium py-1.5 px-3 rounded-md w-fit border truncate max-w-full
-                ${
-                  act.type === "enrollment"
-                    ? "text-green-400 bg-green-500/10 border-green-500/20"
-                    : "text-blue-400 bg-blue-500/10 border-blue-500/20"
-                }`}
+                          className={`text-xs font-medium py-1 px-2 rounded-md w-fit border truncate max-w-full ${act.type === "enrollment" ? "text-green-400 bg-green-500/10 border-green-500/20" : "text-blue-400 bg-blue-500/10 border-blue-500/20"}`}
                         >
                           {act.main_content}
                         </div>
-
-                        {/* Nếu là bài học thì hiện thêm tên khóa học nhỏ ở dưới */}
-                        {act.sub_content && (
-                          <span className="text-[10px] text-gray-500 italic">
-                            Thuộc khóa: {act.sub_content}
-                          </span>
-                        )}
-
-                        <span className="text-[10px] text-gray-600 mt-1 block">
+                        <span className="text-[10px] text-gray-600 mt-1">
                           {act.date_string
                             ? new Date(act.date_string).toLocaleString(
                                 "vi-VN",
                                 {
-                                  timeZone: "Asia/Ho_Chi_Minh", // 👈 QUAN TRỌNG: Ép về giờ VN
-                                  hour: "2-digit", // Hiện giờ 2 số (09)
-                                  minute: "2-digit", // Hiện phút 2 số
-                                  day: "2-digit", // Ngày
-                                  month: "2-digit", // Tháng
-                                  year: "numeric", // Năm
-                                }
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                },
                               )
                             : ""}
                         </span>
@@ -241,10 +246,9 @@ export default async function AdminPage() {
                   ))}
                 </ul>
               ) : (
-                <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-2">
-                  <Activity size={32} className="opacity-20" />
-                  <p className="text-sm">Chưa có hoạt động nào</p>
-                </div>
+                <p className="text-gray-500 text-center text-sm mt-10">
+                  Chưa có hoạt động
+                </p>
               )}
             </div>
           </div>

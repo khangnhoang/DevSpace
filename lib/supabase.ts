@@ -20,6 +20,7 @@ import type {
   LessonItem,
   ChapterItem,
   ProfileData,
+  Instructor,
 } from "@/lib/types";
 
 // 2. Khởi tạo Client
@@ -46,7 +47,7 @@ export async function getLessonsByCourse(courseSlug: string) {
   const { data: chapters } = await supabase
     .from("chapters")
     .select(
-      `id, title, order_index, lessons (id, title, slug, video_url, exercises (count))`
+      `id, title, order_index, lessons (id, title, slug, video_url, exercises (count))`,
     )
     .eq("course_id", course.id)
     .order("order_index", { ascending: true })
@@ -137,7 +138,7 @@ export async function getCompletedLessonIds(userId: string) {
 // --------------------------------------------------------
 
 export async function getUserDashboardData(
-  userId: string
+  userId: string,
 ): Promise<DashboardCourse[]> {
   // 1. Lấy danh sách Khóa học
   const { data: allCoursesData } = await supabase
@@ -170,7 +171,7 @@ export async function getUserDashboardData(
     const totalLessons = lessonsOfCourse.length;
 
     const userCompletedCount = lessonsOfCourse.filter((l) =>
-      completedLessonIds.includes(l.id)
+      completedLessonIds.includes(l.id),
     ).length;
 
     const percent =
@@ -264,7 +265,7 @@ export async function updateCourse(
     image_url: string;
     price: number;
   },
-  newImageFile?: File | null
+  newImageFile?: File | null,
 ) {
   let finalImageUrl = courseData.image_url;
 
@@ -301,7 +302,7 @@ export async function addCourse(
     description: string;
     price: number;
   },
-  imageFile?: File | null
+  imageFile?: File | null,
 ) {
   let imageUrl = "";
 
@@ -361,7 +362,7 @@ export async function getLessons() {
   const { data, error } = await supabase
     .from("lessons")
     .select(
-      "id, title, slug, content, course_id, chapter_id, video_url, order_index, courses (id, name), chapters (id, title)"
+      "id, title, slug, content, course_id, chapter_id, video_url, order_index, courses (id, name), chapters (id, title)",
     )
     .order("course_id", { ascending: true })
     .order("chapter_id", { ascending: true })
@@ -473,7 +474,7 @@ export async function uploadUserAvatar(file: File) {
 export async function editUser(
   id: string,
   dataUser: any,
-  newImageFile?: File | null
+  newImageFile?: File | null,
 ) {
   let finalImageUrl = dataUser.avatar_url;
   if (newImageFile) {
@@ -502,7 +503,7 @@ export async function getExerciseByLessonId(lessonId: number | null) {
 
 export async function addExercise(
   lessonId: number | null,
-  exerciseData: ExerciseData
+  exerciseData: ExerciseData,
 ) {
   if (!lessonId) return { error: { message: "Thiếu ID bài học" } };
   const { error } = await supabase
@@ -522,7 +523,7 @@ export async function deleteExercise(exerciseId: number) {
 
 export async function editExercise(
   exerciseId: number,
-  exerciseData: ExerciseData
+  exerciseData: ExerciseData,
 ) {
   const { error } = await supabase
     .from("exercises")
@@ -542,11 +543,19 @@ function estimateTime(content: string | null, hasVideo: boolean): number {
 }
 
 export async function getFullCourseDetail(
-  slug: string
+  slug: string,
 ): Promise<CourseDetail | null> {
   const { data: course } = await supabase
     .from("courses")
-    .select("id, name, slug, description, image_url, price")
+    .select(
+      `
+      id, name, slug, description, image_url, price,
+      instructors (
+        id, bio, job_title,
+        profiles ( full_name, avatar_url )
+      )
+    `,
+    )
     .eq("slug", slug)
     .single();
 
@@ -555,10 +564,29 @@ export async function getFullCourseDetail(
     return null;
   }
 
+  const instructorData = Array.isArray(course.instructors)
+    ? course.instructors[0]
+    : course.instructors;
+
+  const profileData =
+    instructorData && Array.isArray(instructorData.profiles)
+      ? instructorData.profiles[0]
+      : instructorData?.profiles;
+
+  // Map lại đúng chuẩn interface Instructor
+  const formattedInstructor: Instructor | null = instructorData
+    ? {
+        id: instructorData.id,
+        bio: instructorData.bio,
+        job_title: instructorData.job_title,
+        profiles: (profileData as any) || null,
+      }
+    : null;
+
   const { data: chapter } = await supabase
     .from("chapters")
     .select(
-      "id, title, order_index, lessons (id, title, slug, video_url, content, exercises (count))"
+      "id, title, order_index, lessons (id, title, slug, video_url, content, exercises (count))",
     )
     .eq("course_id", course.id)
     .order("order_index", { ascending: true })
@@ -621,6 +649,7 @@ export async function getFullCourseDetail(
       "Giải quyết vấn đề",
     ],
     chapters: formattedChapters,
+    instructors: formattedInstructor,
   };
 }
 
@@ -656,13 +685,13 @@ const getChapterOrder = (lesson: any) => {
 
 export async function getLastAccessedLessonSlug(
   userId: string,
-  courseId: number // Nhận courseId luôn cho đỡ phải query lại từ slug
+  courseId: number, // Nhận courseId luôn cho đỡ phải query lại từ slug
 ) {
   // 1. Lấy TOÀN BỘ bài học của khóa đó kèm thông tin chương để sắp xếp
   const { data: rawLessons, error } = await supabase
     .from("lessons")
     .select(
-      "id, slug, title, order_index, created_at, chapters(id, order_index)"
+      "id, slug, title, order_index, created_at, chapters(id, order_index)",
     )
     .eq("course_id", courseId);
 
@@ -704,7 +733,7 @@ export async function getLastAccessedLessonSlug(
     .eq("user_id", userId)
     .in(
       "lesson_id",
-      allLessons.map((l) => l.id)
+      allLessons.map((l) => l.id),
     ); // Chỉ lấy progress của khóa này
 
   const completedSet = new Set(progressData?.map((p) => p.lesson_id) || []);
@@ -756,7 +785,7 @@ export async function checkAndSaveProgress(userId: string, lessonId: number) {
 
 export async function getLastAccessedLessonId(
   userId: string,
-  courseSlug: string
+  courseSlug: string,
 ) {
   // 1. Lấy ID khóa học
   const { data: courseData } = await supabase
@@ -773,7 +802,7 @@ export async function getLastAccessedLessonId(
     .from("lessons")
     // Lấy đủ field cần thiết để sort
     .select(
-      "id, title, order_index, created_at, chapters!inner(id, order_index)"
+      "id, title, order_index, created_at, chapters!inner(id, order_index)",
     )
     .eq("course_id", courseId);
 
@@ -827,7 +856,7 @@ export async function getLastAccessedLessonId(
 
 export async function checkUserAndHasEnroll(
   userId: string,
-  courseSlug: string
+  courseSlug: string,
 ) {
   const { data: courseData, error: courseError } = await supabase
     .from("courses")
@@ -838,7 +867,7 @@ export async function checkUserAndHasEnroll(
   if (courseError || !courseData) {
     console.error(
       "Lỗi khi lấy courseId cho việc kiểm tra user, đăng ký khóa học",
-      courseError
+      courseError,
     );
     return { enrolled: false, error: courseError };
   }
@@ -860,7 +889,7 @@ export async function checkUserAndHasEnroll(
   if (enrollmentError) {
     console.error(
       "Có lỗi khi kiểm tra người dùng đăng ký khóa học",
-      enrollmentError
+      enrollmentError,
     );
     return { enrolled: false, error: enrollmentError };
   }
@@ -889,7 +918,7 @@ export async function createNote(
   userId: string,
   lessonId: number,
   content: string,
-  timestamp: number
+  timestamp: number,
 ) {
   const { data, error } = await supabase
     .from("notes")
@@ -935,7 +964,7 @@ export async function updateProfile(
     province: string;
     avatar_url: string;
   },
-  newImageFile?: File | null
+  newImageFile?: File | null,
 ) {
   let finalImageUrl = dataUser.avatar_url;
   if (newImageFile) {
@@ -962,7 +991,7 @@ export async function getCommentByLesson(lessonId: number) {
   const { data, error } = await supabase
     .from("comments")
     .select(
-      "id, content, created_at, deleted_at, user_id, profiles(full_name, avatar_url, role)"
+      "id, content, created_at, deleted_at, user_id, profiles(full_name, avatar_url, role)",
     )
     .eq("lesson_id", lessonId)
     .order("created_at", { ascending: false });
@@ -977,7 +1006,7 @@ export async function getCommentByLesson(lessonId: number) {
 export async function addComment(
   lessonId: number,
   userId: string,
-  content: string
+  content: string,
 ) {
   // 1. Tạo mốc thời gian 5 phút trước
   const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
@@ -1014,7 +1043,7 @@ export async function addComment(
 export async function editComment(
   commentId: number,
   userId: string,
-  content: string
+  content: string,
 ) {
   const { error } = await supabase
     .from("comments")

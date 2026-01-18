@@ -2,10 +2,11 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
+import { sendSuccessEmail } from "./email";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 async function sendAdminNotification(userId: string, courseId: number) {
@@ -52,8 +53,57 @@ async function sendAdminNotification(userId: string, courseId: number) {
   }
 }
 
-export async function createPendingPayment(courseId: number, userId: string) {
+export async function updatePaymentWithCoupon(
+  paymentId: number,
+  couponCode: string,
+) {
   try {
+    const { data: payment } = await supabaseAdmin
+      .from("payments")
+      .select("course_id, user_id, status")
+      .eq("id", paymentId)
+      .single();
+    if (!payment || payment.status !== "pending")
+      return { error: "Đơn hàng không hợp lệ" };
+
+    const { data: course } = await supabaseAdmin
+      .from("courses")
+      .select("price")
+      .eq("id", payment.course_id)
+      .single();
+    if (!course) return { error: "Khóa học không tồn tại" };
+
+    const { data: coupon } = await supabaseAdmin
+      .from("coupons")
+      .select("*")
+      .eq("code", couponCode.toUpperCase())
+      .eq("is_active", true)
+      .single();
+    if (!coupon || coupon.used_count >= coupon.max_uses)
+      return { error: "Mã giảm giá không hợp lệ" };
+
+    const discountAmount = (course.price * coupon.discount_percent) / 100;
+    const finalAmount = Math.max(0, course.price - discountAmount);
+
+    const { error } = await supabaseAdmin
+      .from("payments")
+      .update({ amount: finalAmount, updated_at: new Date().toISOString() })
+      .eq("id", paymentId);
+    if (error) return { error: "Lỗi cập nhật giá" };
+
+    return { success: true, newAmount: finalAmount };
+  } catch (e) {
+    return { error: "Lỗi hệ thống" };
+  }
+}
+
+export async function createPendingPayment(
+  courseId: number,
+  userId: string,
+  couponCode: string | null = null, // 👈 Thêm tham số này
+) {
+  try {
+    // 1. Check xem có đơn pending nào cũ không (logic cũ giữ nguyên)
     const { data: existingPayment } = await supabaseAdmin
       .from("payments")
       .select("id, amount")
@@ -63,6 +113,8 @@ export async function createPendingPayment(courseId: number, userId: string) {
       .maybeSingle();
 
     if (existingPayment) {
+      // Nếu đơn cũ giá khác đơn mới (do mã giảm giá), có thể cân nhắc xóa đơn cũ tạo đơn mới
+      // Nhưng để đơn giản, cứ return đơn cũ.
       return {
         success: true,
         paymentId: existingPayment.id,
@@ -71,6 +123,7 @@ export async function createPendingPayment(courseId: number, userId: string) {
       };
     }
 
+    // 2. Lấy giá gốc khóa học
     const { data: course } = await supabaseAdmin
       .from("courses")
       .select("price")
@@ -79,13 +132,37 @@ export async function createPendingPayment(courseId: number, userId: string) {
 
     if (!course) return { error: "Khóa học không tồn tại" };
 
+    let finalAmount = course.price;
+
+    // 3. 👇 LOGIC MỚI: Xử lý mã giảm giá trên Server
+    if (couponCode) {
+      const { data: coupon } = await supabaseAdmin
+        .from("coupons")
+        .select("*")
+        .eq("code", couponCode.toUpperCase())
+        .eq("is_active", true)
+        .single();
+
+      // Check valid và còn lượt dùng
+      if (coupon && coupon.used_count < coupon.max_uses) {
+        const discount = (course.price * coupon.discount_percent) / 100;
+        finalAmount = Math.max(0, course.price - discount);
+
+        // (Optional) Update số lượng đã dùng +1 (Atomic update)
+        await supabaseAdmin.rpc("increment_coupon_usage", {
+          coupon_id: coupon.id,
+        });
+      }
+    }
+
+    // 4. Tạo Payment với giá finalAmount
     const { data: payment, error } = await supabaseAdmin
       .from("payments")
       .insert({
         user_id: userId,
         course_id: courseId,
         status: "pending",
-        amount: course.price,
+        amount: finalAmount, // 👈 LƯU GIÁ ĐÃ GIẢM
       })
       .select("id, amount")
       .single();
@@ -116,7 +193,7 @@ export async function cancelPayment(paymentId: number | null) {
 export async function confirmPaymentAndEnroll(
   paymentId: number | null,
   courseId: number,
-  userId: string
+  userId: string,
 ) {
   if (!paymentId) return { error: "Thiếu mã giao dịch" };
 
@@ -169,7 +246,6 @@ export async function confirmPaymentAndEnroll(
 }
 
 export async function getAllPayments() {
-
   // BƯỚC 1: Lấy bảng Payments (Chỉ lấy user_id, không join users)
   const { data: payments, error: paymentError } = await supabaseAdmin
     .from("payments")
@@ -177,7 +253,7 @@ export async function getAllPayments() {
       `
       id, amount, status, created_at, user_id,
       courses:course_id ( name, price )
-    `
+    `,
     )
     .order("created_at", { ascending: false });
 
@@ -212,25 +288,31 @@ export async function getAllPayments() {
 // 👇 HÀM MỚI: Admin duyệt đơn (Manual Approve)
 export async function approvePayment(paymentId: number) {
   try {
-    // 1. Lấy thông tin đơn hàng hiện tại
+    // 1. Lấy thông tin Payment
     const { data: payment } = await supabaseAdmin
       .from("payments")
-      .select("*")
+      .select("*, courses ( id, name, slug )") // Lấy ID khóa học để query bài học
       .eq("id", paymentId)
       .single();
 
     if (!payment) return { error: "Không tìm thấy giao dịch" };
 
-    // 2. Cập nhật trạng thái thành success
+    // 2. Lấy Profile
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", payment.user_id)
+      .single();
+
+    // 3. Update Status Payment
     const { error: updateError } = await supabaseAdmin
       .from("payments")
       .update({ status: "success", updated_at: new Date().toISOString() })
       .eq("id", paymentId);
 
-    if (updateError) return { error: "Lỗi cập nhật trạng thái payment" };
+    if (updateError) return { error: "Lỗi update payment" };
 
-    // 3. Tự động thêm vào bảng Enrollments (Để user vào học được)
-    // Check xem đã enroll chưa để tránh lỗi duplicate
+    // 4. Enroll (Logic giữ nguyên)
     const { data: existingEnroll } = await supabaseAdmin
       .from("enrollments")
       .select("id")
@@ -239,24 +321,55 @@ export async function approvePayment(paymentId: number) {
       .single();
 
     if (!existingEnroll) {
-      const { error: enrollError } = await supabaseAdmin
-        .from("enrollments")
-        .insert({
-          user_id: payment.user_id,
-          course_id: payment.course_id,
-        });
-
-      if (enrollError)
-        return { error: "Lỗi kích hoạt khóa học: " + enrollError.message };
+      await supabaseAdmin.from("enrollments").insert({
+        user_id: payment.user_id,
+        course_id: payment.course_id,
+      });
     }
 
-    // 4. (Optional) Gửi thông báo cho User: "Admin đã duyệt đơn của bạn"
-    // Ông có thể tái sử dụng bảng notifications ở đây nếu muốn
+    // 5. 👇 LOGIC MỚI: TÌM BÀI HỌC ĐẦU TIÊN
+    // (Tìm Chapter đầu tiên -> Tìm Lesson đầu tiên của Chapter đó)
+    let firstLessonSlug = null;
 
-    revalidatePath("/admin/transactions"); // Refresh dữ liệu trang admin
+    // B1: Lấy chương đầu tiên
+    const { data: firstChapter } = await supabaseAdmin
+      .from("chapters")
+      .select("id")
+      .eq("course_id", payment.course_id)
+      .order("order_index", { ascending: true })
+      .limit(1)
+      .single();
+
+    if (firstChapter) {
+      // B2: Lấy bài học đầu tiên của chương đó
+      const { data: firstLesson } = await supabaseAdmin
+        .from("lessons")
+        .select("slug")
+        .eq("chapter_id", firstChapter.id)
+        .order("order_index", { ascending: true }) // Hoặc order by id nếu không có order_index
+        .limit(1)
+        .single();
+
+      if (firstLesson) {
+        firstLessonSlug = firstLesson.slug;
+      }
+    }
+
+    // 6. Gửi Email với link bài học chuẩn
+    if (profile?.email) {
+      sendSuccessEmail(
+        profile.email,
+        profile.full_name || "Học viên",
+        payment.courses?.name || "Khóa học",
+        payment.courses?.slug || "",
+        firstLessonSlug, // 👈 Truyền slug bài học vào đây
+      );
+    }
+
+    revalidatePath("/admin/transactions");
     return { success: true };
   } catch (error) {
-    console.error(error);
+    console.error("Approve Error:", error);
     return { error: "Lỗi hệ thống" };
   }
 }

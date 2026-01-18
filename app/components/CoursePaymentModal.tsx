@@ -1,17 +1,17 @@
 "use client";
 import React, { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { X, Loader2, Copy, Check } from "lucide-react";
+import { X, Loader2, Copy, Check, Tag } from "lucide-react";
 import { toast } from "sonner";
-import { enrollCourse } from "@/app/action/enroll"; // Import server action cũ của bạn
-import { cancelPayment, confirmPaymentAndEnroll } from "../action/payment";
+import { cancelPayment, updatePaymentWithCoupon } from "@/app/action/payment";
+import { supabase } from "@/lib/supabase"; // Nhớ import supabase client
 
 interface Props {
   course: any;
   userId: string;
   paymentId: number | null;
   onClose: () => void;
-  onSuccess: () => void; // Callback để báo cho trang cha biết là xong rồi
+  onSuccess: () => void;
 }
 
 export default function CoursePaymentModal({
@@ -24,29 +24,98 @@ export default function CoursePaymentModal({
   const [isLoading, setIsLoading] = useState(false);
   const [hasCopied, setHasCopied] = useState(false);
 
+  // --- STATE CHO COUPON ---
+  const [discountCode, setDiscountCode] = useState("");
+  const [checkingCode, setCheckingCode] = useState(false);
+  const [finalPrice, setFinalPrice] = useState(course.price); // Giá cuối cùng (mặc định là giá gốc)
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    percent: number;
+  } | null>(null);
+
+  // Nội dung chuyển khoản cơ bản
   const transferContent =
     `HOCPHI ${userId.slice(0, 4)} PAY${paymentId} ${course.slug}`.toUpperCase();
+
+  // Tạo link QR Code động theo giá tiền (finalPrice)
+  // Lưu ý: addInfo chính là nội dung chuyển khoản
+  // MB Bank (Mã là MB) - STK: 0985357081 - Tên: NGUYEN HOANG KHANG
+  const qrUrl = `https://img.vietqr.io/image/MB-0985357081-compact2.png?amount=${finalPrice}&addInfo=${transferContent}&accountName=NGUYEN HOANG KHANG`;
+
+  // --- LOGIC CHECK COUPON ---
+  const handleCheckCoupon = async () => {
+    if (!discountCode.trim()) return;
+    setCheckingCode(true);
+
+    try {
+      // 1. Check trong DB
+      const { data, error } = await supabase
+        .from("coupons")
+        .select("*")
+        .eq("code", discountCode.toUpperCase())
+        .eq("is_active", true)
+        .single();
+
+      if (error || !data) {
+        toast.error("Mã giảm giá không tồn tại hoặc đã hết hạn");
+        setCheckingCode(false);
+        return;
+      }
+
+      // 2. Check số lượt dùng
+      if (data.used_count >= data.max_uses) {
+        toast.error("Mã này đã hết lượt sử dụng");
+        setCheckingCode(false);
+        return;
+      }
+
+      const res = await updatePaymentWithCoupon(paymentId!, discountCode);
+
+      if (res.error) {
+        toast.error(res.error);
+        setCheckingCode(false);
+        return;
+      }
+
+      if (res.success && res.newAmount !== undefined) {
+        // Update state UI theo giá Server trả về cho chắc ăn
+        setFinalPrice(res.newAmount);
+        setAppliedCoupon({ code: discountCode, percent: 0 }); // Percent để 0 cũng được vì giá đã update
+        toast.success(
+          `Đã áp dụng mã! Giá mới: ${res.newAmount.toLocaleString()}đ`,
+        );
+      }
+
+      // 3. Tính giá mới
+      const discountAmount = (course.price * data.discount_percent) / 100;
+      const newPrice = Math.max(0, course.price - discountAmount);
+
+      setFinalPrice(newPrice);
+      setAppliedCoupon({ code: data.code, percent: data.discount_percent });
+      toast.success(
+        `Áp dụng mã ${data.code} giảm ${data.discount_percent}% thành công!`,
+      );
+    } catch (err) {
+      toast.error("Lỗi khi kiểm tra mã");
+    } finally {
+      setCheckingCode(false);
+    }
+  };
 
   const handleConfirmPayment = async () => {
     setIsLoading(true);
     try {
-      // 1. Giả lập delay cho user thấy có xử lý
+      // Giả lập delay
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // 2. LOGIC MỚI: Không gọi server action enroll nữa
-      // Chỉ thông báo cho user biết là phải đợi
+      // LOGIC: Nếu có mã giảm giá, ông có thể update vào bảng payments ở đây (optional)
+      // Nhưng để đơn giản, Admin nhìn số tiền chuyển khoản khớp với giá sau giảm là duyệt.
+
       toast.success("Đã gửi xác nhận thanh toán!");
-      toast.info("Vui lòng đợi Admin duyệt trong giây lát để vào học.", {
-        duration: 5000, // Hiện lâu chút cho đọc
+      toast.info("Vui lòng đợi Admin duyệt trong giây lát.", {
+        duration: 5000,
       });
-
-      // 3. Đóng form
       onClose();
-
-      // LƯU Ý QUAN TRỌNG:
-      // KHÔNG gọi onSuccess() ở đây nữa.
-      // Vì onSuccess() ở trang cha sẽ redirect vào trang học (mà chưa được duyệt thì vào làm gì).
-
       onSuccess();
     } catch (error) {
       toast.error("Có lỗi xảy ra");
@@ -56,16 +125,15 @@ export default function CoursePaymentModal({
   };
 
   const handleCancelPayment = async () => {
-    // Gọi action hủy payment
     await cancelPayment(paymentId);
     toast.info("Đã hủy giao dịch");
     onClose();
   };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(transferContent);
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
     setHasCopied(true);
-    toast.success("Đã sao chép nội dung chuyển khoản");
+    toast.success("Đã sao chép!");
     setTimeout(() => setHasCopied(false), 2000);
   };
 
@@ -84,75 +152,120 @@ export default function CoursePaymentModal({
         </div>
 
         {/* Body */}
-        <div className="p-6 flex flex-col items-center gap-6 overflow-y-auto">
-          <div className="text-center">
+        <div className="p-6 flex flex-col items-center gap-5 overflow-y-auto">
+          <div className="text-center w-full">
             <p className="text-gray-500 text-sm mb-1">
               Thanh toán cho khóa học
             </p>
-            <h2 className="text-xl font-bold text-blue-700">{course.name}</h2>
-            <p className="text-2xl font-bold mt-2 text-red-600">
-              {course.price_text}
-            </p>
+            <h2 className="text-xl font-bold text-blue-700 truncate px-2 uppercase">
+              {course.name}
+            </h2>
           </div>
 
-          {/* QR Code */}
-          <div className="border-2 border-blue-500 rounded-xl p-3 bg-white shadow-inner">
-            <QRCodeSVG
-              value={transferContent}
-              size={180}
-              level={"H"}
-              includeMargin={true}
-            />
-          </div>
-
-          {/* Transfer Content Info */}
-          <div className="w-full bg-blue-50 border border-blue-100 p-4 rounded-lg">
-            <p className="text-xs text-blue-600 font-semibold mb-1 uppercase text-center">
-              Nội dung chuyển khoản (Bắt buộc)
-            </p>
-            <div
-              onClick={copyToClipboard}
-              className="flex items-center justify-between bg-white border border-blue-200 rounded p-3 cursor-pointer hover:border-blue-400 transition-colors group"
-            >
-              <span className="font-mono font-bold text-lg text-gray-800 tracking-wider">
-                {transferContent}
-              </span>
-              <div className="text-gray-400 group-hover:text-blue-600">
-                {hasCopied ? (
-                  <Check size={18} className="text-green-500" />
+          {/* === COUPON INPUT === */}
+          <div className="w-full flex flex-col gap-2">
+            <label className="text-xs font-bold uppercase text-gray-500 flex items-center gap-1">
+              <Tag size={12} /> Mã giảm giá
+            </label>
+            <div className="flex gap-2">
+              <input
+                value={discountCode}
+                onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                placeholder="Nhập mã (VD: SV2025)"
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                disabled={!!appliedCoupon}
+              />
+              <button
+                onClick={handleCheckCoupon}
+                disabled={checkingCode || !!appliedCoupon || !discountCode}
+                className="bg-gray-900 text-white px-3 py-2 rounded-lg text-sm font-bold hover:bg-gray-800 disabled:opacity-50 min-w-20"
+              >
+                {checkingCode ? (
+                  <Loader2 className="animate-spin mx-auto" size={16} />
+                ) : appliedCoupon ? (
+                  "Đã dùng"
                 ) : (
-                  <Copy size={18} />
+                  "Áp dụng"
                 )}
+              </button>
+            </div>
+          </div>
+
+          {/* QR Code & Info Box */}
+          <div className="w-full bg-blue-50 border border-blue-200 p-4 rounded-xl flex flex-col items-center gap-4">
+            {/* Ảnh QR từ VietQR */}
+            <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-100">
+              <img
+                src={qrUrl}
+                alt="QR Payment"
+                className="w-40 h-40 object-contain"
+              />
+            </div>
+
+            <div className="w-full space-y-2 text-sm">
+              {/* Dòng hiển thị giá tiền */}
+              <div className="flex justify-between items-center border-b border-blue-200 pb-2">
+                <span className="text-gray-500">Số tiền:</span>
+                <div className="flex flex-col items-end">
+                  {/* Giá gốc bị gạch nếu có coupon */}
+                  {appliedCoupon && (
+                    <span className="text-xs text-gray-400 line-through">
+                      {course.price.toLocaleString()}đ
+                    </span>
+                  )}
+                  <div className="flex items-center gap-2 text-blue-700 font-bold text-xl">
+                    {finalPrice.toLocaleString()}đ
+                    <Copy
+                      size={14}
+                      className="cursor-pointer text-blue-500"
+                      onClick={() => copyToClipboard(finalPrice.toString())}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Nội dung CK */}
+              <div className="flex flex-col gap-1 pt-1">
+                <span className="text-[10px] text-gray-500 uppercase font-semibold">
+                  Nội dung chuyển khoản (Bắt buộc):
+                </span>
+                <div
+                  onClick={() => copyToClipboard(transferContent)}
+                  className="bg-white border border-blue-300 rounded p-2 flex justify-between items-center cursor-pointer hover:bg-blue-100 transition"
+                >
+                  <span className="font-mono font-bold text-blue-900 tracking-wide text-sm break-all">
+                    {transferContent}
+                  </span>
+                  {hasCopied ? (
+                    <Check size={16} className="text-green-500" />
+                  ) : (
+                    <Copy size={16} className="text-gray-400" />
+                  )}
+                </div>
               </div>
             </div>
-            <p className="text-[10px] text-center text-gray-500 mt-2">
-              *Hệ thống sẽ tự động kích hoạt sau khi bạn bấm xác nhận
-            </p>
           </div>
         </div>
 
-        {/* Footer Actions */}
+        {/* Footer */}
         <div className="p-4 border-t bg-gray-50 flex flex-col gap-3">
           <button
             onClick={handleConfirmPayment}
             disabled={isLoading}
-            className="cursor-pointer w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98]"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.98]"
           >
             {isLoading ? (
-              <>
-                <Loader2 className="animate-spin" /> Đang xác thực giao dịch...
-              </>
+              <Loader2 className="animate-spin" />
             ) : (
               "Tôi đã thanh toán"
             )}
           </button>
-
           <button
             onClick={handleCancelPayment}
             disabled={isLoading}
-            className="cursor-pointer w-full text-gray-500 hover:text-gray-800 text-sm font-medium py-2"
+            className="w-full text-gray-500 hover:text-gray-800 text-sm font-medium"
           >
-            Để sau, tôi sẽ thanh toán lại
+            Hủy bỏ
           </button>
         </div>
       </div>

@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, use } from "react";
+import React, { useEffect, useState, use, useCallback } from "react";
 import {
   Check,
   CircleFadingArrowUp,
@@ -10,6 +10,8 @@ import {
   Plus,
   Minus,
   Loader2,
+  Briefcase,
+  UserRound,
 } from "lucide-react";
 import {
   getFullCourseDetail,
@@ -25,7 +27,291 @@ import { enrollCourse } from "@/app/action/enroll";
 import CoursePaymentModal from "@/app/components/CoursePaymentModal";
 import { User } from "@supabase/supabase-js";
 import Image from "next/image";
+import VideoModal from "@/app/components/VideoModal";
+import CustomAvatar from "@/app/components/CustomAvatar";
 
+// --- 1. COMPONENT REVIEWS (ĐỂ RA NGOÀI ĐỂ TRÁNH LỖI RENDER) ---
+// --- COMPONENT COURSE REVIEWS (BẢN NÂNG CẤP) ---
+// --- COMPONENT COURSE REVIEWS (BẢN FINAL: PHÂN TRANG + FIX LỖI) ---
+const CourseReviews = ({
+  courseId,
+  hasEnrolled,
+}: {
+  courseId: number;
+  hasEnrolled: boolean;
+}) => {
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [rating, setRating] = useState(5);
+  const [content, setContent] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  // -- STATE PHÂN TRANG --
+  const [page, setPage] = useState(0); // Trang hiện tại (bắt đầu từ 0)
+  const [hasMore, setHasMore] = useState(true); // Còn data để load không?
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const ITEMS_PER_PAGE = 5; // Số review mỗi lần load
+  const MAX_ITEMS = 50; // Giới hạn cứng (10 trang)
+
+  // Hàm fetch data tách riêng để tái sử dụng
+  const fetchReviews = useCallback(
+    async (pageIndex: number, isRefresh = false) => {
+      try {
+        if (pageIndex * ITEMS_PER_PAGE >= MAX_ITEMS) {
+          setHasMore(false);
+          return;
+        }
+
+        const from = pageIndex * ITEMS_PER_PAGE;
+        const to = from + ITEMS_PER_PAGE - 1;
+
+        const { data, error } = await supabase
+          .from("reviews")
+          .select("*, profiles(full_name, avatar_url)", { count: "exact" })
+          .eq("course_id", courseId) // Nó phụ thuộc vào courseId
+          .order("created_at", { ascending: false })
+          .range(from, to);
+
+        if (error) throw error;
+
+        if (data) {
+          if (isRefresh) {
+            setReviews(data);
+          } else {
+            setReviews((prev) => [...prev, ...data]);
+          }
+
+          if (data.length < ITEMS_PER_PAGE) {
+            setHasMore(false);
+          }
+        }
+      } catch (err) {
+        console.error("Fetch reviews error:", err);
+      }
+    },
+    [courseId],
+  ); // 👈 QUAN TRỌNG: Chỉ tạo lại hàm khi courseId đổi
+
+  // Load lần đầu
+  useEffect(() => {
+    setPage(0);
+    setHasMore(true);
+    fetchReviews(0, true);
+  }, [fetchReviews]);
+
+  // Xử lý nút "Xem thêm"
+  const handleLoadMore = async () => {
+    setIsLoadingMore(true);
+    const nextPage = page + 1;
+    await fetchReviews(nextPage);
+    setPage(nextPage);
+    setIsLoadingMore(false);
+  };
+
+  // --- LOGIC TÍNH SAO (GIỮ NGUYÊN) ---
+  // Lưu ý: Tính rating trung bình thì nên dùng RPC (Server function) sẽ chuẩn hơn
+  // Nhưng tạm thời tính dựa trên reviews đã load cũng được (tương đối)
+  const totalReviews = reviews.length;
+  const averageRating =
+    totalReviews > 0
+      ? (
+          reviews.reduce((acc, item) => acc + item.rating, 0) / totalReviews
+        ).toFixed(1)
+      : "0.0";
+
+  const starCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } as Record<number, number>;
+  reviews.forEach((r) => {
+    const star = Math.round(r.rating);
+    if (star >= 1 && star <= 5) starCounts[star as keyof typeof starCounts]++;
+  });
+
+  // --- SUBMIT REVIEW ---
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!content.trim()) return;
+    setSubmitting(true);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const { error } = await supabase.from("reviews").insert({
+      user_id: user?.id,
+      course_id: courseId,
+      rating: rating,
+      content: content,
+    });
+
+    if (error) {
+      toast.error("Lỗi: " + error.message);
+    } else {
+      toast.success("Đánh giá thành công!");
+      setContent("");
+      // Reset lại list để hiện review mới nhất lên đầu
+      setPage(0);
+      setHasMore(true);
+      fetchReviews(0, true);
+    }
+    setSubmitting(false);
+  };
+
+  return (
+    <div className="mt-12 max-w-4xl border-t border-gray-700 pt-8">
+      <h2 className="text-2xl font-bold text-white mb-8">
+        Đánh giá & Nhận xét
+      </h2>
+
+      {/* DASHBOARD THỐNG KÊ (GIỮ NGUYÊN) */}
+      <div className="flex flex-col md:flex-row gap-8 mb-10 items-center bg-[#1f2937] p-6 rounded-xl border border-gray-700">
+        <div className="flex flex-col items-center justify-center gap-2 min-w-[150px]">
+          <div className="text-6xl font-extrabold text-white">
+            {averageRating}
+          </div>
+          <div className="flex text-yellow-400 text-xl gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <span key={star}>
+                {star <= Math.round(Number(averageRating)) ? "★" : "☆"}
+              </span>
+            ))}
+          </div>
+          <p className="text-gray-400 text-sm">
+            {totalReviews} đánh giá (đã tải)
+          </p>
+        </div>
+        <div className="flex-1 w-full flex flex-col gap-2">
+          {[5, 4, 3, 2, 1].map((star) => {
+            const count = starCounts[star] || 0;
+            const percent = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
+            return (
+              <div key={star} className="flex items-center gap-3 text-sm">
+                <span className="text-white w-3 font-bold">{star}</span>
+                <span className="text-yellow-400">★</span>
+                <div className="flex-1 h-2.5 bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-yellow-400 rounded-full"
+                    style={{ width: `${percent}%` }}
+                  ></div>
+                </div>
+                <span className="text-gray-400 w-10 text-right">
+                  {percent.toFixed(0)}%
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* FORM VIẾT ĐÁNH GIÁ (GIỮ NGUYÊN) */}
+      {hasEnrolled && (
+        <form
+          onSubmit={handleSubmit}
+          className="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-8"
+        >
+          <h3 className="text-white font-bold mb-4">Viết đánh giá của bạn</h3>
+          <div className="flex gap-2 mb-4">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                type="button"
+                key={star}
+                onClick={() => setRating(star)}
+                className={`text-3xl transition-transform hover:scale-110 ${star <= rating ? "text-yellow-400" : "text-gray-600"}`}
+              >
+                ★
+              </button>
+            ))}
+          </div>
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Chia sẻ cảm nhận..."
+            className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white mb-3 h-24 focus:outline-none focus:border-blue-500"
+          />
+          <div className="flex justify-end">
+            <button
+              disabled={submitting}
+              className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-blue-500 disabled:opacity-50"
+            >
+              {submitting ? "Đang gửi..." : "Gửi đánh giá"}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* DANH SÁCH REVIEW (CÓ PHÂN TRANG) */}
+      <div className="flex flex-col gap-6">
+        {reviews.length === 0 ? (
+          <div className="text-center py-8 text-gray-500 italic bg-gray-800/50 rounded-lg">
+            Chưa có đánh giá nào.
+          </div>
+        ) : (
+          reviews.map((review) => (
+            <div
+              key={review.id}
+              className="bg-[#1f2937] p-5 rounded-xl border border-gray-700 flex gap-4 animate-in fade-in slide-in-from-bottom-2"
+            >
+              <div className="shrink-0">
+                <div className="w-10 h-10 bg-linear-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center font-bold text-white text-sm overflow-hidden shadow-md">
+                  {review.profiles?.avatar_url ? (
+                    <img
+                      src={review.profiles.avatar_url}
+                      alt="Ava"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    review.profiles?.full_name?.charAt(0) || "U"
+                  )}
+                </div>
+              </div>
+              <div className="flex-1">
+                <div className="flex justify-between items-start mb-1">
+                  <div>
+                    <p className="text-white font-bold text-sm">
+                      {review.profiles?.full_name || "Học viên ẩn danh"}
+                    </p>
+                    <div className="flex text-yellow-400 text-xs mt-0.5">
+                      {Array(5)
+                        .fill(0)
+                        .map((_, i) => (
+                          <span
+                            key={i}
+                            className={
+                              i < review.rating
+                                ? "text-yellow-400"
+                                : "text-gray-600"
+                            }
+                          >
+                            ★
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                  <span className="text-gray-500 text-xs ml-auto">
+                    {new Date(review.created_at).toLocaleDateString("vi-VN")}
+                  </span>
+                </div>
+                <p className="text-gray-300 text-sm leading-relaxed mt-2 bg-[#111827] p-3 rounded-lg border border-gray-800">
+                  {review.content}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
+
+        {/* NÚT LOAD MORE */}
+        {hasMore && reviews.length > 0 && (
+          <button
+            onClick={handleLoadMore}
+            disabled={isLoadingMore}
+            className="mx-auto mt-4 text-sm text-gray-400 hover:text-white hover:underline disabled:opacity-50"
+          >
+            {isLoadingMore ? "Đang tải thêm..." : "Xem thêm đánh giá cũ hơn"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// --- 2. COMPONENT CHÍNH ---
 export default function DetailPage({
   params,
 }: {
@@ -41,24 +327,20 @@ export default function DetailPage({
 
   const [hasEnrolled, setHasEnrolled] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState(false);
-  const [hasPendingPayment, setHasPendingPayment] = useState(false); // Check đơn treo
+  const [hasPendingPayment, setHasPendingPayment] = useState(false);
 
   const [isOpenPaymentForm, setIsOpenPaymentForm] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [showTrailer, setShowTrailer] = useState(false);
 
-  // Hàm check xem có đơn nào đang pending không (quan trọng để giữ state khi reload)
   const checkPendingStatus = async (userId: string, courseId: number) => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("payments")
-      .select("id, status") // Lấy thêm status để soi
+      .select("id, status")
       .eq("user_id", userId)
       .eq("course_id", courseId)
       .eq("status", "pending")
       .maybeSingle();
-    
-    // 👇 THÊM DÒNG NÀY ĐỂ DEBUG
-    console.log("Check Pending:", { userId, courseId, data, error });
-
     return !!data;
   };
 
@@ -70,7 +352,6 @@ export default function DetailPage({
     if (lastSlug) {
       return `/learn/${currentCourse.slug}/${lastSlug}`;
     }
-
     if (
       currentCourse.chapters.length > 0 &&
       currentCourse.chapters[0].lessons.length > 0
@@ -78,7 +359,6 @@ export default function DetailPage({
       const firstSlug = currentCourse.chapters[0].lessons[0].slug;
       return `/learn/${currentCourse.slug}/${firstSlug}`;
     }
-
     return null;
   };
 
@@ -90,7 +370,6 @@ export default function DetailPage({
           data: { user },
         } = await supabase.auth.getUser();
 
-        // Fetch song song: Info khóa học & Trạng thái Enrollment
         const [courseData, enrollmentStatus] = await Promise.all([
           getFullCourseDetail(slug),
           checkHasEnroll(slug, user?.id || null),
@@ -101,10 +380,7 @@ export default function DetailPage({
           if (courseData.chapters.length > 0) {
             setExpandedChapters([courseData.chapters[0].id]);
           }
-
-          // === LOGIC MỚI: Check thêm Pending Payment ===
           if (user && !enrollmentStatus) {
-            // Chỉ check pending nếu chưa enroll (để tối ưu)
             const isPending = await checkPendingStatus(user.id, courseData.id);
             setHasPendingPayment(isPending);
           }
@@ -158,8 +434,6 @@ export default function DetailPage({
 
   const handleEnrollmentClick = async () => {
     if (!course) return;
-
-    // 1. Check lại user lần nữa cho chắc
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -169,7 +443,6 @@ export default function DetailPage({
     }
     setCurrentUser(user);
 
-    // 2. Nếu nút đang disable hoặc pending thì chặn luôn
     if (hasPendingPayment) {
       toast.info("Đơn hàng của bạn đang chờ duyệt. Vui lòng đợi.");
       return;
@@ -182,7 +455,6 @@ export default function DetailPage({
 
       if (res.error) {
         toast.error(res.error);
-        // Nếu lỗi báo là "đã tồn tại đơn pending" thì set state luôn để disable nút
         if (res.error.includes("pending") || res.error.includes("chờ")) {
           setHasPendingPayment(true);
         }
@@ -219,24 +491,19 @@ export default function DetailPage({
 
   const handlePaymentRequestSent = () => {
     setIsOpenPaymentForm(false);
-    setHasPendingPayment(true); // Disable nút ngay lập tức
-    // Không cần reload trang, state đã chặn click rồi
+    setHasPendingPayment(true);
   };
 
-  // === SKELETON ĐẦY ĐỦ (Đã khôi phục) ===
+  // --- SKELETON ---
   if (loading)
     return (
-      <div className="bg-[#111827] w-full min-h-screen p-4 flex md:p-8 flex-col lg:flex-row gap-8 justify-center animate-pulse">
-        {/* SKELETON CỘT TRÁI: NỘI DUNG */}
-        <div className="w-full lg:w-2/3 flex flex-col gap-8">
-          {/* Header Skeleton */}
+      <div className="bg-[#111827] w-full min-h-screen p-4 flex md:p-8 flex-col lg:flex-row gap-8 justify-center">
+        <div className="w-full lg:w-2/3 flex flex-col gap-8 animate-pulse">
           <div className="w-full flex flex-col gap-4">
             <div className="h-10 bg-gray-700 rounded-md w-3/4"></div>
             <div className="h-4 bg-gray-700 rounded-md w-full"></div>
             <div className="h-4 bg-gray-700 rounded-md w-5/6"></div>
           </div>
-
-          {/* Learning Outcomes Skeleton */}
           <div className="flex flex-col gap-4">
             <div className="h-8 bg-gray-700 rounded-md w-1/3"></div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -248,8 +515,6 @@ export default function DetailPage({
               ))}
             </div>
           </div>
-
-          {/* Chapter List Skeleton */}
           <div className="flex flex-col gap-4">
             <div className="flex justify-between items-center">
               <div className="h-8 bg-gray-700 rounded-md w-1/4"></div>
@@ -265,23 +530,12 @@ export default function DetailPage({
             </div>
           </div>
         </div>
-
-        {/* SKELETON CỘT PHẢI: SIDEBAR */}
-        <div className="w-full lg:w-1/3">
+        <div className="w-full lg:w-1/3 animate-pulse">
           <div className="flex flex-col gap-5 w-full bg-[#1f2937] p-5 rounded-xl border border-gray-700 lg:sticky lg:top-8">
             <div className="aspect-video w-full bg-gray-700 rounded-lg"></div>
             <div className="flex flex-col gap-2 items-center">
               <div className="h-10 bg-gray-700 rounded-md w-1/2"></div>
               <div className="h-4 bg-gray-700 rounded-md w-1/3"></div>
-            </div>
-            <div className="h-12 bg-gray-700 rounded-full w-full"></div>
-            <div className="flex flex-col gap-3 mt-2 border-t border-gray-700 pt-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="flex gap-3 items-center">
-                  <div className="w-5 h-5 bg-gray-700 rounded-full"></div>
-                  <div className="h-4 bg-gray-700 rounded-md w-2/3"></div>
-                </div>
-              ))}
             </div>
           </div>
         </div>
@@ -308,7 +562,7 @@ export default function DetailPage({
       {/* CỘT TRÁI: NỘI DUNG */}
       <div className="w-full lg:w-2/3 flex flex-col gap-8">
         <div className="w-full flex flex-col gap-4">
-          <h1 className="text-2xl md:text-3xl font-bold text-white">
+          <h1 className="text-2xl md:text-3xl font-bold text-white uppercase">
             {course.name}
           </h1>
           <p className="text-sm leading-relaxed text-gray-300">
@@ -414,12 +668,68 @@ export default function DetailPage({
             </div>
           </div>
         </div>
+
+        {/* --- THÔNG TIN GIẢNG VIÊN --- */}
+        {course.instructors && (
+          <div>
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-6">
+              Giảng viên hướng dẫn
+            </h2>
+            <div className="bg-[#1f2937] border border-gray-700 p-6 rounded-xl flex flex-col md:flex-row gap-6 items-start">
+              {/* Avatar Giảng viên */}
+              <div className="shrink-0">
+                <CustomAvatar
+                  src={course.instructors.profiles?.avatar_url}
+                  fallbackText={course.instructors.profiles?.full_name?.[0]}
+                  className="w-20 h-20 border-2 border-blue-500 shadow-lg"
+                  fontSize="text-3xl" // Chữ to lên cho cân đối với khung 80px
+                />
+              </div>
+
+              {/* Thông tin chi tiết */}
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  {course.instructors.profiles?.full_name ||
+                    "Giảng viên ẩn danh"}
+                  <Check
+                    size={16}
+                    className="text-blue-400 bg-blue-400/10 rounded-full p-0.5"
+                  />
+                </h3>
+                <p className="text-blue-400 text-sm font-medium mb-3 uppercase tracking-wide">
+                  {course.instructors.job_title}
+                </p>
+
+                <p className="text-gray-300 text-sm leading-relaxed mb-4 bg-gray-800/50 p-4 rounded-lg border border-gray-700/50 italic">
+                  {course.instructors.bio}
+                </p>
+
+                <div className="flex gap-4 text-xs text-gray-400 font-medium">
+                  <div className="flex items-center gap-1.5 bg-gray-800 px-2 py-1 rounded">
+                    <Briefcase size={14} className="text-gray-500" />
+                    <span>Nhiều năm kinh nghiệm</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-gray-800 px-2 py-1 rounded">
+                    <UserRound size={14} className="text-gray-500" />
+                    <span>Hỗ trợ 1-1</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 👇 COURSE REVIEWS ĐÃ ĐƯỢC CHÈN VÀO ĐÂY 👇 */}
+        <CourseReviews courseId={course.id} hasEnrolled={hasEnrolled} />
       </div>
 
-      {/* CỘT PHẢI: SIDEBAR MUA KHÓA HỌC */}
+      {/* CỘT PHẢI: SIDEBAR */}
       <div className="w-full lg:w-1/3">
         <div className="flex flex-col gap-5 w-full bg-[#1f2937] p-5 rounded-xl border border-gray-700 lg:sticky lg:top-8 shadow-xl">
-          <div className="relative aspect-video w-full rounded-lg overflow-hidden group">
+          <div
+            className="cursor-pointer relative aspect-video w-full rounded-lg overflow-hidden group border border-gray-700 shadow-md"
+            onClick={() => setShowTrailer(true)}
+          >
             <Image
               src={course.image_url}
               alt={course.name}
@@ -428,10 +738,30 @@ export default function DetailPage({
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               priority
             />
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-              <PlayCircle size={48} className="text-white drop-shadow-lg" />
+            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+              <div className="group-hover:scale-110 transition-transform duration-300 drop-shadow-2xl">
+                <PlayCircle size={60} className="text-white drop-shadow-md" />
+              </div>
+              <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg group-hover:bg-blue-600 transition-colors">
+                <Film size={14} />
+                <span>Xem Trailer</span>
+              </div>
             </div>
           </div>
+
+          <div
+            onClick={() => setShowTrailer(true)}
+            className="mt-3 flex items-center justify-center gap-2 text-sm text-blue-400 font-medium cursor-pointer hover:text-blue-300 hover:underline w-full"
+          >
+            <PlayCircle size={16} /> Xem video giới thiệu khóa học
+          </div>
+
+          {showTrailer && (
+            <VideoModal
+              videoId="cZHp-Oozg6I"
+              onClose={() => setShowTrailer(false)}
+            />
+          )}
 
           <div className="flex flex-col gap-2 text-center">
             <h1 className="text-3xl font-bold text-green-400">
@@ -444,15 +774,10 @@ export default function DetailPage({
             )}
           </div>
 
-          {/* === NÚT BẤM CHÍNH (ĐÃ FIX LOGIC DISABLE) === */}
           <button
             onClick={
               hasEnrolled ? handleContinueLearning : handleEnrollmentClick
             }
-            // Logic disable chặt chẽ hơn:
-            // 1. Đang loading xử lý
-            // 2. Đang fetch data (loading)
-            // 3. Đã có đơn pending (dù mới tạo hay load từ DB)
             disabled={isEnrolling || loading || hasPendingPayment}
             className={`px-4 py-3 rounded-full cursor-pointer transition-all w-full font-bold text-lg flex justify-center items-center
               ${

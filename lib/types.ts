@@ -143,6 +143,7 @@ export interface AdminCourseData {
   image_url: string;
   lessonCount: number;
   price: number;
+  instructor_id: number | null;
 }
 
 // Dùng cho Form thêm/sửa bài tập

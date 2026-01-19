@@ -256,6 +256,15 @@ export async function getAdminCourseData() {
   return formattedData as AdminCourseData[];
 }
 
+export async function getInstructors() {
+  // Join bảng instructors với profiles để lấy tên
+  const { data, error } = await supabase
+    .from("instructors")
+    .select("id, profiles(full_name)");
+  
+  return { data, error };
+}
+
 export async function updateCourse(
   id: number,
   courseData: {
@@ -264,6 +273,7 @@ export async function updateCourse(
     description: string;
     image_url: string;
     price: number;
+    instructor_id: number | null;
   },
   newImageFile?: File | null,
 ) {
@@ -289,6 +299,7 @@ export async function updateCourse(
       description: courseData.description,
       image_url: finalImageUrl,
       price: courseData.price,
+      instructor_id: courseData.instructor_id,
     })
     .eq("id", id);
 
@@ -301,6 +312,7 @@ export async function addCourse(
     slug: string;
     description: string;
     price: number;
+    instructor_id: number | null;
   },
   imageFile?: File | null,
 ) {
@@ -324,6 +336,7 @@ export async function addCourse(
     description: coursesData.description,
     image_url: imageUrl,
     price: coursesData.price,
+    instructor_id: coursesData.instructor_id,
   });
 
   return { insertError };

@@ -44,6 +44,7 @@ const CourseReviews = ({
   const [rating, setRating] = useState(5);
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   // -- STATE PHÂN TRANG --
   const [page, setPage] = useState(0); // Trang hiện tại (bắt đầu từ 0)
@@ -91,12 +92,35 @@ const CourseReviews = ({
     [courseId],
   ); // 👈 QUAN TRỌNG: Chỉ tạo lại hàm khi courseId đổi
 
+  const checkUserReview = useCallback(async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from("reviews")
+      .select("rating, content")
+      .eq("user_id", user.id)
+      .eq("course_id", courseId)
+      .maybeSingle(); // Dùng maybeSingle để không lỗi nếu chưa có
+
+    if (data) {
+      setRating(data.rating);
+      setContent(data.content || "");
+      setIsEditing(true); // Bật chế độ sửa
+    }
+  }, [courseId]);
+
   // Load lần đầu
   useEffect(() => {
     setPage(0);
     setHasMore(true);
     fetchReviews(0, true);
-  }, [fetchReviews]);
+    if (hasEnrolled) {
+      checkUserReview(); // Chỉ check nếu đã mua khóa học
+    }
+  }, [fetchReviews, checkUserReview, hasEnrolled]);
 
   // Xử lý nút "Xem thêm"
   const handleLoadMore = async () => {
@@ -134,12 +158,16 @@ const CourseReviews = ({
       data: { user },
     } = await supabase.auth.getUser();
 
-    const { error } = await supabase.from("reviews").insert({
-      user_id: user?.id,
-      course_id: courseId,
-      rating: rating,
-      content: content,
-    });
+    const { error } = await supabase.from("reviews").upsert(
+      {
+        user_id: user?.id,
+        course_id: courseId,
+        rating: rating,
+        content: content,
+        created_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id, course_id" },
+    );
 
     if (error) {
       toast.error("Lỗi: " + error.message);
@@ -150,6 +178,7 @@ const CourseReviews = ({
       setPage(0);
       setHasMore(true);
       fetchReviews(0, true);
+      setIsEditing(true);
     }
     setSubmitting(false);
   };
@@ -206,14 +235,16 @@ const CourseReviews = ({
           onSubmit={handleSubmit}
           className="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-8"
         >
-          <h3 className="text-white font-bold mb-4">Viết đánh giá của bạn</h3>
+          <h3 className="text-white font-bold mb-4">
+            {isEditing ? "Chỉnh sửa đánh giá của bạn" : "Viết đánh giá của bạn"}
+          </h3>
           <div className="flex gap-2 mb-4">
             {[1, 2, 3, 4, 5].map((star) => (
               <button
                 type="button"
                 key={star}
                 onClick={() => setRating(star)}
-                className={`text-3xl transition-transform hover:scale-110 ${star <= rating ? "text-yellow-400" : "text-gray-600"}`}
+                className={`cursor-pointer text-3xl transition-transform hover:scale-110 ${star <= rating ? "text-yellow-400" : "text-gray-600"}`}
               >
                 ★
               </button>
@@ -228,9 +259,13 @@ const CourseReviews = ({
           <div className="flex justify-end">
             <button
               disabled={submitting}
-              className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-blue-500 disabled:opacity-50"
+              className="cursor-pointer bg-blue-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-blue-500 disabled:opacity-50"
             >
-              {submitting ? "Đang gửi..." : "Gửi đánh giá"}
+              {submitting
+                ? "Đang xử lý..."
+                : isEditing
+                  ? "Cập nhật đánh giá"
+                  : "Gửi đánh giá"}
             </button>
           </div>
         </form>

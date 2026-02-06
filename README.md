@@ -2,6 +2,14 @@
 
 **DevSpace** là hệ thống quản lý học tập (LMS) phục vụ đào tạo lập trình trực tuyến, được xây dựng như đồ án tốt nghiệp chuyên ngành Công nghệ Thông tin. Hệ thống cung cấp đầy đủ chức năng từ học tập tương tác, luyện code trực tuyến, thanh toán, đến quản trị và thống kê dữ liệu.
 
+## 🌐 Demo trực tuyến
+
+Hệ thống đã được triển khai trên môi trường production:
+
+- **Production:** https://devspace-lms.vercel.app
+
+Lưu ý: Một số tác vụ gửi email có thể chậm ở request đầu tiên do cơ chế serverless.
+
 ## ✨ Tính năng chính
 
 ### 👤 Dành cho Học viên

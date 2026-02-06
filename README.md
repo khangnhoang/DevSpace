@@ -1,4 +1,3 @@
----
 
 # 🚀 DevSpace – Nền tảng Đào tạo & Luyện Code Trực tuyến (LMS)
 
@@ -79,6 +78,4 @@ Truy cập: [http://localhost:3000](http://localhost:3000)
 
 © 2026 DevSpace LMS Project
 
----
 
-nói 1 câu là tôi làm tiếp cho 😎

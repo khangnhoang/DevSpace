@@ -1,50 +1,93 @@
-
 # 🚀 DevSpace – Nền tảng Đào tạo & Luyện Code Trực tuyến (LMS)
 
-**DevSpace** là hệ thống quản lý học tập (LMS) phục vụ đào tạo lập trình trực tuyến, được xây dựng như đồ án tốt nghiệp chuyên ngành Công nghệ Thông tin. Hệ thống tích hợp đầy đủ từ quản lý khóa học, học tập tương tác, thanh toán, đến quản trị và thống kê.
+**DevSpace** là hệ thống quản lý học tập (LMS) phục vụ đào tạo lập trình trực tuyến, được xây dựng như đồ án tốt nghiệp chuyên ngành Công nghệ Thông tin. Hệ thống cung cấp đầy đủ chức năng từ học tập tương tác, luyện code trực tuyến, thanh toán, đến quản trị và thống kê dữ liệu.
 
 ## ✨ Tính năng chính
 
-### 👤 Học viên
+### 👤 Dành cho Học viên
 
 * Đăng ký, đăng nhập, quên mật khẩu, xác thực email
 * Xem, tìm kiếm, lọc và ghi danh khóa học
 * Thanh toán và quản lý lịch sử đơn hàng
-* Học tập tương tác với video và bài viết (MDX)
+* Học tập với bài học Video và Văn bản (MDX)
 * Ghi chú realtime đồng bộ theo thời gian video
-* Trình biên dịch code online (HTML/CSS/JS, C++)
-* Bình luận, thảo luận trong bài học
+* Trình biên dịch code online (HTML / CSS / JavaScript / C++)
+* Bình luận và thảo luận trong từng bài học
 * Trang cá nhân, theo dõi tiến độ học tập
-* Đánh giá và nhận xét khóa học (chỉ khi đã mua)
+* Đánh giá khóa học (chỉ khi đã mua, mỗi khóa 1 lần)
 
-### 🛠️ Quản trị viên
+### 🛠️ Dành cho Quản trị viên
 
 * Dashboard thống kê doanh thu, người dùng, khóa học
-* Quản lý khóa học, chương, bài học
+* Quản lý khóa học, chương (chapters), bài học (lessons)
 * Quản lý người dùng và phân quyền
-* Theo dõi giao dịch và doanh thu hệ thống
+* Theo dõi giao dịch và lịch sử thanh toán
 
 ## 🏗️ Công nghệ sử dụng
 
 * **Frontend:** Next.js 15 (App Router), TypeScript, Tailwind CSS
 * **Backend & Database:** Supabase (PostgreSQL)
-* **AI:** Google Gemini API (trợ lý học tập)
-* **Email:** Nodemailer (SMTP Gmail)
-* **Bảo mật:** Row Level Security (RLS), Middleware protection
+* **AI Integration:** Google Gemini API
+* **Email Service:** Nodemailer (SMTP Gmail)
+* **Bảo mật:** Row Level Security (RLS), Middleware bảo vệ route
 
-## 📁 Cấu trúc thư mục (rút gọn)
+## 📁 Cấu trúc thư mục dự án
 
-* `app/` – Giao diện người dùng, admin, auth, API, server actions
-* `components/` – UI components tái sử dụng
-* `lib/` – Tiện ích và cấu hình Supabase
-* `public/` – Tài nguyên tĩnh
+```text
+MY-W3SCHOOLS
+├── app/
+│   ├── (main)/                 # Giao diện chính cho học viên
+│   │   ├── course/             # Danh sách & chi tiết khóa học
+│   │   ├── learn/              # Màn hình học (video, notes, compiler)
+│   │   ├── login/              # Trang đăng nhập
+│   │   ├── profile/            # Trang cá nhân & tiến độ học tập
+│   │   └── try_it/             # Trình biên dịch code độc lập
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   │
+│   ├── action/                 # Server Actions (logic backend)
+│   │   ├── admin-dashboard.ts
+│   │   ├── email.ts
+│   │   ├── enroll.ts
+│   │   ├── gemini.ts
+│   │   ├── get-notifications.ts
+│   │   ├── payment.ts
+│   │   └── user.ts
+│   │
+│   ├── admin/                  # Giao diện quản trị
+│   │   ├── chapters/
+│   │   ├── courses/
+│   │   ├── lessons/
+│   │   ├── transactions/
+│   │   ├── users/
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   │
+│   ├── auth/                   # Xác thực & bảo mật
+│   │   ├── callback/
+│   │   └── reset-password/
+│   │
+│   ├── components/             # Components dùng chung
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── not-found.tsx
+│
+├── lib/                         # Cấu hình Supabase & helper functions
+├── public/                      # Tài nguyên tĩnh
+├── .env.local                   # Biến môi trường
+├── .gitignore
+├── eslint.config.mjs
+└── package.json
+```
 
 ## 🗄️ Cơ sở dữ liệu
 
-Hệ thống gồm 14 bảng chính:
-`users`, `profiles`, `courses`, `chapters`, `lessons`, `enrollments`, `payments`, `notes`, `comments`, `reviews`, `user_progress`, …
+Hệ thống sử dụng **14 bảng chính**:
+`users`, `profiles`, `courses`, `chapters`, `lessons`, `enrollments`,
+`payments`, `notes`, `comments`, `reviews`, `user_progress`, …
 
-Có ràng buộc toàn vẹn dữ liệu để xử lý race condition và đảm bảo mỗi học viên chỉ đăng ký/đánh giá hợp lệ.
+* Thiết lập **unique constraints** để tránh race condition
+* Chỉ cho phép học viên đã ghi danh mới được đánh giá khóa học
 
 ## ⚙️ Cài đặt & chạy demo
 
@@ -56,7 +99,11 @@ npm install
 
 ### 2. Kiểm tra file `.env.local`
 
-File đã được cấu hình sẵn Supabase, Gemini API và Email Service.
+File đã được cấu hình sẵn:
+
+* Supabase URL & Keys
+* Gemini API Key
+* Email SMTP (Gmail)
 
 ### 3. Chạy ứng dụng
 
@@ -73,9 +120,8 @@ Truy cập: [http://localhost:3000](http://localhost:3000)
 
 ## ⚠️ Lưu ý
 
-* Hệ thống xử lý race condition bằng ràng buộc unique ở database
-* Chỉ học viên đã mua khóa học mới được đánh giá và mỗi khóa chỉ đánh giá 1 lần
+* Hệ thống xử lý race condition ở tầng database
+* Mỗi học viên chỉ được đánh giá mỗi khóa học **1 lần duy nhất**
 
 © 2026 DevSpace LMS Project
-
 

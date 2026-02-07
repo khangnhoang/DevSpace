@@ -123,8 +123,8 @@ Truy cập: [http://localhost:3000](http://localhost:3000)
 
 ## 🔐 Tài khoản demo
 
-* **Admin:** [admin@devspace.com](mailto:admin@devspace.com) / 123456
-* **Student:** [student@devspace.com](mailto:student@devspace.com) / 123456
+* **Admin:** [admin@devspace.com](mailto:admin@devspace.com) / 123123
+* **Student:** [student@devspace.com](mailto:student@devspace.com) / 123123
 
 ## ⚠️ Lưu ý
 

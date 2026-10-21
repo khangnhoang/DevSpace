@@ -1,4 +1,7 @@
-import { getLessonsByCourse, supabase, getExerciseByLessonId } from "@/lib/supabase";
+import { redirect } from "next/navigation";
+import { getLessonsByCourse } from "@/lib/supabase";
+import { requireCourseAccess } from "@/lib/auth.server";
+import { createSupabaseServerClient } from "@/lib/supabase.server";
 import NotFoundLesson from "@/app/components/NotFoundLesson";
 import Quiz, { QuizQuestion } from "@/app/components/Quiz";
 import Link from "next/link";
@@ -11,23 +14,33 @@ interface Props {
 export default async function QuizPage({ params }: Props) {
   const { course, slug } = await params;
 
-  // 1. Lấy thông tin bài học
+  // 1. Gate on the server: signed in and enrolled (or admin)
+  const access = await requireCourseAccess(course);
+  if ("redirect" in access) redirect(access.redirect);
+  if ("notFound" in access) return <NotFoundLesson />;
+
+  // 2. Lấy thông tin bài học (phải thuộc khóa học trên URL)
+  const supabase = await createSupabaseServerClient();
   const { data: lesson, error } = await supabase
     .from("lessons")
     .select("id, title, slug")
     .eq("slug", slug)
-    .single();
+    .eq("course_id", access.course.id)
+    .maybeSingle();
 
   if (error || !lesson) {
     return <NotFoundLesson />;
   }
 
-  // 2. Lấy user
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = access.user;
 
-  // 3. Lấy bài tập
-  const exercisesRaw = await getExerciseByLessonId(lesson.id);
-  
+  // 3. Lấy bài tập (RLS cho phép vì đã enroll / admin)
+  const { data: exercisesRaw } = await supabase
+    .from("exercises")
+    .select("*")
+    .eq("lesson_id", lesson.id)
+    .order("id", { ascending: true });
+
   if (!exercisesRaw || exercisesRaw.length === 0) {
     return (
       <div className="p-8 min-h-screen w-full bg-gray-50 pt-16 flex flex-col items-center justify-center">
@@ -53,7 +66,7 @@ export default async function QuizPage({ params }: Props) {
   }));
 
   // 4. Logic bài tiếp theo
-  const chapters = await getLessonsByCourse(course);
+  const chapters = await getLessonsByCourse(course, supabase);
   const allLessons = chapters.flatMap((chapter) => chapter.lessons);
   const currentIndex = allLessons?.findIndex((i) => i.slug === slug) ?? -1;
   const nextLesson =
@@ -89,7 +102,7 @@ export default async function QuizPage({ params }: Props) {
         <Quiz 
           questions={quizQuestions} 
           lessonId={lesson.id} 
-          userId={user?.id}
+          userId={user.id}
           nextLessonPath={nextLessonPath} 
         />
       </div>

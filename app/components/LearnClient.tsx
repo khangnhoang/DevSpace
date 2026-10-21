@@ -4,7 +4,6 @@ import {
   supabase,
   type Lessons,
   type Chapter,
-  checkUserAndHasEnroll,
   getLastAccessedLessonId,
   getCompletedLessonIds,
 } from "@/lib/supabase";
@@ -31,6 +30,7 @@ interface Props {
   nextLesson: NextLesson;
   prevLesson: PrevLesson;
   videoId: string | null;
+  isAdmin: boolean;
   children: React.ReactNode;
 }
 
@@ -40,6 +40,7 @@ export default function LearnClient({
   nextLesson,
   prevLesson,
   videoId,
+  isAdmin,
   children,
 }: Props) {
   const router = useRouter();
@@ -52,30 +53,18 @@ export default function LearnClient({
     let isMounted = true;
     const checkAccess = async () => {
       try {
+        // Login / enrollment / admin access is enforced on the server (page.tsx).
         const {
           data: { user },
         } = await supabase.auth.getUser();
 
         if (!isMounted) return;
+        if (!user) return;
 
-        if (!user) {
-          toast.warning("Bạn phải đăng nhập để vào học");
-          router.push("/login");
-          return;
-        }
-
-        const result = await checkUserAndHasEnroll(user.id, course);
-        if (result.error) {
-          toast.error("Có lỗi khi kiểm tra người dùng" + result.error);
-          router.push("/");
-          return;
-        }
-
-        if (!isMounted) return;
-
-        if (!result.enrolled) {
-          toast.error("Bạn chưa đăng ký khóa học này!");
-          router.push("/");
+        // Admins skip the "learn in order" check.
+        if (isAdmin) {
+          setCurrentUser(user);
+          setLoading(false);
           return;
         }
 
@@ -118,7 +107,7 @@ export default function LearnClient({
     return () => {
       isMounted = false;
     };
-  }, [router, course, lesson.id]);
+  }, [router, course, lesson.id, isAdmin]);
 
   const onPlayerReady = (event: YouTubeEvent) => {
     setPlayer(event.target);

@@ -4,6 +4,7 @@ import "@/app/globals.css";
 import Sidebar from "@/app/components/Sidebar";
 import MobileSidebar from "@/app/components/MobileSidebar";
 import { getLessonsByCourse } from "@/lib/supabase";
+import { createSupabaseServerClient } from "@/lib/supabase.server";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -17,7 +18,8 @@ export const metadata: Metadata = {
 
 export default async function CourseLayout({ children, params }: LayoutProps) {
   const { course } = await params;
-  const chapters = await getLessonsByCourse(course);
+  const supabase = await createSupabaseServerClient();
+  const chapters = await getLessonsByCourse(course, supabase);
 
   return (
     // 1. THÊM 'bg-gray-50' vào đây để đồng bộ màu nền toàn trang

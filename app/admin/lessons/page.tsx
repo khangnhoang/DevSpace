@@ -15,7 +15,6 @@ import {
 import {
   getCoursesForSelect,
   getChaptersByCourseId,
-  getLessons,
   addLesson,
   deleteLesson,
   editLesson,
@@ -26,6 +25,7 @@ import {
 } from "@/lib/supabase";
 import MdxEditor from "@/app/components/MdxEditor";
 import { generateQuizFromContent } from "@/app/action/gemini";
+import { getLessonsForAdmin } from "@/app/action/lessons";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -316,7 +316,7 @@ export default function LessonsManagerPage() {
 
   useEffect(() => {
     const fetchLessonsData = async () => {
-      const data = await getLessons();
+      const data = await getLessonsForAdmin();
       setLessons(data);
     };
     fetchLessonsData();

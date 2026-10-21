@@ -35,3 +35,41 @@ export async function requireAdmin(): Promise<AuthResult> {
   if (profile?.role !== "admin") return { error: "Không có quyền truy cập" };
   return auth;
 }
+
+export type CourseAccess =
+  | { user: User; course: { id: number; slug: string }; isAdmin: boolean }
+  | { redirect: string }
+  | { notFound: true };
+
+// Gate for /learn pages: signed in, course exists, and the user is enrolled or
+// an admin. Runs with the caller's own session, so RLS only exposes their rows.
+export async function requireCourseAccess(
+  courseSlug: string,
+): Promise<CourseAccess> {
+  const user = await getCurrentUser();
+  if (!user) return { redirect: "/login" };
+
+  const supabase = await createSupabaseServerClient();
+
+  const { data: course } = await supabase
+    .from("courses")
+    .select("id, slug")
+    .eq("slug", courseSlug)
+    .maybeSingle();
+  if (!course) return { notFound: true };
+
+  const [{ data: profile }, { data: enrollment }] = await Promise.all([
+    supabase.from("profiles").select("role").eq("id", user.id).maybeSingle(),
+    supabase
+      .from("enrollments")
+      .select("course_id")
+      .eq("user_id", user.id)
+      .eq("course_id", course.id)
+      .maybeSingle(),
+  ]);
+
+  const isAdmin = profile?.role === "admin";
+  if (!isAdmin && !enrollment) return { redirect: `/course/${course.slug}` };
+
+  return { user, course, isAdmin };
+}

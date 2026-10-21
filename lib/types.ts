@@ -86,7 +86,6 @@ export interface LessonItem {
   title: string;
   slug: string;
   duration_display: string;
-  video_url: string | null;
   has_exercise: boolean;
   type?: "video" | "reading";
 }

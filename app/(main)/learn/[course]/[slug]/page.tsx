@@ -1,6 +1,9 @@
 // app/learn/[course]/[slug]/page.tsx
+import { redirect } from "next/navigation";
 import { getLessonsByCourse } from "@/lib/supabase";
-import { supabase } from "@/lib/supabase";
+import { requireCourseAccess } from "@/lib/auth.server";
+import { createSupabaseServerClient } from "@/lib/supabase.server";
+import { supabaseAdmin } from "@/lib/supabase.admin";
 import LearnClient from "@/app/components/LearnClient"; // Import component con
 import NotFoundLesson from "@/app/components/NotFoundLesson";
 import matter from "gray-matter";
@@ -10,7 +13,7 @@ export interface lessonBasic {
   id: number;
   title: string;
   slug: string;
-  video_url: string | null;
+  has_video: boolean;
   has_exercise: boolean;
 }
 
@@ -32,19 +35,33 @@ export default async function LearnPage({
 }) {
   const { course, slug } = await params;
 
+  // 1. Gate on the server before any lesson content is read.
+  const access = await requireCourseAccess(course);
+  if ("redirect" in access) redirect(access.redirect);
+  if ("notFound" in access) return <NotFoundLesson />;
+
+  // 2. Public metadata only; the lesson must belong to the course in the URL.
+  const supabase = await createSupabaseServerClient();
   const { data: lesson, error } = await supabase
     .from("lessons")
-    .select("*")
+    .select("id, title, slug, course_id, chapter_id, order_index, created_at")
     .eq("slug", slug)
-    .single();
+    .eq("course_id", access.course.id)
+    .maybeSingle();
 
-  // 2. Xử lý lỗi dữ liệu (không phải lỗi auth)
   if (error || !lesson) {
     return <NotFoundLesson />;
   }
 
-  // 3. Logic bài trước/sau
-  const chapters = await getLessonsByCourse(course);
+  // 3. Private columns, read with the service role only after the gate.
+  const { data: privateData } = await supabaseAdmin
+    .from("lessons")
+    .select("content, video_url")
+    .eq("id", lesson.id)
+    .single();
+
+  // 4. Logic bài trước/sau
+  const chapters = await getLessonsByCourse(course, supabase);
   const allLessons = chapters.flatMap((chapter) => chapter.lessons);
   const currentIndex = allLessons?.findIndex((i) => i.slug === slug) ?? -1;
   const prevLesson = currentIndex > 0 ? allLessons![currentIndex - 1] : null;
@@ -53,12 +70,10 @@ export default async function LearnPage({
       ? allLessons[currentIndex + 1]
       : null;
 
-  // 4. Xử lý content
-  const { content: cleanContent } = matter(lesson.content || "");
-  const videoId = getYouTubeId(lesson.video_url);
+  // 5. Xử lý content
+  const { content: cleanContent } = matter(privateData?.content || "");
+  const videoId = getYouTubeId(privateData?.video_url ?? null);
 
-  // 5. TRẢ VỀ CLIENT COMPONENT (Truyền hết props xuống)
-  // LƯU Ý: Không check User ở đây nữa, để Client lo.
   return (
     <LearnClient
       lesson={lesson}
@@ -68,6 +83,7 @@ export default async function LearnPage({
       nextLesson={nextLesson}
       prevLesson={prevLesson}
       videoId={videoId}
+      isAdmin={access.isAdmin}
     >
       <LessonContent content={cleanContent} />
     </LearnClient>

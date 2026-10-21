@@ -1,4 +1,4 @@
--- Rollback for 20261022000000_h2_1a_public_profile_view.sql.
+-- Rollback for 20261021181051_h2_1a_public_profile_view.sql.
 -- Only run after the code no longer reads profile_cards, has_video or word_count.
 
 begin;

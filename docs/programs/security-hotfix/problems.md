@@ -32,3 +32,4 @@ Phát hiện ngày 2026-10-21 khi đọc code và metadata DB hosted. Mục có 
 | P26 | Quiz chấm ở client, user đã enroll nhận `correct_answer` trong payload | Thấp | cùng P20 (chấm trên server) |
 | P27 | Comment đã soft-delete vẫn đọc được nội dung qua REST; user chưa enroll vẫn đọc/ghi comment bài trả phí | Thấp | sau |
 | P28 | User tự sửa được cột `email` trong `profiles` (email hệ thống gửi theo cột này) | Thấp | sau |
+| P29 | "Khóa học của tôi" ở `/profile` chỉ hiện khoá đã hoàn thành ≥ 1 bài (`getUserDashboardData` lọc `isStarted`) → user đã mua nhưng chưa học xong bài nào thấy "Bạn chưa tham gia khóa học nào". Lỗi có từ trước H2 (phát hiện khi QA H2-1) | Thấp | sau |

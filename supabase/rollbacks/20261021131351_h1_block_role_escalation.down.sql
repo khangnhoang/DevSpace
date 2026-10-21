@@ -1,4 +1,4 @@
--- Rollback for 20261021000000_h1_block_role_escalation.sql.
+-- Rollback for 20261021131351_h1_block_role_escalation.sql.
 -- Restores the original (vulnerable) definitions; only use to undo a bad deploy.
 
 begin;

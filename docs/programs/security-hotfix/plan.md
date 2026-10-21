@@ -51,7 +51,7 @@ Nội dung bài học/quiz trả phí đọc được không cần enroll (P13 �
 
 ## 4. Thiết kế
 
-### 4.1 DB — migration `supabase/migrations/20261021000000_h1_block_role_escalation.sql`
+### 4.1 DB — migration `supabase/migrations/20261021131351_h1_block_role_escalation.sql`
 
 Repo chưa có thư mục `supabase/`. Tạo file migration này làm bản ghi lịch sử (chưa có baseline schema; baseline thuộc program test-infra). Sonnet chỉ viết file, **không apply**. Main apply lên hosted sau khi Owner duyệt (Supabase MCP `apply_migration`), rồi kiểm tra lại.
 
@@ -70,7 +70,7 @@ Nội dung yêu cầu:
 6. Không revoke `is_admin()` vì policy RLS gọi nó với role `authenticated`.
 7. Toàn bộ trong một transaction; idempotent khi chạy lại (`create or replace`, `drop trigger if exists`).
 
-Kèm file rollback `supabase/rollbacks/20261021000000_h1_block_role_escalation.down.sql` khôi phục đúng định nghĩa cũ của `handle_new_user`/`is_admin` (lấy từ mục 1 ở trên — Main đã có bản `pg_get_functiondef`, xem Phụ lục A) và drop trigger/function mới.
+Kèm file rollback `supabase/rollbacks/20261021131351_h1_block_role_escalation.down.sql` khôi phục đúng định nghĩa cũ của `handle_new_user`/`is_admin` (lấy từ mục 1 ở trên — Main đã có bản `pg_get_functiondef`, xem Phụ lục A) và drop trigger/function mới.
 
 ### 4.2 Session qua cookie
 

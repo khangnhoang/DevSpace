@@ -28,3 +28,7 @@ Phát hiện ngày 2026-10-21 khi đọc code và metadata DB hosted. Mục có 
 | P23 | Notification: không có nút đánh dấu đã đọc cho từng thông báo (phải bấm thẳng vào thông báo), chỉ có nút cho tất cả | Thấp | sau |
 | P24 | Tạo quiz bằng AI không chạy: `GEMINI_API_KEY` hết hạn. Việc của Owner (cấp key mới); kèm P-audit gộp 2 SDK Gemini | Thấp | Owner |
 | P15 | `/admin/transactions` hiện mọi học viên là "Ẩn danh": trang đọc `p.profiles?.full_name` (`app/admin/transactions/page.tsx:148`) nhưng `getAllPayments` trả về `users`. Lỗi có từ trước H1 (phát hiện khi QA H1) | Thấp | sau |
+| P25 | `approvePayment`/`rejectPayment` UPDATE chỉ theo `id`, không lọc `status = 'pending'` → duyệt lại đơn đã xử lý, gửi email lần nữa; enrollment tạo bằng request riêng, lỗi bị bỏ qua | Thấp | **H2-2** |
+| P26 | Quiz chấm ở client, user đã enroll nhận `correct_answer` trong payload | Thấp | cùng P20 (chấm trên server) |
+| P27 | Comment đã soft-delete vẫn đọc được nội dung qua REST; user chưa enroll vẫn đọc/ghi comment bài trả phí | Thấp | sau |
+| P28 | User tự sửa được cột `email` trong `profiles` (email hệ thống gửi theo cột này) | Thấp | sau |

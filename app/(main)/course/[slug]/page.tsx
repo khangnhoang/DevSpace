@@ -67,7 +67,7 @@ const CourseReviews = ({
 
         const { data, error } = await supabase
           .from("reviews")
-          .select("*, profiles(full_name, avatar_url)", { count: "exact" })
+          .select("*, profiles:profile_cards(full_name, avatar_url)", { count: "exact" })
           .eq("course_id", courseId) // Nó phụ thuộc vào courseId
           .order("created_at", { ascending: false })
           .range(from, to);

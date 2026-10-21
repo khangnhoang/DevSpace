@@ -263,7 +263,7 @@ export async function getInstructors() {
   // Join bảng instructors với profiles để lấy tên
   const { data, error } = await supabase
     .from("instructors")
-    .select("id, profiles(full_name)");
+    .select("id, profiles:profile_cards(full_name)");
   
   return { data, error };
 }
@@ -568,7 +568,7 @@ export async function getFullCourseDetail(
       id, name, slug, description, image_url, price,
       instructors (
         id, bio, job_title,
-        profiles ( full_name, avatar_url )
+        profiles:profile_cards ( full_name, avatar_url )
       )
     `,
     )
@@ -1007,7 +1007,7 @@ export async function getCommentByLesson(lessonId: number) {
   const { data, error } = await supabase
     .from("comments")
     .select(
-      "id, content, created_at, deleted_at, user_id, profiles(full_name, avatar_url, role)",
+      "id, content, created_at, deleted_at, user_id, profiles:profile_cards(full_name, avatar_url, role)",
     )
     .eq("lesson_id", lessonId)
     .order("created_at", { ascending: false });

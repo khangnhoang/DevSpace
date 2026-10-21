@@ -21,15 +21,18 @@ grant select on public.profile_cards to anon, authenticated;
 
 -- Public lesson metadata derived from the private columns, so outlines and
 -- duration estimates no longer need content or video_url.
--- word_count mirrors estimateTime(): strip HTML tags, split on whitespace.
+-- word_count mirrors estimateTime(): content.replace(/<[^>]*>?/gm, "").trim().split(/\s+/).length,
+-- i.e. strip HTML tags, trim all whitespace, split on whitespace. Like JS, a
+-- whitespace-only body counts as 1 (split of "" has length 1); empty/null = null.
 alter table public.lessons
   add column has_video boolean
     generated always as (coalesce(video_url, '') <> '') stored,
   add column word_count integer
     generated always as (
       case when coalesce(content, '') = '' then null
-           else array_length(regexp_split_to_array(
-                  btrim(regexp_replace(content, '<[^>]*>?', '', 'g')), '\s+'), 1)
+           else coalesce(array_length(regexp_split_to_array(
+                  regexp_replace(regexp_replace(content, '<[^>]*>?', '', 'g'), '^\s+|\s+$', '', 'g'),
+                  '\s+'), 1), 1)
       end) stored;
 
 commit;

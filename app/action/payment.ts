@@ -41,11 +41,13 @@ export async function updatePaymentWithCoupon(
       .eq("code", couponCode.toUpperCase())
       .eq("is_active", true)
       .single();
-    if (!coupon || coupon.used_count >= coupon.max_uses)
-      return { error: "Mã giảm giá không hợp lệ" };
+    if (!coupon) return { error: "Mã giảm giá không tồn tại hoặc đã hết hạn" };
+    // max_uses null = unlimited
+    if (coupon.max_uses !== null && coupon.used_count >= coupon.max_uses)
+      return { error: "Mã này đã hết lượt sử dụng" };
 
     const discountAmount = (course.price * coupon.discount_percent) / 100;
-    const finalAmount = Math.max(0, course.price - discountAmount);
+    const finalAmount = Math.round(Math.max(0, course.price - discountAmount));
 
     const { data: updated, error } = await supabaseAdmin
       .from("payments")
@@ -57,7 +59,11 @@ export async function updatePaymentWithCoupon(
     if (error || !updated || updated.length === 0)
       return { error: "Lỗi cập nhật giá" };
 
-    return { success: true, newAmount: finalAmount };
+    return {
+      success: true,
+      newAmount: finalAmount,
+      discountPercent: coupon.discount_percent as number,
+    };
   } catch (e) {
     return { error: "Lỗi hệ thống" };
   }

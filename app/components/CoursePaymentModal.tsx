@@ -4,7 +4,6 @@ import { QRCodeSVG } from "qrcode.react";
 import { X, Loader2, Copy, Check, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { cancelPayment, updatePaymentWithCoupon } from "@/app/action/payment";
-import { supabase } from "@/lib/supabase"; // Nhớ import supabase client
 
 interface Props {
   course: any;
@@ -48,53 +47,24 @@ export default function CoursePaymentModal({
     setCheckingCode(true);
 
     try {
-      // 1. Check trong DB
-      const { data, error } = await supabase
-        .from("coupons")
-        .select("*")
-        .eq("code", discountCode.toUpperCase())
-        .eq("is_active", true)
-        .single();
-
-      if (error || !data) {
-        toast.error("Mã giảm giá không tồn tại hoặc đã hết hạn");
-        setCheckingCode(false);
-        return;
-      }
-
-      // 2. Check số lượt dùng
-      if (data.used_count >= data.max_uses) {
-        toast.error("Mã này đã hết lượt sử dụng");
-        setCheckingCode(false);
-        return;
-      }
-
+      // Pricing and coupon validation happen on the server only.
       const res = await updatePaymentWithCoupon(paymentId!, discountCode);
 
       if (res.error) {
         toast.error(res.error);
-        setCheckingCode(false);
         return;
       }
 
       if (res.success && res.newAmount !== undefined) {
-        // Update state UI theo giá Server trả về cho chắc ăn
         setFinalPrice(res.newAmount);
-        setAppliedCoupon({ code: discountCode, percent: 0 }); // Percent để 0 cũng được vì giá đã update
+        setAppliedCoupon({
+          code: discountCode.toUpperCase(),
+          percent: res.discountPercent ?? 0,
+        });
         toast.success(
           `Đã áp dụng mã! Giá mới: ${res.newAmount.toLocaleString()}đ`,
         );
       }
-
-      // 3. Tính giá mới
-      const discountAmount = (course.price * data.discount_percent) / 100;
-      const newPrice = Math.max(0, course.price - discountAmount);
-
-      setFinalPrice(newPrice);
-      setAppliedCoupon({ code: data.code, percent: data.discount_percent });
-      toast.success(
-        `Áp dụng mã ${data.code} giảm ${data.discount_percent}% thành công!`,
-      );
     } catch (err) {
       toast.error("Lỗi khi kiểm tra mã");
     } finally {

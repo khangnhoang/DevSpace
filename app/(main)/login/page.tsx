@@ -109,8 +109,8 @@ export default function LoginPage() {
       setMessage({ text: "Email không đúng định dạng", type: "error" });
       return;
     }
-    if (password.length < 6) {
-      setMessage({ text: "Mật khẩu phải có ít nhất 6 ký tự", type: "error" });
+    if (password.length < 8) {
+      setMessage({ text: "Mật khẩu phải có ít nhất 8 ký tự", type: "error" });
       return;
     }
     if (password !== confirmPassword) {
@@ -348,7 +348,7 @@ export default function LoginPage() {
               <div className="relative">
                 <input
                   className="input-field"
-                  placeholder="Mật khẩu (tối thiểu 6 ký tự)..."
+                  placeholder="Mật khẩu (tối thiểu 8 ký tự)..."
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   type={showPass ? "text" : "password"}

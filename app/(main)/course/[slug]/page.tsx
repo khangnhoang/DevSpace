@@ -485,7 +485,7 @@ export default function DetailPage({
 
     if (course.price > 0) {
       setIsEnrolling(true);
-      const res = await createPendingPayment(course.id, user.id);
+      const res = await createPendingPayment(course.id);
       setIsEnrolling(false);
 
       if (res.error) {
@@ -501,14 +501,14 @@ export default function DetailPage({
         setIsOpenPaymentForm(true);
       }
     } else {
-      processFreeEnrollment(user.id);
+      processFreeEnrollment();
     }
   };
 
-  const processFreeEnrollment = async (userId: string) => {
+  const processFreeEnrollment = async () => {
     setIsEnrolling(true);
     try {
-      const result = await enrollCourse(course!.id, userId, 0);
+      const result = await enrollCourse(course!.id);
 
       if (result.error) {
         toast.error(result.error);

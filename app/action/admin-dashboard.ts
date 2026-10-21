@@ -2,6 +2,7 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
+import { requireAdmin } from "@/lib/auth.server";
 
 // Khởi tạo Admin Client ngay tại đây (kín đáo, không lộ ra ngoài)
 const supabaseAdmin = createClient(
@@ -16,6 +17,7 @@ const supabaseAdmin = createClient(
 );
 
 export async function getAdminDashboardStats() {
+  if ("error" in (await requireAdmin())) return null;
   try {
     // 1. Fetch các số liệu đếm (Count)
     const [
@@ -63,6 +65,7 @@ export async function getAdminDashboardStats() {
 }
 
 export async function getTopStudents() {
+  if ("error" in (await requireAdmin())) return [];
   try {
     // BƯỚC 1: Lấy dữ liệu user_progress
     const { data: progressData, error } = await supabaseAdmin
@@ -129,6 +132,7 @@ export async function getTopStudents() {
 }
 
 export async function getRecentActivities() {
+  if ("error" in (await requireAdmin())) return [];
   try {
     // 1. Lấy hoạt động HOÀN THÀNH BÀI HỌC (từ user_progress)
     const { data: progressData } = await supabaseAdmin
@@ -227,6 +231,7 @@ export async function getRecentActivities() {
 const CHART_COLORS = ["#00d25b", "#ffab00", "#0090e7", "#fc424a", "#8f5fe8"];
 
 export async function getAdminCourseChartData() {
+  if ("error" in (await requireAdmin())) return [];
   // Query bảng courses và đếm số lượng trong bảng enrollments
   const { data: courses, error } = await supabaseAdmin
     .from("courses")

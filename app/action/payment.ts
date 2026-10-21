@@ -2,66 +2,28 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
-import { sendSuccessEmail } from "./email";
+import { sendSuccessEmail } from "@/lib/email.server";
+import { requireAdmin, requireUser } from "@/lib/auth.server";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
-async function sendAdminNotification(userId: string, courseId: number) {
-  try {
-    const [adminRes, userRes, courseRes] = await Promise.all([
-      supabaseAdmin.from("profiles").select("id").eq("role", "admin"),
-      supabaseAdmin
-        .from("profiles")
-        .select("full_name")
-        .eq("id", userId)
-        .maybeSingle(),
-      supabaseAdmin
-        .from("courses")
-        .select("name")
-        .eq("id", courseId)
-        .maybeSingle(),
-    ]);
-
-    const admins = adminRes.data;
-    const user = userRes.data;
-    const course = courseRes.data;
-
-    if (!admins || !admins.length || !user || !course) {
-      console.error("Không tìm thấy admin, người dùng hoặc khóa học");
-      return;
-    }
-
-    const userName = user.full_name || "Một học viên";
-    const message = `${userName} đã đăng ký khóa học ${course.name}`;
-
-    const nofitications = admins.map((admin) => ({
-      receiver_id: admin.id,
-      actor_id: userId,
-      title: "Đăng ký khóa học mới",
-      message,
-      link: `/admin`,
-      type: "enrollment",
-      is_read: false,
-    }));
-
-    await supabaseAdmin.from("notifications").insert(nofitications);
-  } catch (error) {
-    console.error("Lỗi gửi thông báo đến admin:", error);
-  }
-}
-
 export async function updatePaymentWithCoupon(
   paymentId: number,
   couponCode: string,
 ) {
   try {
+    const auth = await requireUser();
+    if ("error" in auth) return { error: auth.error };
+    const user = auth.user;
+
     const { data: payment } = await supabaseAdmin
       .from("payments")
       .select("course_id, user_id, status")
       .eq("id", paymentId)
+      .eq("user_id", user.id)
       .single();
     if (!payment || payment.status !== "pending")
       return { error: "Đơn hàng không hợp lệ" };
@@ -85,11 +47,15 @@ export async function updatePaymentWithCoupon(
     const discountAmount = (course.price * coupon.discount_percent) / 100;
     const finalAmount = Math.max(0, course.price - discountAmount);
 
-    const { error } = await supabaseAdmin
+    const { data: updated, error } = await supabaseAdmin
       .from("payments")
       .update({ amount: finalAmount, updated_at: new Date().toISOString() })
-      .eq("id", paymentId);
-    if (error) return { error: "Lỗi cập nhật giá" };
+      .eq("id", paymentId)
+      .eq("user_id", user.id)
+      .eq("status", "pending")
+      .select("id");
+    if (error || !updated || updated.length === 0)
+      return { error: "Lỗi cập nhật giá" };
 
     return { success: true, newAmount: finalAmount };
   } catch (e) {
@@ -99,10 +65,13 @@ export async function updatePaymentWithCoupon(
 
 export async function createPendingPayment(
   courseId: number,
-  userId: string,
   couponCode: string | null = null, // 👈 Thêm tham số này
 ) {
   try {
+    const auth = await requireUser();
+    if ("error" in auth) return { error: auth.error };
+    const userId = auth.user.id;
+
     // 1. Check xem có đơn pending nào cũ không (logic cũ giữ nguyên)
     const { data: existingPayment } = await supabaseAdmin
       .from("payments")
@@ -180,72 +149,27 @@ export async function cancelPayment(paymentId: number | null) {
   if (!paymentId) return { error: "Mã giao dịch không hợp lệ" };
 
   try {
-    await supabaseAdmin
+    const auth = await requireUser();
+    if ("error" in auth) return { error: auth.error };
+
+    const { data: updated, error } = await supabaseAdmin
       .from("payments")
       .update({ status: "failed", updated_at: new Date().toISOString() })
-      .eq("id", paymentId);
+      .eq("id", paymentId)
+      .eq("user_id", auth.user.id)
+      .eq("status", "pending")
+      .select("id");
+    if (error || !updated || updated.length === 0)
+      return { error: "Không thể hủy giao dịch này" };
     return { success: true };
   } catch (error) {
     return { error: "Lỗi hủy giao dịch" };
   }
 }
 
-export async function confirmPaymentAndEnroll(
-  paymentId: number | null,
-  courseId: number,
-  userId: string,
-) {
-  if (!paymentId) return { error: "Thiếu mã giao dịch" };
-
-  try {
-    const { error: updateError } = await supabaseAdmin
-      .from("payments")
-      .update({ status: "success", updated_at: new Date().toISOString() })
-      .eq("id", paymentId)
-      .select()
-      .single();
-
-    if (updateError)
-      return { error: "Không thể cập nhật trạng thái thanh toán" };
-
-    const { data: checkPayment } = await supabaseAdmin
-      .from("payments")
-      .select("status")
-      .eq("id", paymentId)
-      .single();
-
-    if (!checkPayment || checkPayment.status !== "success")
-      return { error: "Thanh toán chưa hoàn tất, không thể đăng ký" };
-
-    const { data: existingEnroll } = await supabaseAdmin
-      .from("enrollments")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("course_id", courseId)
-      .single();
-
-    if (existingEnroll) return { success: true };
-
-    const { error: enrollError } = await supabaseAdmin
-      .from("enrollments")
-      .insert({
-        user_id: userId,
-        course_id: courseId,
-      });
-
-    if (enrollError)
-      return { error: "Lỗi đăng ký khóa học" + enrollError.message };
-
-    await sendAdminNotification(userId, courseId);
-
-    return { success: true };
-  } catch (error) {
-    console.error(error);
-    return { error: "Lỗi hệ thống trong quá trình xử lý" };
-  }
-}
-
 export async function getAllPayments() {
+  if ("error" in (await requireAdmin())) return [];
+
   // BƯỚC 1: Lấy bảng Payments (Chỉ lấy user_id, không join users)
   const { data: payments, error: paymentError } = await supabaseAdmin
     .from("payments")
@@ -288,6 +212,9 @@ export async function getAllPayments() {
 // 👇 HÀM MỚI: Admin duyệt đơn (Manual Approve)
 export async function approvePayment(paymentId: number) {
   try {
+    const auth = await requireAdmin();
+    if ("error" in auth) return { error: auth.error };
+
     // 1. Lấy thông tin Payment
     const { data: payment } = await supabaseAdmin
       .from("payments")
@@ -377,6 +304,9 @@ export async function approvePayment(paymentId: number) {
 // 👇 HÀM MỚI: Admin từ chối/Hủy đơn
 export async function rejectPayment(paymentId: number) {
   try {
+    const auth = await requireAdmin();
+    if ("error" in auth) return { error: auth.error };
+
     const { error } = await supabaseAdmin
       .from("payments")
       .update({ status: "failed", updated_at: new Date().toISOString() })

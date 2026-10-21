@@ -2,8 +2,12 @@
 "use server";
 
 import { GoogleGenAI } from "@google/genai";
+import { requireAdmin } from "@/lib/auth.server";
 
 export async function generateQuizFromContent(content: string, quantity: number = 1, previousQuestion: any[]) {
+  const auth = await requireAdmin();
+  if ("error" in auth) return { error: auth.error };
+
   // 1. Kiểm tra xem Key có nhận không
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {

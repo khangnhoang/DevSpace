@@ -39,6 +39,7 @@ export default function UsersManagerPage() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
+  const [password, setPassword] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -50,6 +51,7 @@ export default function UsersManagerPage() {
     setEditingUser(null);
     setEmail("");
     setName("");
+    setPassword("");
     setRole("user");
     setPreviewUrl(null);
     setSelectedFile(null);
@@ -93,6 +95,10 @@ export default function UsersManagerPage() {
       toast.warning("Vui lòng nhập email");
       return;
     }
+    if (!editingUser && password.length < 8) {
+      toast.warning("Mật khẩu phải có ít nhất 8 ký tự");
+      return;
+    }
     setIsLoading(true);
 
     let finalAvatarURL = previewUrl || "";
@@ -125,7 +131,7 @@ export default function UsersManagerPage() {
         fullName: name,
         role: role,
         avatarUrl: finalAvatarURL,
-        password: "123123",
+        password: password,
       });
     }
 
@@ -464,6 +470,19 @@ export default function UsersManagerPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={!!editingUser}
                 />
+                {!editingUser && (
+                  <>
+                    <span>MẬT KHẨU</span>
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      className="p-2 bg-[#2C3039] rounded-md"
+                      placeholder="Tối thiểu 8 ký tự"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </>
+                )}
                 <span>HỌ VÀ TÊN</span>
                 <input
                   type="text"

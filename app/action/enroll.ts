@@ -2,6 +2,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
+import { requireUser } from "@/lib/auth.server";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -53,12 +54,12 @@ async function sendAdminNotification(userId: string, courseId: number) {
   }
 }
 
-export async function enrollCourse(
-  courseId: number,
-  userId: string,
-  price: number
-) {
+export async function enrollCourse(courseId: number) {
   try {
+    const auth = await requireUser();
+    if ("error" in auth) return { error: auth.error };
+    const userId = auth.user.id;
+
     const { data: course } = await supabaseAdmin
       .from("courses")
       .select("price, slug")
@@ -67,12 +68,9 @@ export async function enrollCourse(
 
     if (!course) return { error: "Khóa học không tồn tại" };
 
-    if (course.price === 0) {
-      // Khóa học miễn phí -> OK
-    } else {
-      if (price !== course.price) {
-        return { error: "Giá tiền không hợp lệ" };
-      }
+    // Paid courses are enrolled only through approvePayment (admin).
+    if (course.price !== 0) {
+      return { error: "Khóa học có phí, vui lòng thanh toán để đăng ký" };
     }
 
     const { error } = await supabaseAdmin.from("enrollments").insert({
@@ -84,7 +82,6 @@ export async function enrollCourse(
       return { error: error.message };
     }
 
-    // 👇 2. GỌI HÀM BẮN THÔNG BÁO Ở ĐÂY
     await sendAdminNotification(userId, courseId);
 
     revalidatePath(`/courses/${course.slug}`);

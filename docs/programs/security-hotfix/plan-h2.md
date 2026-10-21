@@ -433,9 +433,9 @@ Công cụ: curl tới REST với anon key và access token của user test (Own
 | 17d | user A | coupon có `max_uses` null (tạo tạm) | áp được |
 | 17e | anon | `POST /graphql/v1` query `lessonsCollection { edges { node { content } } }` và `profilesCollection { ... email }` | lỗi quyền / rỗng như REST |
 | 17f | user A chưa enroll | xem RSC payload trang quiz (`curl` với cookie) | không có câu hỏi/đáp án |
-| 17g | user A | sửa profile của mình (đường `updateUserProfile`) | thành công, không lỗi 42P17 |
+| 17g | user A | sửa profile của mình (trang `/profile`, hàm `updateProfile`) | thành công, không lỗi 42P17 |
 | 17h | admin | sửa profile của user khác | thành công, không lỗi 42P17 |
-| 17i | admin | xoá profile qua UI admin | chỉ thử trên tài khoản tạm; nếu bỏ qua thì ghi rõ; không được có 42P17 |
+| 17i | admin | `DELETE /rest/v1/profiles?id=eq.<tài khoản tạm>` bằng JWT admin (UI admin xoá qua service role nên không kiểm được policy) | xoá được, không lỗi 42P17; nếu bỏ qua thì ghi rõ |
 
 **Ma trận H2-2:**
 

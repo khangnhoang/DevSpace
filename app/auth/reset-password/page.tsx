@@ -35,8 +35,8 @@ export default function ResetPasswordPage() {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (password.length < 6) {
-      toast.error("Mật khẩu phải có ít nhất 6 ký tự");
+    if (password.length < 8) {
+      toast.error("Mật khẩu phải có ít nhất 8 ký tự");
       return;
     }
     if (password !== confirmPassword) {
@@ -58,7 +58,14 @@ export default function ResetPasswordPage() {
         router.push("/");
       }, 1500);
     } catch (error: any) {
-      toast.error("Lỗi: " + error.message);
+      console.error("Lỗi đổi mật khẩu:", error);
+      if (error?.code === "same_password") {
+        toast.error("Mật khẩu mới phải khác mật khẩu cũ");
+      } else if (error?.code === "weak_password") {
+        toast.error("Mật khẩu quá yếu");
+      } else {
+        toast.error("Không đổi được mật khẩu, vui lòng thử lại");
+      }
     } finally {
       setLoading(false);
     }

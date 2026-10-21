@@ -9,6 +9,12 @@ Tách 2 PR, mỗi PR một nhánh, làm tuần tự:
 | **H2-1** chặn lộ dữ liệu | `fix/h2-data-exposure` | P1 profiles PII, P2 coupon công khai, P13 nội dung bài học/quiz trả phí |
 | **H2-2** toàn vẹn ghi | `fix/h2-write-integrity` (cắt từ `main` sau khi H2-1 merge) | P3 review giả danh, P4 comment đổi `user_id`, P5/P6 lượt dùng coupon, P25 duyệt đơn không nguyên tử |
 
+**Tiến độ (2026-10-22):**
+- **H2-1:** xong. PR #3 đã merge và deploy, migration B đã apply, ma trận đã chạy (xem kết quả ở §6).
+- **H2-2:** Owner quyết tách thành hai phần và hoãn cả hai. Ưu tiên trước là chương trình agent-workflow và test-infra (môi trường cô lập + GitHub Actions), vì hiện test tay trên production quá vất vả.
+  - **H2-2a**, P3 + P4 (policy review, `with_check` + trigger comment): nhỏ, rủi ro thấp. Làm khi quay lại security.
+  - **H2-2b**, P5/P6 + P25 (3 RPC, `payments_guard`, thứ tự deploy, rollback): làm sau test-infra, khi đã có test tự động cho luồng thanh toán. Thiết kế ở §4.3 giữ nguyên.
+
 **Quyết định Owner đã chốt (2026-10-22):**
 - **D1** Lượt dùng coupon: **giữ chỗ khi áp mã**, trả lại khi huỷ / từ chối / đổi mã. `max_uses` là giới hạn cứng.
 - **D2** Đăng nhập bằng email chưa đăng ký: **thông báo chung** "Email hoặc mật khẩu không đúng" (chống dò email).
@@ -436,6 +442,14 @@ Công cụ: curl tới REST với anon key và access token của user test (Own
 | 17g | user A | sửa profile của mình (trang `/profile`, hàm `updateProfile`) | thành công, không lỗi 42P17 |
 | 17h | admin | sửa profile của user khác | thành công, không lỗi 42P17 |
 | 17i | admin | `DELETE /rest/v1/profiles?id=eq.<tài khoản tạm>` bằng JWT admin (UI admin xoá qua service role nên không kiểm được policy) | xoá được, không lỗi 42P17; nếu bỏ qua thì ghi rõ |
+
+**Kết quả H2-1 (2026-10-22, production, sau B `20261021185249`):**
+- **Đạt (anon/REST/GraphQL):** 1, 4, 5, 6, 7, 7b, 8, 10, 17, 17b, 17e.
+- **Đạt (SQL giả lập user/admin, rollback):** 2, 3, 9. `EXPLAIN UPDATE/DELETE` không lỗi 42P17.
+- **Đạt (UI, user `student`):** 11, 12, 13 (khoá javascript không có quiz; khoá học theo thứ tự vẫn chặn), 15 (không tạo user mới), 16, 17d (mã tạm `MADUNG50`, đã xoá; đơn 88/89 đã huỷ), 17f.
+- **Đạt (UI, `admin` chỉ enroll reactjs):** 14 (PATCH lessons 204, md5 content không đổi), 17c (bài + quiz html-css), 17h (PATCH profiles 204).
+- **Chưa đạt do lỗi cũ:** 17g. PATCH 400 `invalid input syntax for type date: ""` (P16), lỗi xảy ra sau bước RLS nên không phải do B.
+- **Bỏ qua:** 17i. Không có tài khoản tạm; đã kiểm bằng `EXPLAIN DELETE`.
 
 **Ma trận H2-2:**
 

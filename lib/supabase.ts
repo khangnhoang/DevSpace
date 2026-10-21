@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 
 // ✅ 1. IMPORT & RE-EXPORT
 // Dòng này giúp các file khác vẫn import type từ đây được (không gãy code cũ)
@@ -27,7 +27,10 @@ import type {
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Session is stored in cookies (not localStorage) so the server can read it.
+// On the server (no `document`) this client has no session and acts as anon,
+// which is what server components importing it already relied on.
+export const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 
 // --------------------------------------------------------
 // SECTION A: LOGIC BÀI HỌC (LESSONS)

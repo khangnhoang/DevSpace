@@ -41,17 +41,6 @@ export default function LoginPage() {
   const [gender, setGender] = useState("male");
   const [registerStep, setRegisterStep] = useState(1);
 
-  // --- HÀM CHECK EMAIL TỒN TẠI (QUAN TRỌNG) ---
-  // Chúng ta query bảng 'profiles' thay vì auth.users (vì client không truy cập được auth.users)
-  const checkEmailExists = async (emailToCheck: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("email", emailToCheck)
-      .maybeSingle();
-    return !!data; // Trả về true nếu tìm thấy
-  };
-
   // --- 1. XỬ LÝ ĐĂNG NHẬP ---
   const handleLogin = async () => {
     // Validate cơ bản
@@ -64,27 +53,26 @@ export default function LoginPage() {
     setMessage(null);
 
     try {
-      // BƯỚC 1: Check xem email có tồn tại không trước
-      const exists = await checkEmailExists(email);
-      if (!exists) {
-        setMessage({
-          text: "Email này chưa được đăng ký tài khoản",
-          type: "error",
-        });
-        setLoading(false);
-        return;
-      }
-
-      // BƯỚC 2: Email có tồn tại -> Thử đăng nhập
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        // Vì đã check email tồn tại ở trên, nên nếu lỗi ở đây thì 99% là sai pass
-        // (Hoặc lỗi mạng, nhưng cứ báo sai pass/email cho chuẩn logic)
-        setMessage({ text: "Mật khẩu không chính xác", type: "error" });
+        // Generic on purpose: do not reveal whether the email is registered.
+        if (error.code === "email_not_confirmed") {
+          setMessage({
+            text: "Email chưa được xác nhận. Vui lòng kiểm tra hộp thư.",
+            type: "error",
+          });
+        } else if (error.status === 429 || error.code === "over_request_rate_limit") {
+          setMessage({
+            text: "Bạn thử quá nhiều lần, vui lòng đợi một lúc rồi thử lại",
+            type: "error",
+          });
+        } else {
+          setMessage({ text: "Email hoặc mật khẩu không đúng", type: "error" });
+        }
       } else {
         setMessage({ text: "Đăng nhập thành công!", type: "success" });
         router.refresh();
@@ -97,7 +85,7 @@ export default function LoginPage() {
   };
 
   // --- 2. XỬ LÝ CHUYỂN BƯỚC ĐĂNG KÝ (Step 1 -> Step 2) ---
-  const handleNextStep = async () => {
+  const handleNextStep = () => {
     setMessage(null);
 
     // Validate Input
@@ -118,20 +106,8 @@ export default function LoginPage() {
       return;
     }
 
-    setLoading(true);
-    // Check Email tồn tại ngay tại bước này
-    const exists = await checkEmailExists(email);
-    if (exists) {
-      setMessage({
-        text: "Email này đã được sử dụng. Vui lòng chọn email khác hoặc đăng nhập.",
-        type: "error",
-      });
-      setLoading(false);
-      return;
-    }
-
-    setLoading(false);
-    setRegisterStep(2); // Mọi thứ OK mới cho qua bước 2
+    // The "email already used" check happens after signUp (see handleSignUp).
+    setRegisterStep(2);
   };
 
   // --- 3. XỬ LÝ ĐĂNG KÝ (Gửi Full Info) ---
@@ -162,14 +138,17 @@ export default function LoginPage() {
       },
     });
 
-    if (error) {
+    const emailTaken =
+      error?.code === "user_already_exists" ||
+      (!error && data.user && data.user.identities?.length === 0);
+
+    if (emailTaken) {
+      setMessage({
+        text: "Email này đã được sử dụng. Vui lòng chọn email khác hoặc đăng nhập.",
+        type: "error",
+      });
+    } else if (error) {
       setMessage({ text: error.message, type: "error" });
-    } else if (
-      data.user &&
-      data.user.identities &&
-      data.user.identities.length === 0
-    ) {
-      setMessage({ text: "Email này đã được đăng ký.", type: "error" });
     } else if (data.session) {
       // 🟢 CASE 1: Server trả về Session -> Login luôn (Do tắt confirm email)
       setMessage({
@@ -206,8 +185,7 @@ export default function LoginPage() {
     });
 
     if (error) {
-      // Supabase mặc định không báo lỗi nếu email không tồn tại (để bảo mật)
-      // Nhưng ông có thể checkEmailExists trước nếu muốn báo lỗi rõ ràng
+      // Supabase does not report unknown emails here, which keeps them private.
       setMessage({
         text: "Gửi yêu cầu thất bại (Thử lại sau 1p)",
         type: "error",
@@ -232,7 +210,7 @@ export default function LoginPage() {
     } else {
       // Case Register
       if (registerStep === 1) {
-        await handleNextStep();
+        handleNextStep();
       } else {
         await handleSignUp();
       }

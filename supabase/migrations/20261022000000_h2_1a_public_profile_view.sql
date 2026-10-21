@@ -22,8 +22,11 @@ grant select on public.profile_cards to anon, authenticated;
 -- Public lesson metadata derived from the private columns, so outlines and
 -- duration estimates no longer need content or video_url.
 -- word_count mirrors estimateTime(): content.replace(/<[^>]*>?/gm, "").trim().split(/\s+/).length,
--- i.e. strip HTML tags, trim all whitespace, split on whitespace. Like JS, a
--- whitespace-only body counts as 1 (split of "" has length 1); empty/null = null.
+-- i.e. strip HTML tags, trim whitespace, split on whitespace. Postgres \s is
+-- collation-dependent and differs from JS (e.g. U+FEFF), so the class is spelled
+-- out: ECMAScript's WhiteSpace + LineTerminator set, which is what JS \s matches.
+-- Like JS, a whitespace-only body counts as 1 (split of "" has length 1);
+-- empty/null content = null.
 alter table public.lessons
   add column has_video boolean
     generated always as (coalesce(video_url, '') <> '') stored,
@@ -31,8 +34,9 @@ alter table public.lessons
     generated always as (
       case when coalesce(content, '') = '' then null
            else coalesce(array_length(regexp_split_to_array(
-                  regexp_replace(regexp_replace(content, '<[^>]*>?', '', 'g'), '^\s+|\s+$', '', 'g'),
-                  '\s+'), 1), 1)
+                  regexp_replace(regexp_replace(content, '<[^>]*>?', '', 'g'),
+                                 '^[\t\n\v\f\r \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+|[\t\n\v\f\r \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+$', '', 'g'),
+                  '[\t\n\v\f\r \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+'), 1), 1)
       end) stored;
 
 commit;

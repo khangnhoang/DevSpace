@@ -1,4 +1,4 @@
--- Rollback for 20261022120000_h2_1b_restrict_reads.sql.
+-- Rollback for 20261021185249_h2_1b_restrict_reads.sql.
 -- Restores the original (publicly readable) policies and the table-level SELECT
 -- on lessons; only use to undo a bad deploy. Migration A objects are untouched.
 

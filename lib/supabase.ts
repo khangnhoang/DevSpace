@@ -1,4 +1,5 @@
 import { createBrowserClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // ✅ 1. IMPORT & RE-EXPORT
 // Dòng này giúp các file khác vẫn import type từ đây được (không gãy code cũ)
@@ -36,9 +37,12 @@ export const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 // SECTION A: LOGIC BÀI HỌC (LESSONS)
 // --------------------------------------------------------
 
-export async function getLessonsByCourse(courseSlug: string) {
+export async function getLessonsByCourse(
+  courseSlug: string,
+  client: SupabaseClient = supabase,
+) {
   // Bước 1: Tìm xem cái slug 'html-css' là ID số mấy?
-  const { data: course } = await supabase
+  const { data: course } = await client
     .from("courses")
     .select("id")
     .eq("slug", courseSlug)
@@ -47,10 +51,10 @@ export async function getLessonsByCourse(courseSlug: string) {
   if (!course) return [];
 
   // Bước 2: Lấy các bài học thuộc ID đó
-  const { data: chapters } = await supabase
+  const { data: chapters } = await client
     .from("chapters")
     .select(
-      `id, title, order_index, lessons (id, title, slug, video_url, exercises (count))`,
+      `id, title, order_index, lessons (id, title, slug, has_video, exercises (count))`,
     )
     .eq("course_id", course.id)
     .order("order_index", { ascending: true })
@@ -374,20 +378,6 @@ export async function getChaptersByCourseId(courseId: number) {
   return (data || []) as DBChapter[];
 }
 
-export async function getLessons() {
-  const { data, error } = await supabase
-    .from("lessons")
-    .select(
-      "id, title, slug, content, course_id, chapter_id, video_url, order_index, courses (id, name), chapters (id, title)",
-    )
-    .order("course_id", { ascending: true })
-    .order("chapter_id", { ascending: true })
-    .order("id", { ascending: true });
-
-  if (error) return [];
-  return data || [];
-}
-
 export async function addLesson(lessonData: any) {
   const { error } = await supabase.from("lessons").insert({
     title: lessonData.title,
@@ -548,14 +538,11 @@ export async function editExercise(
   return { error };
 }
 
-function estimateTime(content: string | null, hasVideo: boolean): number {
+// wordCount comes from the generated lessons.word_count column (null = no content).
+function estimateTime(wordCount: number | null, hasVideo: boolean): number {
   if (hasVideo) return 600;
-  if (!content) return 60;
-  const words = content
-    .replace(/<[^>]*>?/gm, "")
-    .trim()
-    .split(/\s+/).length;
-  return Math.max(60, Math.ceil((words / 200) * 60));
+  if (!wordCount) return 60;
+  return Math.max(60, Math.ceil((wordCount / 200) * 60));
 }
 
 export async function getFullCourseDetail(
@@ -602,7 +589,7 @@ export async function getFullCourseDetail(
   const { data: chapter } = await supabase
     .from("chapters")
     .select(
-      "id, title, order_index, lessons (id, title, slug, video_url, content, exercises (count))",
+      "id, title, order_index, lessons (id, title, slug, has_video, word_count, exercises (count))",
     )
     .eq("course_id", course.id)
     .order("order_index", { ascending: true })
@@ -616,8 +603,8 @@ export async function getFullCourseDetail(
     title: ch.title,
     lessons: (ch.lessons || []).map((l: any) => {
       lessonCount++;
-      const hasVideo = !!l.video_url;
-      const duration = estimateTime(l.content, hasVideo);
+      const hasVideo = !!l.has_video;
+      const duration = estimateTime(l.word_count, hasVideo);
       totalSeconds += duration;
       const hasExercise = l.exercises?.[0]?.count > 0;
 
@@ -625,7 +612,6 @@ export async function getFullCourseDetail(
         id: l.id,
         title: l.title,
         slug: l.slug,
-        video_url: l.video_url,
         type: hasVideo ? "video" : "reading",
         duration_display: `${Math.floor(duration / 60)
           .toString()

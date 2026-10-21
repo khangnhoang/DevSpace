@@ -9,10 +9,13 @@ begin;
 
 -- P1: profiles — only self or admin. Public name/avatar/role now come from the
 -- profile_cards view (migration A).
+-- Plain auth.uid() on purpose: a scalar subquery (sublink) here makes Postgres
+-- raise 42P17 "infinite recursion detected in policy for relation profiles"
+-- through the admin UPDATE/DELETE policies, which subquery profiles themselves.
 drop policy "Public profiles are viewable by everyone" on public.profiles;
 create policy "profiles_select_self_or_admin" on public.profiles
   for select to authenticated
-  using (id = (select auth.uid()) or public.is_admin());
+  using (id = auth.uid() or public.is_admin());
 
 -- P2: coupons — no client reads at all (server uses service role).
 drop policy "Public can view active coupons" on public.coupons;

@@ -116,10 +116,12 @@ alter table public.lessons
 
 ```sql
 -- P1: profiles — only self or admin.
+-- Plain auth.uid(), no (select ...): a sublink here makes the admin UPDATE/DELETE
+-- policies on profiles (which subquery profiles) fail with 42P17 recursion.
 drop policy "Public profiles are viewable by everyone" on public.profiles;
 create policy "profiles_select_self_or_admin" on public.profiles
   for select to authenticated
-  using (id = (select auth.uid()) or public.is_admin());
+  using (id = auth.uid() or public.is_admin());
 
 -- P2: coupons — no client reads at all (server uses service role).
 drop policy "Public can view active coupons" on public.coupons;
@@ -146,6 +148,7 @@ create policy "exercises_select_enrolled_or_admin" on public.exercises
   );
 ```
 
+- **Không dùng `(select auth.uid())` ở policy `profiles` (Codex, xác nhận bởi Main):** sublink trong policy SELECT của `profiles` khiến Postgres báo `42P17 infinite recursion detected in policy for relation profiles` khi viết lại policy UPDATE/DELETE admin (hai policy này subquery chính `profiles`) → mọi UPDATE/DELETE profile hỏng, kể cả user sửa profile mình. Dùng `auth.uid()` trần. Policy `exercises` giữ sublink vì chỉ đọc `lessons`/`enrollments`.
 - Grant hiện tại của `lessons` (đã đọc): `anon` và `authenticated` có quyền cấp bảng `SELECT, INSERT, UPDATE, DELETE, REFERENCES, TRIGGER, TRUNCATE` (mặc định Supabase), không có grant theo cột riêng. `revoke select` chỉ gỡ SELECT. (`TRUNCATE`/`TRIGGER` cho client là mặc định Supabase, RLS vẫn chặn ghi — ngoài phạm vi.)
 - `lessons` UPDATE/INSERT/DELETE giữ nguyên grant (admin sửa qua client vẫn chạy; UPDATE lọc theo `id` chỉ cần SELECT trên `id`).
 - Policy phụ của exercises chạy với quyền người gọi: cần SELECT trên `lessons.id, lessons.course_id` (có) và RLS `enrollments` (chỉ dòng của mình — đủ).
@@ -430,6 +433,9 @@ Công cụ: curl tới REST với anon key và access token của user test (Own
 | 17d | user A | coupon có `max_uses` null (tạo tạm) | áp được |
 | 17e | anon | `POST /graphql/v1` query `lessonsCollection { edges { node { content } } }` và `profilesCollection { ... email }` | lỗi quyền / rỗng như REST |
 | 17f | user A chưa enroll | xem RSC payload trang quiz (`curl` với cookie) | không có câu hỏi/đáp án |
+| 17g | user A | sửa profile của mình (đường `updateUserProfile`) | thành công, không lỗi 42P17 |
+| 17h | admin | sửa profile của user khác | thành công, không lỗi 42P17 |
+| 17i | admin | xoá profile qua UI admin | chỉ thử trên tài khoản tạm; nếu bỏ qua thì ghi rõ; không được có 42P17 |
 
 **Ma trận H2-2:**
 

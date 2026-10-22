@@ -39,14 +39,14 @@ Imported by `CLAUDE.md`. This file owns who acts and what each role may do. `doc
 
 Each of these is a separate grant from the Owner; one never implies another, and a grant for one task does not carry to the next:
 
-- commit, push, PR creation or update, merge, branch deletion;
-- applying a migration and any write to the hosted database;
+- commit, push, PR creation or update, merge, branch deletion. A PR creation or update grant also covers writing that PR's CI result into its body (`git-pr-workflow`, `pr-and-ci.md`), and nothing else;
+- applying a migration is two grants, *prepare* (the dry run) and *apply*, in the order `supabase-migration` ("Hosted apply") gives; any other write to the hosted database is a grant of its own;
 - CI fixing that needs a push;
 - anything the Owner has not asked for in words.
 
 Standing limits:
 
-- Implementors never push, even to fix CI (a CI self-fix push is Main-only and needs an Owner grant for CI fixing), and never call the Supabase MCP. Main hands them database metadata as a snapshot in the brief. They may run the local stack only: `npx supabase start`, `stop`, `status`, `db reset`, and `psql` against `127.0.0.1:54322`. They run nothing that reaches hosted: `link`, `db push`, `db pull`, `migration repair`, `--linked`, or `--db-url` to a hosted host. Hosted access stays Main-only.
+- Implementors never push, even to fix CI (a CI self-fix push is Main-only and needs an Owner grant for CI fixing), and never call the Supabase MCP. Main hands them database metadata as a snapshot in the brief. They may run the local stack only: `npx supabase start`, `stop`, `status`, `db reset`, and `psql` against `127.0.0.1:54322`. They run nothing that reaches hosted: `link`, `db push`, `db pull`, `migration repair`, `--linked`, or `--db-url` to a hosted host. Hosted access stays Main-only. The checkout is permanently linked to hosted, so any `supabase` command outside that local list may reach production.
 - Nobody reads or prints `.env*`, and no secret goes into a command, doc or message.
 - The VocaSpace project is off limits. The Owner signs in to the app; agents do not enter passwords.
 - A temporary hosted-database write (a test row, a changed setting) needs the Owner's approval first and is cleaned up afterwards.
@@ -79,6 +79,15 @@ Claude memory is not where rules live. Test every candidate memory in this order
 5. Memory keeps only facts about the Owner and state that no doc reflects yet. Example: a step outside the repo, or a doc that lags reality.
 
 Delete a memory line once the owning doc has caught up. A new durable rule goes to its owner as a separate `chore(agent-rules): ...` commit; until then it sits in memory marked "pending move".
+
+**Handoff.** When the Owner asks for a handoff, or a long session must stop with work in flight, Main writes it as one memory file linked from `MEMORY.md`. It holds facts no doc reflects yet (hosted, git and branch state, running processes, idle sessions, grants used and pending, lagging state records), the next task's approved scope item by item, what a later unit owns, and what comes after. It links to the owning docs instead of copying them. Main also gives the Owner a one-line prompt for the new session.
+
+A handoff is tied to its task and is deleted with it. The task is complete when its PR is merged and the owning docs record every durable fact the handoff held; session facts (running processes, idle sessions, a branch to start from) expire with the task.
+
+- The session that completes the task deletes the handoff and its `MEMORY.md` line in the same turn it confirms the merge.
+- A session that loads a handoff whose task is already complete (check `git log origin/main` or the PR state) deletes it before any other work.
+- A partly complete task: Main edits the handoff down to what is still open and not yet in a doc, and deletes it when nothing is left.
+- A task the Owner cancels: delete the handoff, and record the reason in the owning doc if one needs it.
 
 ## 8. Changing skills
 

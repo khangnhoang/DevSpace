@@ -23,7 +23,7 @@ Needs an explicit grant. Before a normal push confirm: clean worktree and index;
 2. Check that the head branch is already on the remote. If not, stop and ask for push permission. Never accept an interactive `gh` offer to push or fork.
 3. Check for an existing PR (`gh pr view <branch>`); never create a duplicate. Update title, body, labels or draft state only as asked.
 4. Create with `gh pr create --base main --head <branch> --title "<title>" --body-file <file>`; update with `gh pr edit`. Use an exact title or body when the Owner gives one. Otherwise title and body are in English. Keep the body file out of the commit.
-5. The body has: summary; changed files or areas; checks run and results; production impact (migrations and their rollout order, hosted steps still pending); risks and limits; follow-ups. Link the plan or problem IDs.
+5. The body follows `.github/pull_request_template.md`: Summary, Changes, Checks run, CI result, Production impact and pending hosted steps, Risks and limits, Follow-ups. `gh pr create --body-file` does not apply the template, so build the body file from it; leave `CI result` as the placeholder table until CI ends (see "Record the CI result"). Link the plan or problem IDs.
 6. After a PR exists, the desktop app's PR tools handle status and auto-fix; do not poll with scheduled tasks.
 
 PR creation never merges, and update-only permission does not deliver new commits.
@@ -34,10 +34,19 @@ A PR to `main` runs `.github/workflows/ci.yml`: the jobs `typecheck`, `build`, `
 
 Use `gh pr checks --watch` (or `gh pr checks`) and report each check's exact terminal state. Do not say CI passed unless GitHub shows a passing state; report pending, failed, skipped and cancelled explicitly with the job names and a short log summary. A failed job's log comes from `gh run view <id> --log-failed`.
 
+## Record the CI result
+
+When CI on a PR reaches a terminal state, red or green, Main writes the result into the body's `CI result` section with `gh pr edit <n> --body-file <file>`, then stops. The PR creation or update grant covers this write and nothing else (`.claude/rules.md` section 4). The Owner decides the merge; nobody merges on their own, and a red result is not fixed without a CI-fix grant.
+
+- Report the latest run for the PR's current head, not an older or cancelled one: the run link, the event, the head commit, and the table Check | Result | Duration | Notes with the five Actions jobs and Vercel.
+- The `lint` row carries the problem count from the lint step's log ("✖ N problems"); see Watch CI.
+- A check that did not reach its step says `not run`, `skipped` or `cancelled` with the reason (for example no lint count when setup failed).
+- CI evidence lives in the PR body, not in a program's `progress.md` State.
+
 ## CI failure
 
 Read the failed logs first (`gh run view <id> --log-failed` for an Actions job, or the Vercel build log). Classify as one of: `branch-caused-small-safe`, `branch-caused-large-risky`, `unrelated-main`, `infra-flaky`, `secret-env-config`, `db-risk`, `unclear`. Only `branch-caused-small-safe` may be fixed, under the CI-fix limits in `docs/agent-loops.md` Loop 3 and `.claude/rules.md` section 4. A fix attempt is one cycle: read logs, edit, validate locally, commit, push, re-watch. It never widens the PR, touches schema, RLS, migrations, secrets or repo settings, weakens a check, forces a push or deletes a branch. Any other class: stop and report the job, the log evidence, the class, why it was not self-fixed and the smallest decision needed.
 
 ## Merge
 
-Default: do not merge; report that the PR is ready for the Owner. Merge or auto-merge only when the Owner asks in the current task. Before merging verify with `gh pr view <branch> --json mergeStateStatus,reviewDecision,statusCheckRollup` and `gh pr checks`: all checks pass (a green `lint` job whose log still shows "✖ N problems" is expected until the lint cleanup unit), none pending, no conflicts, no requested changes or open review comments, no branch rule blocking, and no migration or hosted step that has not been approved. If anything is inconclusive, do not merge and say what could not be verified. Use `gh pr merge <n> --merge` unless another method is requested. Applying a migration is a separate step with its own grant (`supabase-migration`).
+Default: do not merge; report that the PR is ready for the Owner. Merge or auto-merge only when the Owner asks in the current task. Before merging verify with `gh pr view <branch> --json mergeStateStatus,reviewDecision,statusCheckRollup` and `gh pr checks`: all checks pass (a green `lint` job whose log still shows "✖ N problems" is expected until the lint cleanup unit), none pending, no conflicts, no requested changes or open review comments, no branch rule blocking, and every hosted step the rollout order puts before the merge completed (applied and postflight done; order in `supabase-migration`). If anything is inconclusive, do not merge and say what could not be verified. Use `gh pr merge <n> --merge` unless another method is requested. Applying a migration is a separate step with its own grant (`supabase-migration`).

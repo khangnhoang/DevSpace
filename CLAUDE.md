@@ -11,7 +11,7 @@ Roadmap, in this order: (1) agent-workflow (rules, skills, docs system), (2) inf
 - `npx tsc --noEmit`: type check.
 - `npm run docs:check`: structure and link checks for `docs/`, `.claude/`, `CLAUDE.md`, `README.md`. `npm run docs:check:test` runs its tests.
 - CI (`.github/workflows/ci.yml`) runs `typecheck`, `build`, `docs`, `lint` and `db` on every pull request to `main` and every push to `main`, with no hosted secret; `db` starts the local Supabase stack and runs `db reset`. `typecheck`, `build`, `docs` and `db` block; the `lint` job and its lint step both report success until the lint cleanup, so the lint result is the problem count in the step's log (`gh run view <id> --log`, line "✖ N problems"). Whether `main` requires the blocking jobs is an Owner setting in GitHub; check it with `gh api repos/khangnhoang/DevSpace/branches/main/protection` (read-only). The Vercel deploy still runs as before.
-- Local database (Docker Desktop running): `npx supabase start`, `npx supabase db reset` (baseline, migrations, then the invented seed in `supabase/seed.sql`, which holds the users `learner@devspace.test` and `admin@devspace.test`), `npx supabase stop`. No command links to hosted.
+- Local database (Docker Desktop running): `npx supabase start`, `npx supabase db reset` (baseline, migrations, then the invented seed in `supabase/seed.sql`, which holds the users `learner@devspace.test` and `admin@devspace.test`), `npx supabase stop`. The checkout stays linked to hosted, so only these local commands are routine; hosted applies follow `supabase-migration` ("Hosted apply").
 - There are no automated tests. Verify by commands and by a manual browser pass; report what was not verified.
 
 ## Code map

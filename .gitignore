@@ -40,6 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# raw hosted schema dump for the local baseline (never commit)
+/supabase/dumps/
+
 # claude code local state
 /.claude/*.local.json
 /.claude/worktrees/

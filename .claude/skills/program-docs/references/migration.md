@@ -20,7 +20,7 @@ Read this only when migrating a live program's docs to the current shape, or res
 
 ## Reshape: a single-unit program gains a second unit
 
-1. Move the root detail plan to `implementation-plans/<first-unit>/plan.md` with its approved Spec unchanged.
+1. Move the root detail plan to `implementation-plans/u1-<slug>/plan.md` with its approved Spec unchanged.
 2. Write a master plan at the root `plan.md` from the master-plan template: goal, numbered decisions, invariants, a unit table with both units, rollout order.
 3. Fix links and the progress pointer; update State to name the new plan path and revision.
 4. A path that published migrations cite never moves. Keep it in place on the allowlist and put the new unit's plan beside it instead.

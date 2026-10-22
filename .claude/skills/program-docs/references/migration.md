@@ -27,14 +27,12 @@ Read this only when migrating a live program's docs to the current shape, reshap
 
 ## Reshape: a program becomes evergreen
 
-Only on the Owner's decision that the program owns a long-lived capability ([ADR 0002](../../../../docs/adr/0002-program-kinds.md)). Run the Procedure steps 1 to 3 (baseline, meaning checklist, citations) first and steps 5 to 9 after; the steps below replace step 4.
+Only on the Owner's decision that the program owns a long-lived capability ([ADR 0002](../../../../docs/adr/0002-program-kinds.md)). Run the Procedure steps 1 to 3 (baseline, meaning checklist, citations) first and steps 5 to 9 after; the steps below replace step 4. If Procedure step 3 finds a published migration citing the root `plan.md`, stop and report: the file cannot be deleted, so the program cannot become evergreen without the Owner's decision on that path.
 
 1. Move the plan content to initiative plans. A single-unit root detail plan moves to `implementation-plans/u1-<slug>/plan.md` with its approved Spec unchanged. A master plan's unit plans stay where they are, with their numbers.
-2. Write the charter `README.md` from the charter template: the master plan's goal becomes the capability and boundary, its decisions and invariants keep their numbers, its Units rows become Initiatives rows (closed units keep their rows), its rollout order and gates become the opening steps. Program risks become open entries in `problems.md`; out-of-scope items go into the boundary.
+2. Write the charter `README.md` from the charter template: the master plan's goal becomes the capability and boundary, its decisions and invariants keep their numbers, its Units rows become Initiatives rows (closed units keep their rows), its rollout order and gates become the opening steps. Program risks that still apply go into the charter's Invariants (as the rule that prevents them) or into the initiative plan that owns them; one that fits neither is a reason to stop and report. Out-of-scope items go into the boundary.
 3. Delete the root `plan.md` once the charter holds its meaning, and set the Programs row to `evergreen`.
 4. Fix links to the old root plan (progress pointer, problems, other docs), and update State to name the charter and the initiative plan.
-5. If a published migration cites the root `plan.md`, it cannot be deleted: stop and report, because the program cannot become evergreen without the Owner's decision on that path.
-
 ## Stop
 
 Stop and report when an item cannot be expressed without changing its meaning, a cited path would break, or the baseline moved under the files you are migrating.

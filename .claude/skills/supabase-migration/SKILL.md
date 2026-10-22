@@ -1,6 +1,6 @@
 ---
 name: supabase-migration
-description: Workflow for DevSpace Supabase/PostgreSQL changes: migrations and rollbacks, RLS, grants, views, RPC, triggers, Storage policies, rollout order, hosted-database safety and verification without a local database. Use before writing, reviewing or relying on database behavior, and before any hosted database step.
+description: "Workflow for DevSpace Supabase/PostgreSQL changes: migrations and rollbacks, RLS, grants, views, RPC, triggers, Storage policies, rollout order, hosted-database safety and verification without a local database. Use before writing, reviewing or relying on database behavior, and before any hosted database step."
 ---
 
 # Supabase migration
@@ -20,6 +20,7 @@ Database behavior is changed by a migration file, never by dashboard SQL left as
 - Implementors never call the Supabase MCP, never touch the hosted database and never apply or "repair" anything. Main hands them a metadata snapshot (policies, grants, constraints, function definitions) in the brief and applies migrations only after Codex PASS and the Owner's approval.
 - No local database exists yet. The implementor writes the SQL, the rollback and a verification plan from the snapshot, and never resets or touches hosted to compensate. Main runs the preflight and postflight checks; checks not yet run stay `pending` in the report. Local `supabase db reset`, automated RLS tests and a CI step are deferred to the test-infra program (`docs/backlog/`).
 - Do not weaken RLS or a constraint to make code work. Do not trust client-sent owner, role, status, price or counter fields. Do not change unrelated objects.
+- Do not change Supabase-managed schemas (`auth`, `storage`, `realtime`, `cron` and similar) unless the scope names it. Touching the `handle_new_user` provisioning trigger is a stop unless the task is specifically about provisioning.
 - Put the migration in one `begin; ... commit;` and keep locks short; no external call while holding a lock.
 
 ## DevSpace traps (learned in H1 and H2-1)
@@ -41,7 +42,7 @@ Order follows compatibility between old code, new code and the migration:
 
 ## Workflow
 
-1. **Inspect first:** existing migrations, the snapshot of policies, grants, helpers (`is_admin()` and similar), triggers, RPCs, call sites in `app/action/*` and pages, and the plan's acceptance. Search for an existing helper or pattern before writing a new one. Surface conflicts before writing SQL.
+1. **Inspect first:** existing migrations, the snapshot of policies, grants, helpers (`is_admin()` and similar), triggers, RPCs, call sites in `app/action/*` and pages, and the plan's acceptance. Search for an existing helper or pattern before writing a new one. An index needs a concrete query pattern; check existing indexes for duplicates or overlap first. Surface conflicts before writing SQL.
 2. **Write** the smallest migration for the approved behavior, in an existing-data-safe order (nullable or default, backfill, validate, then `NOT NULL` / `UNIQUE` / `CHECK`). Add a short English comment only for non-obvious order, RLS reasoning, atomicity, `security definer` or rollback. Write the `.down.sql` so it restores the exact earlier state.
 3. **Verification plan** with who runs each check: Main preflight (current policies and grants match the snapshot; data satisfies the new constraints), postflight (REST calls as anon and as a user, simulated-role SQL `set local role` / `request.jwt.claims`, `EXPLAIN` for new policies), and the Owner's manual pass. For each RLS change state what `USING` and `WITH CHECK` allow, test an allowed and a denied actor, and cover owner, enrolled, other-user and admin.
 4. **Report** exact changes, files, checks that ran, checks pending (marked pending, never as passed), the rollout order, and "needs Codex and Main to apply".

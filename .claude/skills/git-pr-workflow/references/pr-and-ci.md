@@ -2,6 +2,17 @@
 
 Read this before any push, PR creation or update, check watching, CI failure or merge. Every step still needs its own grant; the narrowest mode the Owner stated applies (`docs/agent-loops.md` Loop 3).
 
+## Preconditions
+
+Before any PR or CI action run `git status -sb`, `git branch --show-current`, `git remote -v`, `gh --version` and `gh auth status`, and confirm the remote and the authenticated account are the ones the task means (`khangnhoang/DevSpace`). Stop and report when:
+
+- the worktree is dirty and the task did not include those changes, or the branch is unclear or wrong for the task;
+- no usable Git remote exists, `gh` is missing, or `gh auth status` fails or shows no usable account;
+- `gh` output shows missing scopes or token permissions, or the Windows keyring is not reachable from the current shell;
+- proceeding would print or expose a secret.
+
+Do not install or authenticate `gh`, switch to the raw REST API, or copy a token as a workaround; report the blocker and the smallest thing the Owner must do. These stops grant nothing: the action itself still needs its own grant.
+
 ## Push
 
 Needs an explicit grant. Before a normal push confirm: clean worktree and index; the exact branch and commit range; the configured upstream; refreshed remote state with ahead/behind counts; and that a normal push is enough (force-push is never implied). After it, check that the remote head equals the local head and divergence is `0 behind / 0 ahead`. For multi-checkpoint work, push once after the final self-review passes and later push only correction commits, each after its own self-review; this order grants nothing.

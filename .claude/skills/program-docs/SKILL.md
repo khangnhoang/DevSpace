@@ -1,6 +1,6 @@
 ---
 name: program-docs
-description: Contract for the shape of program documentation in DevSpace: master plan, detail plan, progress State, problems, future-features, the docs folders, ADRs, the backlog, and migrating a live program to this shape. Use when creating, updating, reshaping, closing or migrating docs under docs/.
+description: "Contract for the shape of program documentation in DevSpace: master plan, detail plan, progress State, problems, future-features, the docs folders, ADRs, the backlog, and migrating a live program to this shape. Use when creating, updating, reshaping, closing or migrating docs under docs/."
 ---
 
 # Program docs

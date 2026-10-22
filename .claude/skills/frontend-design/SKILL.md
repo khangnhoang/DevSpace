@@ -1,6 +1,6 @@
 ---
 name: frontend-design
-description: Product-aware UI and UX design for DevSpace screens: learner pages, public pages and admin pages. Covers product grounding, a plan then a critique, action hierarchy, states, confirm dialogs, responsive layout, accessibility and natural Vietnamese copy within the current stack. Use when building or reshaping pages, components, dialogs, forms, tables or other product-facing UI.
+description: "Product-aware UI and UX design for DevSpace screens: learner pages, public pages and admin pages. Covers product grounding, a plan then a critique, action hierarchy, states, confirm dialogs, responsive layout, accessibility and natural Vietnamese copy within the current stack. Use when building or reshaping pages, components, dialogs, forms, tables or other product-facing UI."
 ---
 
 # Frontend design
@@ -23,7 +23,7 @@ Next.js App Router, React 19, Tailwind CSS 4 (`app/globals.css`), `lucide-react`
 | Learning experience | `learn`, `quiz`, lesson pages, `profile` progress | medium-high | [learning-experience.md](references/learning-experience.md) |
 | Admin / operations | `app/admin/*` (courses, chapters, lessons, users, transactions) | medium | [admin-operations.md](references/admin-operations.md) |
 
-Read every reference whose row matches before designing; skip the others. A shared component such as `Header` or `Sidebar` is not changed for one screen: use `className` or composition at the usage site, and inspect all usages before touching it.
+Read every reference whose row matches before designing; skip the others. A shared component such as `Header` or `Sidebar` is not changed for one screen: use `className` or composition at the usage site, and inspect all usages before touching it. Change a shared component only when the change is truly global, usage-site customization is insufficient, and the change is backward-compatible or the Owner approved it. Never change dialog width, button radius, card padding or table density globally for one screen.
 
 Scale the process to the change:
 
@@ -50,7 +50,7 @@ Design more than the happy path: loading, empty, error, success, pending, disabl
 
 ## Responsive and accessibility
 
-Check about 375px, tablet and desktop; long content; table overflow; dialog width; wrapping buttons; tap targets. Note that `MobileBlocker` exists: find out where it applies before assuming mobile support. Accessibility floor (WCAG 2.2 AA): semantic controls (a `button`, not a clickable `div`), labels and dialog titles, visible focus, names on icon buttons, text contrast 4.5:1 (3:1 for large text), color never the only signal, errors that name the field and the fix, keyboard order that follows the task, reduced-motion respected. Compute contrast from real values and inspect rendered geometry; report any threshold you did not check as not verified.
+Check about 375px, tablet and desktop; long content; table overflow; dialog width; wrapping buttons; tap targets. Note that `MobileBlocker` exists: find out where it applies before assuming mobile support. Accessibility floor (WCAG 2.2 AA): semantic controls (a `button`, not a clickable `div`), labels and dialog titles, visible focus, names on icon buttons, text contrast 4.5:1 (3:1 for large text), non-text contrast 3:1 (focus indicators, control boundaries, meaningful icons), pointer targets at least 24 x 24px, content usable at 200% zoom and 320px width without two-dimensional scrolling (tables excepted), focus never fully hidden behind sticky or overlay content, color never the only signal, errors that name the field and the fix, keyboard order that follows the task, reduced-motion respected. Compute contrast from real values and inspect rendered geometry; report any threshold you did not check as not verified.
 
 ## Copy
 

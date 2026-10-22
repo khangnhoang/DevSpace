@@ -6,7 +6,7 @@ Read this before implementing or reviewing an async mutation, optimistic update,
 
 - Disable the affected controls while pending and prevent duplicate submission; guard against a second click before the state update lands (a ref or an in-flight flag), not only by the disabled attribute.
 - Show pending, success and a safe error. Wait for the server's confirmation unless an optimistic strategy was approved; if so, define the optimistic state, the confirmation, the rollback, duplicate handling and the failure message.
-- Use the action's `{ error }` / `{ success }` result as is; never turn an error into a success toast. Show the generic message the action returned, not an exception.
+- Use the action's real result as is (read its shape; many return `{ error }` / `{ success }`, others `null`, arrays or `{ data }`); never turn an error into a success toast. Show the generic message the action returned, not an exception.
 - Handle overlapping and stale responses: ignore a result that belongs to an older request (compare an id or use an aborted flag), and clean up timers, subscriptions and realtime channels on unmount.
 - After a mutation, refresh or revalidate data the way the neighbours do (`router.refresh()` or the action's `revalidatePath`) instead of hand-patching several copies.
 - The same account can be open in two tabs; an action can be called twice. The server must be repeat-safe (`server-actions`); the client must not assume otherwise.

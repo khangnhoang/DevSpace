@@ -1,6 +1,6 @@
 ---
 name: planning
-description: Planning workflow for DevSpace work past the small-task conditions: repository discovery, Owner decisions, master vs detail plan, PR breakdown, acceptance, verification and manual QA matrix, and the Sonnet implementation brief. Use before coding anything that is not a small task, when splitting work into PRs, or when writing or revising a plan.
+description: "Planning workflow for DevSpace work past the small-task conditions: repository discovery, Owner decisions, master vs detail plan, PR breakdown, acceptance, verification and manual QA matrix, and the Sonnet implementation brief. Use before coding anything that is not a small task, when splitting work into PRs, or when writing or revising a plan."
 ---
 
 # Planning

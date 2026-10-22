@@ -1,6 +1,6 @@
 ---
 name: git-pr-workflow
-description: Git and GitHub workflow for DevSpace: what git action is allowed, branch start from latest main, staging only related files, English Conventional Commits, correction history, push, PR creation and update, watching checks, CI fixing and merge. Use before any git, gh or PR action, and when reporting a completed checkpoint.
+description: "Git and GitHub workflow for DevSpace: what git action is allowed, branch start from latest main, staging only related files, English Conventional Commits, correction history, push, PR creation and update, watching checks, CI fixing and merge. Use before any git, gh or PR action, and when reporting a completed checkpoint."
 ---
 
 # Git and PR workflow

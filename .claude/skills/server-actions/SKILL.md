@@ -1,6 +1,6 @@
 ---
 name: server-actions
-description: Rules for DevSpace server actions in app/action and any server-side request handler: public POST endpoints, auth and ownership inside the action, never trusting client ids or prices, service-role use, server-side validation without a schema library, return contract, uploads, duplicate submits and state transitions. Use when adding, changing or reviewing a server action or the data it accepts.
+description: "Rules for DevSpace server actions in app/action and any server-side request handler: public POST endpoints, auth and ownership inside the action, never trusting client ids or prices, service-role use, server-side validation without a schema library, return contract, uploads, duplicate submits and state transitions. Use when adding, changing or reviewing a server action or the data it accepts."
 ---
 
 # Server actions
@@ -16,7 +16,7 @@ DevSpace has no Zod and no React Hook Form yet. Schema-based validation and form
 ## Core rules
 
 - A function in a `"use server"` file is a **public POST endpoint**. Anyone can call it with any arguments, whether or not your UI exposes it. Treat every argument as hostile.
-- **Authenticate and authorize inside the action**, every time, with `lib/auth.server.ts`: `requireUser()` for a signed-in user, `requireAdmin()` for admin (role read from `profiles` with the caller's own session, never from `user_metadata`), `requireCourseAccess()` for enrolled access. Do this before any read or write. A check that exists only in the page or component is no check. Return the auth error through the action's normal result.
+- **Authenticate and authorize inside the action**, every time, with `lib/auth.server.ts`: `requireUser()` for a signed-in user, `requireAdmin()` for admin (role read from `profiles` with the caller's own session, never from `user_metadata`), `requireCourseAccess()` for enrolled access. Do this before any read or write. A check that exists only in the page or component is no check. `requireUser()` and `requireAdmin()` return `{ user } | { error }`; map the error into the action's own result shape. `requireCourseAccess()` is for pages: it returns `{ redirect }` or `{ notFound }`, and the page calls `redirect()` or `notFound()`.
 - **Never trust client-sent ids, owners, roles, statuses, prices, discounts, counters or paths.** Derive them on the server: the user id from the session, the price from the course row, the discount from the coupon row, the status from the current row. Check that the target row belongs to the caller (ownership) or that the caller is admin.
 - **The service role bypasses RLS.** `lib/supabase.admin.ts` (and any `createClient` with `SUPABASE_SERVICE_ROLE_KEY`) is server-only and may be used only after the action has done its own authorization. Prefer the caller's session client (`lib/supabase.server.ts`) when RLS can enforce the rule. Never import the service-role client from client code, never return its rows unfiltered.
 - **Validate on the server.** Check type, presence, range, length and allowed values by hand before using a value. Use only the checked values afterwards. Client-side checks are UX, not enforcement.
@@ -31,7 +31,15 @@ DevSpace has no Zod and no React Hook Form yet. Schema-based validation and form
 
 ## Return contract
 
-Follow the existing shape: `{ error: string }` on a failure and `{ success: true, ...data }` on success, so callers test `"error" in result`. Messages are short, natural Vietnamese and generic enough to leak nothing. Do not return raw exceptions, stack traces, SQL or Supabase error text, secrets or full rows. Log the detail on the server instead. Do not turn an error into a fake success.
+The most common shape is `{ error: string }` on a failure and `{ success: true, ...data }` on success, so callers test `"error" in result`, but shapes vary: `app/action/admin-dashboard.ts` returns `null` or arrays, `gemini.ts` returns `{ data }`, `get-notifications.ts` returns nothing. Read the action's real shape and every caller first, and keep a boundary's contract unless the task changes it (then update the callers in the same change). Messages are short, natural Vietnamese and generic enough to leak nothing. Do not return raw exceptions, stack traces, SQL or Supabase error text, secrets or full rows. Log the detail on the server instead. Do not turn an error into a fake success.
+
+## Boundaries validation does not cover
+
+Checking a value's shape does not make it safe to use elsewhere:
+
+- **SQL:** use the Supabase query builder or RPC arguments. Never build SQL from strings, and never write a regex that tries to detect SQL injection.
+- **XSS:** user-written text, HTML or markdown (comments, notes, reviews, profile fields) is escaped on output or sanitized by the repository's established policy before it is rendered as HTML. Lesson MDX is admin-authored content, not a place to render user input.
+- **CSRF:** Next.js checks the `Origin` header for server actions. A route handler (`route.ts`) has no such check, so it must not change state on `GET` and must authenticate and verify the request itself.
 
 ## Uploads, payments and external callbacks
 
@@ -55,5 +63,5 @@ Authorization only in the UI; trusting a client price or user id; using the serv
 - [ ] auth and ownership are checked inside the action before any access
 - [ ] service role used only after authorization
 - [ ] state transitions are filtered and repeat-safe; related writes are atomic or their errors handled
-- [ ] result follows `{ error }` / `{ success }`; messages are generic Vietnamese; nothing internal leaks
+- [ ] result keeps the action's existing shape and its callers still work; messages are generic Vietnamese; nothing internal leaks
 - [ ] checks run and hostile-call cases that could not be run are stated

@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Code review and quality gate for DevSpace: reviewing a checkpoint, commit range, branch, PR, plan or brief, validating corrections, the author self-review method, and writing the brief for a Codex review. Use after implementation, before delivery, when reviewing another session's work, or when preparing Codex.
+description: "Code review and quality gate for DevSpace: reviewing a checkpoint, commit range, branch, PR, plan or brief, validating corrections, the author self-review method, and writing the brief for a Codex review. Use after implementation, before delivery, when reviewing another session's work, or when preparing Codex."
 ---
 
 # Code review

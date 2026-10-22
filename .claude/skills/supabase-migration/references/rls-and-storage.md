@@ -5,7 +5,7 @@ Read this when changing or reviewing a policy, a permission helper, a grant, a b
 ## RLS
 
 - Inspect the existing policies and helpers first (`public.is_admin()` and others in the snapshot); reuse a helper that expresses the same boundary. Use the real definitions, not assumed names.
-- For every affected command (SELECT, INSERT, UPDATE, DELETE) state what the `USING` predicate and the `WITH CHECK` predicate allow. An UPDATE policy without `with_check` lets the owner change ownership columns such as `user_id` (P4).
+- For every affected command (SELECT, INSERT, UPDATE, DELETE) state what the `USING` predicate and the `WITH CHECK` predicate allow. A missing `with_check` reuses `USING` as the check on the new row, so an UPDATE policy with `USING (auth.uid() = user_id or admin)` and no `with_check` stops a regular user from handing the row to someone else, but still lets them change other columns (P4: a comment could move to another `lesson_id`) and lets an admin change `user_id`. Write both predicates explicitly, and add an immutability trigger for columns that must never change.
 - An INSERT policy that checks only a related fact (enrollment) without `user_id = auth.uid()` lets a user write as someone else (P3).
 - Permissive policies on the same command are OR-ed. Replacing a policy means dropping the old one by exact name.
 - Test an allowed and a denied actor for each command. Consider anon, a learner who has not enrolled, an enrolled learner, the owner of the row, another user and admin.

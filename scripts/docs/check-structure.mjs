@@ -365,7 +365,9 @@ function checkProblems(doc, report, { backlog = false } = {}) {
 }
 
 // `seenIds` is shared by every future-features file, so a FEAT ID is unique across the whole repository.
-function checkFutureFeatures(doc, report, seenIds) {
+// A `Moved to` line points at the entry's new home instead of declaring it, so it goes to `moved` and is
+// checked after every file has been read.
+function checkFutureFeatures(doc, report, seenIds, moved) {
   const noteId = (id, n) => {
     const first = seenIds.get(id);
     if (first) {
@@ -381,7 +383,9 @@ function checkFutureFeatures(doc, report, seenIds) {
       for (const line of sectionLines(doc, heading, 2)) {
         if (line.text.trim() === "") continue;
         const closed = FEATURE_CLOSED_PATTERN.exec(line.text.trimEnd());
-        if (closed) {
+        if (closed && line.text.includes(" — Moved to [")) {
+          moved.push({ id: closed[1], n: line.n, report });
+        } else if (closed) {
           noteId(closed[1], line.n);
         } else {
           report(
@@ -495,6 +499,7 @@ export function checkStructure(root) {
   const programOf = (rel) =>
     programDirs.filter((dir) => rel.startsWith(`${dir}/`)).sort((a, b) => b.length - a.length)[0];
   const featureIds = new Map();
+  const movedFeatures = [];
 
   for (const doc of docs.values()) {
     const dir = programOf(doc.rel);
@@ -522,8 +527,17 @@ export function checkStructure(root) {
   // across the whole repository.
   for (const doc of docs.values()) {
     if (posix.basename(doc.rel) === "future-features.md") {
-      checkFutureFeatures(doc, reportFor(doc.rel), featureIds);
+      checkFutureFeatures(doc, reportFor(doc.rel), featureIds, movedFeatures);
     }
+  }
+  const movedOnce = new Set();
+  for (const { id, n, report } of movedFeatures) {
+    if (!featureIds.has(id)) {
+      report(n, "future-features-shape", `${id} is marked moved, but no future-features.md holds its entry`);
+    } else if (movedOnce.has(id)) {
+      report(n, "future-features-shape", `${id} is marked moved more than once`);
+    }
+    movedOnce.add(id);
   }
 
   for (const doc of docs.values()) {

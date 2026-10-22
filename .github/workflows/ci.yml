@@ -61,9 +61,9 @@ jobs:
       - run: npm run docs:check
       - run: npm run docs:check:test
 
-  # Blocking (infrastructure D14). Runs the local Supabase stack only, with the CLI's own demo keys: no
-  # hosted secret and no connection to the hosted project. `start` excludes the containers nothing uses;
-  # Auth, Kong, PostgREST and Storage stay because the baseline's storage policies need the `storage` schema.
+  # Blocking (infrastructure D14). Local Supabase stack only, no hosted secret or connection. `start` skips
+  # unused containers; Storage stays for the `storage` schema the baseline's policies use, and Auth for the
+  # `auth` schema its trigger and the seed's users use (Kong and PostgREST stay as the API in front).
   db:
     runs-on: ubuntu-latest
     timeout-minutes: 20

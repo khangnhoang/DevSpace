@@ -1,6 +1,6 @@
 # Manual UI validation
 
-Read this before planning, running or reporting manual UI validation. There is no automated browser test and no seeded local data yet, so validation is one deliberate pass in the browser pane, in coordination with the Owner. The matrix itself comes from the plan (`planning`, QA matrix).
+Read this before planning, running or reporting manual UI validation. There is no automated browser test yet. A local Supabase stack with a minimal invented seed exists, but the app is not wired to it yet, so validation is still one deliberate pass in the browser pane, in coordination with the Owner. The matrix itself comes from the plan (`planning`, QA matrix).
 
 ## Setup
 

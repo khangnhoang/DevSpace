@@ -2,7 +2,7 @@
 
 Read this when a plan has manual QA that depends on data, user roles or hosted state. Skip it otherwise.
 
-DevSpace has no seed data, no local database and no automated browser tests. The Owner signs in; agents never enter credentials. So QA is a table the plan writes before implementation reaches its last checkpoint.
+DevSpace has a local Supabase stack with a minimal invented seed (two users, two courses), and no automated browser tests yet. The Owner signs in; agents never enter credentials. So QA is a table the plan writes before implementation reaches its last checkpoint.
 
 ## Matrix
 

@@ -5,7 +5,7 @@ Direction the Owner has set that this program delivers in a later unit. Each ent
 ## FEAT-001: Dependency update policy
 
 - Status: Planned for U7 (moved from `docs/backlog/` on 2026-10-22); an update is only safe to accept with tests.
-- Direction: set one policy by update type. Patch: update regularly and run the tests. Minor: read the changelog first. Major: handle it as its own migration task. Security fix: handle early, ordered by impact.
+- Direction: set one policy by update type. Patch: update regularly and run the tests. Minor: read the changelog first. Major: handle it as its own migration task. Security fix: handle early, ordered by impact. The policy also covers the Supabase CLI (an exact devDependency since U2, the only CLI on the Owner's machine and in CI, D3): an update also changes the local Docker images, so it is accepted only when `db reset`, the catalog diff against hosted and the tests stay green (Owner request, 2026-10-23).
 - Target program: infrastructure (U7).
 
 ## FEAT-002: Test skills

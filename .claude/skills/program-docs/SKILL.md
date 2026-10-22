@@ -35,13 +35,13 @@ A single-unit program uses a detail plan as its root `plan.md` (no `implementati
 ## Problems and future features
 
 - An open problem keeps its ID. When resolved, first move any live follow-up into an open entry, then shrink it to one line (ID, status, outcome, PR or commit).
-- Each `FEAT-NNN` ID is unique within its file and has `Status`, `Direction` and `Target program`.
+- Each `FEAT-NNN` ID is unique across every `future-features.md` in the repo (backlog included) and its entry has `Status`, `Direction` and `Target program`. Closed entries go as one line each under a `## Closed` heading, in the backlog forms below.
 
 ## Backlog
 
 `docs/backlog/` holds `future-features.md` and `problems.md` (same templates) for work no open program owns. It is not a program: no plan, no progress, no Programs row. Use an entry when the work is too small for a program; related entries that add up to a program move into one.
 
-Every entry is open with its fields, or closed as exactly one line that keeps its ID:
+Every entry is open with its fields, or closed as exactly one line that keeps its ID (under `## Resolved` in `problems.md`, under `## Closed` in `future-features.md`):
 
 - `<ID> — Done: <how it was resolved> (PR #n)`. Until the PR exists the entry stays open with Status `Fixed locally, awaiting delivery`.
 - `<ID> — Moved to [<program>](<link>)`.

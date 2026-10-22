@@ -9,3 +9,7 @@ Direction the Owner has set that is outside the current scope. Work that is in s
 - Status: <Deferred, Planned, Fixed locally awaiting delivery>.
 - Direction: <what to build or change, in a few lines, and the condition that unblocks it>.
 - Target program: <the program that will own it, or "none yet">.
+
+## Closed
+
+<!-- Optional. One line per closed entry, keeping its ID: `- FEAT-nnn — Done: <how> (PR #n)`, `- FEAT-nnn — Moved to [<program>](<link>)` or `- FEAT-nnn — Dropped: <reason>`. -->

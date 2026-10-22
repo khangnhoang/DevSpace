@@ -80,6 +80,15 @@ Claude memory is not where rules live. Test every candidate memory in this order
 
 Delete a memory line once the owning doc has caught up. A new durable rule goes to its owner as a separate `chore(agent-rules): ...` commit; until then it sits in memory marked "pending move".
 
+**Handoff.** When the Owner asks for a handoff, or a long session must stop with work in flight, Main writes it as one memory file linked from `MEMORY.md`. It holds facts no doc reflects yet (hosted, git and branch state, running processes, idle sessions, grants used and pending, lagging state records), the next task's approved scope item by item, what a later unit owns, and what comes after. It links to the owning docs instead of copying them. Main also gives the Owner a one-line prompt for the new session.
+
+A handoff is tied to its task and is deleted with it. The task is complete when its PR is merged and the owning docs record every durable fact the handoff held; session facts (running processes, idle sessions, a branch to start from) expire with the task.
+
+- The session that completes the task deletes the handoff and its `MEMORY.md` line in the same turn it confirms the merge.
+- A session that loads a handoff whose task is already complete (check `git log origin/main` or the PR state) deletes it before any other work.
+- A partly complete task: Main edits the handoff down to what is still open and not yet in a doc, and deletes it when nothing is left.
+- A task the Owner cancels: delete the handoff, and record the reason in the owning doc if one needs it.
+
 ## 8. Changing skills
 
 - Skills live in `.claude/skills/<name>/SKILL.md`. Each rule has one owner: this file owns roles and permissions, `docs/agent-loops.md` owns timing and stop rules, skills own procedures. Do not restate another owner's rule; link to it.

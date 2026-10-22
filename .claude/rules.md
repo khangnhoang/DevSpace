@@ -12,6 +12,7 @@ Imported by `CLAUDE.md`. This file owns who acts and what each role may do. `doc
 ## 2. Roles
 
 - **Small-task flow.** Main (the Opus session) implements directly only when the Owner names a specific item and it passes the four small-task conditions in `docs/agent-loops.md` (Sizing). Otherwise use the planned flow.
+- **Program state records.** Main edits state records directly: `progress.md`, `problems.md` and `future-features.md` entries, including those in `docs/backlog/`. No implementor, no review round and no Codex round, even where a plan gates every change after its last review. Main runs `npm run docs:check` afterwards. This does not cover plans, rules, skills or code, and commit and push stay separate grants (section 4).
 - **Planned flow.**
   1. Main (Opus) plans, self-reviews the plan, and reviews every diff.
   2. One Sonnet session implements the approved plan: `start_session` with model `claude-sonnet-5-5` and effort `high`, in the product checkout on the current task branch (`use_worktree: false`) unless the plan says otherwise (the CP6 simulated sessions keep their approved worktree setup). It makes local commits only. It loads `git-pr-workflow` before staging or committing, including the local checkpoint commits the handoff grants, and `code-review` for every self-review pass.

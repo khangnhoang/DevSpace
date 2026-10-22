@@ -1,89 +1,87 @@
-# Security hotfix — H2: chặn lộ dữ liệu và ghi giả danh
+# Security hotfix — H2: block data exposure and impersonated writes
 
-Trạng thái: Approved — Codex plan review PASS ở round 4 (2026-10-22, `gpt-6.1-sol`, high, read-only). Round 1–3 sửa: view `profile_cards` ghi xuyên RLS (default ACL), gate client chặn admin, `max_uses` null, chẩn đoán P4; duyệt đơn + enrollment trong một RPC trả jsonb; khoá coupon theo thứ tự id; `payments_guard` (INSERT + UPDATE OF) chặn code cũ trong khe chuyển phiên bản; preflight trong cùng transaction; rollback chặn reservation mới trước khi drain; FK `on delete restrict`.
-Mức rủi ro: Cao (RLS, column grant, coupon/payment, DB hosted) → Codex review plan và diff.
-Tách 2 PR, mỗi PR một nhánh, làm tuần tự:
+Progress: [progress.md](progress.md).
+Risk level: High (RLS, column grant, coupon/payment, hosted DB) → Codex reviews the plan and the diff.
+Split into 2 PRs, one branch each, done in sequence:
 
-| PR | Nhánh | Phạm vi |
+| PR | Branch | Scope |
 |---|---|---|
-| **H2-1** chặn lộ dữ liệu | `fix/h2-data-exposure` | P1 profiles PII, P2 coupon công khai, P13 nội dung bài học/quiz trả phí |
-| **H2-2** toàn vẹn ghi | `fix/h2-write-integrity` (cắt từ `main` sau khi H2-1 merge) | P3 review giả danh, P4 comment đổi `user_id`, P5/P6 lượt dùng coupon, P25 duyệt đơn không nguyên tử |
+| **H2-1** data exposure | `fix/h2-data-exposure` | P1 profiles PII, P2 public coupons, P13 paid lesson/quiz content |
+| **H2-2** write integrity | `fix/h2-write-integrity` (cut from `main` after H2-1 merges) | P3 impersonated review, P4 comment `user_id` change, P5/P6 coupon usage, P25 non-atomic order approval |
 
-**Tiến độ (2026-10-22):**
-- **H2-1:** xong. PR #3 đã merge và deploy, migration B đã apply, ma trận đã chạy (xem kết quả ở §6).
-- **H2-2:** Owner quyết tách thành hai phần và hoãn cả hai. Ưu tiên trước là chương trình agent-workflow và test-infra (môi trường cô lập + GitHub Actions), vì hiện test tay trên production quá vất vả.
-  - **H2-2a**, P3 + P4 (policy review, `with_check` + trigger comment): nhỏ, rủi ro thấp. Làm khi quay lại security.
-  - **H2-2b**, P5/P6 + P25 (3 RPC, `payments_guard`, thứ tự deploy, rollback): làm sau test-infra, khi đã có test tự động cho luồng thanh toán. Thiết kế ở §4.3 giữ nguyên.
+The Owner split H2-2 into two parts (2026-10-22):
+- **H2-2a**, P3 + P4 (review policy, `with_check` + comment trigger): small, low risk. Done when the work returns to security.
+- **H2-2b**, P5/P6 + P25 (3 RPCs, `payments_guard`, deploy order, rollback): done after test-infra, once automated tests exist for the payment flow. The design in §4.3 stays as it is.
 
-**Quyết định Owner đã chốt (2026-10-22):**
-- **D1** Lượt dùng coupon: **giữ chỗ khi áp mã**, trả lại khi huỷ / từ chối / đổi mã. `max_uses` là giới hạn cứng.
-- **D2** Đăng nhập bằng email chưa đăng ký: **thông báo chung** "Email hoặc mật khẩu không đúng" (chống dò email).
+**Owner decisions (2026-10-22):**
+- **D1** Coupon usage: **reserve a use when the code is applied**, release it on cancel / reject / switching codes. `max_uses` is a hard limit.
+- **D2** Signing in with an unregistered email: **a generic message** "Email hoặc mật khẩu không đúng" (prevents email probing).
 
-Plan này nằm trên nhánh H2-1. H2-2 dùng lại plan (không viết plan mới) trừ khi H2-1 làm thay đổi thiết kế.
+This plan lives on the H2-1 branch. H2-2 reuses the plan (no new plan) unless H2-1 changes the design.
 
-## 1. Bối cảnh (đã xác minh 2026-10-21)
+## 1. Background (verified 2026-10-21)
 
-Nguồn: code trên `main` @ `5c842d4` (sau H1) và metadata DB hosted `lkvxxrxojjlkchzzqidu` (`pg_policies`, `pg_constraint`, `information_schema.columns`). Không đọc dòng dữ liệu, trừ một đếm số bài học có `import`/`export` (0/80).
+Sources: code on `main` @ `5c842d4` (after H1) and the metadata of the hosted DB `lkvxxrxojjlkchzzqidu` (`pg_policies`, `pg_constraint`, `information_schema.columns`). No data rows were read, except a count of lessons containing `import`/`export` (0/80).
 
-1. **P1 — `profiles` đọc công khai.** Policy `"Public profiles are viewable by everyone"` (SELECT, `public`, `true`). Anon đọc được `email, phone, dob, gender, province, role` của mọi người. Thêm nữa `app/(main)/login/page.tsx:46` `checkEmailExists` dùng chính lỗ này để báo "email chưa đăng ký / đã dùng" (dò email).
-   Nơi cần dữ liệu công khai của người khác (chỉ `full_name, avatar_url`, và `role` cho badge admin):
-   - review khoá: `app/(main)/course/[slug]/page.tsx:70` embed `profiles(full_name, avatar_url)`
-   - bình luận: `lib/supabase.ts:1010` embed `profiles(full_name, avatar_url, role)`
-   - giảng viên: `lib/supabase.ts:571` (`getFullCourseDetail`) và `:266` (`getInstructors`) embed qua `instructors.user_id → profiles`
-   Các chỗ khác chỉ đọc profile của chính mình (Header, HeaderAdmin, finish page, `getProfile`, `requireAdmin`) hoặc chạy bằng service role / trang admin (`is_admin()`).
-2. **P2 — `coupons` đọc công khai.** Policy `"Public can view active coupons"` (`true`). `CoursePaymentModal.tsx:51-69` đọc thẳng bảng coupons ở client, rồi tự tính giá lần hai sau khi `updatePaymentWithCoupon` đã tính trên server.
-3. **P13 — nội dung trả phí đọc được không cần enroll.**
-   - `lessons` và `exercises` có policy SELECT `true` cho `public`. Anon lấy được `lessons.content`, `video_url`, và toàn bộ câu hỏi + `correct_answer` qua REST.
-   - `app/(main)/learn/[course]/[slug]/page.tsx` là server component dùng `supabase` của `lib/supabase.ts` (browser client → trên server là anon), `select("*")` theo slug, render MDX trên server rồi mới để `LearnClient` kiểm tra enroll ở client. Nội dung nằm sẵn trong RSC payload (đã thấy khi kiểm tra next-mdx-remote v6: `h1/h3/p/ul` trong HTML khi chưa đăng nhập).
-   - Trang quiz `.../quiz/page.tsx` tương tự: lấy exercises kèm `correct_answer` không cần đăng nhập.
-   - Trang lấy lesson theo `slug` toàn cục, không kiểm `lesson.course_id` khớp `[course]` trên URL.
-   - Metadata bài học (`id, title, slug, course_id, chapter_id, order_index, created_at`) cần công khai: mục lục khoá, sidebar, dashboard profile, tính bài tiếp theo.
-   - Hai chỗ đọc `video_url`/`content` chỉ để hiển thị metadata, cho mọi khách: `getLessonsByCourse` (`lib/supabase.ts:53`, sidebar: `video_url`) và `getFullCourseDetail` (`lib/supabase.ts:605`, trang khoá công khai: `video_url, content` để ước lượng thời lượng bằng `estimateTime` và gắn nhãn video/đọc). Trang khoá là client component → **mọi khách đang tải toàn bộ nội dung mọi bài** của khoá.
-4. **P3 — review giả danh.** INSERT `reviews` chỉ kiểm enroll của `auth.uid()`, không ràng buộc `user_id = auth.uid()` → user đã enroll ghi review mang `user_id` người khác. Có `UNIQUE (user_id, course_id)` → còn chặn được người thật review sau. Client dùng `upsert` (`course/[slug]/page.tsx:161`).
-5. **P4 — comment chuyển bài / đổi chủ.** UPDATE `comments` `qual = auth.uid() = user_id OR admin`, `with_check = null`. Postgres dùng `USING` làm điều kiện dòng mới khi thiếu `WITH CHECK` (Codex r1) → user thường **không** đổi được `user_id` sang người khác; nhưng vẫn chuyển được comment sang `lesson_id` khác, và admin đổi được `user_id`. Mức thấp; vẫn sửa bằng `WITH CHECK` tường minh + trigger bất biến để không phụ thuộc hành vi ngầm.
-   INSERT `comments` đã có `with_check auth.uid() = user_id` → không giả danh khi tạo.
-6. **P5/P6 — lượt dùng coupon.** `increment_coupon_usage` không tồn tại. UI không bao giờ truyền coupon vào `createPendingPayment`; coupon chỉ áp qua `updatePaymentWithCoupon`, hàm này không đếm lượt → `used_count` không bao giờ tăng, `max_uses` vô nghĩa. `payments` không lưu coupon nào đã áp. `finalAmount` có thể lẻ (cột `integer`).
-7. **Metadata khác đã đọc (Codex r1 yêu cầu):**
-   - RLS bật trên mọi bảng `public`. Không có view nào trong `public`. Function: `handle_new_user`, `is_admin` (definer), `prevent_role_escalation`, `update_updated_at_column` (invoker).
-   - `payments`: chỉ có policy SELECT của chính mình → client không INSERT/UPDATE/DELETE được (mọi ghi đi qua service role).
-   - `coupons`: chỉ policy SELECT `true` → client không ghi được.
-   - `enrollments`: INSERT chỉ khoá `price = 0` và `user_id = auth.uid()`; SELECT của mình; `UNIQUE (user_id, course_id)`.
-   - **Default ACL của `public`** (`pg_default_acl`): bảng/view mới tự cấp `arwdDxtm` cho `anon`, `authenticated`; function mới tự cấp `EXECUTE` cho `anon`, `authenticated`. → Mọi view/function mới phải `revoke` tường minh.
-   - Coupon hiện có: 3 mã, không mã nào `max_uses` null. Đơn `pending` hiện có: 0.
-8. **P25 (mới) — duyệt/từ chối đơn không nguyên tử.** `approvePayment` (`payment.ts:213`) và `rejectPayment` (`:312`) UPDATE chỉ theo `id`, không `status = 'pending'` → duyệt lại đơn đã huỷ/đã duyệt, gửi email lần nữa. Chỉ admin gọi được (sau H1) nên mức thấp, nhưng H2-2 cần nó nguyên tử để đếm coupon đúng một lần.
+1. **P1 — `profiles` is publicly readable.** The policy `"Public profiles are viewable by everyone"` (SELECT, `public`, `true`). Anon can read `email, phone, dob, gender, province, role` of everyone. On top of that, `app/(main)/login/page.tsx:46` `checkEmailExists` uses this same hole to report "email not registered / already used" (email probing).
+   Places that need other people's public data (only `full_name, avatar_url`, and `role` for the admin badge):
+   - course reviews: `app/(main)/course/[slug]/page.tsx:70` embeds `profiles(full_name, avatar_url)`
+   - comments: `lib/supabase.ts:1010` embeds `profiles(full_name, avatar_url, role)`
+   - instructors: `lib/supabase.ts:571` (`getFullCourseDetail`) and `:266` (`getInstructors`) embed through `instructors.user_id → profiles`
+   Other places read only the user's own profile (Header, HeaderAdmin, finish page, `getProfile`, `requireAdmin`) or run with the service role / admin pages (`is_admin()`).
+2. **P2 — `coupons` is publicly readable.** The policy `"Public can view active coupons"` (`true`). `CoursePaymentModal.tsx:51-69` reads the coupons table directly on the client, then recomputes the price a second time after `updatePaymentWithCoupon` has already computed it on the server.
+3. **P13 — paid content readable without enrolling.**
+   - `lessons` and `exercises` have a SELECT policy `true` for `public`. Anon can get `lessons.content`, `video_url`, and all questions + `correct_answer` through REST.
+   - `app/(main)/learn/[course]/[slug]/page.tsx` is a server component using the `supabase` from `lib/supabase.ts` (a browser client → anon on the server), `select("*")` by slug, renders MDX on the server and only then lets `LearnClient` check enrollment on the client. The content is already in the RSC payload (seen while checking next-mdx-remote v6: `h1/h3/p/ul` in the HTML when signed out).
+   - The quiz page `.../quiz/page.tsx` is similar: it fetches exercises with `correct_answer` without sign-in.
+   - The page fetches the lesson by a global `slug` and does not check that `lesson.course_id` matches `[course]` in the URL.
+   - Lesson metadata (`id, title, slug, course_id, chapter_id, order_index, created_at`) must stay public: the course outline, the sidebar, the profile dashboard, computing the next lesson.
+   - Two places read `video_url`/`content` only to display metadata, for every visitor: `getLessonsByCourse` (`lib/supabase.ts:53`, sidebar: `video_url`) and `getFullCourseDetail` (`lib/supabase.ts:605`, public course page: `video_url, content` to estimate duration with `estimateTime` and label video/reading). The course page is a client component → **every visitor downloads the full content of every lesson** of the course.
+4. **P3 — impersonated review.** The INSERT on `reviews` only checks the enrollment of `auth.uid()` and does not constrain `user_id = auth.uid()` → an enrolled user writes a review carrying someone else's `user_id`. There is `UNIQUE (user_id, course_id)` → this can also block the real person from reviewing later. The client uses `upsert` (`course/[slug]/page.tsx:161`).
+5. **P4 — comment moved to another lesson / changed owner.** UPDATE on `comments` has `qual = auth.uid() = user_id OR admin`, `with_check = null`. Postgres uses `USING` as the condition for the new row when `WITH CHECK` is missing (Codex r1) → a regular user can **not** change `user_id` to someone else; but they can still move the comment to a different `lesson_id`, and an admin can change `user_id`. Low severity; still fixed with an explicit `WITH CHECK` + an immutability trigger so it does not rely on implicit behavior.
+   INSERT on `comments` already has `with_check auth.uid() = user_id` → no impersonation on create.
+6. **P5/P6 — coupon usage.** `increment_coupon_usage` does not exist. The UI never passes a coupon to `createPendingPayment`; a coupon is applied only through `updatePaymentWithCoupon`, which does not count usage → `used_count` never increases and `max_uses` is meaningless. `payments` does not store which coupon was applied. `finalAmount` can be fractional (the column is `integer`).
+7. **Other metadata read (Codex r1 asked for it):**
+   - RLS is on for every `public` table. There are no views in `public`. Functions: `handle_new_user`, `is_admin` (definer), `prevent_role_escalation`, `update_updated_at_column` (invoker).
+   - `payments`: only has a SELECT policy for the own rows → the client cannot INSERT/UPDATE/DELETE (every write goes through the service role).
+   - `coupons`: only the SELECT policy `true` → the client cannot write.
+   - `enrollments`: INSERT only locks `price = 0` and `user_id = auth.uid()`; SELECT own rows; `UNIQUE (user_id, course_id)`.
+   - **Default ACL of `public`** (`pg_default_acl`): new tables/views automatically get `arwdDxtm` for `anon`, `authenticated`; new functions automatically get `EXECUTE` for `anon`, `authenticated`. → Every new view/function must `revoke` explicitly.
+   - Existing coupons: 3 codes, none has `max_uses` null. Existing `pending` orders: 0.
+8. **P25 (new) — approving/rejecting an order is not atomic.** `approvePayment` (`payment.ts:213`) and `rejectPayment` (`:312`) UPDATE only by `id`, not `status = 'pending'` → approving again an order that was cancelled/approved, sending the email again. Only an admin can call it (after H1), so the severity is low, but H2-2 needs it atomic to count a coupon exactly once.
 
-## 2. Mục tiêu và tiêu chí hoàn thành
+## 2. Goals and acceptance criteria
 
 ### H2-1
-- **B1** Anon và user thường không đọc được `email, phone, dob, gender, province` của người khác qua REST (`/rest/v1/profiles`). User vẫn đọc/sửa đủ profile của mình; admin vẫn đọc mọi profile.
-- **B2** Tên/avatar/badge admin vẫn hiện đúng ở review, bình luận, giảng viên.
-- **B3** Anon/user không liệt kê được coupon qua REST. Áp mã hợp lệ vẫn đổi giá; mã sai/hết lượt báo lỗi tiếng Việt.
-- **B4** Anon và user chưa enroll không lấy được `lessons.content`, `lessons.video_url` qua REST, và trang `/learn/...` không gửi nội dung bài trong HTML/RSC payload cho họ.
-- **B5** Anon và user chưa enroll không đọc được `exercises` (câu hỏi lẫn đáp án) qua REST hay trang quiz.
-- **B6** User đã enroll (khoá free hoặc đã duyệt) và admin học/làm quiz bình thường; mục lục khoá, sidebar, dashboard tiến độ vẫn đúng.
-- **B7** Trang admin bài học vẫn xem/sửa được `content`.
-- **B8** Đăng ký với email đã có vẫn báo "Email này đã được sử dụng"; không còn truy vấn `profiles` theo email từ client.
-- **B9** Không có thời điểm nào giữa deploy code và apply migration mà production vỡ (xem §5).
+- **B1** Anon and regular users cannot read other people's `email, phone, dob, gender, province` through REST (`/rest/v1/profiles`). A user can still read/update their full own profile; an admin can still read every profile.
+- **B2** Name/avatar/admin badge still show correctly in reviews, comments, instructors.
+- **B3** Anon/users cannot list coupons through REST. Applying a valid code still changes the price; a wrong/exhausted code shows a Vietnamese error.
+- **B4** Anon and users who have not enrolled cannot get `lessons.content`, `lessons.video_url` through REST, and the `/learn/...` page does not send the lesson content in the HTML/RSC payload to them.
+- **B5** Anon and users who have not enrolled cannot read `exercises` (questions or answers) through REST or the quiz page.
+- **B6** An enrolled user (free course or approved) and an admin can learn/take quizzes normally; the course outline, sidebar and progress dashboard stay correct.
+- **B7** The admin lesson page can still view/edit `content`.
+- **B8** Registering with an existing email still shows "Email này đã được sử dụng"; there is no more `profiles` query by email from the client.
+- **B9** There is no moment between deploying the code and applying the migration when production breaks (see §5).
 
 ### H2-2
-- **B10** Không tạo/sửa được review với `user_id ≠ auth.uid()`.
-- **B11** Chủ comment không đổi được `user_id` (và `lesson_id`) của comment; admin vẫn soft-delete được.
-- **B12** (D1) Áp mã thành công giữ 1 lượt (`used_count` +1) và lưu `payments.coupon_id`; áp lại cùng mã không tốn thêm lượt; đổi sang mã khác trả lượt mã cũ; huỷ hoặc từ chối đơn trả lượt; duyệt không đổi `used_count`. Duyệt/từ chối lại đơn đã xử lý bị chặn.
-- **B13** Coupon hết lượt (`used_count >= max_uses`) bị từ chối khi áp, kể cả khi hai người áp cùng lúc lượt cuối (chỉ một người được).
+- **B10** A review cannot be created/updated with `user_id ≠ auth.uid()`.
+- **B11** A comment owner cannot change the comment's `user_id` (and `lesson_id`); an admin can still soft-delete.
+- **B12** (D1) Applying a code successfully holds 1 use (`used_count` +1) and stores `payments.coupon_id`; applying the same code again costs no extra use; switching to another code releases the old code's use; cancelling or rejecting an order releases the use; approving does not change `used_count`. Approving/rejecting an already processed order is blocked.
+- **B13** An exhausted coupon (`used_count >= max_uses`) is rejected on apply, even when two people apply at the same moment for the last use (only one succeeds).
 
-## 3. Ngoài phạm vi
+## 3. Out of scope
 
-- Quiz chấm ở client và nhận `correct_answer` (user đã enroll xem được đáp án) → **P26**, làm cùng P20 (lưu kết quả quiz, chấm trên server).
-- Comment: nội dung comment đã soft-delete vẫn đọc được qua REST; user chưa enroll vẫn đọc/ghi comment bài trả phí → **P27**.
-- `profiles` UPDATE: user tự sửa được cột `email` trong profiles (không ảnh hưởng đăng nhập; email hệ thống gửi theo `profiles.email`) → **P28**.
-- Kiểm tra "học theo thứ tự" (`isAllowed` trong `LearnClient`) vẫn ở client — đây là UX, không phải phân quyền.
-- P7 nói chung (mọi server component đọc bằng anon) — H2-1 chỉ sửa trang learn/quiz/layout.
+- The quiz is graded on the client and receives `correct_answer` (an enrolled user can see the answers) → **P26**, done together with P20 (store quiz results, grade on the server).
+- Comments: the content of a soft-deleted comment is still readable through REST; a user who has not enrolled can still read/write comments on a paid lesson → **P27**.
+- `profiles` UPDATE: a user can edit the `email` column in profiles themselves (does not affect sign-in; system email is sent to `profiles.email`) → **P28**.
+- The "learn in order" check (`isAllowed` in `LearnClient`) stays on the client — this is UX, not authorization.
+- P7 in general (every server component reading with anon) — H2-1 fixes only the learn/quiz/layout pages.
 
-## 4. Thiết kế
+## 4. Design
 
-### 4.1 H2-1 — DB, tách 2 migration để deploy an toàn
+### 4.1 H2-1 — DB, split into 2 migrations for a safe deploy
 
-**Migration A (bổ sung, không phá gì)** `supabase/migrations/<ts>_h2_1a_public_profile_view.sql`:
+**Migration A (additive, breaks nothing)** `supabase/migrations/<ts>_h2_1a_public_profile_view.sql`:
 
 ```sql
 -- Public projection of profiles: only what other users may see.
@@ -97,7 +95,7 @@ revoke all on public.profile_cards from public, anon, authenticated;
 grant select on public.profile_cards to anon, authenticated;
 ```
 
-- **Kiểm ngay sau khi apply A** (Codex r1 blocker): `POST`, `PATCH`, `DELETE /rest/v1/profile_cards` bằng anon và user thường đều bị từ chối (42501); `information_schema.table_privileges` của view chỉ còn `SELECT` cho 2 role.
+- **Check right after applying A** (Codex r1 blocker): `POST`, `PATCH`, `DELETE /rest/v1/profile_cards` by anon and a regular user are all rejected (42501); `information_schema.table_privileges` of the view shows only `SELECT` for the 2 roles.
 
 ```sql
 -- Public lesson metadata derived from the private columns, so outlines and
@@ -113,12 +111,12 @@ alter table public.lessons
       end) stored;
 ```
 
-- `word_count` khớp `estimateTime` hiện tại (bỏ thẻ HTML, tách theo khoảng trắng). `estimateTime` đổi chữ ký thành `(wordCount: number | null, hasVideo: boolean)`; `null` → 60 giây như cũ.
-- Thêm cột stored viết lại bảng (80 dòng) — không đáng kể. Grant hiện tại ở cấp bảng nên anon/authenticated đọc được 2 cột mới ngay.
-- Advisor sẽ báo `security_definer_view` (0010) — chấp nhận có chủ đích, ghi chú trong migration. Phương án thay thế (bảng đồng bộ bằng trigger) phức tạp hơn không cần thiết.
-- PostgREST suy quan hệ của view theo FK của bảng gốc (`reviews.user_id → profiles.id`, `comments.user_id → profiles.id`, `instructors.user_id → profiles.id`) → embed được `profile_cards(...)`. **Phải kiểm ngay sau khi apply A** bằng 3 request REST (§6). Nếu embed không suy ra được: đổi sang 2 truy vấn (lấy danh sách `user_id` rồi `in()` vào view), ghi lại trong plan.
+- `word_count` matches the current `estimateTime` (strip HTML tags, split on whitespace). `estimateTime` changes signature to `(wordCount: number | null, hasVideo: boolean)`; `null` → 60 seconds as before.
+- Adding stored columns rewrites the table (80 rows) — negligible. The current grant is at table level, so anon/authenticated can read the 2 new columns immediately.
+- The advisor will report `security_definer_view` (0010) — accepted on purpose, noted in the migration. The alternative (a table synced by a trigger) is more complex than needed.
+- PostgREST infers the view's relationships from the base table's FKs (`reviews.user_id → profiles.id`, `comments.user_id → profiles.id`, `instructors.user_id → profiles.id`) → `profile_cards(...)` can be embedded. **Must be checked right after applying A** with 3 REST requests (§6). If the embed cannot be inferred: switch to 2 queries (fetch the `user_id` list, then `in()` into the view), and record it in the plan.
 
-**Migration B (thu hẹp quyền)** `supabase/migrations/<ts>_h2_1b_restrict_reads.sql` — chỉ apply sau khi code H2-1 đã lên production:
+**Migration B (narrow the permissions)** `supabase/migrations/<ts>_h2_1b_restrict_reads.sql` — applied only after the H2-1 code is in production:
 
 ```sql
 -- P1: profiles — only self or admin.
@@ -154,44 +152,44 @@ create policy "exercises_select_enrolled_or_admin" on public.exercises
   );
 ```
 
-- **Không dùng `(select auth.uid())` ở policy `profiles` (Codex, xác nhận bởi Main):** sublink trong policy SELECT của `profiles` khiến Postgres báo `42P17 infinite recursion detected in policy for relation profiles` khi viết lại policy UPDATE/DELETE admin (hai policy này subquery chính `profiles`) → mọi UPDATE/DELETE profile hỏng, kể cả user sửa profile mình. Dùng `auth.uid()` trần. Policy `exercises` giữ sublink vì chỉ đọc `lessons`/`enrollments`.
-- Grant hiện tại của `lessons` (đã đọc): `anon` và `authenticated` có quyền cấp bảng `SELECT, INSERT, UPDATE, DELETE, REFERENCES, TRIGGER, TRUNCATE` (mặc định Supabase), không có grant theo cột riêng. `revoke select` chỉ gỡ SELECT. (`TRUNCATE`/`TRIGGER` cho client là mặc định Supabase, RLS vẫn chặn ghi — ngoài phạm vi.)
-- `lessons` UPDATE/INSERT/DELETE giữ nguyên grant (admin sửa qua client vẫn chạy; UPDATE lọc theo `id` chỉ cần SELECT trên `id`).
-- Policy phụ của exercises chạy với quyền người gọi: cần SELECT trên `lessons.id, lessons.course_id` (có) và RLS `enrollments` (chỉ dòng của mình — đủ).
-- Rollback: `supabase/rollbacks/<ts>_h2_1b_restrict_reads.down.sql` khôi phục đúng 3 policy cũ + grant cũ (định nghĩa cũ ở Phụ lục A). Rollback của A: `drop view public.profile_cards`.
+- **Do not use `(select auth.uid())` in the `profiles` policy (Codex, confirmed by Main):** a sublink in the SELECT policy of `profiles` makes Postgres report `42P17 infinite recursion detected in policy for relation profiles` when it rewrites the admin UPDATE/DELETE policies (those two policies subquery `profiles` itself) → every profile UPDATE/DELETE breaks, including a user editing their own profile. Use a bare `auth.uid()`. The `exercises` policy keeps the sublink because it only reads `lessons`/`enrollments`.
+- The current `lessons` grant (already read): `anon` and `authenticated` have table-level `SELECT, INSERT, UPDATE, DELETE, REFERENCES, TRIGGER, TRUNCATE` (Supabase default), with no per-column grants. `revoke select` removes only SELECT. (`TRUNCATE`/`TRIGGER` for clients is the Supabase default, RLS still blocks writes — out of scope.)
+- `lessons` UPDATE/INSERT/DELETE keep their grants (admin edits through the client still work; an UPDATE filtered by `id` only needs SELECT on `id`).
+- The auxiliary exercises policy runs with the caller's rights: it needs SELECT on `lessons.id, lessons.course_id` (present) and the `enrollments` RLS (own rows only — enough).
+- Rollback: `supabase/rollbacks/<ts>_h2_1b_restrict_reads.down.sql` restores exactly the 3 old policies + the old grant (old definitions in Appendix A). Rollback of A: `drop view public.profile_cards`.
 
 ### 4.2 H2-1 — code
 
-**Client service role dùng chung.** Thêm `lib/supabase.admin.ts` (`import "server-only"`, export `supabaseAdmin`). Chỉ dùng trong file mới/sửa của H2; không bắt buộc thay các `createClient` có sẵn trong `app/action/*` (để PR gọn).
+**Shared service-role client.** Add `lib/supabase.admin.ts` (`import "server-only"`, exports `supabaseAdmin`). Used only in new/changed H2 files; the existing `createClient` calls in `app/action/*` need not be replaced (to keep the PR small).
 
-**Trang học `app/(main)/learn/[course]/[slug]/page.tsx`** — gate trên server trước khi đọc nội dung:
-1. `getCurrentUser()`; không có → `redirect("/login")`.
-2. Đọc lesson metadata theo `slug` + course theo `[course]` bằng `createSupabaseServerClient()` (cột công khai). Không có, hoặc `lesson.course_id ≠ course.id` → `<NotFoundLesson />`.
-3. Quyền: enrollment của user cho `course.id` (server client, RLS chỉ trả dòng của mình) **hoặc** admin (đọc `profiles.role` của mình). Không có → `redirect(\`/course/${course}\`)`.
-4. Chỉ sau bước 3 mới đọc `content, video_url` bằng `supabaseAdmin` theo `lesson.id`.
-5. `LearnClient` (Codex r1): **xoá** phần kiểm đăng nhập/enroll ở client (`LearnClient.tsx:61-80`) — nó đẩy admin chưa enroll về `/`, trái B6. Server truyền prop `isAdmin`; phần kiểm "học theo thứ tự" giữ cho học viên và bỏ qua khi `isAdmin`. Trang quiz không có kiểm client tương tự → chỉ cần gate server.
-Đóng gói bước 1–3 thành helper server-only `requireCourseAccess(courseSlug)` trong `lib/auth.server.ts` trả `{ user, course } | { redirect: string }`, dùng chung cho trang học và quiz.
+**Learn page `app/(main)/learn/[course]/[slug]/page.tsx`** — gate on the server before reading content:
+1. `getCurrentUser()`; none → `redirect("/login")`.
+2. Read the lesson metadata by `slug` + the course by `[course]` with `createSupabaseServerClient()` (public columns). Missing, or `lesson.course_id ≠ course.id` → `<NotFoundLesson />`.
+3. Permission: the user's enrollment for `course.id` (server client, RLS returns only their own rows) **or** admin (read their own `profiles.role`). Neither → `redirect(\`/course/${course}\`)`.
+4. Only after step 3 read `content, video_url` with `supabaseAdmin` by `lesson.id`.
+5. `LearnClient` (Codex r1): **remove** the client-side sign-in/enroll check (`LearnClient.tsx:61-80`) — it sends an admin who has not enrolled back to `/`, contrary to B6. The server passes a prop `isAdmin`; the "learn in order" check stays for learners and is skipped when `isAdmin`. The quiz page has no similar client check → it only needs the server gate.
+Package steps 1–3 as a server-only helper `requireCourseAccess(courseSlug)` in `lib/auth.server.ts` returning `{ user, course } | { redirect: string }`, shared by the learn page and the quiz page.
 
-**Trang quiz `.../quiz/page.tsx`** — dùng cùng helper; exercises đọc bằng server client (RLS mới cho phép vì đã enroll / admin). Không đổi cách chấm (P26).
+**Quiz page `.../quiz/page.tsx`** — uses the same helper; exercises are read with the server client (the new RLS allows it because the user is enrolled / admin). The grading method does not change (P26).
 
-**Metadata thay cho cột riêng tư:**
-- `getLessonsByCourse`: `video_url` → `has_video`; type `lessonBasic` và nơi dùng (`LearnClient`, sidebar) đổi theo. `videoId` của bài đang học vẫn lấy từ bước 4 ở trên.
-- `getFullCourseDetail`: bỏ `video_url, content`, dùng `has_video, word_count` cho `type` và `estimateTime`; bỏ trường `video_url` khỏi object trả về (và khỏi type nếu không ai đọc).
+**Metadata instead of the private columns:**
+- `getLessonsByCourse`: `video_url` → `has_video`; the type `lessonBasic` and its users (`LearnClient`, sidebar) change accordingly. The `videoId` of the lesson being learned still comes from step 4 above.
+- `getFullCourseDetail`: drop `video_url, content`, use `has_video, word_count` for `type` and `estimateTime`; drop the `video_url` field from the returned object (and from the type if nobody reads it).
 
-**`getLessonsByCourse` (`lib/supabase.ts:39`)** — nhận tham số `client` tuỳ chọn (mặc định `supabase` hiện tại). Layout `learn/[course]/layout.tsx`, trang học, trang quiz truyền server client để `exercises(count)` (cờ `has_exercise`) đúng với user đã enroll. Ở trang công khai (chưa enroll) `has_exercise` sẽ là `false` sau Migration B — chấp nhận.
+**`getLessonsByCourse` (`lib/supabase.ts:39`)** — takes an optional `client` parameter (default the current `supabase`). The layout `learn/[course]/layout.tsx`, the learn page and the quiz page pass the server client so `exercises(count)` (the `has_exercise` flag) is correct for an enrolled user. On the public page (not enrolled) `has_exercise` will be `false` after Migration B — accepted.
 
-**Không còn đọc `lessons.*`/`content`/`video_url` bằng anon/authenticated.** Grep toàn bộ `from("lessons")` và embed `lessons(` / `lessons (`:
-- `getLessons()` (`lib/supabase.ts:377`, trang admin bài học, đọc `content`) → chuyển thành server action `getLessonsForAdmin()` trong `app/action/` với `requireAdmin()` + service role; `app/admin/lessons/page.tsx` gọi action này.
-- Mọi `select("*")` trên lessons hoặc embed `lessons(*)` từ client → liệt kê cột cụ thể.
-- Nơi khác đọc `content` (ví dụ tạo quiz AI) phải chạy trên server bằng service role sau `requireAdmin()` — kiểm khi grep.
+**No more reading `lessons.*`/`content`/`video_url` with anon/authenticated.** Grep all `from("lessons")` and the embeds `lessons(` / `lessons (`:
+- `getLessons()` (`lib/supabase.ts:377`, admin lessons page, reads `content`) → change to a server action `getLessonsForAdmin()` in `app/action/` with `requireAdmin()` + service role; `app/admin/lessons/page.tsx` calls this action.
+- Any `select("*")` on lessons or embed `lessons(*)` from the client → list specific columns.
+- Any other place that reads `content` (for example AI quiz creation) must run on the server with the service role after `requireAdmin()` — check while grepping.
 
-**Profile công khai** — đổi 4 embed sang `profile_cards(...)`, giữ tên trường mà UI đọc bằng alias để không phải sửa component: `profiles:profile_cards(full_name, avatar_url)` (review), `profiles:profile_cards(full_name, avatar_url, role)` (comment), `profiles:profile_cards(full_name, avatar_url)` (`getFullCourseDetail`), `profiles:profile_cards(full_name)` (`getInstructors`). Grep lại `profiles(` / `profiles (` để không sót.
+**Public profile** — change 4 embeds to `profile_cards(...)`, keeping the field names the UI reads through an alias so components need no change: `profiles:profile_cards(full_name, avatar_url)` (review), `profiles:profile_cards(full_name, avatar_url, role)` (comment), `profiles:profile_cards(full_name, avatar_url)` (`getFullCourseDetail`), `profiles:profile_cards(full_name)` (`getInstructors`). Grep `profiles(` / `profiles (` again so none is missed.
 
-**Đăng ký / đăng nhập (`login/page.tsx`)** — xoá `checkEmailExists`:
-- Đăng ký: sau `supabase.auth.signUp`, nếu `data.user && data.user.identities?.length === 0` → "Email này đã được sử dụng. Vui lòng chọn email khác hoặc đăng nhập." (hành vi của Supabase khi email đã tồn tại và bật xác nhận email). Bước kiểm ở `registerStep` 1 bỏ đi; thông báo chuyển về sau bước gửi form.
-- Đăng nhập (D2): bỏ thông báo "Email này chưa được đăng ký"; lỗi đăng nhập dùng thông báo chung "Email hoặc mật khẩu không đúng".
+**Sign-up / sign-in (`login/page.tsx`)** — remove `checkEmailExists`:
+- Sign-up: after `supabase.auth.signUp`, if `data.user && data.user.identities?.length === 0` → "Email này đã được sử dụng. Vui lòng chọn email khác hoặc đăng nhập." (Supabase's behavior when the email already exists and email confirmation is on). The check at `registerStep` 1 goes away; the message moves to after the form is submitted.
+- Sign-in (D2): drop the message "Email này chưa được đăng ký"; sign-in errors use the generic message "Email hoặc mật khẩu không đúng".
 
-**Coupon (`CoursePaymentModal.tsx`)** — xoá truy vấn `coupons` và phần tự tính giá ở client. `updatePaymentWithCoupon` trả thêm `discountPercent` và phân biệt lỗi tiếng Việt: "Mã giảm giá không tồn tại hoặc đã hết hạn" / "Mã này đã hết lượt sử dụng". Kiểm hết lượt chỉ khi `max_uses !== null` (null = không giới hạn; JS so `n >= null` thành `n >= 0` → từ chối nhầm). Modal chỉ hiển thị theo kết quả server. `finalAmount` làm tròn `Math.round`.
+**Coupon (`CoursePaymentModal.tsx`)** — remove the `coupons` query and the client-side price computation. `updatePaymentWithCoupon` additionally returns `discountPercent` and distinguishes Vietnamese errors: "Mã giảm giá không tồn tại hoặc đã hết hạn" / "Mã này đã hết lượt sử dụng". Check exhaustion only when `max_uses !== null` (null = unlimited; in JS `n >= null` becomes `n >= 0` → wrongly rejects). The modal shows only the server result. `finalAmount` is rounded with `Math.round`.
 
 ### 4.3 H2-2 — DB `supabase/migrations/<ts>_h2_2_write_integrity.sql`
 
@@ -357,143 +355,143 @@ revoke execute on function public.approve_payment(bigint) from public, anon, aut
 revoke execute on function public.payments_guard() from public, anon, authenticated;
 ```
 
-- `approve_payment` (Codex r1): trạng thái và enrollment cùng commit hoặc cùng rollback — không còn trường hợp đơn `success` mà chưa có quyền học. Duyệt song song với huỷ/từ chối: cả hai đều UPDATE có điều kiện `status = 'pending'` trên cùng dòng → Postgres tuần tự hoá, chỉ một bên thắng.
-- **Đơn cũ đã giảm giá (Codex r1, r2):** khối `do $$` cuối migration đếm đơn pending có `amount < price` (giảm giá theo luồng cũ, không có `coupon_id`) **trong cùng transaction với việc tạo `payments_guard`** → không có khe giữa lúc kiểm và lúc chặn. Hiện là 0. Nếu > 0 migration tự huỷ; Main báo Owner chọn từ chối từng đơn hoặc cho phép ngoại lệ.
-- **`payments_guard` (Codex r2, r3):** ngoài 3 RPC, (a) INSERT chỉ được tạo đơn `pending`, đúng giá khoá, `coupon_id` null — chặn `createPendingPayment(courseId, couponCode)` cũ (vẫn gọi thẳng được dù UI không truyền); (b) mọi UPDATE có `amount`/`status`/`coupon_id` trong danh sách SET bị chặn, kể cả gán lại cùng giá trị — chặn action duyệt cũ duyệt lại đơn đã `success` rồi gửi email. Trigger chạy cả với service role. GUC `app.payment_rpc` chỉ đặt được trong session DB: client REST không có đường đặt nó (PostgREST không cho đặt GUC tuỳ ý; `set_config` không được expose vì `public` không có wrapper nào), service role thì đã là quyền cao nhất. Hệ quả: từ lúc apply migration tới lúc code mới lên, thao tác thanh toán của code cũ (áp mã, huỷ, duyệt, từ chối) **báo lỗi thay vì làm lệch `used_count`** — chấp nhận vài phút gián đoạn. `updated_at` và các cột khác vẫn sửa được.
+- `approve_payment` (Codex r1): the status and the enrollment commit together or roll back together — there is no more case of a `success` order without learning rights. Approving in parallel with cancel/reject: both run an UPDATE conditional on `status = 'pending'` on the same row, so Postgres serializes them and only one side wins.
+- **Old discounted orders (Codex r1, r2):** the final `do $$` block counts pending orders with `amount < price` (discounted through the old flow, without `coupon_id`) **in the same transaction that creates `payments_guard`** → there is no gap between the check and the block. It is 0 now. If > 0 the migration aborts itself; Main reports to the Owner, who chooses to reject each order or allow an exception.
+- **`payments_guard` (Codex r2, r3):** besides the 3 RPCs, (a) INSERT may only create a `pending` order at the locked price with `coupon_id` null — this blocks the old `createPendingPayment(courseId, couponCode)` (still directly callable even though the UI does not pass it); (b) every UPDATE with `amount`/`status`/`coupon_id` in the SET list is blocked, even re-assigning the same value — this blocks the old approve action from approving an already `success` order again and sending an email. The trigger also runs for the service role. The GUC `app.payment_rpc` can be set only inside a DB session: a REST client has no way to set it (PostgREST does not allow arbitrary GUCs; `set_config` is not exposed because `public` has no wrapper for it), and the service role is already the highest privilege. Consequence: from applying the migration until the new code is live, the old code's payment operations (apply code, cancel, approve, reject) **report errors instead of skewing `used_count`** — a few minutes of disruption is accepted. `updated_at` and other columns can still be edited.
 
-- **D1 — giữ chỗ khi áp.** `FOR UPDATE` trên payment chặn hai lần áp song song trên cùng đơn; UPDATE có điều kiện `used_count < max_uses` chặn hai đơn tranh lượt cuối (Postgres khoá dòng coupon, lần thứ hai đánh giá lại điều kiện sau khi lần đầu commit).
-- Duyệt đơn **không** đổi `used_count` (lượt đã giữ từ lúc áp) — chỉ cần UPDATE nguyên tử `status = 'pending' → 'success'` (§4.4).
-- Đơn pending bỏ dở giữ lượt cho tới khi bị huỷ/từ chối — chấp nhận (admin từ chối đơn treo để trả lượt). Đơn pending cũ có sẵn trước migration có `coupon_id = null` → không trả lượt nào, đúng vì trước đây chưa từng đếm.
-- `max_uses` hiện là `integer` có thể null → coi null là không giới hạn.
-- Hai hàm chỉ service role gọi (revoke khỏi client); server action vẫn `requireUser`/`requireAdmin` trước khi gọi và truyền `user.id` từ session, không từ client. Trigger `prevent_comment_reassign` là INVOKER và chặn cả service role — chấp nhận (không có luồng hợp lệ nào đổi chủ comment).
+- **D1 — reserve on apply.** `FOR UPDATE` on the payment blocks two parallel applies on the same order; the conditional UPDATE `used_count < max_uses` blocks two orders racing for the last use (Postgres locks the coupon row, the second one re-evaluates the condition after the first commits).
+- Approving an order **does not** change `used_count` (the use was reserved when applied) — it only needs the atomic UPDATE `status = 'pending' → 'success'` (§4.4).
+- An abandoned pending order holds its use until it is cancelled/rejected — accepted (an admin rejects stale orders to release the use). Old pending orders that exist before the migration have `coupon_id = null` → release no use, which is correct because they were never counted.
+- `max_uses` is currently an `integer` that can be null → treat null as unlimited.
+- Both functions are called only by the service role (revoked from clients); server actions still run `requireUser`/`requireAdmin` before calling and pass `user.id` from the session, not from the client. The trigger `prevent_comment_reassign` is INVOKER and also blocks the service role — accepted (no legitimate flow changes a comment's owner).
 
 ### 4.4 H2-2 — code
 
-- `updatePaymentWithCoupon`: `requireUser()` rồi `rpc("apply_payment_coupon", { p_payment_id, p_user_id: user.id, p_code })`; map lỗi: `invalid_payment` → "Đơn hàng không hợp lệ", `invalid_coupon` → "Mã giảm giá không tồn tại hoặc đã hết hạn", `coupon_exhausted` → "Mã này đã hết lượt sử dụng". Trả `{ newAmount, discountPercent }` (H2-1 đã đổi modal sang dùng 2 trường này).
-- `createPendingPayment`: bỏ tham số `couponCode` và nhánh gọi `increment_coupon_usage` (không caller nào truyền).
+- `updatePaymentWithCoupon`: `requireUser()` then `rpc("apply_payment_coupon", { p_payment_id, p_user_id: user.id, p_code })`; map errors: `invalid_payment` → "Đơn hàng không hợp lệ", `invalid_coupon` → "Mã giảm giá không tồn tại hoặc đã hết hạn", `coupon_exhausted` → "Mã này đã hết lượt sử dụng". Returns `{ newAmount, discountPercent }` (H2-1 already changed the modal to use these 2 fields).
+- `createPendingPayment`: drop the `couponCode` parameter and the branch calling `increment_coupon_usage` (no caller passes it).
 - `cancelPayment`: `rpc("close_pending_payment", { p_payment_id, p_user_id: user.id })`; `false` → "Không thể hủy giao dịch này".
-- `rejectPayment` (`payment.ts:312`, hiện UPDATE chỉ theo `id`): `requireAdmin()` rồi `rpc("close_pending_payment", { p_payment_id, p_user_id: null })`; `false` → "Đơn đã được xử lý".
-- `approvePayment`: `requireAdmin()` rồi `rpc("approve_payment", { p_payment_id })`; `data?.approved !== true` → "Đơn đã được xử lý", không gửi email. Email + thông báo chỉ gửi khi `approved === true` (đã commit), dùng `user_id`/`course_id` trong kết quả. Xoá đoạn enroll riêng hiện tại (`payment.ts:241-254`).
-- Review/comment: không đổi code (client đã gửi đúng `user_id` của mình).
+- `rejectPayment` (`payment.ts:312`, currently UPDATE by `id` only): `requireAdmin()` then `rpc("close_pending_payment", { p_payment_id, p_user_id: null })`; `false` → "Đơn đã được xử lý".
+- `approvePayment`: `requireAdmin()` then `rpc("approve_payment", { p_payment_id })`; `data?.approved !== true` → "Đơn đã được xử lý", no email. Email + notification are sent only when `approved === true` (already committed), using the `user_id`/`course_id` in the result. Remove the separate enroll block that exists now (`payment.ts:241-254`).
+- Review/comment: no code change (the client already sends its own `user_id`).
 
-## 5. Thứ tự triển khai và checkpoint
+## 5. Rollout order and checkpoints
 
-**H2-1** (Sonnet trên `fix/h2-data-exposure`, Main apply migration sau khi Owner duyệt):
-1. **CP1** — viết Migration A + rollback; đổi 4 embed sang `profile_cards`. Main apply A, kiểm embed bằng REST (§6). Nếu embed hỏng → phương án 2 truy vấn trước khi đi tiếp.
-2. **CP2** — `lib/supabase.admin.ts`, `requireCourseAccess`, trang học, trang quiz, layout, `getLessonsByCourse(client)`, `getLessonsForAdmin`, bỏ mọi đọc `content`/`*` lessons từ client.
-3. **CP3** — đăng ký/đăng nhập bỏ `checkEmailExists`; coupon modal + `updatePaymentWithCoupon`.
-4. **CP4** — viết Migration B + rollback (không apply). Main review diff, Codex review diff.
-5. Merge + deploy code H2-1 (chạy được với DB cũ vì A đã có, B chưa). Kiểm production cơ bản.
-6. Main apply B (Owner duyệt), chạy lại ma trận §6 trên production/localhost.
+**H2-1** (Sonnet on `fix/h2-data-exposure`, Main applies the migration after the Owner approves):
+1. **CP1** — write Migration A + rollback; change 4 embeds to `profile_cards`. Main applies A and checks the embeds with REST (§6). If the embed breaks → the 2-query option before going on.
+2. **CP2** — `lib/supabase.admin.ts`, `requireCourseAccess`, learn page, quiz page, layout, `getLessonsByCourse(client)`, `getLessonsForAdmin`, drop every `content`/`*` read of lessons from the client.
+3. **CP3** — sign-up/sign-in drop `checkEmailExists`; coupon modal + `updatePaymentWithCoupon`.
+4. **CP4** — write Migration B + rollback (do not apply). Main reviews the diff, Codex reviews the diff.
+5. Merge + deploy the H2-1 code (works with the old DB because A is there and B is not). Basic production check.
+6. Main applies B (Owner approves), reruns the §6 matrix on production/localhost.
 
-**H2-2** (nhánh mới từ `main` sau bước 6): migration + code cùng PR.
-1. Owner chọn lúc ít người mua (vài phút thao tác thanh toán sẽ báo lỗi).
-2. Apply migration. Preflight trong migration tự huỷ nếu có đơn cũ đã giảm giá. Từ đây `payments_guard` chặn mọi đường ghi thanh toán của code cũ (kể cả INSERT giảm giá) → không reservation nào bị phá, không có đơn giảm giá mới thiếu `coupon_id` (Codex r2).
-3. Merge + deploy code H2-2. Request cũ còn chạy (kể cả qua Skew Protection nếu bật) chỉ nhận lỗi, không ghi sai.
-4. Chạy ma trận §6 H2-2 và query đối soát (dưới).
+**H2-2** (new branch from `main` after step 6): migration + code in the same PR.
+1. The Owner picks a time with few purchases (a few minutes of payment operations will report errors).
+2. Apply the migration. The preflight in the migration aborts itself if an old discounted order exists. From here `payments_guard` blocks every payment write path of the old code (including a discounted INSERT) → no reservation is broken, no new discounted order lacks a `coupon_id` (Codex r2).
+3. Merge + deploy the H2-2 code. Old requests still running (including through Skew Protection if enabled) only get errors, they do not write wrongly.
+4. Run the §6 H2-2 matrix and the reconciliation query (below).
 
-**Rollback H2-2** (Codex r1, r2) — rollback là quay về hành vi trước H2-2, nơi `max_uses` **không** được thực thi; D1 không giữ được sau rollback, Owner chấp nhận khi quyết định rollback.
-0. Chặn reservation mới ở DB trước (Codex r3): `revoke execute on function public.apply_payment_coupon(bigint, uuid, text) from service_role;` — lần gọi mới bị từ chối, lần gọi đang chạy tự kết thúc (kiểm `pg_stat_activity` không còn query `apply_payment_coupon`). `approve_payment` và `close_pending_payment` vẫn chạy để xử lý đơn.
-1. Khi code H2-2 còn chạy: admin xử lý hết đơn pending có `coupon_id` (duyệt hoặc từ chối qua RPC) để không còn reservation treo; kiểm `select count(*) from payments where status = 'pending' and coupon_id is not null` = 0.
-2. Revert code về H2-1. Guard vẫn còn → code cũ chạm thanh toán sẽ báo lỗi, không ghi sai.
-3. Ngay sau đó apply `supabase/rollbacks/<ts>_h2_2_write_integrity.down.sql`: drop `payments_guard` và 3 RPC; giữ cột `coupon_id` (lịch sử, code cũ bỏ qua); khôi phục policy reviews/comments cũ nếu lý do rollback nằm ở đó.
-4. Đối soát chỉ chạy khi writer đã dừng (giữa bước 2 và 3, guard đang chặn), để ghi lại số liệu chứ không duy trì D1:
+**Rollback H2-2** (Codex r1, r2) — rollback means returning to the behavior before H2-2, where `max_uses` is **not** enforced; D1 cannot be kept after a rollback, and the Owner accepts that when deciding to roll back.
+0. Block new reservations at the DB first (Codex r3): `revoke execute on function public.apply_payment_coupon(bigint, uuid, text) from service_role;` — new calls are rejected, running calls finish by themselves (check `pg_stat_activity` has no `apply_payment_coupon` query left). `approve_payment` and `close_pending_payment` keep running to process orders.
+1. While the H2-2 code is still running: an admin processes every pending order that has a `coupon_id` (approve or reject through the RPC) so no reservation is left hanging; check `select count(*) from payments where status = 'pending' and coupon_id is not null` = 0.
+2. Revert the code to H2-1. The guard is still there → old code touching payments will report errors, not write wrongly.
+3. Right after, apply `supabase/rollbacks/<ts>_h2_2_write_integrity.down.sql`: drop `payments_guard` and the 3 RPCs; keep the column `coupon_id` (history, ignored by the old code); restore the old reviews/comments policies if the reason for the rollback lies there.
+4. Reconciliation runs only when the writers have stopped (between steps 2 and 3, with the guard blocking), to record the numbers rather than to maintain D1:
    ```sql
    select c.code, c.used_count,
           (select count(*) from public.payments p
             where p.coupon_id = c.id and p.status in ('pending', 'success')) as reserved
    from public.coupons c;
    ```
-   Khi H2-2 đang chạy, `used_count = reserved` là bất biến — query này cũng dùng cho #29.
+   While H2-2 is running, `used_count = reserved` is an invariant — this query is also used for #29.
 
-## 6. Kiểm chứng
+## 6. Verification
 
-Công cụ: curl tới REST với anon key và access token của user test (Owner đăng nhập trong browser pane; Main lấy token từ cookie của phiên đó), như H1. SQL chỉ đọc, trừ khi Owner duyệt.
+Tools: curl to REST with the anon key and the access token of a test user (the Owner signs in in the browser pane; Main takes the token from that session's cookie), as in H1. SQL is read-only unless the Owner approves.
 
-**Sau Migration A:** REST `reviews?select=id,profiles:profile_cards(full_name)`, `comments?select=id,profiles:profile_cards(full_name,role)`, `courses?select=id,instructors(profiles:profile_cards(full_name))` trả tên.
+**After Migration A:** REST `reviews?select=id,profiles:profile_cards(full_name)`, `comments?select=id,profiles:profile_cards(full_name,role)`, `courses?select=id,instructors(profiles:profile_cards(full_name))` return names.
 
-**Ma trận H2-1 (sau B):**
+**H2-1 matrix (after B):**
 
-| # | Ai | Thao tác | Kỳ vọng |
+| # | Who | Action | Expected |
 |---|---|---|---|
 | 1 | anon | `GET /profiles?select=email,phone` | `[]` |
-| 2 | user A | `GET /profiles?select=email&id=neq.<A>` | `[]`; `id=eq.<A>` trả của A |
-| 3 | admin | `GET /profiles?select=email` | mọi dòng |
-| 4 | anon | `GET /profile_cards?select=*` | chỉ 4 cột công khai |
+| 2 | user A | `GET /profiles?select=email&id=neq.<A>` | `[]`; `id=eq.<A>` returns A's |
+| 3 | admin | `GET /profiles?select=email` | every row |
+| 4 | anon | `GET /profile_cards?select=*` | only the 4 public columns |
 | 5 | anon, user A | `GET /coupons` | `[]` |
-| 6 | anon | `GET /lessons?select=content` | lỗi 42501 (permission denied for column) |
-| 7 | anon | `GET /lessons?select=id,title,slug,has_video,word_count` | trả dữ liệu |
-| 7b | anon | mở `/course/<X>` | thời lượng, nhãn video/đọc như trước; network không có `content`/`video_url` |
-| 8 | user A chưa enroll khoá X | `GET /exercises?lesson_id=eq.<bài của X>` | `[]` |
-| 9 | user A đã enroll khoá X | như #8 | có câu hỏi |
-| 10 | anon | `curl /learn/<X>/<bài>` | 307 → `/login`, HTML không chứa nội dung bài |
-| 11 | user A chưa enroll | mở `/learn/<X>/<bài>` | về `/course/<X>`, payload không có nội dung |
-| 12 | user A | `/learn/<khoá khác>/<bài của X>` (lệch course) | NotFound |
-| 13 | user A đã enroll / admin | học bài, sidebar có cờ quiz, làm quiz | bình thường |
-| 14 | admin | `/admin/lessons` xem/sửa nội dung | bình thường |
-| 15 | — | đăng ký bằng email đã có | "Email này đã được sử dụng" |
-| 16 | user A | áp coupon đúng / sai / hết lượt | đổi giá / 2 thông báo lỗi tiếng Việt |
-| 17 | anon | review/comment/giảng viên trên trang khoá | hiện tên, avatar, badge admin |
-| 17b | anon, user A | `POST`/`PATCH`/`DELETE /profile_cards` | 42501 (kiểm ngay sau A) |
-| 17c | admin chưa enroll khoá X | mở bài + quiz của X | vào được, không bị đẩy về `/` |
-| 17d | user A | coupon có `max_uses` null (tạo tạm) | áp được |
-| 17e | anon | `POST /graphql/v1` query `lessonsCollection { edges { node { content } } }` và `profilesCollection { ... email }` | lỗi quyền / rỗng như REST |
-| 17f | user A chưa enroll | xem RSC payload trang quiz (`curl` với cookie) | không có câu hỏi/đáp án |
-| 17g | user A | sửa profile của mình (trang `/profile`, hàm `updateProfile`) | thành công, không lỗi 42P17 |
-| 17h | admin | sửa profile của user khác | thành công, không lỗi 42P17 |
-| 17i | admin | `DELETE /rest/v1/profiles?id=eq.<tài khoản tạm>` bằng JWT admin (UI admin xoá qua service role nên không kiểm được policy) | xoá được, không lỗi 42P17; nếu bỏ qua thì ghi rõ |
+| 6 | anon | `GET /lessons?select=content` | error 42501 (permission denied for column) |
+| 7 | anon | `GET /lessons?select=id,title,slug,has_video,word_count` | returns data |
+| 7b | anon | open `/course/<X>` | duration, video/reading label as before; the network has no `content`/`video_url` |
+| 8 | user A not enrolled in course X | `GET /exercises?lesson_id=eq.<lesson of X>` | `[]` |
+| 9 | user A enrolled in course X | as #8 | has questions |
+| 10 | anon | `curl /learn/<X>/<lesson>` | 307 → `/login`, the HTML does not contain the lesson content |
+| 11 | user A not enrolled | open `/learn/<X>/<lesson>` | back to `/course/<X>`, the payload has no content |
+| 12 | user A | `/learn/<another course>/<lesson of X>` (course mismatch) | NotFound |
+| 13 | user A enrolled / admin | learn a lesson, the sidebar has the quiz flag, take the quiz | normal |
+| 14 | admin | `/admin/lessons` view/edit content | normal |
+| 15 | — | register with an existing email | "Email này đã được sử dụng" |
+| 16 | user A | apply a correct / wrong / exhausted coupon | price changes / 2 Vietnamese error messages |
+| 17 | anon | reviews/comments/instructors on the course page | show name, avatar, admin badge |
+| 17b | anon, user A | `POST`/`PATCH`/`DELETE /profile_cards` | 42501 (check right after A) |
+| 17c | admin not enrolled in course X | open X's lesson + quiz | gets in, is not pushed back to `/` |
+| 17d | user A | coupon with `max_uses` null (created temporarily) | can be applied |
+| 17e | anon | `POST /graphql/v1` query `lessonsCollection { edges { node { content } } }` and `profilesCollection { ... email }` | permission error / empty like REST |
+| 17f | user A not enrolled | view the RSC payload of the quiz page (`curl` with cookie) | no questions/answers |
+| 17g | user A | edit their own profile (`/profile` page, function `updateProfile`) | succeeds, no 42P17 error |
+| 17h | admin | edit another user's profile | succeeds, no 42P17 error |
+| 17i | admin | `DELETE /rest/v1/profiles?id=eq.<temporary account>` with an admin JWT (the admin UI deletes through the service role, so the policy cannot be checked there) | deletes, no 42P17 error; if skipped, say so explicitly |
 
-**Kết quả H2-1 (2026-10-22, production, sau B `20261021185249`):**
-- **Đạt (anon/REST/GraphQL):** 1, 4, 5, 6, 7, 7b, 8, 10, 17, 17b, 17e.
-- **Đạt (SQL giả lập user/admin, rollback):** 2, 3, 9. `EXPLAIN UPDATE/DELETE` không lỗi 42P17.
-- **Đạt (UI, user `student`):** 11, 12, 13 (khoá javascript không có quiz; khoá học theo thứ tự vẫn chặn), 15 (không tạo user mới), 16, 17d (mã tạm `MADUNG50`, đã xoá; đơn 88/89 đã huỷ), 17f.
-- **Đạt (UI, `admin` chỉ enroll reactjs):** 14 (PATCH lessons 204, md5 content không đổi), 17c (bài + quiz html-css), 17h (PATCH profiles 204).
-- **Chưa đạt do lỗi cũ:** 17g. PATCH 400 `invalid input syntax for type date: ""` (P16), lỗi xảy ra sau bước RLS nên không phải do B.
-- **Bỏ qua:** 17i. Không có tài khoản tạm; đã kiểm bằng `EXPLAIN DELETE`.
+**H2-1 results (2026-10-22, production, after B `20261021185249`):**
+- **Passed (anon/REST/GraphQL):** 1, 4, 5, 6, 7, 7b, 8, 10, 17, 17b, 17e.
+- **Passed (SQL simulating user/admin, rolled back):** 2, 3, 9. `EXPLAIN UPDATE/DELETE` has no 42P17 error.
+- **Passed (UI, user `student`):** 11, 12, 13 (the javascript course has no quiz; a learn-in-order course still blocks), 15 (no new user created), 16, 17d (temporary code `MADUNG50`, deleted; orders 88/89 cancelled), 17f.
+- **Passed (UI, `admin` enrolled only in reactjs):** 14 (PATCH lessons 204, md5 of content unchanged), 17c (html-css lesson + quiz), 17h (PATCH profiles 204).
+- **Not passed because of an old bug:** 17g. PATCH 400 `invalid input syntax for type date: ""` (P16); the error happens after the RLS step so it is not caused by B.
+- **Skipped:** 17i. There is no temporary account; checked with `EXPLAIN DELETE`.
 
-**Ma trận H2-2:**
+**H2-2 matrix:**
 
-| # | Ai | Thao tác | Kỳ vọng |
+| # | Who | Action | Expected |
 |---|---|---|---|
-| 18 | user A đã enroll | `POST /reviews` với `user_id = B` | 42501 |
-| 19 | user A | `PATCH /comments?id=eq.<của A>` đặt `user_id = B` | lỗi (RLS hoặc trigger) |
-| 20 | admin | soft-delete comment của A | thành công |
-| 21 | user A | áp mã M lên đơn pending | `used_count(M)` +1, `payments.coupon_id = M` |
-| 21b | user A | áp lại M | `used_count(M)` không đổi |
-| 21c | user A | đổi sang mã N | `N` +1, `M` −1 |
-| 21d | user A | huỷ đơn / admin từ chối đơn | mã đang áp −1, đơn `failed` |
-| 21e | admin | duyệt đơn có mã | `used_count` không đổi, đơn `success` |
-| 21f | 2 user | áp cùng lúc mã còn 1 lượt (2 request song song) | đúng 1 thành công, `used_count = max_uses` |
-| 22 | admin | duyệt/từ chối lại đơn đã xử lý | "Đơn đã được xử lý", `used_count` không đổi, không gửi email |
+| 18 | enrolled user A | `POST /reviews` with `user_id = B` | 42501 |
+| 19 | user A | `PATCH /comments?id=eq.<A's>` setting `user_id = B` | error (RLS or trigger) |
+| 20 | admin | soft-delete A's comment | succeeds |
+| 21 | user A | apply code M to a pending order | `used_count(M)` +1, `payments.coupon_id = M` |
+| 21b | user A | apply M again | `used_count(M)` unchanged |
+| 21c | user A | switch to code N | `N` +1, `M` −1 |
+| 21d | user A | cancel the order / admin rejects the order | the applied code −1, order `failed` |
+| 21e | admin | approve an order with a code | `used_count` unchanged, order `success` |
+| 21f | 2 users | apply at the same time a code with 1 use left (2 parallel requests) | exactly 1 succeeds, `used_count = max_uses` |
+| 22 | admin | approve/reject again an already processed order | "Đơn đã được xử lý", `used_count` unchanged, no email |
 | 23 | anon, user | `POST /rpc/apply_payment_coupon`, `/rpc/close_pending_payment`, `/rpc/approve_payment`, `/rpc/payments_guard` | 42501 / 404 |
-| 23b | admin | `approve_payment` với id không tồn tại / đơn đã xử lý — xem body REST thật | `{"approved": false}`, không email |
-| 23c | service role | `PATCH /payments` đặt `status`/`amount` trực tiếp, kể cả gán lại `status = 'success'` cho đơn đã duyệt (giả code cũ) | 42501 từ `payments_guard`; chỉ `updated_at` thì được |
-| 23d | service role | `POST /payments` với `amount < price` hoặc có `coupon_id` (giả `createPendingPayment` cũ có coupon) | 42501; `POST` đơn pending đúng giá vẫn được |
-| 23e | service role | `DELETE /coupons?id=eq.<H2TEST>` khi đã có đơn tham chiếu | lỗi FK 23503, không đụng guard |
-| 23f | — | rollback bước 0: revoke `apply_payment_coupon` khỏi service_role rồi gọi action áp mã | lỗi, không tạo reservation; huỷ/duyệt vẫn chạy (kiểm trên Supabase branch hoặc bỏ qua nếu không rollback thật) |
-| 24 | user A | `updatePaymentWithCoupon` lên đơn của B | "Đơn hàng không hợp lệ" |
-| 25 | 2 user | đổi mã ngược chiều cùng lúc (đơn 1: M→N, đơn 2: N→M) | cả hai xong, không deadlock, tổng `used_count` đúng |
-| 26 | admin | duyệt đơn → enrollment có ngay; duyệt đơn của user đã enroll sẵn | thành công, không lỗi trùng |
-| 27 | admin + user | duyệt và huỷ cùng một đơn cùng lúc | đúng một bên thắng; nếu duyệt thắng thì có enrollment |
-| 28 | user A | REST trực tiếp: `PATCH /payments` (amount/status/coupon_id), `PATCH /coupons` (used_count), `POST /enrollments` khoá trả phí, `PATCH /comments` đổi `lesson_id`/`user_id` | đều bị chặn |
-| 29 | — | query đối soát `used_count` (§5) sau toàn bộ ma trận | khớp |
+| 23b | admin | `approve_payment` with a non-existent id / an already processed order — look at the real REST body | `{"approved": false}`, no email |
+| 23c | service role | `PATCH /payments` setting `status`/`amount` directly, including re-assigning `status = 'success'` on an approved order (simulating old code) | 42501 from `payments_guard`; only `updated_at` is allowed |
+| 23d | service role | `POST /payments` with `amount < price` or with `coupon_id` (simulating the old `createPendingPayment` with a coupon) | 42501; `POST` of a pending order at the right price still works |
+| 23e | service role | `DELETE /coupons?id=eq.<H2TEST>` when an order already references it | FK error 23503, does not touch the guard |
+| 23f | — | rollback step 0: revoke `apply_payment_coupon` from service_role then call the apply-code action | error, no reservation created; cancel/approve still run (check on a Supabase branch, or skip if not rolling back for real) |
+| 24 | user A | `updatePaymentWithCoupon` on B's order | "Đơn hàng không hợp lệ" |
+| 25 | 2 users | switch codes in opposite directions at the same time (order 1: M→N, order 2: N→M) | both finish, no deadlock, total `used_count` correct |
+| 26 | admin | approve an order → the enrollment exists immediately; approve an order of a user already enrolled | succeeds, no duplicate error |
+| 27 | admin + user | approve and cancel the same order at the same time | exactly one side wins; if approve wins there is an enrollment |
+| 28 | user A | direct REST: `PATCH /payments` (amount/status/coupon_id), `PATCH /coupons` (used_count), `POST /enrollments` for a paid course, `PATCH /comments` changing `lesson_id`/`user_id` | all blocked |
+| 29 | — | the `used_count` reconciliation query (§5) after the whole matrix | matches |
 
-Các bước 21–21f cần mã coupon test: Owner tạo mã `H2TEST` (`max_uses = 1`) trên dashboard; sau khi kiểm thì **tắt** (`is_active = false`), không xoá — coupon đã có đơn tham chiếu không xoá được (`on delete restrict`, Codex r3).
+Steps 21–21f need a test coupon code: the Owner creates the code `H2TEST` (`max_uses = 1`) in the dashboard; after checking, **turn it off** (`is_active = false`), do not delete it — a coupon that has orders referencing it cannot be deleted (`on delete restrict`, Codex r3).
 
-Advisors sau mỗi migration: chỉ được thêm `security_definer_view` cho `profile_cards`.
+Advisors after each migration: the only addition allowed is `security_definer_view` for `profile_cards`.
 
-`npx tsc --noEmit`, `npm run lint` (tách lỗi có sẵn), `npm run build` cho mỗi checkpoint.
+`npx tsc --noEmit`, `npm run lint` (separating pre-existing errors), `npm run build` for each checkpoint.
 
-## 7. Rủi ro
+## 7. Risks
 
-- **Sót chỗ đọc profile/lesson** → sau Migration B hiện "Ẩn danh" hoặc lỗi 42501. Giảm bằng grep trong CP2 và chạy lại #13, #14, #17 trên production ngay sau khi apply B; rollback B nếu vỡ (A và code giữ nguyên, tương thích).
-- **Embed view không suy được** → phương án 2 truy vấn (CP1).
-- **`identities` rỗng** phụ thuộc cấu hình "Confirm email" đang bật; nếu tắt, Supabase trả lỗi `user_already_exists` → xử lý cả hai.
-- **Redirect trong server component** khi chưa đăng nhập phải không chặn crawler trang khoá công khai — chỉ áp ở `/learn/*`.
-- **Đơn treo giữ lượt** (H2-2, D1) — đơn pending bỏ dở giữ lượt coupon tới khi bị huỷ/từ chối. Admin xử lý đơn treo ở `/admin/transactions`. Tự động hết hạn đơn pending → sau (ghi problems).
-- **Sai lệch `used_count`** nếu có đường khác đổi `payments.status` ngoài 2 hàm trên. Sau H2-2 chỉ còn `approvePayment` (không đụng coupon) — grep `status:` trong `app/action/` để xác nhận.
+- **Missed profile/lesson reads** → after Migration B "Ẩn danh" or a 42501 error appears. Reduced by the grep in CP2 and by rerunning #13, #14, #17 on production right after applying B; roll back B if it breaks (A and the code stay, compatible).
+- **View embed cannot be inferred** → the 2-query option (CP1).
+- **Empty `identities`** depends on the "Confirm email" setting being on; if it is off, Supabase returns the error `user_already_exists` → handle both.
+- **A redirect in a server component** when signed out must not block crawlers of the public course page — applied only at `/learn/*`.
+- **Stale orders holding uses** (H2-2, D1) — an abandoned pending order holds the coupon use until it is cancelled/rejected. An admin handles stale orders at `/admin/transactions`. Automatic expiry of pending orders → later (record in problems).
+- **`used_count` skew** if another path changes `payments.status` outside the 2 functions above. After H2-2 only `approvePayment` remains (it does not touch coupons) — grep `status:` in `app/action/` to confirm.
 
-## Phụ lục A — định nghĩa cũ (để viết rollback)
+## Appendix A — old definitions (for writing the rollback)
 
 ```sql
 create policy "Public profiles are viewable by everyone" on public.profiles for select to public using (true);

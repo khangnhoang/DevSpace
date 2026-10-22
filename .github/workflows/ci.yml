@@ -61,6 +61,24 @@ jobs:
       - run: npm run docs:check
       - run: npm run docs:check:test
 
+  # Blocking (infrastructure D14). Runs the local Supabase stack only, with the CLI's own demo keys: no
+  # hosted secret and no connection to the hosted project. `start` excludes the containers nothing uses;
+  # Auth, Kong, PostgREST and Storage stay because the baseline's storage policies need the `storage` schema.
+  db:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx supabase start -x studio,mailpit,edge-runtime,logflare,vector,imgproxy,supavisor,realtime,postgres-meta
+      # `start` already applied the migrations and the seed on the empty database. `db reset` is the
+      # developer command and the step later units extend with their tests.
+      - run: npx supabase db reset
+
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 15

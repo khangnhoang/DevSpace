@@ -7,7 +7,7 @@ description: "Contract for the shape of program documentation in DevSpace: maste
 
 ## Use when / do not use when
 
-Use when a task creates, updates, reshapes, closes or migrates program documentation (`plan.md`, `implementation-plans/<unit>/plan.md`, `progress.md`, `problems.md`, `future-features.md`), an ADR, `docs/backlog/`, or the `docs/` index.
+Use when a task creates, updates, reshapes, closes or migrates program documentation (`plan.md`, `implementation-plans/u<n>-<slug>/plan.md`, `progress.md`, `problems.md`, `future-features.md`), an ADR, `docs/backlog/`, or the `docs/` index.
 
 Do not use it for product code, for the planning method (the `planning` skill), or merely to read a plan.
 
@@ -24,6 +24,13 @@ This skill owns document shape only: file roles, where State lives, taxonomy, li
 | `future-features.md` | Entries `## FEAT-NNN: <title>` with Status, Direction, Target program | Work that is in scope |
 
 A single-unit program uses a detail plan as its root `plan.md` (no `implementation-plans/` folder). A program with `implementation-plans/` has a master plan at the root.
+
+Plan shape, checked by `npm run docs:check` (rule `plan-shape`):
+
+- A root `plan.md` titled `# Master plan — <program>` is a master plan, with or without `implementation-plans/`. Once `implementation-plans/` exists, the root plan must be a master plan.
+- Units are numbered `U1`, `U2`, ...: each row of the master plan's Units table starts with its unique `U<n>`.
+- A unit's detail plan sits at `implementation-plans/u<n>-<slug>/plan.md`, is titled `# U<n> detail plan — <title>` with the same `n`, and its `U<n>` is a row of the Units table. A single-unit root detail plan carries no unit ID.
+- Each plan has its template's numbered `##` sections, with the same titles and in the same order; extra sections such as appendices may follow.
 
 ## State has one owner
 

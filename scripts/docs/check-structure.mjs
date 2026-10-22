@@ -32,6 +32,11 @@ export const ALLOWLIST = [
     rule: "problems-shape",
     reason: "the P1-P29 table keeps its IDs and rows; translating it must not add, merge or drop a row",
   },
+  {
+    file: "docs/programs/security-hotfix/plan.md",
+    rule: "plan-shape",
+    reason: "the H1 plan predates the templates and published migrations cite its sections, so its headings cannot change",
+  },
 ];
 
 // Required fields of the State table in the progress template ("Hosted state" is optional).
@@ -48,6 +53,17 @@ const REQUIRED_STATE_FIELDS = [
 const OPEN_ENTRY_FIELDS = ["Status", "Problem", "Evidence", "Direction", "Exit condition"];
 const FEATURE_FIELDS = ["Status", "Direction", "Target program"];
 const LIFECYCLES = new Set(["active", "closed"]);
+
+// Numbered `##` sections of the master-plan and detail-plan templates, in order (program-docs skill, Plan shape).
+const PLAN_SECTIONS = {
+  master: ["1. Goal and outcome", "2. Owner decisions", "3. Shared invariants", "4. Units", "5. Order and rollout gates", "6. Program risks", "7. Out of scope"],
+  detail: ["1. Binding Spec", "2. Repository facts", "3. Bounded implementation hypotheses", "4. Checkpoints", "5. Risks, rollout and rollback", "6. Progress"],
+};
+const MASTER_TITLE = /^Master plan — \S/;
+const UNIT_ID = /^U(\d+)\b/;
+const UNIT_FOLDER = /^implementation-plans\/u(\d+)-[a-z0-9]+(?:-[a-z0-9]+)*\/plan\.md$/;
+const UNIT_TITLE = /^U(\d+) detail plan — \S/;
+const ROOT_DETAIL_TITLE = /^(?!U\d+ ).+ detail plan — \S/;
 
 // Milestone grammar from the progress template: `- YYYY-MM-DD <text> (<ref>)`, final period optional.
 const HASH = "(?:`[0-9a-f]{7,40}`|[0-9a-f]{7,40})";
@@ -439,10 +455,49 @@ function checkPlan(doc, kind, report, programDir) {
   }
 }
 
+// Template sections, unit IDs and titles of a plan. Returns the unit numbers of a master plan's Units table,
+// or the unit number a unit detail plan claims, so they can be matched once every plan has been read.
+function checkPlanShape(doc, kind, relInProgram, report) {
+  const title = doc.headings.find((heading) => heading.level === 1);
+  const sections = doc.headings.filter((heading) => heading.level === 2);
+  PLAN_SECTIONS[kind].forEach((expected, index) => {
+    const found = sections[index];
+    if (found?.title !== expected) {
+      report(found?.n ?? 1, "plan-shape", `${kind} plan section ${index + 1} must be "## ${expected}" (template order)`);
+    }
+  });
+  if (kind === "master") {
+    const units = new Set();
+    const heading = sections.find((item) => item.title === "4. Units");
+    const rows = heading ? sectionLines(doc, heading, 2).filter((line) => line.text.trim().startsWith("|")) : [];
+    for (const row of rows.slice(2)) {
+      const cell = row.text.trim().split("|")[1]?.trim() ?? "";
+      const id = UNIT_ID.exec(cell)?.[1];
+      if (!id) report(row.n, "plan-shape", 'each Units row starts with its unit ID "U<n>"');
+      else if (units.has(id)) report(row.n, "plan-shape", `unit U${id} appears more than once in the Units table`);
+      else units.add(id);
+    }
+    return { units };
+  }
+  if (relInProgram === "plan.md") {
+    if (!ROOT_DETAIL_TITLE.test(title?.title ?? "")) {
+      report(title?.n ?? 1, "plan-shape", 'a single-unit detail plan is titled "# <name> detail plan — <title>", with no unit ID');
+    }
+    return {};
+  }
+  const folder = UNIT_FOLDER.exec(relInProgram)?.[1];
+  const id = UNIT_TITLE.exec(title?.title ?? "")?.[1];
+  if (!folder) report(1, "plan-shape", "a unit detail plan sits at implementation-plans/u<n>-<slug>/plan.md");
+  if (!id) report(title?.n ?? 1, "plan-shape", 'a unit detail plan is titled "# U<n> detail plan — <title>"');
+  else if (folder && folder !== id) report(title?.n ?? 1, "plan-shape", `title says U${id} but the folder says u${folder}`);
+  return { unit: id ?? folder };
+}
+
 // Role of a file inside a program, from its path relative to the program folder. A root plan.md is a
-// master plan when the program has implementation-plans/, otherwise a detail plan (single-unit program).
-function roleOf(relInProgram, hasUnits) {
-  if (relInProgram === "plan.md") return hasUnits ? "master" : "detail";
+// master plan when it is titled as one or the program has implementation-plans/, otherwise a detail plan
+// (single-unit program).
+function roleOf(relInProgram, hasUnits, masterTitle) {
+  if (relInProgram === "plan.md") return hasUnits || masterTitle ? "master" : "detail";
   if (relInProgram === "progress.md" || relInProgram === "problems.md") return relInProgram.slice(0, -3);
   if (relInProgram === "future-features.md") return "future";
   if (/^implementation-plans\/[^/]+\/plan\.md$/.test(relInProgram)) return "detail";
@@ -500,6 +555,8 @@ export function checkStructure(root) {
     programDirs.filter((dir) => rel.startsWith(`${dir}/`)).sort((a, b) => b.length - a.length)[0];
   const featureIds = new Map();
   const movedFeatures = [];
+  const unitsByProgram = new Map();
+  const claimedUnits = [];
 
   for (const doc of docs.values()) {
     const dir = programOf(doc.rel);
@@ -507,7 +564,11 @@ export function checkStructure(root) {
     const report = reportFor(doc.rel);
     const relInProgram = doc.rel.slice(dir.length + 1);
     const hasUnits = [...docs.keys()].some((rel) => rel.startsWith(`${dir}/implementation-plans/`));
-    const role = roleOf(relInProgram, hasUnits);
+    const masterTitle = MASTER_TITLE.test(doc.headings.find((heading) => heading.level === 1)?.title ?? "");
+    const role = roleOf(relInProgram, hasUnits, masterTitle);
+    if (relInProgram === "plan.md" && hasUnits && !masterTitle) {
+      report(1, "plan-shape", 'the program has implementation-plans/, so its root plan.md must be a master plan titled "# Master plan — <program>"');
+    }
     if (!role) {
       report(
         1,
@@ -520,7 +581,13 @@ export function checkStructure(root) {
       checkProblems(doc, report);
     } else if (role !== "future") {
       checkPlan(doc, role, report, dir);
+      const shape = checkPlanShape(doc, role, relInProgram, report);
+      if (shape.units) unitsByProgram.set(dir, shape.units);
+      if (shape.unit) claimedUnits.push({ dir, unit: shape.unit, report });
     }
+  }
+  for (const { dir, unit, report } of claimedUnits) {
+    if (!unitsByProgram.get(dir)?.has(unit)) report(1, "plan-shape", `U${unit} is not a row of the master plan's Units table`);
   }
 
   // Every future-features.md under docs/ is checked exactly once, wherever it sits, so FEAT IDs are unique

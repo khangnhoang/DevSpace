@@ -1,6 +1,6 @@
-<!-- Template: detail plan. Copy to docs/programs/<program>/implementation-plans/<unit>/plan.md (or, for a single-unit program, to docs/programs/<program>/plan.md). Fill every <placeholder>, delete this comment. No State section. The final section must be a real Markdown link to progress.md. Spec = binding; facts = frozen evidence; hypotheses = may change. -->
+<!-- Template: detail plan. Copy to docs/programs/<program>/implementation-plans/u<n>-<slug>/plan.md (or, for a single-unit program, to docs/programs/<program>/plan.md, with "<name> detail plan" in place of "U<n> detail plan"). Fill every <placeholder>, delete this comment. No State section. The final section must be a real Markdown link to progress.md. Spec = binding; facts = frozen evidence; hypotheses = may change. -->
 
-# <Unit ID> detail plan — <unit title>
+# U<n> detail plan — <unit title>
 
 Revision: r<n>, <YYYY-MM-DD>. Owner approval: <date or pending>. Master plan: <link, or "none (single-unit program)">.
 

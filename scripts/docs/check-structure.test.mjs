@@ -4,11 +4,11 @@
 // - Type: Node CLI black-box tests on temporary fixture trees built from the skill's templates.
 // - Subject: `scripts/docs/check-structure.mjs`.
 // - Passing cases: a tree that follows the templates exits 0; every rule ID has a passing fixture next to its
-//   failing one; the security-hotfix allowlist passes exactly the two stated path and rule pairs.
+//   failing one; the security-hotfix allowlist passes exactly the three stated path and rule pairs.
 // - Failing cases: loose IDs outside a valid entry, a closed future-features line with the wrong prefix, a
 //   duplicate FEAT ID in a file outside programs and backlog, a plan that links another program's progress.md,
 //   a progress.md outside docs/programs not treated as a program; every rule ID (file-role, progress-state, milestone-format, this-commit, problems-shape,
-//   no-state-in-plan, plan-progress-link, future-features-shape, backlog-shape, backlog-not-program,
+//   no-state-in-plan, plan-progress-link, plan-shape, future-features-shape, backlog-shape, backlog-not-program,
 //   programs-index, adr-index) has a fixture that exits 1 and names the right `file:line [rule-id]`; the
 //   allowlist is per path and per rule; bad usage or a missing root exits 2.
 // - Invariant: the result depends only on the fixture tree, never on the real docs/.
@@ -91,15 +91,23 @@ const FEATURE = (id, extra = "") =>
 const README = (rows) =>
   ["# Docs", "", "## Programs", "", "| Path | Lifecycle |", "| --- | --- |", ...rows, ""].join("\n");
 
-const DETAIL = "# U1 detail plan\n\n## 1. Binding Spec\n\n## 6. Progress\n\nCurrent State and milestones: [progress.md](progress.md).\n";
+const DETAIL_SECTIONS = ["1. Binding Spec", "2. Repository facts", "3. Bounded implementation hypotheses", "4. Checkpoints", "5. Risks, rollout and rollback", "6. Progress"];
+const MASTER_SECTIONS = ["1. Goal and outcome", "2. Owner decisions", "3. Shared invariants", "4. Units", "5. Order and rollout gates", "6. Program risks", "7. Out of scope"];
+const sections = (titles) => titles.map((title) => `## ${title}\n`).join("\n");
+const DETAIL = `# Solo detail plan — one unit\n\n${sections(DETAIL_SECTIONS)}\nCurrent State and milestones: [progress.md](progress.md).\n`;
+const UNIT_DETAIL = DETAIL.replace("# Solo detail plan", "# U1 detail plan").replace("(progress.md)", "(../../progress.md)");
+const UNIT_PATH = "docs/programs/alpha/implementation-plans/u1-first/plan.md";
+const UNITS_TABLE = "| Unit | Branch |\n| --- | --- |\n| U1 First | `b1` |\n";
+const LEGACY_PLAN = "# Security hotfix — H1\n\n## 1. Background\n\nProgress: [progress.md](progress.md).\n";
+const MASTER = `# Master plan — Alpha\n\n${sections(MASTER_SECTIONS).replace("## 4. Units\n", `## 4. Units\n\n${UNITS_TABLE}`)}`;
 
 function baseTree() {
   return {
     "docs/README.md": README(["| `programs/alpha` | active |", "| `programs/solo` | closed |"]),
-    "docs/programs/alpha/plan.md": "# Master plan — Alpha\n\n## 1. Goal\n\n- Goal: g.\n",
+    "docs/programs/alpha/plan.md": MASTER,
     "docs/programs/alpha/progress.md": progress(),
     "docs/programs/alpha/problems.md": problems(OPEN_ENTRY("ALPHA-001"), "- ALPHA-000 — Resolved 2026-01-01: done (abc1234)."),
-    "docs/programs/alpha/implementation-plans/u1/plan.md": DETAIL.replace("(progress.md)", "(../../progress.md)"),
+    [UNIT_PATH]: UNIT_DETAIL,
     "docs/programs/alpha/future-features.md": `# Future\n\n${FEATURE("FEAT-010")}`,
     "docs/programs/solo/plan.md": DETAIL,
     "docs/programs/solo/progress.md": progress(),
@@ -247,8 +255,8 @@ test("no-state-in-plan: State sections fail, similar headings and a one-line poi
   const file = "docs/programs/alpha/plan.md";
   assertViolation(run({ [file]: "# Master plan\n\n## State\n\nWe are on step 3.\n" }), file, "no-state-in-plan", 3);
   assertViolation(run({ [file]: "# Master plan\n\n## 4. Current State\n\nText.\n" }), file, "no-state-in-plan", 3);
-  assertClean(run({ [file]: "# Master plan\n\n## State transitions\n\nText.\n\n## Statement\n\nText.\n" }));
-  assertClean(run({ [file]: "# Master plan\n\n## State\n\nSee [progress.md](progress.md).\n" }));
+  assertClean(run({ [file]: `${MASTER}\n## State transitions\n\nText.\n\n## Statement\n\nText.\n` }));
+  assertClean(run({ [file]: `${MASTER}\n## State\n\nSee [progress.md](progress.md).\n` }));
   assertViolation(run({ [file]: "# Master plan\n\n## State\n\nSee [progress.md.bak](progress.md.bak).\n" }), file, "no-state-in-plan", 3);
 });
 
@@ -256,12 +264,12 @@ test("plan-progress-link: a root detail plan needs a progress link, a master pla
   const solo = "docs/programs/solo/plan.md";
   assertViolation(run({ [solo]: "# Detail plan\n\n## 1. Binding Spec\n" }), solo, "plan-progress-link", 1);
   assertViolation(run({ [solo]: "# Detail plan\n\nProgress: `progress.md`.\n" }), solo, "plan-progress-link", 1);
-  assertClean(run({ [solo]: "# Detail plan\n\nProgress: [progress][p].\n\n[p]: progress.md\n" }));
+  assertClean(run({ [solo]: `${DETAIL.replace("[progress.md](progress.md)", "[progress][p]")}\n[p]: progress.md\n` }));
   assertViolation(run({ [solo]: "# Detail plan\n\nProgress: [other](../alpha/progress.md).\n" }), solo, "plan-progress-link", 1);
   assertViolation(run({ [solo]: "# Detail plan\n\nProgress: [web](https://example.com/progress.md).\n" }), solo, "plan-progress-link", 1);
   assertViolation(
-    run({ "docs/programs/alpha/implementation-plans/u1/plan.md": DETAIL.replace("(progress.md)", "(../../../solo/progress.md)") }),
-    "docs/programs/alpha/implementation-plans/u1/plan.md",
+    run({ [UNIT_PATH]: UNIT_DETAIL.replace("(../../progress.md)", "(../../../solo/progress.md)") }),
+    UNIT_PATH,
     "plan-progress-link",
     1,
   );
@@ -271,14 +279,33 @@ test("plan-progress-link: a root detail plan needs a progress link, a master pla
     "no-state-in-plan",
     3,
   );
-  const unit = "docs/programs/alpha/implementation-plans/u1/plan.md";
-  assertViolation(run({ [unit]: "# U1\n\n## 1. Binding Spec\n" }), unit, "plan-progress-link", 1);
-  assertClean(run({ "docs/programs/alpha/plan.md": "# Master plan\n\n## 1. Goal\n\n- Goal: g.\n" }));
+  assertViolation(run({ [UNIT_PATH]: "# U1\n\n## 1. Binding Spec\n" }), UNIT_PATH, "plan-progress-link", 1);
+  assertClean(run({ "docs/programs/alpha/plan.md": MASTER }));
 });
 
-test("a root plan.md is a master plan only while the program has implementation-plans", () => {
-  const withUnits = run({ "docs/programs/solo/implementation-plans/u1/plan.md": DETAIL.replace("(progress.md)", "(../../progress.md)"), "docs/programs/solo/plan.md": "# Master plan\n" });
-  assertClean(withUnits);
+test("plan-shape: role by title, template sections, unit IDs, folders and titles", () => {
+  const master = "docs/programs/alpha/plan.md";
+  const solo = "docs/programs/solo/plan.md";
+  // A root plan titled as a master plan is one before implementation-plans/ exists; afterwards it must be.
+  assertClean(run({ [solo]: MASTER }));
+  assertViolation(run({ [master]: DETAIL }), master, "plan-shape", 1);
+  // Template sections: present, titled and ordered as in the template; extra sections may follow.
+  assertViolation(run({ [master]: MASTER.replace("## 3. Shared invariants\n", "") }), master, "plan-shape");
+  assertViolation(run({ [master]: MASTER.replace("## 6. Program risks", "## 6. Risks") }), master, "plan-shape");
+  assertViolation(run({ [solo]: DETAIL.replace("## 2. Repository facts", "## 2. Facts") }), solo, "plan-shape");
+  assertClean(run({ [solo]: `${DETAIL}\n## Appendix A — notes\n` }));
+  // Units table: each row starts with a unique U<n>.
+  assertViolation(run({ [master]: MASTER.replace("| U1 First |", "| I1 First |") }), master, "plan-shape");
+  assertViolation(run({ [master]: MASTER.replace("| U1 First | `b1` |\n", "| U1 First | `b1` |\n| U1 Again | `b2` |\n") }), master, "plan-shape");
+  // Titles: a root detail plan has none, a unit detail plan has its U<n> matching folder and table.
+  assertViolation(run({ [solo]: DETAIL.replace("# Solo detail plan", "# U1 detail plan") }), solo, "plan-shape", 1);
+  assertViolation(run({ [UNIT_PATH]: UNIT_DETAIL.replace("# U1 detail plan", "# U2 detail plan") }), UNIT_PATH, "plan-shape", 1);
+  const noSlug = "docs/programs/alpha/implementation-plans/u1/plan.md";
+  assertViolation(run({ [UNIT_PATH]: null, [noSlug]: UNIT_DETAIL }), noSlug, "plan-shape", 1);
+  const notInTable = "docs/programs/alpha/implementation-plans/u2-second/plan.md";
+  const missing = run({ [notInTable]: UNIT_DETAIL.replace("# U1 detail plan", "# U2 detail plan") });
+  assertViolation(missing, notInTable, "plan-shape", 1);
+  assert.match(missing.stderr, /U2 is not a row of the master plan's Units table/);
 });
 
 test("future-features-shape: heading, fields and IDs unique across all files", () => {
@@ -359,10 +386,10 @@ test("adr-index: every ADR file is linked from docs/adr/README.md, the README it
   assertClean(run({ "docs/adr/two.md": "# Two\n", "docs/adr/README.md": "# ADRs\n\n- [one](one.md)\n- [two][t]\n\n[t]: two.md\n" }));
 });
 
-test("security-hotfix allowlist: two files, one rule each, nothing else", () => {
+test("security-hotfix allowlist: three path and rule pairs, nothing else", () => {
   const hotfix = {
     "docs/README.md": README(["| `programs/alpha` | active |", "| `programs/solo` | closed |", "| `programs/security-hotfix` | closed |"]),
-    "docs/programs/security-hotfix/plan.md": DETAIL,
+    "docs/programs/security-hotfix/plan.md": LEGACY_PLAN,
     "docs/programs/security-hotfix/plan-h2.md": "# Plan H2\n",
     "docs/programs/security-hotfix/progress.md": progress(),
     "docs/programs/security-hotfix/problems.md": "# Problems\n\n| # | Problem |\n| --- | --- |\n| P1 | text |\n",
@@ -383,7 +410,7 @@ test("security-hotfix allowlist: two files, one rule each, nothing else", () => 
   const moved = {
     ...hotfix,
     "docs/README.md": README(["| `programs/alpha` | active |", "| `programs/solo` | closed |", "| `programs/other` | closed |"]),
-    "docs/programs/other/plan.md": DETAIL,
+    "docs/programs/other/plan.md": LEGACY_PLAN,
     "docs/programs/other/plan-h2.md": "# Plan H2\n",
     "docs/programs/other/progress.md": progress(),
     "docs/programs/other/problems.md": "# Problems\n\n| # | Problem |\n| --- | --- |\n| P1 | text |\n",
@@ -391,6 +418,7 @@ test("security-hotfix allowlist: two files, one rule each, nothing else", () => 
   const result = run(moved);
   assertViolation(result, "docs/programs/other/plan-h2.md", "file-role", 1);
   assertViolation(result, "docs/programs/other/problems.md", "problems-shape");
+  assertViolation(result, "docs/programs/other/plan.md", "plan-shape");
 });
 
 test("unknown arguments and a missing root exit 2", () => {

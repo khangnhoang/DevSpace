@@ -39,7 +39,7 @@ Imported by `CLAUDE.md`. This file owns who acts and what each role may do. `doc
 
 Each of these is a separate grant from the Owner; one never implies another, and a grant for one task does not carry to the next:
 
-- commit, push, PR creation or update, merge, branch deletion;
+- commit, push, PR creation or update, merge, branch deletion. A PR creation or update grant also covers writing that PR's CI result into its body (`git-pr-workflow`, `pr-and-ci.md`), and nothing else;
 - applying a migration and any write to the hosted database;
 - CI fixing that needs a push;
 - anything the Owner has not asked for in words.

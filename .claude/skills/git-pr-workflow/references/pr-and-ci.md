@@ -23,7 +23,7 @@ Needs an explicit grant. Before a normal push confirm: clean worktree and index;
 2. Check that the head branch is already on the remote. If not, stop and ask for push permission. Never accept an interactive `gh` offer to push or fork.
 3. Check for an existing PR (`gh pr view <branch>`); never create a duplicate. Update title, body, labels or draft state only as asked.
 4. Create with `gh pr create --base main --head <branch> --title "<title>" --body-file <file>`; update with `gh pr edit`. Use an exact title or body when the Owner gives one. Otherwise title and body are in English. Keep the body file out of the commit.
-5. The body has: summary; changed files or areas; checks run and results; production impact (migrations and their rollout order, hosted steps still pending); risks and limits; follow-ups. Link the plan or problem IDs.
+5. The body follows `.github/pull_request_template.md`: Summary, Changes, Checks run, CI result, Production impact and pending hosted steps, Risks and limits, Follow-ups. `gh pr create --body-file` does not apply the template, so build the body file from it; leave `CI result` as the placeholder table until CI ends (see "Record the CI result"). Link the plan or problem IDs.
 6. After a PR exists, the desktop app's PR tools handle status and auto-fix; do not poll with scheduled tasks.
 
 PR creation never merges, and update-only permission does not deliver new commits.
@@ -33,6 +33,15 @@ PR creation never merges, and update-only permission does not deliver new commit
 A PR to `main` runs `.github/workflows/ci.yml`: the jobs `typecheck`, `build`, `docs`, `lint` and `db`, listed by `gh pr checks` next to the Vercel deploy preview. `typecheck`, `build`, `docs` and `db` block; `lint` does not, and runs `npm run lint` in a step with `continue-on-error` until the lint cleanup unit (`docs/programs/infrastructure/`). The `lint` job and its lint step both report success, so a green `lint` check does not mean lint is clean: the lint result is the problem count in the lint step's log (`gh run view <id> --log`, line "✖ N problems"), 81 today. A red `lint` job means setup (checkout, Node, `npm ci`) failed, which is a CI failure. A red `db` job is a real failure: read the failing step in `gh run view <id> --log-failed`. A failed `npx supabase start` step means the local stack did not come up (image pull or container health); a failed `npx supabase db reset` step means the baseline, a migration or the seed did not apply, and the SQL error is in that step's log. Whether `main` requires the blocking jobs is an Owner setting in GitHub, not something the repo enforces; check it with `gh api repos/khangnhoang/DevSpace/branches/main/protection` (read-only).
 
 Use `gh pr checks --watch` (or `gh pr checks`) and report each check's exact terminal state. Do not say CI passed unless GitHub shows a passing state; report pending, failed, skipped and cancelled explicitly with the job names and a short log summary. A failed job's log comes from `gh run view <id> --log-failed`.
+
+## Record the CI result
+
+When CI on a PR reaches a terminal state, red or green, Main writes the result into the body's `CI result` section with `gh pr edit <n> --body-file <file>`, then stops. The PR creation or update grant covers this write and nothing else (`.claude/rules.md` section 4). The Owner decides the merge; nobody merges on their own, and a red result is not fixed without a CI-fix grant.
+
+- Report the latest run for the PR's current head, not an older or cancelled one: the run link, the event, the head commit, and the table Check | Result | Duration | Notes with the five Actions jobs and Vercel.
+- The `lint` row carries the problem count from the lint step's log ("✖ N problems"); see Watch CI.
+- A check that did not reach its step says `not run`, `skipped` or `cancelled` with the reason (for example no lint count when setup failed).
+- CI evidence lives in the PR body, not in a program's `progress.md` State.
 
 ## CI failure
 

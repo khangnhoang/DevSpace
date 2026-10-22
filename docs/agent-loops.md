@@ -53,7 +53,7 @@ If any condition fails, use the planned flow. Steps: size, implement, verify, se
 ## Loop 3: PR and CI
 
 - **Trigger:** the Owner asks to inspect PR or CI state, watch checks, open or update a PR, or fix CI. Owner: `git-pr-workflow`.
-- **Mode:** the narrowest the Owner stated. `inspect` and `watch` change nothing. `create PR` and `update PR` do only that action. A CI-fix grant covers only the edit, validate, commit and push actions the Owner named; it does not imply commit or push.
+- **Mode:** the narrowest the Owner stated. `inspect` and `watch` change nothing. `create PR` and `update PR` do only that action, plus writing that PR's CI result into its body (`.claude/rules.md` section 4). A CI-fix grant covers only the edit, validate, commit and push actions the Owner named; it does not imply commit or push.
 - **Stop** before any ungranted action, a fix that is not small and branch-caused, force-push, branch deletion or merge. Main makes at most two CI self-fix rounds; a third needs the Owner. Implementors never push.
 
 ## Self-review

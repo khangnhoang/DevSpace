@@ -1,3 +1,7 @@
-# Three hosted function bodies in the baseline contain CRLF; without this, `core.autocrlf` rewrites them to LF
-# on commit and the replayed function definitions differ from hosted.
+# SQL checks out as LF on Windows too, so a local `db reset` replays the same bytes as CI and as hosted.
+/supabase/migrations/*.sql text eol=lf
+/supabase/rollbacks/*.sql text eol=lf
+
+# Hosted `update_updated_at_column` has CRLF in its body; keep the baseline bytes exactly as dumped.
+# This line comes after the pattern above, so it wins for the baseline.
 /supabase/migrations/20261021000000_baseline.sql -text

@@ -11,7 +11,7 @@ Direction the Owner has set that is outside the current scope. Work that is in s
 ## FEAT-003: Local database reset and RLS tests in `supabase-migration`
 
 - Status: Deferred until the isolated Supabase local environment and automated RLS tests exist.
-- Direction: add `supabase db reset` and the automated RLS tests to the `supabase-migration` skill, replacing the "no local database" workaround it carries today.
+- Direction: add `supabase db reset` and the automated RLS tests to the `supabase-migration` skill, replacing the "no local database" workaround it carries today. Remove the temporary rule in `.claude/rules.md` section 4 (implementors run no database) when this lands.
 - Target program: infrastructure (test-infra; not created yet).
 
 ## FEAT-004: CI step in the workflow and the commands

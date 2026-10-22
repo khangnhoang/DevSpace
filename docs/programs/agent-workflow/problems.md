@@ -38,7 +38,7 @@ Plan: `plan.md`. Progress: `progress.md`.
 
 ### AW-005: Skills are not loaded at the point of action
 
-- Status: Open (2026-10-22). A fix is on `exp/aw-005`, pending Codex round 4 and a CP6-I rerun.
+- Status: Open (2026-10-22); fix adopted (`b99315e`); CP6-I rerun loaded both skills. Stays open until the CP6 report is final.
 - Problem: the simulated implementor committed without loading `git-pr-workflow` and wrote its `Tự review` block without loading `code-review` (no Skill call, no SKILL.md read), although its work was otherwise sound.
 - Evidence: the CP6 simulated implementor session, which implemented a mock CP1 and made a local commit with neither skill loaded.
 - Direction: `.claude/rules.md` section 2 tells the implementor to load both skills at those points, and the two skill descriptions name the commit and self-review moments; verify with a rerun of the implementor scenario.

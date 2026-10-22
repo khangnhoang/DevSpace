@@ -45,7 +45,7 @@ Each of these is a separate grant from the Owner; one never implies another, and
 
 Standing limits:
 
-- Implementors never push, even to fix CI (a CI self-fix push is Main-only and needs an Owner grant for CI fixing), and never call the Supabase MCP. Main hands them database metadata as a snapshot in the brief.
+- Implementors never push, even to fix CI (a CI self-fix push is Main-only and needs an Owner grant for CI fixing), and never call the Supabase MCP. Main hands them database metadata as a snapshot in the brief. They also run no database at all, hosted or local (no `psql`, `initdb`, `pg_ctl`, Docker or `supabase start`), even to check syntax; database checks are Main's. This is temporary, until the infrastructure program provides a local database (FEAT-003).
 - Nobody reads or prints `.env*`, and no secret goes into a command, doc or message.
 - The VocaSpace project is off limits. The Owner signs in to the app; agents do not enter passwords.
 - A temporary hosted-database write (a test row, a changed setting) needs the Owner's approval first and is cleaned up afterwards.

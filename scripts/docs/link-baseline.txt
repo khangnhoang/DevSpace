@@ -1,0 +1,3 @@
+# Known broken relative markdown links that stay on purpose. The baseline is empty: fix a broken link
+# instead of adding it here. One entry per line: <source file> -> <link target as written>.
+# Lines starting with # are comments. The check prints entries that are no longer broken.

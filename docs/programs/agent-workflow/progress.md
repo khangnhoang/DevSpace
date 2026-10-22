@@ -13,7 +13,7 @@ Plan: `plan.md`. Problems: `problems.md`. Git history is the final evidence when
 | Accepted deviations | The Owner added a rule after the plan was approved: when the auto-mode classifier denies a call, ask the Owner for that exact action and retry once (`.claude/rules.md` section 4, `89478e0`, widened to both roles in the round 1 corrections). `FEAT-008` and `FEAT-009` record the never-port list as closed `Dropped` entries because the plan names no other home for it. The Owner added a temporary rule (2026-10-22) in `.claude/rules.md` section 4: implementors run no database, hosted or local, even to check syntax; it is removed when the infrastructure program provides a local database (FEAT-003). The Owner also decided (2026-10-22) that Main may run read-only catalog and metadata queries on the hosted project without asking; reading user data rows and any write need approval first (`.claude/rules.md` section 4). |
 | Blockers / Owner decisions | none |
 | Next action | Main runs the Codex re-review of this change, then the CP6 report. |
-| Current authority | Local commits for CP1-CP4 on `chore/agent-workflow`. Push, PR and merge are not granted. No Supabase MCP call, no `.env*` read, no edit of `C:\VocaSpace`, no edit of the Claude memory files. |
+| Current authority | Local commits for CP1-CP4 on `chore/agent-workflow`. Push, PR and merge are not granted. Implementors, and the CP6 simulated sessions (which run under temporary deny rules), make no Supabase MCP call; Main's hosted access follows `.claude/rules.md` section 4 (read-only catalog queries are allowed, data rows and writes need the Owner). No `.env*` read, no edit of `C:\VocaSpace`, no edit of the Claude memory files. |
 
 ## Milestones
 
@@ -31,4 +31,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-22 AW-005 fix on exp/aw-005: the implementor loads git-pr-workflow before committing and code-review for self-review; AW-004 and AW-005 recorded (`b99315e`).
 - 2026-10-22 AW-005 fix adopted into chore/agent-workflow after the CP6-I rerun loaded both skills (`b99315e`).
 - 2026-10-22 Temporary rule: implementors run no database; FEAT-003 removes it (`505f103`).
-- 2026-10-22 Owner rule: Main may run read-only hosted catalog queries without asking (this commit).
+- 2026-10-22 Owner rule: Main may run read-only hosted catalog queries without asking (`157672d`).
+- 2026-10-22 Current authority aligned with the hosted-query rule (this commit).

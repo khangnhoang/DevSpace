@@ -299,6 +299,16 @@ test("future-features-shape: heading, fields and IDs unique across all files", (
   assertViolation(run({ [file]: `# F\n\n${FEATURE("FEAT-010")}\n- FEAT-051 — Dropped: not under Closed` }), file, "future-features-shape");
   assertClean(run({ [file]: `# F\n\nRelated: [FEAT-001](../../backlog/future-features.md), and ALPHA-001 in prose.\n\n${FEATURE("FEAT-010", "Context: see FEAT-001.")}` }));
   assertClean(run({ [file]: `# F\n\n${FEATURE("FEAT-010")}${FEATURE("FEAT-011")}` }));
+  const target = "docs/programs/beta/future-features.md";
+  const moved = "# F\n\n## Closed\n\n- FEAT-060 — Moved to [beta](../beta/future-features.md)\n";
+  assertClean(run({ [file]: moved, [target]: `# F\n\n${FEATURE("FEAT-060")}` }));
+  assertViolation(run({ [file]: moved }), file, "future-features-shape", 5);
+  const movedTwice = run({
+    [file]: moved,
+    [target]: `# F\n\n${FEATURE("FEAT-060")}`,
+    "docs/backlog/future-features.md": moved.replace("../beta/", "../programs/beta/"),
+  });
+  assert.match(movedTwice.stderr, /FEAT-060 is marked moved more than once/);
 });
 
 test("backlog-shape: backlog problems and features are open with full fields or closed as one line", () => {

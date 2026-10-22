@@ -12,14 +12,8 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Direction: keep the link, because a copied template must keep a working `progress.md` link; move the progress template and the detail template together.
 - Exit condition: none needed while both templates stay in the same folder; reopen if one of them moves.
 
-### BL-001: A moved FEAT entry fails the ID uniqueness check
-
-- Status: Open (2026-10-22, found while closing `agent-workflow`).
-- Problem: the `program-docs` skill allows a closed future-features line `FEAT-nnn — Moved to [...]`, but `scripts/docs/check-structure.mjs` counts that line as a use of the ID, so moving an entry to another `future-features.md` always reports "ID is not unique". Closing `agent-workflow` therefore recorded its moves in prose instead of closed lines.
-- Evidence: `npm run docs:check-structure` reported 7 `future-features-shape` violations with the `Moved to` lines in place (2026-10-22); the `noteId` check in `check-structure.mjs` runs on closed lines too.
-- Direction: either the checker skips IDs on `Moved to` lines when the target holds the entry, or the skill says a moved FEAT leaves no closed line. A docs-tooling change, small; owner decided later.
-- Exit condition: the skill and the checker agree, and a moved FEAT entry passes `npm run docs:check`.
-
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.
+
+- BL-001 — Done: the docs checker treats a `Moved to` line as a pointer and the moved FEAT entries use the template lines again (PR #8)

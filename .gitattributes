@@ -1,0 +1,3 @@
+# Three hosted function bodies in the baseline contain CRLF; without this, `core.autocrlf` rewrites them to LF
+# on commit and the replayed function definitions differ from hosted.
+/supabase/migrations/20261021000000_baseline.sql -text

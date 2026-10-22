@@ -25,7 +25,7 @@ Report findings with severity (Critical, Required, Suggestion, Nit, FYI), file:l
 
 ## Rules
 
-- A new target gets a fresh Codex session. Later rounds of the same target use `codex exec resume <id>` with the same flags, `-o` and stdin, and a prompt that lists what changed since the last round.
+- Session and resume mechanics are in `.claude/rules.md` section 3. For a later round, the prompt lists what changed since the last round.
 - Give it the real files or diff, not a summary. A plan under review that is not committed is given as the working-tree file and a diff.
 - Main checks each finding against the repo; Codex output is advisory until verified. Loop until PASS, and ask the Owner only when a finding needs a new decision.
 - Every migration goes through Codex before it is applied. The review covers the SQL, the rollback, RLS and grants, and the rollout order.

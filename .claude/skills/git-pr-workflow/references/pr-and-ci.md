@@ -23,7 +23,7 @@ DevSpace has no CI workflow yet; the check on a PR is the Vercel deploy preview.
 
 ## CI failure
 
-Read the failed logs first (`gh run view <id> --log-failed`, or the Vercel build log). Classify as one of: `branch-caused-small-safe`, `branch-caused-large-risky`, `unrelated-main`, `infra-flaky`, `secret-env-config`, `db-risk`, `unclear`. Only `branch-caused-small-safe` may be fixed, and only by Main under an Owner grant for CI fixing that names the edit, validate, commit and push actions. A fix attempt is one cycle: read logs, edit, validate locally, commit, push, re-watch. At most two attempts without a new grant. It never widens the PR, touches schema, RLS, migrations, secrets or repo settings, weakens a check, forces a push or deletes a branch. Any other class: stop and report the job, the log evidence, the class, why it was not self-fixed and the smallest decision needed.
+Read the failed logs first (`gh run view <id> --log-failed`, or the Vercel build log). Classify as one of: `branch-caused-small-safe`, `branch-caused-large-risky`, `unrelated-main`, `infra-flaky`, `secret-env-config`, `db-risk`, `unclear`. Only `branch-caused-small-safe` may be fixed, under the CI-fix limits in `docs/agent-loops.md` Loop 3 and `.claude/rules.md` section 4. A fix attempt is one cycle: read logs, edit, validate locally, commit, push, re-watch. It never widens the PR, touches schema, RLS, migrations, secrets or repo settings, weakens a check, forces a push or deletes a branch. Any other class: stop and report the job, the log evidence, the class, why it was not self-fixed and the smallest decision needed.
 
 ## Merge
 

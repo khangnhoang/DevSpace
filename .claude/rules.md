@@ -50,7 +50,7 @@ Standing limits:
 - The VocaSpace project is off limits. The Owner signs in to the app; agents do not enter passwords.
 - A temporary hosted-database write (a test row, a changed setting) needs the Owner's approval first and is cleaned up afterwards.
 - When permission is unclear, take the narrower action and report it.
-- When the auto-mode classifier denies a call, do not work around it. Ask the Owner for that exact action (what, which files, why) with `AskUserQuestion`, retry once after a yes, and report a second denial to Main as a blocker.
+- When the auto-mode classifier denies a call, do not work around it. Whoever made the call, Main or an implementor, asks the Owner for that exact action (what, which files, why) with `AskUserQuestion` and retries once after a yes. After a second denial an implementor reports it to Main, and Main reports it to the Owner as a blocker.
 
 ## 5. Finding triage
 

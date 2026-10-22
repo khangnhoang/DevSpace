@@ -41,7 +41,7 @@ When the work is done and no commit is granted, report: changed files with the r
 
 ## Push, PR, CI and merge
 
-Read [pr-and-ci.md](references/pr-and-ci.md) before any push, PR, CI or merge request. Short form: a normal push needs a clean tree, the exact branch and range, and an explicit grant; a PR needs the head already on the remote; the PR title and body are in English and state only what really ran; CI today is the Vercel deploy check (`gh pr checks --watch`); merge only with explicit permission and never auto-merge unless asked. Main alone fixes CI, at most two rounds, only with the Owner's CI-fix grant.
+Read [pr-and-ci.md](references/pr-and-ci.md) before any push, PR, CI or merge request. Short form: a normal push needs a clean tree, the exact branch and range, and an explicit grant; a PR needs the head already on the remote; the PR title and body are in English and state only what really ran; CI today is the Vercel deploy check (`gh pr checks --watch`); merge only with explicit permission and never auto-merge unless asked. Who may fix CI, and how many rounds, is owned by `docs/agent-loops.md` Loop 3 and `.claude/rules.md` section 4.
 
 ## Stop when
 

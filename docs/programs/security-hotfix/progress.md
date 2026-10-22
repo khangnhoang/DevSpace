@@ -9,7 +9,7 @@ Plan: `plan.md` (H1) and `plan-h2.md` (H2). Problems: `problems.md`. Git history
 | Spec revision | H1: `plan.md`, approved. H2: `plan-h2.md`, approved. Both passed Codex plan review in round 4 (`gpt-6.1-sol`, high, read-only). |
 | Current unit / checkpoint | none active. H2-2a and H2-2b are deferred. |
 | Status | H1 and H2-1 shipped. H2-2 deferred by the Owner on 2026-10-22. |
-| Completed evidence | H1: PR khangnhoang/DevSpace#2, merged 2026-10-21. H2-1: PR #3 and #4, merged and deployed, migration B `20261021185249` applied, matrix run on production with the results in `plan-h2.md` section 6 (historical, 2026-10-22). Open from that run: 17g fails on the old bug P16 and 17i was skipped. |
+| Completed evidence | H1: PR #2, merged 2026-10-21. H2-1: PR #3 and #4, merged and deployed, migration B `20261021185249` applied, matrix run on production with the results in `plan-h2.md` section 6 (historical, 2026-10-22). Open from that run: 17g fails on the old bug P16 and 17i was skipped. |
 | Accepted deviations | none |
 | Blockers / Owner decisions | H2-2a (P3 and P4: review policy, comment `with_check` and trigger) is small and low risk; do it when work returns to security. H2-2b (P5/P6 and P25: 3 RPCs, `payments_guard`, deploy order, rollback) waits for the test-infra program and automated tests of the payment flow. The Owner put agent-workflow and test-infra (an isolated environment and GitHub Actions) first because manual testing on production is too heavy. |
 | Next action | none until the test-infra program starts; the Owner decides when to return to H2-2a. |

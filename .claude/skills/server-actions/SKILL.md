@@ -39,7 +39,7 @@ Checking a value's shape does not make it safe to use elsewhere:
 
 - **SQL:** use the Supabase query builder or RPC arguments. Never build SQL from strings, and never write a regex that tries to detect SQL injection.
 - **XSS:** user-written text, HTML or markdown (comments, notes, reviews, profile fields) is escaped on output or sanitized by the repository's established policy before it is rendered as HTML. Lesson MDX is admin-authored content, not a place to render user input.
-- **CSRF:** Next.js checks the `Origin` header for server actions. A route handler (`route.ts`) has no such check, so it must not change state on `GET` and must authenticate and verify the request itself.
+- **CSRF:** Next.js checks the `Origin` header for server actions. A route handler (`route.ts`) has no such check, so it must not make a business mutation on `GET`, and must authenticate and verify the request itself. Protocol callbacks, such as the PKCE auth callback that exchanges a code for a session, are the exception: they verify their protocol inputs (code, verifier, allowlisted redirect).
 
 ## Uploads, payments and external callbacks
 

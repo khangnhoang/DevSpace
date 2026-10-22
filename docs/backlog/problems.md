@@ -14,10 +14,10 @@ Problems that no open program owns. This is not a program: it has no plan and no
 
 ### BL-001: A moved FEAT entry fails the ID uniqueness check
 
-- Status: Open (2026-10-22, found while closing `agent-workflow`).
+- Status: Fixed locally, awaiting delivery (2026-10-22, on `fix/docs-check-moved-feat`).
 - Problem: the `program-docs` skill allows a closed future-features line `FEAT-nnn — Moved to [...]`, but `scripts/docs/check-structure.mjs` counts that line as a use of the ID, so moving an entry to another `future-features.md` always reports "ID is not unique". Closing `agent-workflow` therefore recorded its moves in prose instead of closed lines.
 - Evidence: `npm run docs:check-structure` reported 7 `future-features-shape` violations with the `Moved to` lines in place (2026-10-22); the `noteId` check in `check-structure.mjs` runs on closed lines too.
-- Direction: either the checker skips IDs on `Moved to` lines when the target holds the entry, or the skill says a moved FEAT leaves no closed line. A docs-tooling change, small; owner decided later.
+- Direction: the checker treats a `Moved to` line as a pointer: it does not count as a declaration, but its ID must be declared in some `future-features.md` and moved only once. The closed `agent-workflow` and backlog files use the template `Moved to` lines again.
 - Exit condition: the skill and the checker agree, and a moved FEAT entry passes `npm run docs:check`.
 
 ## Resolved

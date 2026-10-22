@@ -1,6 +1,6 @@
 # Future features — backlog
 
-Direction the Owner has set that is outside the current scope. Work that is in scope belongs in the plan. FEAT-001 moved to [infrastructure](../programs/infrastructure/future-features.md) on 2026-10-22.
+Direction the Owner has set that is outside the current scope. Work that is in scope belongs in the plan.
 
 ## FEAT-005: Zod, React Hook Form and shadcn in the skills
 
@@ -19,3 +19,7 @@ Direction the Owner has set that is outside the current scope. Work that is in s
 - Status: Deferred; the rule was cut down to "read deliberately" (`CLAUDE.md` rule 6).
 - Direction: revisit a fuller token-budget rule (VocaSpace Core Engineering Rule 6) only if the Owner sets budgets.
 - Target program: none yet.
+
+## Closed
+
+- FEAT-001 — Moved to [infrastructure](../programs/infrastructure/future-features.md)

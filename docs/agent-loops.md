@@ -60,13 +60,7 @@ If any condition fails, use the planned flow. Steps: size, implement, verify, se
 
 A pass is one full review of the current candidate. Review after writing a plan, after each checkpoint, and once more over the whole diff before it goes to review or delivery. A later correction gets its own review. Repeat until a pass leaves no `Critical` or `Required` finding; there is no pass cap.
 
-Method, on the real candidate and not on memory or the author's summary:
-
-1. Anchor: reread the request, the plan, the scope and exclusions, and look at the actual files or diff.
-2. Falsify: list the plausible ways it could be wrong (missing requirement, wrong owner, unhandled state, scope leakage, stale evidence, claim stronger than its proof) and test them.
-3. Verify: run the deterministic checks after the last edit, or reuse a result only when the last edit cannot affect it.
-
-Details and the finding format are in the `code-review` skill. A finding that cannot be fixed goes to the Owner through `AskUserQuestion` with a recommended resolution; an implementor returns it to Main instead of asking. Never stop silently or report the work as passed. Self-review does not replace a required Codex review or manual QA, and never widens permission.
+The method (anchor on the real candidate, falsify, verify) and the finding format are owned by the `code-review` skill (Self-review). A finding that cannot be fixed goes to the Owner through `AskUserQuestion` with a recommended resolution; an implementor returns it to Main instead of asking. Never stop silently or report the work as passed. Self-review does not replace a required Codex review or manual QA, and never widens permission.
 
 **`Tự review` block.** Every plan and implementation report carries one:
 

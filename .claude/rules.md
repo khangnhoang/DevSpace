@@ -14,11 +14,11 @@ Imported by `CLAUDE.md`. This file owns who acts and what each role may do. `doc
 - **Small-task flow.** Main (the Opus session) implements directly only when the Owner names a specific item and it passes the four small-task conditions in `docs/agent-loops.md` (Sizing). Otherwise use the planned flow.
 - **Planned flow.**
   1. Main (Opus) plans, self-reviews the plan, and reviews every diff.
-  2. One Sonnet session implements the approved plan: `start_session` with model `claude-sonnet-5-5` and effort `high`. It makes local commits only.
+  2. One Sonnet session implements the approved plan: `start_session` with model `claude-sonnet-5-5` and effort `high`, in the product checkout on the current task branch (`use_worktree: false`) unless the plan says otherwise (the CP6 simulated sessions keep their approved worktree setup). It makes local commits only.
   3. `start_session` caps effort at Main's own, so check the new session with `get_session` and fix it with `set_session_effort(high)`, ideally before it begins real work.
   4. When the session ends a turn, Main reads the full report and checks the real diff and commits. Corrections go to the same session with `SendMessage`. Repeat until the review passes, then report to the Owner.
 - Large or high-risk work (auth, payment or coupon, admin permissions, schema or migration, data deletion, CI or deploy, the backend migration) adds the Codex gate on the plan and on the implementation diff.
-- While an implementor owns a plan, Main does not edit the product code that plan covers.
+- While an implementor owns a plan, Main does not edit the product code or the tests that plan covers.
 
 ## 3. Codex gate
 
@@ -29,7 +29,7 @@ Imported by `CLAUDE.md`. This file owns who acts and what each role may do. `doc
   codex exec - -m gpt-6.1-sol -c model_reasoning_effort='"high"' -c sandbox_mode='"read-only"' -o <out> < <prompt>
   ```
 
-- Later rounds of the same review: `codex exec resume <id> -` with the same flags, `-o` and stdin. Resume does not keep the first round's flags, so repeat them and check the log header. A new target gets a fresh session.
+- Later rounds of the same review: `codex exec resume <id> -` with the same flags, `-o` and stdin. Resume does not keep the first round's flags, so repeat them and check the log header. A new target gets a fresh session. If resume fails on a thread-store conflict (another Codex thread holds the writer), do not start a competing session: give the Owner the round prompt to paste into the thread that holds it.
 - Codex loads neither this file nor the skills. Every brief starts with a "Read first" list of the rules and skills that apply (`code-review` has the template).
 - Loop fix and re-review until PASS. Ask the Owner only when a finding needs a new decision.
 - Small fixes during Owner QA (copy, layout, styling) get no Codex round.

@@ -17,8 +17,8 @@ Database behavior is changed by a migration file, never by dashboard SQL left as
 
 - Files: `supabase/migrations/<timestamp>_<name>.sql` and `supabase/rollbacks/<same-name>.down.sql`. Every migration has a `.down.sql`.
 - Never edit a published migration. A fix is a new migration. A migration that was applied under a different version is renamed to the recorded version in a separate PR (see the H2-1 history).
-- Implementors never call the Supabase MCP, never touch the hosted database and never apply or "repair" anything. Main hands them a metadata snapshot (policies, grants, constraints, function definitions) in the brief and applies migrations only after Codex PASS and the Owner's approval.
-- Local verification is `npx supabase db reset` on the local stack (baseline, published migrations, minimal invented seed); the implementor may run it (`.claude/rules.md` section 4), and for a schema-shaping change Main also compares the local catalog with hosted. The implementor writes the SQL, the rollback and a verification plan from the snapshot, and never touches hosted to compensate. Main runs the preflight and postflight checks on hosted; checks not yet run stay `pending` in the report. Automated RLS tests are deferred to U3 (`docs/programs/infrastructure/`). Hosted history records the baseline only through `migration repair` by the Owner, and nobody runs `db push` to hosted.
+- Implementors never call the Supabase MCP, never touch the hosted database and never apply or "repair" anything; they never run `link`, `--linked` or `db push`. Main hands them a metadata snapshot (policies, grants, constraints, function definitions) in the brief and applies migrations only through "Hosted apply" below, after Codex PASS and the Owner's grants.
+- Local verification is `npx supabase db reset` on the local stack (baseline, published migrations, minimal invented seed); the implementor may run it (`.claude/rules.md` section 4), and for a schema-shaping change Main also compares the local catalog with hosted. The implementor writes the SQL, the rollback and a verification plan from the snapshot, and never touches hosted to compensate. Main runs the preflight and postflight checks on hosted; checks not yet run stay `pending` in the report. Automated RLS tests are deferred to U3 (`docs/programs/infrastructure/`). The baseline was recorded in hosted history once, through `migration repair` by the Owner; later migrations go through "Hosted apply".
 - Do not weaken RLS or a constraint to make code work. Do not trust client-sent owner, role, status, price or counter fields. Do not change unrelated objects.
 - Do not change Supabase-managed schemas (`auth`, `storage`, `realtime`, `cron` and similar) unless the scope names it. Touching the `handle_new_user` provisioning trigger is a stop unless the task is specifically about provisioning.
 - Put the migration in one `begin; ... commit;` and keep locks short; no external call while holding a lock.
@@ -39,6 +39,20 @@ Order follows compatibility between old code, new code and the migration:
 - **Restriction after the code is live.** A migration that removes reads or access old code still uses (H2-1 B) is applied only after the new code is live in production, or the old code breaks.
 - **Guard before the deploy.** A guard that blocks old writers (H2-2) is applied before the deploy that changes the writer, with a rollback that cannot strand in-flight state.
 - The plan and the migration header both state the order. Say which step is the Owner's and which is Main's.
+
+## Hosted apply
+
+Main applies a repo migration to hosted with `npx supabase db push` from this checkout, which stays linked to hosted (`supabase/.temp/project-ref`, gitignored). Two Owner grants gate it, *prepare* and *apply*; no step text below grants anything (`.claude/rules.md` section 4).
+
+1. **Precondition.** The migration and its rollback passed Codex, the PR's CI is green, and the rollout order says it is time. A merge to `main` deploys production, so an additive or guard migration is applied, and its postflight done, before the merge; a restriction is applied only after the merge and after Main confirms the compatible production deploy is live.
+2. **Target.** `supabase/.temp/project-ref` must read `lkvxxrxojjlkchzzqidu` (`CLAUDE.md`). Missing or different: stop.
+3. **Grant 1, prepare.** Ask the Owner, naming the project and the migration file(s). Then run `npx supabase db push --linked --dry-run`, and record the commit (`git rev-parse HEAD`, clean tree) and the versions it lists.
+4. **Grant 2, apply.** Only if the dry run lists exactly the expected file(s), ask the Owner, naming the project, the commit and the version(s). Right before applying, re-check the project ref and a clean tree at the same commit, and run the dry run again; any difference stops the apply and the prepare step starts over. Then run `npx supabase db push --linked --yes`; `list_migrations` must show the new version under the file's name.
+5. **Stop and report** when the dry run lists anything else or nothing, when the CLI asks for a database password, or on any error. The Owner then decides (for example runs the step themself).
+
+The two grants cover only the dry run and the apply. Postflight on metadata uses Main's standing read-only catalog permission (`.claude/rules.md` section 4); a postflight that reads user data rows or writes a test row needs its own Owner approval first and stays `pending` until it has it.
+
+Never `--include-all`, `--include-seed` (the seed holds invented users with known passwords) or `--include-roles`; never `--db-url`; never the MCP `apply_migration` for a repo migration. The MCP records its own version, so H2-1's hosted version differed from its file name until a rename PR, and it applies the SQL text it is given, which is how `lessons.word_count` was found stored differently on hosted than in the H2-1a file. `db push` applies the file itself under the file's version.
 
 ## Workflow
 

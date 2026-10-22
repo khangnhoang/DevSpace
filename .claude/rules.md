@@ -40,13 +40,13 @@ Imported by `CLAUDE.md`. This file owns who acts and what each role may do. `doc
 Each of these is a separate grant from the Owner; one never implies another, and a grant for one task does not carry to the next:
 
 - commit, push, PR creation or update, merge, branch deletion. A PR creation or update grant also covers writing that PR's CI result into its body (`git-pr-workflow`, `pr-and-ci.md`), and nothing else;
-- applying a migration and any write to the hosted database;
+- applying a migration is two grants, *prepare* (the dry run) and *apply*, in the order `supabase-migration` ("Hosted apply") gives; any other write to the hosted database is a grant of its own;
 - CI fixing that needs a push;
 - anything the Owner has not asked for in words.
 
 Standing limits:
 
-- Implementors never push, even to fix CI (a CI self-fix push is Main-only and needs an Owner grant for CI fixing), and never call the Supabase MCP. Main hands them database metadata as a snapshot in the brief. They may run the local stack only: `npx supabase start`, `stop`, `status`, `db reset`, and `psql` against `127.0.0.1:54322`. They run nothing that reaches hosted: `link`, `db push`, `db pull`, `migration repair`, `--linked`, or `--db-url` to a hosted host. Hosted access stays Main-only.
+- Implementors never push, even to fix CI (a CI self-fix push is Main-only and needs an Owner grant for CI fixing), and never call the Supabase MCP. Main hands them database metadata as a snapshot in the brief. They may run the local stack only: `npx supabase start`, `stop`, `status`, `db reset`, and `psql` against `127.0.0.1:54322`. They run nothing that reaches hosted: `link`, `db push`, `db pull`, `migration repair`, `--linked`, or `--db-url` to a hosted host. Hosted access stays Main-only. The checkout is permanently linked to hosted, so any `supabase` command outside that local list may reach production.
 - Nobody reads or prints `.env*`, and no secret goes into a command, doc or message.
 - The VocaSpace project is off limits. The Owner signs in to the app; agents do not enter passwords.
 - A temporary hosted-database write (a test row, a changed setting) needs the Owner's approval first and is cleaned up afterwards.

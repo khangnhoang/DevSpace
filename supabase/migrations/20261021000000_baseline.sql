@@ -2,8 +2,11 @@
 --
 -- Origin: the Owner dumped the hosted schema on 2026-10-23 (`supabase db dump --linked`). Main loaded the
 -- dump into a throwaway local stack, applied the three published rollbacks in reverse order (h2_1b, h2_1a,
--- h1) and re-dumped it with `supabase db dump --local` (CLI 2.121.0). The first section below is that dump,
--- unedited; function bodies must stay byte-identical to hosted.
+-- h1) and re-dumped it with `supabase db dump --local` (CLI 2.121.0). The dump section is unedited except for
+-- 17 CR bytes removed (13 in `handle_new_user`, 4 in `is_admin`): they came from the Windows checkout of
+-- the H1 rollback during the derivation, not from hosted. The 5 CR bytes in `update_updated_at_column` are
+-- hosted's own and must stay. Function bodies match hosted after the replay, not in this file: the pre-H1
+-- `handle_new_user` here deliberately differs, and H1 replaces it.
 --
 -- Why it exists: the published migrations that sort after this file (20261021131351 and later) assume the
 -- pre-H1 schema, so `supabase db reset` replays this baseline first and the published files unchanged.
@@ -12,8 +15,19 @@
 -- `supabase migration repair 20261021000000 --status applied`, run by the Owner with a separate grant.
 -- Never run this file against hosted and never `db push` before that repair.
 --
--- The last two sections are written by hand: the objects outside `public` that a `public` dump does not
--- carry (copied from a read-only hosted snapshot of 2026-10-23), and the session-setting reset.
+-- The guard below and the last two sections are written by hand: the objects outside `public` that a
+-- `public` dump does not carry (copied from a read-only hosted snapshot of 2026-10-23), and the
+-- session-setting reset.
+
+-- Guard: a `db push` to hosted before the repair would replay the pre-H1 schema onto production. The CLI
+-- sends this file as one batch, so the exception aborts it before any statement below applies.
+do $$
+begin
+  if to_regclass('public.profiles') is not null then
+    raise exception 'The baseline only runs on an empty database; hosted records it through `migration repair`.';
+  end if;
+end;
+$$;
 
 
 
@@ -1416,8 +1430,7 @@ CREATE POLICY "User tu sua avatar" ON "storage"."objects" FOR UPDATE USING ((("b
 -- ---------------------------------------------------------------------------------------------------
 -- Session settings
 -- ---------------------------------------------------------------------------------------------------
--- The dump sets these with session scope, and the CLI runs every migration on one connection, so they
--- would otherwise leak into the migrations that sort after this file.
+-- Clear the session settings the dump sets, so this file leaves the session as it found it.
 RESET search_path;
 RESET check_function_bodies;
 RESET row_security;

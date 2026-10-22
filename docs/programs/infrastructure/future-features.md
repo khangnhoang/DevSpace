@@ -22,6 +22,6 @@ Direction the Owner has set that this program delivers in a later unit. Each ent
 
 ## FEAT-004: CI step in the workflow and the commands
 
-- Status: Planned for U1 (moved from `agent-workflow` on 2026-10-22).
+- Status: U1 part done in PR 11 (CI job, `git-pr-workflow` and `CLAUDE.md` Commands); U2 to U4 add their test commands and CI jobs.
 - Direction: add the CI step to `git-pr-workflow` and its `pr-and-ci.md` reference. The GitHub Actions job must also run `npm run docs:check` and `npm run docs:check:test` (agent-workflow D9). Update the commands section of `CLAUDE.md`: real CI instead of Vercel only, and each later unit adds its test commands.
 - Target program: infrastructure (U1, then U2 to U4 for their commands).

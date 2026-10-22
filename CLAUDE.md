@@ -10,7 +10,7 @@ Roadmap, in this order: (1) agent-workflow (rules, skills, docs system), (2) inf
 - `npm run lint`: it reports 81 existing problems. Do not increase that number.
 - `npx tsc --noEmit`: type check.
 - `npm run docs:check`: structure and link checks for `docs/`, `.claude/`, `CLAUDE.md`, `README.md`. `npm run docs:check:test` runs its tests.
-- CI (`.github/workflows/ci.yml`) runs `typecheck`, `build`, `docs` and `lint` on every pull request to `main` and every push to `main`, with no hosted secret and no database. `typecheck`, `build` and `docs` block; the `lint` job stays green while its lint step fails with the 81 existing problems, so read that step's result and log. Requiring the blocking jobs on `main` is an Owner setting in GitHub (pending), and the Vercel deploy still runs as before.
+- CI (`.github/workflows/ci.yml`) runs `typecheck`, `build`, `docs` and `lint` on every pull request to `main` and every push to `main`, with no hosted secret and no database. `typecheck`, `build` and `docs` block; the `lint` job stays green while its lint step fails with the 81 existing problems, so read that step's result and log. Whether `main` requires the blocking jobs is an Owner setting in GitHub; check it with `gh api repos/khangnhoang/DevSpace/branches/main/protection` (read-only). The Vercel deploy still runs as before.
 - There are no automated tests. Verify by commands and by a manual browser pass; report what was not verified.
 
 ## Code map

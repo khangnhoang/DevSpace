@@ -10,7 +10,7 @@ Found on 2026-10-21 while reading the code and the hosted DB metadata. Items mar
 | P4 | The `comments` UPDATE policy has no `with_check` → the comment owner can change `user_id` | Low | **H2** |
 | P5 | The code calls the RPC `increment_coupon_usage` but the function does not exist in the DB → coupon usage never increases | Medium | H2 or later |
 | P6 | A coupon is counted when the pending order is created, while `updatePaymentWithCoupon` does not count → inconsistent usage logic | Low | later |
-| P7 | Server components read data with the anon client, not per user | Low | test-infra program / migration |
+| P7 | Server components read data with the anon client, not per user | Low | techstack-migration (out of scope for `infrastructure`, its plan section 7) |
 | P8 | Auth uses the implicit flow; should move to PKCE | Low | migration |
 | P9 | Leaked password protection is off (Auth settings) | Low | Owner turns it on in the dashboard |
 | P10 | Bucket `avatars`: any signed-in user can upload to any path | Low | later |
@@ -33,3 +33,4 @@ Found on 2026-10-21 while reading the code and the hosted DB metadata. Items mar
 | P27 | The content of a soft-deleted comment is still readable through REST; a user who has not enrolled can still read/write comments on a paid lesson | Low | later |
 | P28 | A user can edit the `email` column in `profiles` themselves (system email is sent to this column) | Low | later |
 | P29 | "Khóa học của tôi" at `/profile` shows only courses with ≥ 1 completed lesson (`getUserDashboardData` filters `isStarted`) → a user who bought a course but has not finished any lesson sees "Bạn chưa tham gia khóa học nào". The bug predates H2 (found during H2-1 QA) | Low | later |
+| AW-003 | This file keeps the P1-P29 table, so `scripts/docs/check-structure.mjs` allowlists it for `problems-shape`; it is the only program problems file not in the open-entry shape. When H2-2a or H2-2b reopens, reshape it into open entries and one-line resolved entries keeping every ID, and remove the allowlist entry (`plan-h2.md` stays allowlisted). Moved from `agent-workflow` on 2026-10-22 | Low | with H2-2 |

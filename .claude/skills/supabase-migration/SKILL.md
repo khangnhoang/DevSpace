@@ -16,6 +16,7 @@ Database behavior is changed by a migration file, never by dashboard SQL left as
 ## Hard rules
 
 - Files: `supabase/migrations/<timestamp>_<name>.sql` and `supabase/rollbacks/<same-name>.down.sql`. Every migration has a `.down.sql`.
+- A new migration must replay through `npx supabase db reset` after the baseline and the earlier migrations; the CI `db` job fails otherwise.
 - Never edit a published migration. A fix is a new migration. A migration that was applied under a different version is renamed to the recorded version in a separate PR (see the H2-1 history).
 - Implementors never call the Supabase MCP, never touch the hosted database and never apply or "repair" anything; they never run `link`, `--linked` or `db push`. Main hands them a metadata snapshot (policies, grants, constraints, function definitions) in the brief and applies migrations only through "Hosted apply" below, after Codex PASS and the Owner's grants.
 - Local verification is `npx supabase db reset` on the local stack (baseline, published migrations, minimal invented seed); the implementor may run it (`.claude/rules.md` section 4), and for a schema-shaping change Main also compares the local catalog with hosted. The implementor writes the SQL, the rollback and a verification plan from the snapshot, and never touches hosted to compensate. Main runs the preflight and postflight checks on hosted; checks not yet run stay `pending` in the report. Automated RLS tests are deferred to U3 (`docs/programs/infrastructure/`). The baseline was recorded in hosted history once, through `migration repair` by the Owner; later migrations go through "Hosted apply".
@@ -23,13 +24,15 @@ Database behavior is changed by a migration file, never by dashboard SQL left as
 - Do not change Supabase-managed schemas (`auth`, `storage`, `realtime`, `cron` and similar) unless the scope names it. Touching the `handle_new_user` provisioning trigger is a stop unless the task is specifically about provisioning.
 - Put the migration in one `begin; ... commit;` and keep locks short; no external call while holding a lock.
 
-## DevSpace traps (learned in H1 and H2-1)
+## DevSpace traps (learned in H1, H2-1 and U2)
 
 1. **Policy recursion.** In the `profiles` SELECT policy, a scalar subquery `(select auth.uid())` combined with UPDATE and DELETE policies that subquery `profiles` raised `42P17 infinite recursion detected in policy`. Plain `auth.uid()` fixed it. Do not wrap `auth.uid()` in a subquery in a policy on a table that other policies also read.
 2. **Default ACL on new objects.** The schema's default ACL grants write privileges on new views and functions. A simple view is auto-updatable and would write through to its table as the owner, bypassing RLS. Always `revoke all ... from public, anon, authenticated` first, then grant exactly what is needed. For a function: `revoke execute ... from public, anon, authenticated`, then grant to the intended role.
 3. **Column revoke does nothing under a table grant.** If a table-level `SELECT` exists, `revoke select (col)` has no effect. Revoke the table-level privilege, then grant the allowed columns. The rollback must undo both in reverse (revoke the column grants before restoring the table grant).
 4. **Policy names.** Drop an old policy by its exact name before creating its replacement; a missing drop leaves the old permissive policy, and permissive policies are OR-ed.
 5. **Service role bypasses RLS.** Code using `lib/supabase.admin.ts` is not protected by any policy; the check must be in the action (`server-actions`).
+6. **Line endings.** `.gitattributes` checks out SQL under `supabase/migrations` and `supabase/rollbacks` as LF. Do not add CRLF to those files or a new `-text` line; the baseline is the one `-text` file, which keeps hosted's CR bytes.
+7. **The baseline is frozen.** `supabase/migrations/20261021000000_baseline.sql` is the pre-H1 schema derived from the Owner's hosted dump of 2026-10-23; the baseline plus the published migrations rebuild hosted. Never edit it: its guard aborts on a database that already has `public.profiles`, and hosted history marks it applied.
 
 ## Rollout order
 
@@ -57,7 +60,7 @@ Never `--include-all`, `--include-seed` (the seed holds invented users with know
 ## Workflow
 
 1. **Inspect first:** existing migrations, the snapshot of policies, grants, helpers (`is_admin()` and similar), triggers, RPCs, call sites in `app/action/*` and pages, and the plan's acceptance. Search for an existing helper or pattern before writing a new one. An index needs a concrete query pattern; check existing indexes for duplicates or overlap first. Surface conflicts before writing SQL.
-2. **Write** the smallest migration for the approved behavior, in an existing-data-safe order (nullable or default, backfill, validate, then `NOT NULL` / `UNIQUE` / `CHECK`). Add a short English comment only for non-obvious order, RLS reasoning, atomicity, `security definer` or rollback. Write the `.down.sql` so it restores the exact earlier state.
+2. **Write** the smallest migration for the approved behavior. Create the file with `npx supabase migration new <name>` (it creates an empty migration under the right timestamp) and the rollback by hand as `supabase/rollbacks/<same name>.down.sql`. Write it in an existing-data-safe order (nullable or default, backfill, validate, then `NOT NULL` / `UNIQUE` / `CHECK`). Add a short English comment only for non-obvious order, RLS reasoning, atomicity, `security definer` or rollback. Write the `.down.sql` so it restores the exact earlier state.
 3. **Verification plan** with who runs each check: Main preflight (current policies and grants match the snapshot; data satisfies the new constraints), postflight (REST calls as anon and as a user, simulated-role SQL `set local role` / `request.jwt.claims`, `EXPLAIN` for new policies), and the Owner's manual pass. For each RLS change state what `USING` and `WITH CHECK` allow, test an allowed and a denied actor, and cover owner, enrolled, other-user and admin.
 4. **Report** exact changes, files, checks that ran, checks pending (marked pending, never as passed), the rollout order, and "needs Codex and Main to apply".
 

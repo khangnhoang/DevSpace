@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Checks the shape of program documentation under docs/ against the mechanical rules stated in the
 // `program-docs` skill and its templates: file roles, State only in progress.md, milestones, problems,
-// future-features, the backlog, the Programs index and the ADR index. It does not judge whether a State
+// future-features, the backlog, the Programs index and the ADR index, for delivery programs (`active`,
+// `closed`) and evergreen programs (charter README.md). It does not judge whether a State
 // is true or whether a translation kept its meaning.
 //
 // Usage: node scripts/docs/check-structure.mjs [--root <dir>]
@@ -52,14 +53,24 @@ const REQUIRED_STATE_FIELDS = [
 ];
 const OPEN_ENTRY_FIELDS = ["Status", "Problem", "Evidence", "Direction", "Exit condition"];
 const FEATURE_FIELDS = ["Status", "Direction", "Target program"];
-const LIFECYCLES = new Set(["active", "closed"]);
+// `active` and `closed` are delivery programs; `evergreen` owns a long-lived capability (program-docs skill,
+// Lifecycle, index and ADRs).
+const LIFECYCLES = new Set(["active", "closed", "evergreen"]);
 
-// Numbered `##` sections of the master-plan and detail-plan templates, in order (program-docs skill, Plan shape).
+// Numbered `##` sections of the master-plan, charter and detail-plan templates, in order (program-docs skill,
+// Plan shape).
 const PLAN_SECTIONS = {
   master: ["1. Goal and outcome", "2. Owner decisions", "3. Shared invariants", "4. Units", "5. Order and rollout gates", "6. Program risks", "7. Out of scope"],
+  charter: ["1. Capability and boundary", "2. Owner decisions", "3. Invariants", "4. Initiatives", "5. Opening an initiative"],
   detail: ["1. Binding Spec", "2. Repository facts", "3. Bounded implementation hypotheses", "4. Checkpoints", "5. Risks, rollout and rollback", "6. Progress"],
 };
+// The table of unit IDs a master plan or a charter owns, and the words its messages use.
+const ID_TABLES = {
+  master: { heading: "4. Units", row: "Units row", noun: "unit", table: "Units table" },
+  charter: { heading: "4. Initiatives", row: "Initiatives row", noun: "initiative", table: "Initiatives table" },
+};
 const MASTER_TITLE = /^Master plan — \S/;
+const CHARTER_TITLE = /^Charter — \S/;
 const UNIT_ID = /^U(\d+)\b/;
 const UNIT_FOLDER = /^implementation-plans\/u(\d+)-[a-z0-9]+(?:-[a-z0-9]+)*\/plan\.md$/;
 const UNIT_TITLE = /^U(\d+) detail plan — \S/;
@@ -455,26 +466,31 @@ function checkPlan(doc, kind, report, programDir) {
   }
 }
 
-// Template sections, unit IDs and titles of a plan. Returns the unit numbers of a master plan's Units table,
-// or the unit number a unit detail plan claims, so they can be matched once every plan has been read.
+// Template sections, unit IDs and titles of a plan. Returns the unit numbers of a master plan's Units table
+// or a charter's Initiatives table, or the unit number a unit detail plan claims, so they can be matched
+// once every plan has been read.
 function checkPlanShape(doc, kind, relInProgram, report) {
   const title = doc.headings.find((heading) => heading.level === 1);
   const sections = doc.headings.filter((heading) => heading.level === 2);
   PLAN_SECTIONS[kind].forEach((expected, index) => {
     const found = sections[index];
     if (found?.title !== expected) {
-      report(found?.n ?? 1, "plan-shape", `${kind} plan section ${index + 1} must be "## ${expected}" (template order)`);
+      report(found?.n ?? 1, "plan-shape", `${kind === "charter" ? "charter" : `${kind} plan`} section ${index + 1} must be "## ${expected}" (template order)`);
     }
   });
-  if (kind === "master") {
+  if (kind === "charter" && !CHARTER_TITLE.test(title?.title ?? "")) {
+    report(title?.n ?? 1, "plan-shape", 'a charter is titled "# Charter — <program>"');
+  }
+  if (kind === "master" || kind === "charter") {
+    const { heading: tableHeading, row: rowName, noun, table } = ID_TABLES[kind];
     const units = new Set();
-    const heading = sections.find((item) => item.title === "4. Units");
+    const heading = sections.find((item) => item.title === tableHeading);
     const rows = heading ? sectionLines(doc, heading, 2).filter((line) => line.text.trim().startsWith("|")) : [];
     for (const row of rows.slice(2)) {
       const cell = row.text.trim().split("|")[1]?.trim() ?? "";
       const id = UNIT_ID.exec(cell)?.[1];
-      if (!id) report(row.n, "plan-shape", 'each Units row starts with its unit ID "U<n>"');
-      else if (units.has(id)) report(row.n, "plan-shape", `unit U${id} appears more than once in the Units table`);
+      if (!id) report(row.n, "plan-shape", `each ${rowName} starts with its ${noun} ID "U<n>"`);
+      else if (units.has(id)) report(row.n, "plan-shape", `${noun} U${id} appears more than once in the ${table}`);
       else units.add(id);
     }
     return { units };
@@ -495,8 +511,13 @@ function checkPlanShape(doc, kind, relInProgram, report) {
 
 // Role of a file inside a program, from its path relative to the program folder. A root plan.md is a
 // master plan when it is titled as one or the program has implementation-plans/, otherwise a detail plan
-// (single-unit program).
-function roleOf(relInProgram, hasUnits, masterTitle) {
+// (single-unit program). An evergreen program has a charter README.md instead of a root plan.md; a
+// README.md in a delivery program, or a root plan.md in an evergreen one, has no role.
+function roleOf(relInProgram, hasUnits, masterTitle, evergreen) {
+  if (evergreen) {
+    if (relInProgram === "README.md") return "charter";
+    if (relInProgram === "plan.md") return null;
+  }
   if (relInProgram === "plan.md") return hasUnits || masterTitle ? "master" : "detail";
   if (relInProgram === "progress.md" || relInProgram === "problems.md") return relInProgram.slice(0, -3);
   if (relInProgram === "future-features.md") return "future";
@@ -558,22 +579,34 @@ export function checkStructure(root) {
   const unitsByProgram = new Map();
   const claimedUnits = [];
 
+  // The kind of a program is the Lifecycle value of its Programs row, so the index is read before the
+  // program files are.
+  const readme = docs.get("docs/README.md");
+  const readmeReport = (file, n, rule, message) => reportFor(file)(n, rule, message);
+  const programsTable = readme ? parseProgramsTable(readme, readmeReport) : null;
+  const evergreenDirs = new Set(
+    (programsTable?.rows ?? []).filter((row) => row.lifecycle === "evergreen").map((row) => row.path),
+  );
+
   for (const doc of docs.values()) {
     const dir = programOf(doc.rel);
     if (!dir) continue;
     const report = reportFor(doc.rel);
     const relInProgram = doc.rel.slice(dir.length + 1);
+    const evergreen = evergreenDirs.has(dir);
     const hasUnits = [...docs.keys()].some((rel) => rel.startsWith(`${dir}/implementation-plans/`));
     const masterTitle = MASTER_TITLE.test(doc.headings.find((heading) => heading.level === 1)?.title ?? "");
-    const role = roleOf(relInProgram, hasUnits, masterTitle);
-    if (relInProgram === "plan.md" && hasUnits && !masterTitle) {
+    const role = roleOf(relInProgram, hasUnits, masterTitle, evergreen);
+    if (relInProgram === "plan.md" && hasUnits && !masterTitle && !evergreen) {
       report(1, "plan-shape", 'the program has implementation-plans/, so its root plan.md must be a master plan titled "# Master plan — <program>"');
     }
     if (!role) {
       report(
         1,
         "file-role",
-        "file is not a program role (plan, progress, problems, future-features, implementation-plans/<unit>/plan.md); remove it or move its content",
+        evergreen && relInProgram === "plan.md"
+          ? "an evergreen program has no root plan.md; its identity is README.md and each initiative has implementation-plans/u<n>-<slug>/plan.md"
+          : "file is not a program role (plan, progress, problems, future-features, implementation-plans/<unit>/plan.md, and README.md only in an evergreen program); remove it or move its content",
       );
     } else if (role === "progress") {
       checkProgress(doc, report);
@@ -587,7 +620,13 @@ export function checkStructure(root) {
     }
   }
   for (const { dir, unit, report } of claimedUnits) {
-    if (!unitsByProgram.get(dir)?.has(unit)) report(1, "plan-shape", `U${unit} is not a row of the master plan's Units table`);
+    const owner = evergreenDirs.has(dir) ? "charter's Initiatives" : "master plan's Units";
+    if (!unitsByProgram.get(dir)?.has(unit)) report(1, "plan-shape", `U${unit} is not a row of the ${owner} table`);
+  }
+  for (const dir of evergreenDirs) {
+    if (programDirs.includes(dir) && !docs.has(`${dir}/README.md`)) {
+      reportFor(`${dir}/progress.md`)(1, "plan-shape", `evergreen program ${dir} has no README.md charter titled "# Charter — <program>"`);
+    }
   }
 
   // Every future-features.md under docs/ is checked exactly once, wherever it sits, so FEAT IDs are unique
@@ -620,10 +659,9 @@ export function checkStructure(root) {
     }
   }
 
-  const readme = docs.get("docs/README.md");
   if (readme) {
-    const report = (file, n, rule, message) => reportFor(file)(n, rule, message);
-    const { rows, line } = parseProgramsTable(readme, report);
+    const report = readmeReport;
+    const { rows, line } = programsTable;
     const byPath = new Map();
     for (const row of rows) {
       if (row.path === BACKLOG_DIR) {
@@ -638,7 +676,7 @@ export function checkStructure(root) {
         report("docs/README.md", row.n, "programs-index", `row ${row.path} does not point to a program (a folder with progress.md)`);
       }
       if (!LIFECYCLES.has(row.lifecycle)) {
-        report("docs/README.md", row.n, "programs-index", `lifecycle "${row.lifecycle}" must be active or closed`);
+        report("docs/README.md", row.n, "programs-index", `lifecycle "${row.lifecycle}" must be active, closed or evergreen`);
       }
     }
     for (const dir of programDirs) {

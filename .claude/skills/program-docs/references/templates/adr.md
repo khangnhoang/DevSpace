@@ -1,4 +1,4 @@
-<!-- Template: ADR. Copy to docs/adr/<NNNN>-<short-kebab-title>.md, fill every <placeholder>, delete this comment, and add a line to docs/adr/README.md. Use an ADR only for a decision that outlives one program or spans programs; a program-only decision stays in that program's master plan. -->
+<!-- Template: ADR. Copy to docs/adr/<NNNN>-<short-kebab-title>.md, fill every <placeholder>, delete this comment, and add a line to docs/adr/README.md. Use an ADR only for a decision that outlives one program or spans programs; a program-only decision stays in that program's master plan or charter. -->
 
 # ADR <NNNN>: <decision title>
 

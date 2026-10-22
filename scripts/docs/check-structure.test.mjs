@@ -11,6 +11,9 @@
 //   no-state-in-plan, plan-progress-link, plan-shape, future-features-shape, backlog-shape, backlog-not-program,
 //   programs-index, adr-index) has a fixture that exits 1 and names the right `file:line [rule-id]`; the
 //   allowlist is per path and per rule; bad usage or a missing root exits 2.
+// - Evergreen programs: the Programs lifecycle `evergreen` selects a charter README.md (title, five sections,
+//   Initiatives table) and initiative plans checked against that table; a root plan.md, a missing charter, a bad
+//   title, sections, IDs and a README.md in a delivery program each fail with the right rule.
 // - Invariant: the result depends only on the fixture tree, never on the real docs/.
 // - Last verified with: `npm run docs:check:test`.
 
@@ -100,6 +103,24 @@ const UNIT_PATH = "docs/programs/alpha/implementation-plans/u1-first/plan.md";
 const UNITS_TABLE = "| Unit | Branch |\n| --- | --- |\n| U1 First | `b1` |\n";
 const LEGACY_PLAN = "# Security hotfix — H1\n\n## 1. Background\n\nProgress: [progress.md](progress.md).\n";
 const MASTER = `# Master plan — Alpha\n\n${sections(MASTER_SECTIONS).replace("## 4. Units\n", `## 4. Units\n\n${UNITS_TABLE}`)}`;
+
+const CHARTER_SECTIONS = ["1. Capability and boundary", "2. Owner decisions", "3. Invariants", "4. Initiatives", "5. Opening an initiative"];
+const INITIATIVES_TABLE = "| Initiative | Branch |\n| --- | --- |\n| U1 First | `b1` |\n";
+const CHARTER = `# Charter — Gamma\n\n${sections(CHARTER_SECTIONS).replace("## 4. Initiatives\n", `## 4. Initiatives\n\n${INITIATIVES_TABLE}`)}`;
+const GAMMA = "docs/programs/gamma";
+const GAMMA_UNIT_PATH = `${GAMMA}/implementation-plans/u1-first/plan.md`;
+
+// An evergreen program next to the base tree's alpha (master plan) and solo (single-unit) programs; the
+// Programs table is replaced with one that lists it.
+function evergreenTree() {
+  return {
+    "docs/README.md": README(["| `programs/alpha` | active |", "| `programs/solo` | closed |", "| `programs/gamma` | evergreen |"]),
+    [`${GAMMA}/README.md`]: CHARTER,
+    [`${GAMMA}/progress.md`]: progress(),
+    [`${GAMMA}/problems.md`]: problems(OPEN_ENTRY("GAMMA-001"), "- GAMMA-000 — Resolved 2026-01-01: done (abc1234)."),
+    [GAMMA_UNIT_PATH]: UNIT_DETAIL,
+  };
+}
 
 function baseTree() {
   return {
@@ -306,6 +327,78 @@ test("plan-shape: role by title, template sections, unit IDs, folders and titles
   const missing = run({ [notInTable]: UNIT_DETAIL.replace("# U1 detail plan", "# U2 detail plan") });
   assertViolation(missing, notInTable, "plan-shape", 1);
   assert.match(missing.stderr, /U2 is not a row of the master plan's Units table/);
+});
+
+const EVERGREEN = evergreenTree();
+const CHARTER_FILE = `${GAMMA}/README.md`;
+const gammaInitiative = (title) => UNIT_DETAIL.replace("# U1 detail plan", `# ${title} detail plan`);
+const programsReadme = (gammaLifecycle) =>
+  README(["| `programs/alpha` | active |", "| `programs/solo` | closed |", `| \`programs/gamma\` | ${gammaLifecycle} |`]);
+
+test("evergreen (a): a valid evergreen program passes next to active and closed programs", () => {
+  assertClean(run(EVERGREEN));
+  assertClean(run({ ...EVERGREEN, [CHARTER_FILE]: `${CHARTER}\n## Appendix A — notes\n` }));
+  // A charter with no initiatives yet is valid.
+  assertClean(run({ ...EVERGREEN, [CHARTER_FILE]: CHARTER.replace("| U1 First | `b1` |\n", ""), [GAMMA_UNIT_PATH]: null }));
+});
+
+test("evergreen (b): a root plan.md in an evergreen program is a file-role violation", () => {
+  assertViolation(run({ ...EVERGREEN, [`${GAMMA}/plan.md`]: MASTER }), `${GAMMA}/plan.md`, "file-role", 1);
+  assertViolation(run({ ...EVERGREEN, [`${GAMMA}/plan.md`]: DETAIL }), `${GAMMA}/plan.md`, "file-role", 1);
+});
+
+test("evergreen (c): an evergreen program without README.md fails", () => {
+  assertViolation(run({ ...EVERGREEN, [CHARTER_FILE]: null }), `${GAMMA}/progress.md`, "plan-shape", 1);
+});
+
+test("evergreen (d): a charter with a wrong title fails", () => {
+  assertViolation(run({ ...EVERGREEN, [CHARTER_FILE]: CHARTER.replace("# Charter — Gamma", "# Master plan — Gamma") }), CHARTER_FILE, "plan-shape", 1);
+  assertViolation(run({ ...EVERGREEN, [CHARTER_FILE]: CHARTER.replace("# Charter — Gamma", "# Gamma") }), CHARTER_FILE, "plan-shape", 1);
+});
+
+test("evergreen (e): a charter section missing or out of order fails", () => {
+  assertViolation(run({ ...EVERGREEN, [CHARTER_FILE]: CHARTER.replace("## 3. Invariants\n", "") }), CHARTER_FILE, "plan-shape");
+  const swapped = CHARTER.replace("## 2. Owner decisions\n", "## @@\n").replace("## 3. Invariants\n", "## 2. Owner decisions\n").replace("## @@\n", "## 3. Invariants\n");
+  assertViolation(run({ ...EVERGREEN, [CHARTER_FILE]: swapped }), CHARTER_FILE, "plan-shape");
+});
+
+test("evergreen (f): an Initiatives row without a U<n> ID fails", () => {
+  assertViolation(run({ ...EVERGREEN, [CHARTER_FILE]: CHARTER.replace("| U1 First |", "| I1 First |") }), CHARTER_FILE, "plan-shape");
+});
+
+test("evergreen (g): a duplicate Initiatives ID fails", () => {
+  const duplicate = CHARTER.replace("| U1 First | `b1` |\n", "| U1 First | `b1` |\n| U1 Again | `b2` |\n");
+  assertViolation(run({ ...EVERGREEN, [CHARTER_FILE]: duplicate }), CHARTER_FILE, "plan-shape");
+});
+
+test("evergreen (h): an initiative plan missing from the Initiatives table fails", () => {
+  const notInTable = `${GAMMA}/implementation-plans/u2-second/plan.md`;
+  const missing = run({ ...EVERGREEN, [notInTable]: gammaInitiative("U2") });
+  assertViolation(missing, notInTable, "plan-shape", 1);
+  assert.match(missing.stderr, /U2 is not a row of the charter's Initiatives table/);
+});
+
+test("evergreen (i): an initiative whose title number differs from its folder fails", () => {
+  assertViolation(run({ ...EVERGREEN, [GAMMA_UNIT_PATH]: gammaInitiative("U2") }), GAMMA_UNIT_PATH, "plan-shape", 1);
+});
+
+test("evergreen (j): a root README.md in an active program is a file-role violation", () => {
+  assertViolation(run({ "docs/programs/alpha/README.md": CHARTER }), "docs/programs/alpha/README.md", "file-role", 1);
+});
+
+test("evergreen (k): a root README.md in a closed program is a file-role violation", () => {
+  assertViolation(run({ "docs/programs/solo/README.md": CHARTER }), "docs/programs/solo/README.md", "file-role", 1);
+});
+
+test("evergreen: the kind is the Lifecycle value, and initiative plans and the charter keep the plan rules", () => {
+  // The same files under an `active` row are not a charter program.
+  assertViolation(run({ ...EVERGREEN, "docs/README.md": programsReadme("active") }), CHARTER_FILE, "file-role", 1);
+  const paused = run({ ...EVERGREEN, "docs/README.md": programsReadme("paused") });
+  assertViolation(paused, "docs/README.md", "programs-index");
+  assert.match(paused.stderr, /must be active, closed or evergreen/);
+  // An initiative plan is a detail plan: it links its own progress.md. A charter has no State section.
+  assertViolation(run({ ...EVERGREEN, [GAMMA_UNIT_PATH]: "# U1 detail plan — x\n\n## 1. Binding Spec\n" }), GAMMA_UNIT_PATH, "plan-progress-link", 1);
+  assertViolation(run({ ...EVERGREEN, [CHARTER_FILE]: `${CHARTER}\n## State\n\nWe are on step 3.\n` }), CHARTER_FILE, "no-state-in-plan");
 });
 
 test("future-features-shape: heading, fields and IDs unique across all files", () => {

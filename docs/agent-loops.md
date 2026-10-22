@@ -24,8 +24,8 @@ If any condition fails, use the planned flow. Steps: size, implement, verify, se
 
 **Medium work.** Past the small-task conditions, with one outcome and low risk:
 
-- inside a program: a normal detail plan at `docs/programs/<program>/implementation-plans/<unit>/plan.md`;
-- outside any program (a backlog entry): no file. Main writes a short plan in chat, the Owner approves it, and it becomes the Sonnet brief. The PR and the entry's `Done` line are the record;
+- inside a program: a normal detail plan at `docs/programs/<program>/implementation-plans/<unit>/plan.md`; medium work that an evergreen program owns is planned as that program's initiative, a detail plan in its `implementation-plans/` (`program-docs` owns the shape);
+- outside any program, when no program owns the capability (a backlog entry): no file. Main writes a short plan in chat, the Owner approves it, and it becomes the Sonnet brief. The PR and the entry's `Done` line are the record;
 - a single-unit program that gains a second unit is reshaped first, by the `program-docs` migration procedure.
 
 **Large or high-risk work.** A plan file, the Codex gate on the plan and on the implementation (`.claude/rules.md` section 3), and an Owner decision for anything the plan cannot settle.

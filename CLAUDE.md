@@ -20,7 +20,7 @@ Roadmap, in this order: (1) agent-workflow (rules, skills, docs system), (2) inf
 - `app/action/*.ts`: server actions. Each one is a public POST endpoint.
 - `lib/auth.server.ts`: `requireUser`, `requireAdmin` and course-access checks. `lib/supabase.server.ts` (caller session), `lib/supabase.admin.ts` (service role, server-only).
 - `supabase/migrations` and `supabase/rollbacks`: one `.down.sql` per migration. Published migrations are never edited.
-- `docs/programs/<program>/`: program plans and state. `docs/adr/`: cross-program decisions. `docs/backlog/`: work no open program owns.
+- `docs/programs/<program>/`: program plans (or the charter `README.md` of an evergreen program) and state. `docs/adr/`: cross-program decisions. `docs/backlog/`: work no open program owns.
 
 ## Core engineering rules
 

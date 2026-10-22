@@ -1,35 +1,35 @@
-# Security hotfix — vấn đề ngoài phạm vi H1
+# Security hotfix — problems outside the scope of H1
 
-Phát hiện ngày 2026-10-21 khi đọc code và metadata DB hosted. Mục có dấu **H2** sẽ làm ngay sau H1.
+Found on 2026-10-21 while reading the code and the hosted DB metadata. Items marked **H2** will be done right after H1. The "Planned" column is the plan as of discovery; what has been delivered is recorded in [progress.md](progress.md).
 
-| # | Vấn đề | Mức | Dự kiến |
+| # | Problem | Severity | Planned |
 |---|---|---|---|
-| P1 | `profiles` SELECT `true` cho `public`: anon đọc được email, phone, dob, gender, province của mọi người | Cao | **H2** |
-| P2 | `coupons` SELECT `true` cho `public`: liệt kê được mọi mã; `CoursePaymentModal` kiểm tra coupon ngay ở client | Trung bình | **H2** |
-| P3 | Policy INSERT `reviews` chỉ kiểm tra enroll, không ràng buộc `user_id = auth.uid()` → review giả danh người khác | Trung bình | **H2** |
-| P4 | Policy UPDATE `comments` không có `with_check` → chủ comment đổi được `user_id` | Thấp | **H2** |
-| P5 | Code gọi RPC `increment_coupon_usage` nhưng function không tồn tại trên DB → lượt dùng coupon không bao giờ tăng | Trung bình | H2 hoặc sau |
-| P6 | Coupon được tính lượt khi tạo đơn pending, `updatePaymentWithCoupon` thì không → logic lượt dùng không nhất quán | Thấp | sau |
-| P7 | Server component đọc dữ liệu bằng client anon, không theo user | Thấp | program test-infra / migration |
-| P8 | Auth dùng implicit flow; nên chuyển PKCE | Thấp | migration |
-| P9 | Leaked password protection đang tắt (Auth settings) | Thấp | Owner bật trên dashboard |
-| P10 | Bucket `avatars`: mọi user đăng nhập upload được vào bất kỳ path nào | Thấp | sau |
-| P11 | pg_graphql phơi toàn bộ bảng cho anon/authenticated (advisor 0026/0027) | Thấp | sau |
-| ~~P12~~ | Mật khẩu cố định `123123` khi admin tạo user — đã đưa vào H1 theo Codex review round 1 | Cao | H1 |
-| P13 | Nội dung lesson/quiz trả phí đọc được không cần enroll: RLS `lessons`/`exercises` SELECT `true`; trang learn query toàn bộ lesson trên server, kiểm tra enroll ở client (`LearnClient.tsx`) sau khi dữ liệu đã nằm trong RSC payload | Cao | **H2** (Owner: tách H2-1/H2-2 nếu lớn) |
-| P14 | Link email chỉ mở được trên trình duyệt đã yêu cầu (PKCE); nên chuyển sang `token_hash` + `verifyOtp` qua route server | Thấp | sau |
-| P16 | Cập nhật profile khi bỏ trống ngày sinh → `invalid input syntax for type date: ""` (form gửi chuỗi rỗng thay vì `null`). Lỗi có từ trước H1 | Thấp | sau |
-| ~~P17~~ | Quy tắc mật khẩu không thống nhất: admin tạo user ≥ 8 ký tự, đăng ký/reset chỉ 6; đặt lại trùng mật khẩu cũ hiện lỗi tiếng Anh `same_password`. Liên quan quy tắc H1 vừa đặt (A11) → sửa trong H1 | Thấp | H1 |
-| P18 | Mở link xác nhận đăng ký ở trình duyệt/tab không có code verifier → trang `/auth/error`, dù email đã được xác nhận và đăng nhập được. Gốc là P14 | Thấp | cùng P14 |
-| P19 | Nhiều tab `localhost` cùng mở: `supabase-js` dùng `navigator.locks` chung, thao tác auth chờ khoá vô hạn → một tab kẹt làm các tab khác xoay mãi khi đăng nhập. Đóng hết tab là hết. Hành vi của thư viện, không do H1 | Thấp | theo dõi |
-| P20 | Kết quả quiz không được lưu (không có bảng), UI không đánh dấu quiz đã hoàn thành như bài học; vào lại phải làm từ đầu | Trung bình | future-features |
-| P21 | Xác nhận xoá dùng `window.confirm` (bình luận, CRUD admin courses/chapters/lessons) — xấu, không đồng bộ UI | Thấp | khi áp shadcn (Dialog) |
-| P22 | Avatar trong phần đánh giá khoá có thêm nền gradient lạ | Thấp | sau |
-| P23 | Notification: không có nút đánh dấu đã đọc cho từng thông báo (phải bấm thẳng vào thông báo), chỉ có nút cho tất cả | Thấp | sau |
-| P24 | Tạo quiz bằng AI không chạy: `GEMINI_API_KEY` hết hạn. Việc của Owner (cấp key mới); kèm P-audit gộp 2 SDK Gemini | Thấp | Owner |
-| P15 | `/admin/transactions` hiện mọi học viên là "Ẩn danh": trang đọc `p.profiles?.full_name` (`app/admin/transactions/page.tsx:148`) nhưng `getAllPayments` trả về `users`. Lỗi có từ trước H1 (phát hiện khi QA H1) | Thấp | sau |
-| P25 | `approvePayment`/`rejectPayment` UPDATE chỉ theo `id`, không lọc `status = 'pending'` → duyệt lại đơn đã xử lý, gửi email lần nữa; enrollment tạo bằng request riêng, lỗi bị bỏ qua | Thấp | **H2-2** |
-| P26 | Quiz chấm ở client, user đã enroll nhận `correct_answer` trong payload | Thấp | cùng P20 (chấm trên server) |
-| P27 | Comment đã soft-delete vẫn đọc được nội dung qua REST; user chưa enroll vẫn đọc/ghi comment bài trả phí | Thấp | sau |
-| P28 | User tự sửa được cột `email` trong `profiles` (email hệ thống gửi theo cột này) | Thấp | sau |
-| P29 | "Khóa học của tôi" ở `/profile` chỉ hiện khoá đã hoàn thành ≥ 1 bài (`getUserDashboardData` lọc `isStarted`) → user đã mua nhưng chưa học xong bài nào thấy "Bạn chưa tham gia khóa học nào". Lỗi có từ trước H2 (phát hiện khi QA H2-1) | Thấp | sau |
+| P1 | `profiles` SELECT `true` for `public`: anon can read the email, phone, dob, gender, province of everyone | High | **H2** |
+| P2 | `coupons` SELECT `true` for `public`: every code can be listed; `CoursePaymentModal` checks the coupon on the client | Medium | **H2** |
+| P3 | The `reviews` INSERT policy only checks enrollment and does not constrain `user_id = auth.uid()` → a review impersonating someone else | Medium | **H2** |
+| P4 | The `comments` UPDATE policy has no `with_check` → the comment owner can change `user_id` | Low | **H2** |
+| P5 | The code calls the RPC `increment_coupon_usage` but the function does not exist in the DB → coupon usage never increases | Medium | H2 or later |
+| P6 | A coupon is counted when the pending order is created, while `updatePaymentWithCoupon` does not count → inconsistent usage logic | Low | later |
+| P7 | Server components read data with the anon client, not per user | Low | test-infra program / migration |
+| P8 | Auth uses the implicit flow; should move to PKCE | Low | migration |
+| P9 | Leaked password protection is off (Auth settings) | Low | Owner turns it on in the dashboard |
+| P10 | Bucket `avatars`: any signed-in user can upload to any path | Low | later |
+| P11 | pg_graphql exposes every table to anon/authenticated (advisor 0026/0027) | Low | later |
+| ~~P12~~ | Fixed password `123123` when an admin creates a user — moved into H1 per Codex review round 1 | High | H1 |
+| P13 | Paid lesson/quiz content readable without enrolling: RLS `lessons`/`exercises` SELECT `true`; the learn page queries every lesson on the server and checks enrollment on the client (`LearnClient.tsx`) after the data is already in the RSC payload | High | **H2** (Owner: split into H2-1/H2-2 if large) |
+| P14 | Email links open only in the browser that requested them (PKCE); should move to `token_hash` + `verifyOtp` through a server route | Low | later |
+| P16 | Updating a profile with an empty date of birth → `invalid input syntax for type date: ""` (the form sends an empty string instead of `null`). The bug predates H1 | Low | later |
+| ~~P17~~ | Inconsistent password rules: admin-created users ≥ 8 characters, sign-up/reset only 6; resetting to the same password currently shows the English error `same_password`. Related to the rule H1 just set (A11) → fixed in H1 | Low | H1 |
+| P18 | Opening the signup confirmation link in a browser/tab without the code verifier → the `/auth/error` page, even though the email is confirmed and sign-in works. The root cause is P14 | Low | with P14 |
+| P19 | Several `localhost` tabs open: `supabase-js` shares `navigator.locks`, auth operations wait on the lock forever → one stuck tab makes the other tabs spin on sign-in. Closing all tabs fixes it. Library behavior, not caused by H1 | Low | monitor |
+| P20 | Quiz results are not stored (no table), the UI does not mark a quiz as completed like a lesson; re-entering means starting over | Medium | future-features |
+| P21 | Delete confirmation uses `window.confirm` (comments, admin CRUD of courses/chapters/lessons) — ugly, inconsistent with the UI | Low | when shadcn (Dialog) is applied |
+| P22 | The avatar in the course review section has a strange extra gradient background | Low | later |
+| P23 | Notifications: there is no mark-as-read button per notification (you must click the notification itself), only a button for all | Low | later |
+| P24 | AI quiz creation does not run: `GEMINI_API_KEY` has expired. The Owner's job (issue a new key); includes the audit item of merging the 2 Gemini SDKs | Low | Owner |
+| P15 | `/admin/transactions` shows every learner as "Ẩn danh": the page reads `p.profiles?.full_name` (`app/admin/transactions/page.tsx:148`) but `getAllPayments` returns `users`. The bug predates H1 (found during H1 QA) | Low | later |
+| P25 | `approvePayment`/`rejectPayment` UPDATE only by `id`, not filtering `status = 'pending'` → approving again an order that was already processed, sending the email again; the enrollment is created by a separate request and its error is ignored | Low | **H2-2** |
+| P26 | The quiz is graded on the client, an enrolled user receives `correct_answer` in the payload | Low | with P20 (grade on the server) |
+| P27 | The content of a soft-deleted comment is still readable through REST; a user who has not enrolled can still read/write comments on a paid lesson | Low | later |
+| P28 | A user can edit the `email` column in `profiles` themselves (system email is sent to this column) | Low | later |
+| P29 | "Khóa học của tôi" at `/profile` shows only courses with ≥ 1 completed lesson (`getUserDashboardData` filters `isStarted`) → a user who bought a course but has not finished any lesson sees "Bạn chưa tham gia khóa học nào". The bug predates H2 (found during H2-1 QA) | Low | later |

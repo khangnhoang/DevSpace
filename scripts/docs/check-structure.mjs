@@ -282,13 +282,18 @@ function checkProgress(doc, report) {
   }
 }
 
-// Content with an ID that sits outside any entry (before the first section, or in the intro of Open) is not
-// an entry: it would never be checked, so it is reported instead. Lines strictly between `from` and `to`.
-function reportLooseIds(doc, report, rule, kind, from, to) {
+// An entry declaration is a line that starts with an ID followed by `:` or an em dash (`- BL-001: ...`,
+// `- BL-001 — Done: ...`). It is valid only in the closing section (`Resolved`, `Closed`), where each line is
+// checked; anywhere else, including after a complete entry, it would never be checked, so it is reported.
+// A reference (`Plan: [ALPHA-001](plan.md)`, prose that mentions an ID) is not a declaration.
+const DECLARATION = new RegExp(`^\\s*(?:[-*+]\\s+)?\\**(${ID})\\**\\s*(?::|—)`);
+function reportDeclarations(doc, report, rule, closingTitle) {
+  const closing = doc.headings.find((heading) => heading.level === 2 && heading.title === closingTitle);
+  const range = closing ? sectionRange(doc, closing, 2) : null;
   for (const line of doc.content) {
-    if (line.n <= from || line.n >= to || /^#{1,6}[ \t]/.test(line.text)) continue;
-    const id = ID_PATTERN.exec(line.text)?.[1];
-    if (id) report(line.n, rule, `${id} appears outside a valid ${kind}; write it as one or remove it`);
+    if (range && line.n >= range.from && line.n < range.to) continue;
+    const id = DECLARATION.exec(line.text)?.[1];
+    if (id) report(line.n, rule, `${id} is declared outside a valid entry; use an entry heading or move it under "## ${closingTitle}"`);
   }
 }
 
@@ -309,14 +314,13 @@ function checkProblems(doc, report, { backlog = false } = {}) {
     }
   };
 
-  reportLooseIds(doc, report, "problems-shape", "problems entry", 0, h2[0]?.n ?? Infinity);
+  reportDeclarations(doc, report, "problems-shape", "Resolved");
 
   if (open) {
     const range = sectionRange(doc, open, 2);
     const entries = doc.headings.filter(
       (heading) => heading.level === 3 && heading.n > range.from && heading.n < range.to,
     );
-    reportLooseIds(doc, report, "problems-shape", "open entry", range.from, entries[0]?.n ?? range.to);
     for (const entry of entries) {
       const id = ID_PATTERN.exec(entry.title)?.[1];
       if (id) noteId(id, entry.n);
@@ -371,7 +375,7 @@ function checkFutureFeatures(doc, report, seenIds) {
     }
   };
   const h2 = doc.headings.filter((item) => item.level === 2);
-  reportLooseIds(doc, report, "future-features-shape", "feature entry", 0, h2[0]?.n ?? Infinity);
+  reportDeclarations(doc, report, "future-features-shape", "Closed");
   for (const heading of h2) {
     if (heading.title === "Closed") {
       for (const line of sectionLines(doc, heading, 2)) {

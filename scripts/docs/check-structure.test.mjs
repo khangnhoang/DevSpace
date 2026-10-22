@@ -235,6 +235,12 @@ test("problems-shape: sections, open-entry fields, resolved lines and unique IDs
   assertViolation(run({ [file]: "# Problems\n\n- ALPHA-007: before any section\n\n## Open\n\n## Resolved\n" }), file, "problems-shape", 3);
   assertClean(run({ [file]: problems(OPEN_ENTRY("ALPHA-001") + "\n\n" + OPEN_ENTRY("ALPHA-002"), "") }));
   assertClean(run({ [file]: problems("None yet.", "") }));
+  // A malformed declaration after a complete entry is not swallowed as that entry's content.
+  assertViolation(run({ [file]: problems(OPEN_ENTRY("ALPHA-001") + "\n\n- ALPHA-002 — Done: fixed (PR #42)", "") }), file, "problems-shape", 13);
+  assertViolation(run({ [file]: problems(OPEN_ENTRY("ALPHA-001") + "\n\n- ALPHA-003: another problem", "") }), file, "problems-shape", 13);
+  // References are not declarations: prose, a link, a field value and an entry body that mention IDs.
+  assertClean(run({ [file]: problems("See [ALPHA-001](plan.md) and ALPHA-002 in prose.\n\n" + OPEN_ENTRY("ALPHA-001").replace("- Evidence: e.", "- Evidence: related to BL-001 and [FEAT-001](x.md)."), "") }));
+  assertClean(run({ [file]: problems(OPEN_ENTRY("ALPHA-001"), "- ALPHA-000 — Resolved 2026-01-01: done, see ALPHA-001 (abc1234).") }));
 });
 
 test("no-state-in-plan: State sections fail, similar headings and a one-line pointer pass", () => {
@@ -289,6 +295,9 @@ test("future-features-shape: heading, fields and IDs unique across all files", (
   assertViolation(run({ [loose]: "# F\n\n## FEAT-040: Idea\n\n- Status: Deferred.\n" }), loose, "future-features-shape", 3);
   assertViolation(run({ "docs/programs/solo/future-features.md": `# F\n\n${FEATURE("FEAT-001")}` }), "docs/programs/solo/future-features.md", "future-features-shape", 3);
   assertClean(run({ [loose]: `# F\n\n${FEATURE("FEAT-041")}` }));
+  assertViolation(run({ [file]: `# F\n\n${FEATURE("FEAT-010", "- FEAT-050: loose after an entry")}` }), file, "future-features-shape", 8);
+  assertViolation(run({ [file]: `# F\n\n${FEATURE("FEAT-010")}\n- FEAT-051 — Dropped: not under Closed` }), file, "future-features-shape");
+  assertClean(run({ [file]: `# F\n\nRelated: [FEAT-001](../../backlog/future-features.md), and ALPHA-001 in prose.\n\n${FEATURE("FEAT-010", "Context: see FEAT-001.")}` }));
   assertClean(run({ [file]: `# F\n\n${FEATURE("FEAT-010")}${FEATURE("FEAT-011")}` }));
 });
 

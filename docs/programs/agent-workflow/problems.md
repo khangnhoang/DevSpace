@@ -28,22 +28,9 @@ Plan: `plan.md`. Progress: `progress.md`.
 - Direction: when a unit reopens security work (H2-2a or H2-2b), reshape the table into open entries and one-line resolved entries, keeping every ID, and remove the allowlist entry. `plan-h2.md` stays on the allowlist because published migrations cite its path.
 - Exit condition: the `problems-shape` allowlist entry is removed and `npm run docs:check` passes.
 
-### AW-004: The simulation oracle is readable by the simulated session
-
-- Status: Open (2026-10-22).
-- Problem: the expected behavior of the CP5 and CP6 scenarios (`plan.md` sections 4.1 and 4.2) is in the repo, so a simulated session can read the answers; a simulated planner did, and that run was invalid.
-- Evidence: the simulated planner read `docs/programs/agent-workflow/plan.md` sections 4.1 and 4.2 during its run.
-- Direction: the simulation base branch strips those sections; the oracle lives only in Main's scratchpad.
-- Exit condition: a rerun of the planner scenario on a base branch without sections 4.1 and 4.2 gives a valid result.
-
-### AW-005: Skills are not loaded at the point of action
-
-- Status: Open (2026-10-22); fix adopted (`b99315e`); CP6-I rerun loaded both skills. Stays open until the CP6 report is final.
-- Problem: the simulated implementor committed without loading `git-pr-workflow` and wrote its `Tự review` block without loading `code-review` (no Skill call, no SKILL.md read), although its work was otherwise sound.
-- Evidence: the CP6 simulated implementor session, which implemented a mock CP1 and made a local commit with neither skill loaded.
-- Direction: `.claude/rules.md` section 2 tells the implementor to load both skills at those points, and the two skill descriptions name the commit and self-review moments; verify with a rerun of the implementor scenario.
-- Exit condition: the rerun shows `git-pr-workflow` loaded before the commit and `code-review` loaded before the self-review.
-
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.
+
+- AW-004 — Resolved 2026-10-22: CP5 and the CP6 planner reran on a base branch without plan sections 4.1 and 4.2, with valid results (`1b8d8e5`).
+- AW-005 — Resolved 2026-10-22: the CP6 implementor rerun loaded `git-pr-workflow` before committing and `code-review` before its self-review (`b99315e`).

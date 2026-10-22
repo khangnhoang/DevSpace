@@ -49,6 +49,7 @@ Standing limits:
 - Nobody reads or prints `.env*`, and no secret goes into a command, doc or message.
 - The VocaSpace project is off limits. The Owner signs in to the app; agents do not enter passwords.
 - A temporary hosted-database write (a test row, a changed setting) needs the Owner's approval first and is cleaned up afterwards.
+- Main may run read-only catalog and metadata queries on the hosted project without asking (schema, policies, grants, constraints, function definitions, the migration list). Reading user data rows, and any write, needs the Owner's approval first.
 - When permission is unclear, take the narrower action and report it.
 - When the auto-mode classifier denies a call, do not work around it. Whoever made the call, Main or an implementor, asks the Owner for that exact action (what, which files, why) with `AskUserQuestion` and retries once after a yes. After a second denial an implementor reports it to Main, and Main reports it to the Owner as a blocker.
 

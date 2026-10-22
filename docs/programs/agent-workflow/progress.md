@@ -10,9 +10,9 @@ Plan: `plan.md`. Problems: `problems.md`. Git history is the final evidence when
 | Current unit / checkpoint | The program has one unit. CP1-CP4 are implemented and committed locally on `chore/agent-workflow`; CP5 and CP6 belong to Main. |
 | Status | CP1-CP4 implemented and corrected after Main review round 1 and Codex rounds 1 and 2. The AW-005 fix was adopted (`b99315e`) after the CP6-I rerun loaded both skills; a temporary no-database rule for implementors was added; waiting for Codex re-review. |
 | Completed evidence | `npm run docs:check` and `npm run docs:check:test` pass after CP4 (checks run by the implementor, 2026-10-22). `npm run lint` still reports the 81 existing problems. The translated `security-hotfix` docs were compared with `e499408` by an uncommitted script (heading numbers, IDs and code blocks); the script is not in the repo. |
-| Accepted deviations | The Owner added a rule after the plan was approved: when the auto-mode classifier denies a call, ask the Owner for that exact action and retry once (`.claude/rules.md` section 4, `89478e0`, widened to both roles in the round 1 corrections). `FEAT-008` and `FEAT-009` record the never-port list as closed `Dropped` entries because the plan names no other home for it. The Owner added a temporary rule (2026-10-22) in `.claude/rules.md` section 4: implementors run no database, hosted or local, even to check syntax; it is removed when the infrastructure program provides a local database (FEAT-003). |
+| Accepted deviations | The Owner added a rule after the plan was approved: when the auto-mode classifier denies a call, ask the Owner for that exact action and retry once (`.claude/rules.md` section 4, `89478e0`, widened to both roles in the round 1 corrections). `FEAT-008` and `FEAT-009` record the never-port list as closed `Dropped` entries because the plan names no other home for it. The Owner added a temporary rule (2026-10-22) in `.claude/rules.md` section 4: implementors run no database, hosted or local, even to check syntax; it is removed when the infrastructure program provides a local database (FEAT-003). The Owner also decided (2026-10-22) that Main may run read-only catalog and metadata queries on the hosted project without asking; reading user data rows and any write need approval first (`.claude/rules.md` section 4). |
 | Blockers / Owner decisions | none |
-| Next action | Main runs the Codex re-review of this change, then CP5 and the CP6-P rerun. |
+| Next action | Main runs the Codex re-review of this change, then the CP6 report. |
 | Current authority | Local commits for CP1-CP4 on `chore/agent-workflow`. Push, PR and merge are not granted. No Supabase MCP call, no `.env*` read, no edit of `C:\VocaSpace`, no edit of the Claude memory files. |
 
 ## Milestones
@@ -30,4 +30,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-22 Codex round 2 corrections: docs checker declaration scan `3e15869`, skills GET callback and target size `8760b92` (`95866a2`).
 - 2026-10-22 AW-005 fix on exp/aw-005: the implementor loads git-pr-workflow before committing and code-review for self-review; AW-004 and AW-005 recorded (`b99315e`).
 - 2026-10-22 AW-005 fix adopted into chore/agent-workflow after the CP6-I rerun loaded both skills (`b99315e`).
-- 2026-10-22 Temporary rule: implementors run no database; FEAT-003 removes it (this commit).
+- 2026-10-22 Temporary rule: implementors run no database; FEAT-003 removes it (`505f103`).
+- 2026-10-22 Owner rule: Main may run read-only hosted catalog queries without asking (this commit).

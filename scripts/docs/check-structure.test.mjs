@@ -5,7 +5,9 @@
 // - Subject: `scripts/docs/check-structure.mjs`.
 // - Passing cases: a tree that follows the templates exits 0; every rule ID has a passing fixture next to its
 //   failing one; the security-hotfix allowlist passes exactly the two stated path and rule pairs.
-// - Failing cases: every rule ID (file-role, progress-state, milestone-format, this-commit, problems-shape,
+// - Failing cases: loose IDs outside a valid entry, a closed future-features line with the wrong prefix, a
+//   duplicate FEAT ID in a file outside programs and backlog, a plan that links another program's progress.md,
+//   a progress.md outside docs/programs not treated as a program; every rule ID (file-role, progress-state, milestone-format, this-commit, problems-shape,
 //   no-state-in-plan, plan-progress-link, future-features-shape, backlog-shape, backlog-not-program,
 //   programs-index, adr-index) has a fixture that exits 1 and names the right `file:line [rule-id]`; the
 //   allowlist is per path and per rule; bad usage or a missing root exits 2.
@@ -151,13 +153,24 @@ test("file-role: a non-role file in a program fails, role files pass", () => {
   assertClean(run({ "docs/other/loose.md": "# Not in a program\n" }));
 });
 
-test("a program is found by its progress.md in any folder", () => {
-  const result = run({
-    "docs/legacy/x/progress.md": progress(),
-    "docs/legacy/x/plan.md": DETAIL,
+test("a program is a folder directly under docs/programs; elsewhere progress.md is not a program", () => {
+  const outside = {
+    "docs/legacy/x/progress.md": "# Not a program\n",
+    "docs/legacy/x/plan.md": "# Loose plan\n",
     "docs/legacy/x/notes.md": "# Notes\n",
-  });
-  assertViolation(result, "docs/legacy/x/notes.md", "file-role", 1);
+  };
+  assertClean(run(outside));
+  assertViolation(
+    run({ ...outside, "docs/README.md": README(["| `programs/alpha` | active |", "| `programs/solo` | closed |", "| `legacy/x` | active |"]) }),
+    "docs/README.md",
+    "programs-index",
+  );
+  assertViolation(
+    run({ "docs/programs/alpha/implementation-plans/u1/progress.md": progress() }),
+    "docs/programs/alpha/implementation-plans/u1/progress.md",
+    "file-role",
+    1,
+  );
 });
 
 test("progress-state: only State then Milestones, with every required State field", () => {
@@ -217,7 +230,11 @@ test("problems-shape: sections, open-entry fields, resolved lines and unique IDs
   assertViolation(run({ [file]: problems("### Something\n\n- Status: Open.", "") }), file, "problems-shape");
   assertViolation(run({ [file]: problems(OPEN_ENTRY("ALPHA-001"), "- ALPHA-001 — Resolved 2026-01-01: dup (abc1234).") }), file, "problems-shape");
   assertViolation(run({ [file]: problems(OPEN_ENTRY("ALPHA-001"), "A paragraph instead of a list line.") }), file, "problems-shape");
+  assertViolation(run({ [file]: problems("- ALPHA-005: a loose line\n\n" + OPEN_ENTRY("ALPHA-001"), "") }), file, "problems-shape", 5);
+  assertViolation(run({ [file]: problems(OPEN_ENTRY("ALPHA-001"), "- ALPHA-002: no em dash") }), file, "problems-shape");
+  assertViolation(run({ [file]: "# Problems\n\n- ALPHA-007: before any section\n\n## Open\n\n## Resolved\n" }), file, "problems-shape", 3);
   assertClean(run({ [file]: problems(OPEN_ENTRY("ALPHA-001") + "\n\n" + OPEN_ENTRY("ALPHA-002"), "") }));
+  assertClean(run({ [file]: problems("None yet.", "") }));
 });
 
 test("no-state-in-plan: State sections fail, similar headings and a one-line pointer pass", () => {
@@ -234,6 +251,20 @@ test("plan-progress-link: a root detail plan needs a progress link, a master pla
   assertViolation(run({ [solo]: "# Detail plan\n\n## 1. Binding Spec\n" }), solo, "plan-progress-link", 1);
   assertViolation(run({ [solo]: "# Detail plan\n\nProgress: `progress.md`.\n" }), solo, "plan-progress-link", 1);
   assertClean(run({ [solo]: "# Detail plan\n\nProgress: [progress][p].\n\n[p]: progress.md\n" }));
+  assertViolation(run({ [solo]: "# Detail plan\n\nProgress: [other](../alpha/progress.md).\n" }), solo, "plan-progress-link", 1);
+  assertViolation(run({ [solo]: "# Detail plan\n\nProgress: [web](https://example.com/progress.md).\n" }), solo, "plan-progress-link", 1);
+  assertViolation(
+    run({ "docs/programs/alpha/implementation-plans/u1/plan.md": DETAIL.replace("(progress.md)", "(../../../solo/progress.md)") }),
+    "docs/programs/alpha/implementation-plans/u1/plan.md",
+    "plan-progress-link",
+    1,
+  );
+  assertViolation(
+    run({ "docs/programs/alpha/plan.md": "# Master plan\n\n## State\n\nSee [progress.md](../solo/progress.md).\n" }),
+    "docs/programs/alpha/plan.md",
+    "no-state-in-plan",
+    3,
+  );
   const unit = "docs/programs/alpha/implementation-plans/u1/plan.md";
   assertViolation(run({ [unit]: "# U1\n\n## 1. Binding Spec\n" }), unit, "plan-progress-link", 1);
   assertClean(run({ "docs/programs/alpha/plan.md": "# Master plan\n\n## 1. Goal\n\n- Goal: g.\n" }));
@@ -248,9 +279,16 @@ test("future-features-shape: heading, fields and IDs unique across all files", (
   const file = "docs/programs/alpha/future-features.md";
   assertViolation(run({ [file]: "# F\n\n## A loose idea\n" }), file, "future-features-shape", 3);
   assertViolation(run({ [file]: "# F\n\n## FEAT-010: Idea\n\n- Status: Deferred.\n- Direction: d.\n" }), file, "future-features-shape", 3);
-  assertViolation(run({ [file]: `# F\n\n${FEATURE("FEAT-001")}` }), "docs/backlog/future-features.md", "future-features-shape", 3);
+  assertViolation(run({ [file]: `# F\n\n${FEATURE("FEAT-001")}` }), file, "future-features-shape", 3);
   assertViolation(run({ [file]: `# F\n\n${FEATURE("FEAT-010")}${FEATURE("FEAT-010")}` }), file, "future-features-shape");
   assertViolation(run({ [file]: "# F\n\n## Closed\n\n- FEAT-020 — Fixed it\n" }), file, "future-features-shape", 5);
+  assertViolation(run({ [file]: "# F\n\n## Closed\n\n- BL-020 — Dropped: wrong prefix\n" }), file, "future-features-shape", 5);
+  assertViolation(run({ [file]: `# F\n\n- FEAT-030: a loose idea\n\n${FEATURE("FEAT-011")}` }), file, "future-features-shape", 3);
+  const loose = "docs/notes/future-features.md";
+  assertViolation(run({ [loose]: `# F\n\n${FEATURE("FEAT-001")}` }), loose, "future-features-shape", 3);
+  assertViolation(run({ [loose]: "# F\n\n## FEAT-040: Idea\n\n- Status: Deferred.\n" }), loose, "future-features-shape", 3);
+  assertViolation(run({ "docs/programs/solo/future-features.md": `# F\n\n${FEATURE("FEAT-001")}` }), "docs/programs/solo/future-features.md", "future-features-shape", 3);
+  assertClean(run({ [loose]: `# F\n\n${FEATURE("FEAT-041")}` }));
   assertClean(run({ [file]: `# F\n\n${FEATURE("FEAT-010")}${FEATURE("FEAT-011")}` }));
 });
 

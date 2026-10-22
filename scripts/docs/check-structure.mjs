@@ -15,6 +15,7 @@ import { repoFileIndex } from "./repo-files.mjs";
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const DOCS_DIR = "docs";
 const BACKLOG_DIR = "docs/backlog";
+const PROGRAMS_DIR = "docs/programs";
 const SKIP_DIRS = new Set(["node_modules", ".git"]);
 
 // Exceptions to the rules, one per path and rule, each with a reason. A path that published migrations
@@ -57,9 +58,12 @@ const ID = "[A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*-\\d+";
 const ID_PATTERN = new RegExp(`\\b(${ID})\\b`);
 const FEATURE_HEADING = /^(FEAT-\d+): \S/;
 // A closed backlog entry is exactly one line that keeps its ID (program-docs skill, Backlog).
-const CLOSED_PATTERN = new RegExp(
-  `^[-*+] (${ID}) — (?:Done: .+ \\(PR #\\d+\\)|Moved to \\[[^\\]]+\\]\\([^)]+\\)|Dropped: .+)$`,
-);
+const closedPattern = (idPattern) =>
+  new RegExp(`^[-*+] (${idPattern}) — (?:Done: .+ \\(PR #\\d+\\)|Moved to \\[[^\\]]+\\]\\([^)]+\\)|Dropped: .+)$`);
+const CLOSED_PATTERN = closedPattern(ID);
+const FEATURE_CLOSED_PATTERN = closedPattern("FEAT-\\d+");
+// A resolved problem is one list line that starts with its ID and an em dash.
+const RESOLVED_PATTERN = new RegExp(`^[-*+]\\s+\\**(${ID})\\**\\s+— \\S`);
 
 function parseArgs(argv) {
   const options = { root: resolve(scriptDir, "..", "..") };
@@ -196,9 +200,12 @@ function linkTargets(line, definitions) {
   return targets;
 }
 
-// The target is exactly `progress.md` (fragment or query dropped); `progress.md.bak` does not count.
-function isProgressTarget(target) {
-  return /(^|\/)progress\.md$/.test(target.split(/[#?]/)[0]);
+// A link counts only when it resolves to the program's own progress.md (fragment and query dropped), so
+// `progress.md.bak` and another program's progress.md do not count.
+function pointsToOwnProgress(target, docRel, programDir) {
+  const path = target.split(/[#?]/)[0];
+  if (path === "" || path.startsWith("/") || /^[a-z][a-z0-9+.-]*:/i.test(path)) return false;
+  return posix.join(posix.dirname(docRel), path) === `${programDir}/progress.md`;
 }
 
 function sectionRange(doc, heading, level) {
@@ -275,6 +282,16 @@ function checkProgress(doc, report) {
   }
 }
 
+// Content with an ID that sits outside any entry (before the first section, or in the intro of Open) is not
+// an entry: it would never be checked, so it is reported instead. Lines strictly between `from` and `to`.
+function reportLooseIds(doc, report, rule, kind, from, to) {
+  for (const line of doc.content) {
+    if (line.n <= from || line.n >= to || /^#{1,6}[ \t]/.test(line.text)) continue;
+    const id = ID_PATTERN.exec(line.text)?.[1];
+    if (id) report(line.n, rule, `${id} appears outside a valid ${kind}; write it as one or remove it`);
+  }
+}
+
 // `backlog` switches the Resolved section to the three closed forms of the backlog (Done, Moved to, Dropped).
 function checkProblems(doc, report, { backlog = false } = {}) {
   const h2 = doc.headings.filter((heading) => heading.level === 2);
@@ -292,11 +309,14 @@ function checkProblems(doc, report, { backlog = false } = {}) {
     }
   };
 
+  reportLooseIds(doc, report, "problems-shape", "problems entry", 0, h2[0]?.n ?? Infinity);
+
   if (open) {
     const range = sectionRange(doc, open, 2);
     const entries = doc.headings.filter(
       (heading) => heading.level === 3 && heading.n > range.from && heading.n < range.to,
     );
+    reportLooseIds(doc, report, "problems-shape", "open entry", range.from, entries[0]?.n ?? range.to);
     for (const entry of entries) {
       const id = ID_PATTERN.exec(entry.title)?.[1];
       if (id) noteId(id, entry.n);
@@ -317,9 +337,9 @@ function checkProblems(doc, report, { backlog = false } = {}) {
       if (line.text.trim() === "") continue;
       if (/^[-*+] /.test(line.text)) {
         started = true;
-        const id = new RegExp(`^[-*+]\\s+\\**(${ID})`).exec(line.text)?.[1];
+        const id = RESOLVED_PATTERN.exec(line.text)?.[1];
         if (id) noteId(id, line.n);
-        else report(line.n, "problems-shape", "a resolved entry must start with its ID, such as `- PREFIX-001 — ...`");
+        else report(line.n, "problems-shape", "a resolved entry must start with its ID and an em dash, such as `- PREFIX-001 — ...`");
         if (backlog && !CLOSED_PATTERN.test(line.text.trimEnd())) {
           report(
             line.n,
@@ -350,11 +370,13 @@ function checkFutureFeatures(doc, report, seenIds) {
       seenIds.set(id, { file: doc.rel, n });
     }
   };
-  for (const heading of doc.headings.filter((item) => item.level === 2)) {
+  const h2 = doc.headings.filter((item) => item.level === 2);
+  reportLooseIds(doc, report, "future-features-shape", "feature entry", 0, h2[0]?.n ?? Infinity);
+  for (const heading of h2) {
     if (heading.title === "Closed") {
       for (const line of sectionLines(doc, heading, 2)) {
         if (line.text.trim() === "") continue;
-        const closed = CLOSED_PATTERN.exec(line.text.trimEnd());
+        const closed = FEATURE_CLOSED_PATTERN.exec(line.text.trimEnd());
         if (closed) {
           noteId(closed[1], line.n);
         } else {
@@ -382,7 +404,8 @@ function checkFutureFeatures(doc, report, seenIds) {
   }
 }
 
-function checkPlan(doc, kind, report) {
+function checkPlan(doc, kind, report, programDir) {
+  const isOwnProgress = (target) => pointsToOwnProgress(target, doc.rel, programDir);
   const definitions = parseDefinitions(doc.content);
   for (const heading of doc.headings) {
     const title = heading.title.replace(/^\d+(?:\.\d+)*\.?\s+/, "").toLowerCase();
@@ -391,7 +414,7 @@ function checkPlan(doc, kind, report) {
       (line) => line.text.trim() !== "" && !definitions.lines.has(line.n),
     );
     const isPointer =
-      body.length === 1 && linkTargets(body[0], definitions).some((target) => isProgressTarget(target));
+      body.length === 1 && linkTargets(body[0], definitions).some(isOwnProgress);
     if (!isPointer) {
       report(
         heading.n,
@@ -402,9 +425,9 @@ function checkPlan(doc, kind, report) {
   }
   if (kind === "detail") {
     const linksProgress = doc.content.some((line) =>
-      linkTargets(line, definitions).some((target) => isProgressTarget(target)),
+      linkTargets(line, definitions).some(isOwnProgress),
     );
-    if (!linksProgress) report(1, "plan-progress-link", "a detail plan must link to progress.md with a Markdown link");
+    if (!linksProgress) report(1, "plan-progress-link", "a detail plan must link to its own program's progress.md with a Markdown link");
   }
 }
 
@@ -459,11 +482,12 @@ export function checkStructure(root) {
   }
   const reportFor = (rel) => (n, rule, message) => violations.push({ file: rel, line: n, rule, message });
 
-  // The backlog is not a program: it never has progress.md and never a Programs row.
+  // A program is a folder directly under docs/programs/ with a progress.md. The backlog is not a program, and
+  // a progress.md anywhere else is not subject to program rules.
   const programDirs = [...docs.keys()]
     .filter((rel) => posix.basename(rel) === "progress.md")
     .map((rel) => posix.dirname(rel))
-    .filter((dir) => dir !== BACKLOG_DIR);
+    .filter((dir) => posix.dirname(dir) === PROGRAMS_DIR);
   const programOf = (rel) =>
     programDirs.filter((dir) => rel.startsWith(`${dir}/`)).sort((a, b) => b.length - a.length)[0];
   const featureIds = new Map();
@@ -485,10 +509,16 @@ export function checkStructure(root) {
       checkProgress(doc, report);
     } else if (role === "problems") {
       checkProblems(doc, report);
-    } else if (role === "future") {
-      checkFutureFeatures(doc, report, featureIds);
-    } else {
-      checkPlan(doc, role, report);
+    } else if (role !== "future") {
+      checkPlan(doc, role, report, dir);
+    }
+  }
+
+  // Every future-features.md under docs/ is checked exactly once, wherever it sits, so FEAT IDs are unique
+  // across the whole repository.
+  for (const doc of docs.values()) {
+    if (posix.basename(doc.rel) === "future-features.md") {
+      checkFutureFeatures(doc, reportFor(doc.rel), featureIds);
     }
   }
 
@@ -500,9 +530,7 @@ export function checkStructure(root) {
       report(1, "backlog-not-program", "docs/backlog/ is not a program: it has no plan.md and no progress.md");
     } else if (name === "problems.md") {
       checkProblems(doc, report, { backlog: true });
-    } else if (name === "future-features.md") {
-      checkFutureFeatures(doc, report, featureIds);
-    } else {
+    } else if (name !== "future-features.md") {
       report(1, "backlog-shape", "docs/backlog/ holds only future-features.md and problems.md");
     }
   }

@@ -129,9 +129,16 @@ describe("the e2e mail record", () => {
     const file = join(folder, "[root-of-the-server]__fixture._.js");
     writeFileSync(
       file,
-      `module.exports=[[1,a=>{class M{sendMail(a,b=null){throw new Error("the real sendMail ran")}}a.exports=M}]];`,
+      mailerChunk(true),
     );
     return file;
+  }
+
+  // The class has nodemailer's markers (the strings are no-op statements here) or, without them, is an
+  // unrelated class with the same signature.
+  function mailerChunk(withMarkers: boolean) {
+    const markers = withMarkers ? `"this.transporter.getSocket";"Sending mail using %s/%s";` : "";
+    return `module.exports=[[1,a=>{class M{sendMail(a,b=null){${markers}throw new Error("the real sendMail ran")}}a.exports=M}]];`;
   }
 
   const send = (file: string) => `
@@ -168,14 +175,27 @@ describe("the e2e mail record", () => {
     expect(run.mail).toEqual([]);
   });
 
+  it("leaves a chunk whose class is not nodemailer's alone", () => {
+    const dir = mkdtempSync(join(tmpdir(), "e2e-mail-"));
+    dirs.push(dir);
+    const folder = join(dir, ".next", "server", "chunks", "ssr");
+    mkdirSync(folder, { recursive: true });
+    const file = join(folder, "[root-of-the-server]__unrelated._.js");
+    writeFileSync(file, mailerChunk(false));
+
+    const run = runGuarded(send(file), { mail: true });
+    expect(run.stdout.trim()).toBe("failed the real sendMail ran");
+    expect(run.mail).toEqual([]);
+  });
+
   describe("patchMailerSource", () => {
     it("rewrites a minified and an unminified definition", () => {
-      expect(patchMailerSource("class M{sendMail(a,b=null){let c;}}")).toBe(
-        "class M{sendMail(a,b=null){return globalThis.__e2eRecordMail(a,b);let c;}}",
+      const markers = '"this.transporter.getSocket";"Sending mail using %s/%s";';
+      expect(patchMailerSource(`class M{sendMail(a,b=null){${markers}}}`)).toBe(
+        `class M{sendMail(a,b=null){return globalThis.__e2eRecordMail(a,b);${markers}}}`,
       );
-      expect(patchMailerSource("class M {\n  sendMail(data, callback = null) {\n    let x;\n  }\n}")).toContain(
-        "return globalThis.__e2eRecordMail(data,callback);",
-      );
+      const unminified = `class M {\n  sendMail(data, callback = null) {\n    ${markers}\n  }\n}`;
+      expect(patchMailerSource(unminified)).toContain("return globalThis.__e2eRecordMail(data,callback);");
     });
 
     it("leaves calls and sources without a definition alone", () => {
@@ -183,8 +203,28 @@ describe("the e2e mail record", () => {
       expect(patchMailerSource(source)).toBe(source);
     });
 
-    it("fails when one chunk defines sendMail twice", () => {
-      expect(() => patchMailerSource("class A{sendMail(a,b=null){}}class B{sendMail(c,d=null){}}")).toThrow(/2 sendMail definitions/);
+    it("leaves an unrelated class with the same signature alone", () => {
+      const source = "class Other{sendMail(a,b=null){return a+b}}";
+      expect(patchMailerSource(source)).toBe(source);
+    });
+
+    it("leaves the signature inside a string alone", () => {
+      const source = 'const doc="class Other{sendMail(a,b=null){return 1}}";export{doc}';
+      expect(patchMailerSource(source)).toBe(source);
+    });
+
+    it("patches only the definition that carries the nodemailer markers", () => {
+      const mailer = 'class Mailer{sendMail(a,b=null){let c;"function"==typeof this.transporter.getSocket&&(c=1);this.logger.debug({},"Sending mail using %s/%s")}}';
+      const decoy = 'const doc="{sendMail(x,y=null){}";class Other{sendMail(p,q=null){return p}}';
+      const patched = patchMailerSource(`${decoy}${mailer}`);
+      const expected = mailer.replace("sendMail(a,b=null){", "sendMail(a,b=null){return globalThis.__e2eRecordMail(a,b);");
+      expect(patched).toBe(`${decoy}${expected}`);
+    });
+
+    it("fails when a chunk bundles nodemailer but holds no definition of its sendMail or two", () => {
+      expect(() => patchMailerSource('log("Sending mail using %s/%s");')).toThrow(/0 nodemailer sendMail definitions/);
+      const mailer = 'class M{sendMail(a,b=null){this.transporter.getSocket;log("Sending mail using %s/%s")}}';
+      expect(() => patchMailerSource(`${mailer}${mailer}`)).toThrow(/2 nodemailer sendMail definitions/);
     });
   });
 });

@@ -26,6 +26,33 @@ describe("runKnownBug with the error of Playwright's expect", () => {
     );
   });
 
+  it("counts a failed negated assertion as the bug and a held one as the fix", async () => {
+    // A failed `.not` assertion carries matcherResult.pass === true: Playwright throws when pass equals isNot.
+    const reports: string[] = [];
+    await runKnownBug(
+      "P99",
+      async (bug) => bug(() => playwrightExpect("denied").not.toBe("denied")),
+      (message) => {
+        reports.push(message);
+      },
+    );
+    expect(reports).toEqual(["known bug P99"]);
+    await expect(runKnownBug("P99", async (bug) => bug(() => playwrightExpect("allowed").not.toBe("denied")))).rejects.toThrow(
+      /P99 no longer reproduces/,
+    );
+  });
+
+  it("fails on an Error that only looks like an assertion failure", async () => {
+    const lookalike = Object.assign(new Error("not a matcher"), { matcherResult: { pass: false } });
+    await expect(
+      runKnownBug("P99", async (bug) =>
+        bug(() => {
+          throw lookalike;
+        }),
+      ),
+    ).rejects.toBe(lookalike);
+  });
+
   it("fails on a failed precondition", async () => {
     await expect(
       runKnownBug("P99", async (bug) => {

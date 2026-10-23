@@ -2,13 +2,23 @@ type Check = () => void | Promise<void>;
 export type Bug = (check: Check) => Promise<void>;
 
 // The failure of an assertion, not any other error. Vitest's `expect` throws an `AssertionError`. Playwright's
-// `expect` throws a plain `Error` (its class is not exported) that carries the `matcherResult` of the failed
-// matcher; a TypeError or a timeout of another kind has none, and stays a failure of the test.
+// `expect` throws a plain `Error` (its class is not exported) built as
+// `new ExpectError({ ...result, name, message })`: it always carries a `matcherResult` with a boolean `pass`
+// and string `name` and `message`, and its own message ends with the matcher's message. `pass` is not
+// `false` for a failed `.not` assertion (Playwright throws when `pass === isNot`), so it is not tested for a
+// value. A TypeError, an Error without `matcherResult` and a timeout from outside an `expect` stay failures.
 function isAssertionError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   if (error.name === "AssertionError") return true;
-  const { matcherResult } = error as { matcherResult?: unknown };
-  return typeof matcherResult === "object" && matcherResult !== null && (matcherResult as { pass?: unknown }).pass === false;
+  const { matcherResult } = error as { matcherResult?: Record<string, unknown> | null };
+  return (
+    typeof matcherResult === "object" &&
+    matcherResult !== null &&
+    typeof matcherResult.pass === "boolean" &&
+    typeof matcherResult.name === "string" &&
+    typeof matcherResult.message === "string" &&
+    error.message.endsWith(matcherResult.message)
+  );
 }
 
 // Runs a known-bug body. `bug(check)` wraps the single assertion that describes the CORRECT behavior:

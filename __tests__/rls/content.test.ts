@@ -93,10 +93,11 @@ describe("a learner cannot write content", () => {
     chapters: { course_id: 1, title: `${MARKER} target chapter`, order_index: 9 },
     lessons: { course_id: 1, chapter_id: 1, title: `${MARKER} target lesson`, slug: `${MARKER}-target-lesson`, order_index: 9 },
   } as const;
+  // The changed values keep the marker: if an update policy regressed, the row still matches the cleanup.
   const changes = {
-    courses: { name: "Changed by learner" },
-    chapters: { title: "Changed by learner" },
-    lessons: { title: "Changed by learner" },
+    courses: { name: `${MARKER} changed by learner` },
+    chapters: { title: `${MARKER} changed by learner` },
+    lessons: { title: `${MARKER} changed by learner` },
   } as const;
   const unchangedColumn = { courses: "name", chapters: "title", lessons: "title" } as const;
 

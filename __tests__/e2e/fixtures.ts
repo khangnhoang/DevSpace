@@ -1,5 +1,8 @@
 import { test as base, expect } from "@playwright/test";
+import { join } from "node:path";
 import { classifyRequest } from "../helpers/e2e-network";
+import { recordSize, recordsSince, serverRecordPaths, type GuardRecord, type MailRecord } from "../helpers/e2e-server";
+import { openActionCaller, type ActionCaller } from "./server-action";
 
 export { expect };
 
@@ -14,8 +17,35 @@ export { expect };
 const MONACO_LOADER_PREFIX = "https://cdn.jsdelivr.net/npm/monaco-editor@";
 const MONACO_LOADER_SUFFIX = "/min/vs/loader.js";
 
-export const test = base.extend<{ blockedMonacoLoader: boolean }>({
+// The e2e server runs behind the server guard (server-guard.cjs). `mailsSent()` returns the mails the server
+// recorded since this test began; a test during which the server tried to resolve or reach a non-local host fails.
+export type ServerRecords = { mailsSent: () => MailRecord[] };
+
+export const test = base.extend<{ blockedMonacoLoader: boolean; serverRecords: ServerRecords; callAction: ActionCaller }>({
   blockedMonacoLoader: [false, { option: true }],
+
+  // Posts to a server action endpoint as an actor (server-action.ts). Its contexts are closed after the test.
+  callAction: async ({}, provide) => {
+    const { call, dispose } = await openActionCaller();
+    await provide(call);
+    await dispose();
+  },
+
+  serverRecords: [
+    async ({}, provide) => {
+      const paths = serverRecordPaths(join(__dirname, "../.."));
+      const guardStart = recordSize(paths.guard);
+      const mailStart = recordSize(paths.mail);
+
+      await provide({ mailsSent: () => recordsSince<MailRecord>(paths.mail, mailStart) });
+
+      expect(
+        recordsSince<GuardRecord>(paths.guard, guardStart),
+        "the e2e server tried to resolve or reach a non-local host",
+      ).toEqual([]);
+    },
+    { auto: true },
+  ],
 
   // The callback is not named `use` (Playwright's usual name): the react-hooks lint rule reads that as a hook.
   context: async ({ context, blockedMonacoLoader }, provide) => {

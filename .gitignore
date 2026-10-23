@@ -17,6 +17,8 @@
 /playwright/.cache/
 # sessions saved by the e2e setup project
 /__tests__/e2e/.auth/
+# guard and mail records written by the e2e server
+/__tests__/e2e/.server/
 
 # next.js
 /.next/

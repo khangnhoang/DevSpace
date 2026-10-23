@@ -16,7 +16,7 @@ Skills: `frontend-workflow`, `frontend-design`. Check the hierarchy and primary,
 
 ## Tests and verification
 
-Skill: `test-quality-strategy`. DevSpace has unit and RLS tests (`npm test`) and no automated browser or server action tests yet. Check that the tests assert the promised behavior at the right layer, cover denied and hostile paths, are deterministic and clean up after themselves; that a policy, grant or security change adds or updates RLS tests; that a known bug runs through `knownBug` and is never a skipped test or `test.fails`; and that the plan's commands and manual steps cover whatever the tests do not. Failures are reported rather than hidden, and nothing claims coverage that was not run.
+Skill: `test-quality-strategy`. DevSpace has unit and RLS tests (`npm test`), a Playwright smoke (`npm run test:e2e`) and no server action tests yet. Check that the tests assert the promised behavior at the right layer, cover denied and hostile paths, are deterministic and clean up after themselves; that a policy, grant or security change adds or updates RLS tests; that a known bug runs through `knownBug` and is never a skipped test or `test.fails`; and that the plan's commands and manual steps cover whatever the tests do not. Failures are reported rather than hidden, and nothing claims coverage that was not run.
 
 ## Security, performance and comments
 

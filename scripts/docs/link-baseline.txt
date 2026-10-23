@@ -1,3 +1,5 @@
-# Known broken relative markdown links that stay on purpose. The baseline is empty: fix a broken link
-# instead of adding it here. One entry per line: <source file> -> <link target as written>.
+# Known broken relative markdown links that stay on purpose. Fix a broken link instead of adding it here;
+# the only entry is a link inside the vendored upstream skill, whose text stays byte for byte.
+# One entry per line: <source file> -> <link target as written>.
 # Lines starting with # are comments. The check prints entries that are no longer broken.
+.claude/skills/playwright-cli/SKILL.md -> .playwright-cli/page-2026-02-14T19-22-42-679Z.yml

@@ -1,6 +1,6 @@
 # Manual UI validation
 
-Read this before planning, running or reporting manual UI validation. There is no automated browser test yet. A local Supabase stack with a minimal invented seed exists, but the app is not wired to it yet, so validation is still one deliberate pass in the browser pane, in coordination with the Owner. The matrix itself comes from the plan (`planning`, QA matrix).
+Read this before planning, running or reporting manual UI validation. The Playwright smoke (`npm run test:e2e`) covers only the paths in `__tests__/e2e`, so validation is still one deliberate pass in the browser pane, in coordination with the Owner. The matrix itself comes from the plan (`planning`, QA matrix).
 
 ## Setup
 

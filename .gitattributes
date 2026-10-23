@@ -5,3 +5,6 @@
 # Hosted `update_updated_at_column` has CRLF in its body; keep the baseline bytes exactly as dumped.
 # This line comes after the pattern above, so it wins for the baseline.
 /supabase/migrations/20261021000000_baseline.sql -text
+
+# Vendored upstream LICENSE has CRLF line endings; keep its bytes so the blob SHA matches microsoft/playwright-cli.
+/.claude/skills/playwright-cli/LICENSE -text whitespace=cr-at-eol

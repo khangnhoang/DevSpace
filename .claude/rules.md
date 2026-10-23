@@ -95,6 +95,7 @@ A handoff is tied to its task and is deleted with it. The task is complete when 
 - A skill states only what DevSpace has today. Missing tooling is named once as deferred, with no steps.
 - Keep a skill at about 150 lines, with frontmatter `name` and `description`, "Use when" and "Do not use when", and a read condition for every reference. Run `npm run docs:check` after editing.
 - A new skill, or one that widens a permission, needs the Owner's decision. No skill can widen section 4.
+- A vendored third-party skill (`playwright-cli`) keeps its upstream body byte for byte, except the frontmatter `description` and one DevSpace block under the H1. The DevSpace block wins over that body, and the length target applies to the block.
 
 ## 9. Code comments
 

@@ -25,11 +25,16 @@ test.describe("anonymous visitor", () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
-  test("[S5] opens the try-it page without a page error", async ({ page }) => {
-    const response = await page.goto("/try_it");
-    expect(response?.status()).toBe(200);
-    // The editor itself loads from a CDN, which the network guard aborts: only the page shell is asserted.
-    await expect(page.getByRole("button", { name: "Chạy Code" })).toBeVisible();
+  test.describe("try-it page", () => {
+    // The editor loads from a CDN that the network guard blocks (see fixtures.ts).
+    test.use({ blockedMonacoLoader: true });
+
+    test("[S5] opens the try-it page without a page error", async ({ page }) => {
+      const response = await page.goto("/try_it");
+      expect(response?.status()).toBe(200);
+      // Only the page shell is asserted: the editor cannot load.
+      await expect(page.getByRole("button", { name: "Chạy Code" })).toBeVisible();
+    });
   });
 
   test("[S6] sees the sign-in form on the login page", async ({ page }) => {

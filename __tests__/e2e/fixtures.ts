@@ -8,9 +8,16 @@ export { expect };
 // project or the production site is aborted and fails the test, and so does a page error or a 5xx answer
 // from a local host. Redirect hops skip the route handler: the browser cannot resolve a non-local host
 // (`playwright.config.ts`) and the request listener still reports a hosted hop.
-export const test = base.extend({
+// The guard blocks Monaco's CDN loader on /try_it, and `@monaco-editor/loader` then rejects an unhandled promise
+// with an `Event`, which Playwright reports as a page error with an empty name. Only a row that sets
+// `blockedMonacoLoader` tolerates that one error, and only after the loader request has failed.
+const MONACO_LOADER_URL = "https://cdn.jsdelivr.net/npm/monaco-editor@";
+
+export const test = base.extend<{ blockedMonacoLoader: boolean }>({
+  blockedMonacoLoader: [false, { option: true }],
+
   // The callback is not named `use` (Playwright's usual name): the react-hooks lint rule reads that as a hook.
-  context: async ({ context }, provide) => {
+  context: async ({ context, blockedMonacoLoader }, provide) => {
     // A set, because a hosted request is recorded by the route handler and by the request listener.
     const problems = new Set<string>();
 
@@ -25,7 +32,15 @@ export const test = base.extend({
     context.on("request", (request) => {
       if (classifyRequest(request.url()) === "hosted") problems.add(`request to a hosted host: ${request.url()}`);
     });
-    context.on("weberror", (webError) => problems.add(`page error: ${webError.error().message}`));
+    let monacoLoaderFailed = false;
+    context.on("requestfailed", (request) => {
+      if (request.url().startsWith(MONACO_LOADER_URL)) monacoLoaderFailed = true;
+    });
+    context.on("weberror", (webError) => {
+      const error = webError.error();
+      const monacoEvent = blockedMonacoLoader && monacoLoaderFailed && !error.name && error.message === "Event";
+      if (!monacoEvent) problems.add(`page error: ${error.message}`);
+    });
     context.on("response", (response) => {
       if (response.status() >= 500) problems.add(`HTTP ${response.status()} from ${response.url()}`);
     });

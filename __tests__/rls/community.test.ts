@@ -15,11 +15,22 @@ import { admin, expectDenied, fixtures, IDS, learner, must, student } from "./he
 
 const MARKER = "rls-test";
 
-// G3: restore the seed comment and remove reviews and comments a test added, even when it failed.
+const SEED_COMMENT = "Bài giảng này giải thích rất dễ hiểu.";
+
+// G3: restore the seed comment and remove reviews and comments a test added, even when it failed. The seed
+// comment is restored first, in every mutable column, and kept out of the marker delete: a write policy that
+// regressed may have left the marker text in it.
 afterEach(async () => {
+  const restored = must(
+    await fixtures
+      .from("comments")
+      .update({ user_id: IDS.student, lesson_id: 3, content: SEED_COMMENT, deleted_at: null })
+      .eq("id", 1)
+      .select("id"),
+  );
+  expect(restored, "the seed comment 1 must exist to be restored").toHaveLength(1);
+  must(await fixtures.from("comments").delete().like("content", `${MARKER}%`).neq("id", 1));
   must(await fixtures.from("reviews").delete().in("user_id", [IDS.learner, IDS.student]));
-  must(await fixtures.from("comments").delete().like("content", `${MARKER}%`));
-  must(await fixtures.from("comments").update({ lesson_id: 3, deleted_at: null }).eq("id", 1));
 });
 
 const review = (userId: string) => ({ user_id: userId, course_id: 2, rating: 4, content: `${MARKER} review` });

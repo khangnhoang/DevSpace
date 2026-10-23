@@ -111,10 +111,13 @@ describe("role changes", () => {
 describe("functions", () => {
   // The sign-up user is deleted even when the test fails, so no other test sees a fourth profile.
   afterEach(async () => {
-    const { data } = await fixtures.auth.admin.listUsers({ perPage: 1000 });
+    const { data, error } = await fixtures.auth.admin.listUsers({ perPage: 1000 });
+    if (error) throw new Error(`cleanup could not list users: ${error.message}`);
     for (const user of data.users.filter((u) => u.email === signUpEmail)) {
-      await fixtures.auth.admin.deleteUser(user.id);
+      const deleted = await fixtures.auth.admin.deleteUser(user.id);
+      if (deleted.error) throw new Error(`cleanup could not delete the sign-up user: ${deleted.error.message}`);
     }
+    expect(must(await fixtures.from("profiles").select("id").eq("email", signUpEmail)), "the sign-up profile must be gone").toEqual([]);
   });
 
   // handle_new_user returns trigger, so an API call fails before any privilege check; read the catalog instead.

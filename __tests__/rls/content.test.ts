@@ -7,8 +7,9 @@
 // Denied paths: anon and learner read lessons.content or video_url; anon and a learner without enrollment read
 //   no exercises; a learner inserts, updates or deletes courses, chapters and lessons.
 // Known bugs: none.
-// Invariants: the seed rows (courses 1 and 2, chapters 1 and 2, lessons 1 to 4) are never changed; rows a test
-//   inserts carry the rls-test marker and are deleted afterwards through the service role.
+// Invariants: the seed rows (courses 1 and 2, chapters 1 and 2, lessons 1 to 4) are never write targets; rows a
+//   test inserts, including the [C7] update and delete targets, carry the rls-test marker and are deleted
+//   afterwards through the service role.
 import { afterEach, describe, expect, it } from "vitest";
 import { admin, anon, expectDenied, fixtures, learner, must, student } from "./helpers";
 
@@ -87,6 +88,11 @@ describe("a learner cannot write content", () => {
     chapters: { course_id: 1, title: `${MARKER} chapter`, order_index: 9 },
     lessons: { course_id: 1, chapter_id: 1, title: `${MARKER} lesson`, slug: `${MARKER}-lesson`, order_index: 9 },
   } as const;
+  const targetRows = {
+    courses: { name: `${MARKER} target course`, slug: `${MARKER}-target-course`, price: 0 },
+    chapters: { course_id: 1, title: `${MARKER} target chapter`, order_index: 9 },
+    lessons: { course_id: 1, chapter_id: 1, title: `${MARKER} target lesson`, slug: `${MARKER}-target-lesson`, order_index: 9 },
+  } as const;
   const changes = {
     courses: { name: "Changed by learner" },
     chapters: { title: "Changed by learner" },
@@ -104,21 +110,26 @@ describe("a learner cannot write content", () => {
       expect(must(await fixtures.from(table).select("id"))).toHaveLength(before);
     });
 
-    it(`[C7] updates no seed row of ${table}`, async () => {
+    // The update and delete targets are marker rows made here, not seed rows: if a write policy regresses, only
+    // rows that afterEach already removes are touched (a deleted seed course would cascade into its children).
+    it(`[C7] updates no row of ${table}`, async () => {
       const column = unchangedColumn[table];
-      const before = must(await fixtures.from(table).select(`id, ${column}`).eq("id", 1).single());
+      const { id } = must(await fixtures.from(table).insert(targetRows[table]).select("id").single());
+      const before = must(await fixtures.from(table).select(`id, ${column}`).eq("id", id).single());
 
-      const { data, error } = await learner.from(table).update(changes[table]).eq("id", 1).select("id");
+      const { data, error } = await learner.from(table).update(changes[table]).eq("id", id).select("id");
       expect(error).toBeNull();
       expect(data).toEqual([]);
-      expect(must(await fixtures.from(table).select(`id, ${column}`).eq("id", 1).single())).toEqual(before);
+      expect(must(await fixtures.from(table).select(`id, ${column}`).eq("id", id).single())).toEqual(before);
     });
 
-    it(`[C7] deletes no seed row of ${table}`, async () => {
-      const { data, error } = await learner.from(table).delete().eq("id", 1).select("id");
+    it(`[C7] deletes no row of ${table}`, async () => {
+      const { id } = must(await fixtures.from(table).insert(targetRows[table]).select("id").single());
+
+      const { data, error } = await learner.from(table).delete().eq("id", id).select("id");
       expect(error).toBeNull();
       expect(data).toEqual([]);
-      expect(must(await fixtures.from(table).select("id").eq("id", 1))).toHaveLength(1);
+      expect(must(await fixtures.from(table).select("id").eq("id", id))).toHaveLength(1);
     });
   });
 });

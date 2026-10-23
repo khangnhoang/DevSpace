@@ -24,4 +24,4 @@ Read this when changing or reviewing a policy, a permission helper, a grant, a b
 
 ## Verification details
 
-For each RLS or grant change: allowed role, denied role, allowed and denied path per command including `USING` and `WITH CHECK`, ownership and admin cases, and private or removed rows where relevant. Main runs them as simulated-role SQL or REST calls on the hosted database after approval; until then they are `pending`.
+For each RLS or grant change: allowed role, denied role, allowed and denied path per command including `USING` and `WITH CHECK`, ownership and admin cases, and private or removed rows where relevant. Write them as RLS tests in `__tests__/rls` (`test-quality-strategy`) and run `npm test` on the local stack before any hosted step. Main's hosted postflight stays: simulated-role SQL or REST calls on the hosted database after approval, `pending` until then.

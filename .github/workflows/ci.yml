@@ -76,8 +76,11 @@ jobs:
       - run: npm ci
       - run: npx supabase start -x studio,mailpit,edge-runtime,logflare,vector,imgproxy,supavisor,realtime,postgres-meta
       # `start` already applied the migrations and the seed on the empty database. `db reset` is the
-      # developer command and the step later units extend with their tests.
+      # developer command; the tests below run after it (infrastructure D14).
       - run: npx supabase db reset
+      # Unit and RLS tests (infrastructure U3). The rls project reads the API URL and keys from the local
+      # stack only. A failing test, a known bug that stopped reproducing, or a setup failure fails the job.
+      - run: npm test
 
   lint:
     runs-on: ubuntu-latest

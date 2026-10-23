@@ -84,7 +84,7 @@ insert into public.enrollments (id, user_id, course_id) overriding system value
   values (1, '33333333-3333-4333-8333-333333333333', 2);
 
 insert into public.payments (id, user_id, course_id, amount, status) overriding system value
-  values (1, '33333333-3333-4333-8333-333333333333', 2, 199000, 'approved');
+  values (1, '33333333-3333-4333-8333-333333333333', 2, 199000, 'success');
 
 insert into public.exercises (id, lesson_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation) values
   (1, 3, 'Từ khóa nào khai báo biến có thể gán lại?', 'let', 'const', 'fixed', 'static', 'A', 'let khai báo biến có thể gán lại giá trị.'),

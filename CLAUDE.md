@@ -7,7 +7,7 @@ Roadmap, in this order: (1) agent-workflow (rules, skills, docs system), (2) inf
 ## Commands
 
 - `npm run dev`, `npm run build`, `npm start`.
-- `npm run lint`: it reports 81 existing problems. Do not increase that number.
+- `npm run lint`: it reports 82 existing problems. Do not increase that number.
 - `npx tsc --noEmit`: type check.
 - `npm run docs:check`: structure and link checks for `docs/`, `.claude/`, `CLAUDE.md`, `README.md`. `npm run docs:check:test` runs its tests.
 - CI (`.github/workflows/ci.yml`) runs `typecheck`, `build`, `docs`, `lint` and `db` on every pull request to `main` and every push to `main`, with no hosted secret; `db` starts the local Supabase stack, runs `db reset`, then `npm test`. `typecheck`, `build`, `docs` and `db` block; the `lint` job and its lint step both report success until the lint cleanup, so the lint result is the problem count in the step's log (`gh run view <id> --log`, line "✖ N problems"). Whether `main` requires the blocking jobs is an Owner setting in GitHub; check it with `gh api repos/khangnhoang/DevSpace/branches/main/protection` (read-only). The Vercel deploy still runs as before.

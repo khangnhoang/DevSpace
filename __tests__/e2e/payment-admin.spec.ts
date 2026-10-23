@@ -119,10 +119,12 @@ test.describe("known bugs of approving and rejecting", () => {
   knownBugE2e("P25", "[K7] rejecting an approved order leaves it approved", async (bug, { callAction, serverRecords }) => {
     const actions = paymentActions(callAction);
     const orderId = await createLearnerOrder(actions);
-    expect(await actions.approvePayment("admin", orderId)).toEqual({ success: true });
+    expect(await actions.approvePayment("admin", orderId)).toMatchObject({ success: true });
     expect(serverRecords.mailsSent(), "the setup approval mails the learner").toHaveLength(1);
 
+    // Not the requireAdmin refusal: an admin whose role was lost would leave the order approved for the wrong reason.
     const rejected = await actions.rejectPayment("admin", orderId);
+    expect(rejected, "the reject request was not refused for missing admin rights").not.toEqual({ error: "Không có quyền truy cập" });
     expect(typeof rejected, "the reject request got a response").toBe("object");
 
     await bug(async () => expect((await paymentById(orderId)).status).toBe("success"));
@@ -131,10 +133,13 @@ test.describe("known bugs of approving and rejecting", () => {
   knownBugE2e("P25", "[K8] approving a cancelled order leaves it cancelled", async (bug, { callAction }) => {
     const actions = paymentActions(callAction);
     const orderId = await createLearnerOrder(actions);
-    expect(await actions.cancelPayment("learner", orderId)).toEqual({ success: true });
+    expect(await actions.cancelPayment("learner", orderId)).toMatchObject({ success: true });
     expect(await learnerEnrollmentCount(2), "the learner has no enrollment before the approval").toBe(0);
 
+    // No approve ran before in this row, so the admin's rights are proved here: a refusal would leave the
+    // order cancelled for the wrong reason and pass the bug check.
     const approved = await actions.approvePayment("admin", orderId);
+    expect(approved, "the approve request was not refused for missing admin rights").not.toEqual({ error: "Không có quyền truy cập" });
     expect(typeof approved, "the approve request got a response").toBe("object");
 
     await bug(async () => expect((await paymentById(orderId)).status).toBe("failed"));

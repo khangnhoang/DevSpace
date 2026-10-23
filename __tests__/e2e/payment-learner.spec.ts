@@ -158,6 +158,7 @@ test.describe("calling the payment actions directly", () => {
     expect(first.isResumed).toBeUndefined();
     expect(second).toMatchObject({ success: true, paymentId: first.paymentId, isResumed: true });
     expect(await learnerOrders()).toHaveLength(1);
+    expect(await paymentById(first.paymentId!)).toMatchObject({ id: first.paymentId, user_id: IDS.learner, course_id: 2, amount: 199000, status: "pending" });
   });
 
   test("[H3] a learner cannot apply a coupon to the admin's order", async ({ callAction }) => {

@@ -1,5 +1,84 @@
+import { expect as playwrightExpect } from "@playwright/test";
 import { describe, expect, it } from "vitest";
 import { runKnownBug } from "../helpers/known-bug";
+
+describe("runKnownBug with the error of Playwright's expect", () => {
+  // knownBugE2e wraps this same function; Playwright's `expect` throws a plain Error with a `matcherResult`,
+  // not an AssertionError, and it also runs outside a test for a non-web matcher.
+  it("passes and reports the bug while the correct-behavior assertion fails", async () => {
+    const reports: string[] = [];
+    await runKnownBug(
+      "P99",
+      async (bug) => {
+        playwrightExpect(1).toBe(1);
+        await bug(() => playwrightExpect("allowed").toBe("denied"));
+      },
+      (message) => {
+        reports.push(message);
+      },
+    );
+    expect(reports).toEqual(["known bug P99"]);
+  });
+
+  it("fails with a turn-it-into-a-normal-test message once the correct-behavior assertion holds", async () => {
+    await expect(runKnownBug("P99", async (bug) => bug(() => playwrightExpect("denied").toBe("denied")))).rejects.toThrow(
+      /P99 no longer reproduces: turn this into a normal test/,
+    );
+  });
+
+  it("counts a failed negated assertion as the bug and a held one as the fix", async () => {
+    // A failed `.not` assertion carries matcherResult.pass === true: Playwright throws when pass equals isNot.
+    const reports: string[] = [];
+    await runKnownBug(
+      "P99",
+      async (bug) => bug(() => playwrightExpect("denied").not.toBe("denied")),
+      (message) => {
+        reports.push(message);
+      },
+    );
+    expect(reports).toEqual(["known bug P99"]);
+    await expect(runKnownBug("P99", async (bug) => bug(() => playwrightExpect("allowed").not.toBe("denied")))).rejects.toThrow(
+      /P99 no longer reproduces/,
+    );
+  });
+
+  it("fails on an Error that only looks like an assertion failure", async () => {
+    const lookalike = Object.assign(new Error("not a matcher"), { matcherResult: { pass: false } });
+    await expect(
+      runKnownBug("P99", async (bug) =>
+        bug(() => {
+          throw lookalike;
+        }),
+      ),
+    ).rejects.toBe(lookalike);
+  });
+
+  it("fails on a failed precondition", async () => {
+    await expect(
+      runKnownBug("P99", async (bug) => {
+        playwrightExpect("row missing").toBe("row present");
+        await bug(() => playwrightExpect(1).toBe(2));
+      }),
+    ).rejects.toThrow(/row present/);
+  });
+
+  it("fails on a TypeError or a plain Error inside the bug check, which are not assertion failures", async () => {
+    await expect(
+      runKnownBug("P99", async (bug) =>
+        bug(() => {
+          throw new TypeError("cannot read properties of undefined");
+        }),
+      ),
+    ).rejects.toThrow(TypeError);
+    await expect(
+      runKnownBug("P99", async (bug) =>
+        bug(() => {
+          throw new Error("network down");
+        }),
+      ),
+    ).rejects.toThrow(/network down/);
+  });
+});
 
 describe("runKnownBug", () => {
   it("passes and reports the bug while the correct-behavior assertion fails", async () => {

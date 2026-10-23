@@ -9,7 +9,7 @@ description: "Test quality for DevSpace automated tests: what the unit, rls and 
 
 Use when you write, change, review or plan a test under `__tests__/`, when a policy, grant or security change needs denied-path tests, when a bug fix needs a regression test, or when you report test results.
 
-Do not use for manual browser validation (`frontend-workflow`), for writing the migration itself (`supabase-migration`), or for plan structure (`planning`). Server action tests (infrastructure U5) are deferred: do not write them, and do not claim coverage they would give.
+Do not use for manual browser validation (`frontend-workflow`), for writing the migration itself (`supabase-migration`), or for plan structure (`planning`). Only the payment actions have server action tests (the `payment-*.spec.ts` rows): do not claim coverage for another action.
 
 ## What exists
 
@@ -19,20 +19,29 @@ Do not use for manual browser validation (`frontend-workflow`), for writing the 
 | `rls` | `__tests__/rls/**/*.test.ts` | `npm test` (runs both layers) | the local stack started and seeded: `npx supabase start`, `npx supabase db reset` |
 | `e2e` | `__tests__/e2e/*.spec.ts` (Playwright, Chromium) | `npm run test:e2e` | the local stack started and seeded, and Chromium (`npx playwright install chromium`) |
 
-- `vitest.config.mts` defines both projects, turns env-file loading off and runs the `rls` files one at a time. Shared helpers: `__tests__/helpers` (the local-stack host check, `knownBug`) and `__tests__/rls/helpers.ts` (actor clients).
+- `vitest.config.mts` defines both projects, turns env-file loading off and runs the `rls` files one at a time. Shared helpers: `__tests__/helpers` (the local-stack host check, `knownBug` and its runner-neutral core, the server action reader) and `__tests__/rls/helpers.ts` (actor clients).
 - The `rls` global setup reads the API URL, database URL and keys from `npx supabase status -o json` only, refuses a host other than `127.0.0.1` or `localhost`, and signs in the seed users once. A test never reads `.env*` or a hosted URL.
 - The seed users (`supabase/seed.sql`, invented): `learner` (enrolled nowhere), `student` (enrolled and paid in course 2), `admin`.
 - The CI job `db` runs `npm test` after `db reset`; the CI job `e2e` runs `npm run test:e2e` on its own local stack. Under an agent environment Vitest uses its `minimal` reporter and hides the `known bug <id>` lines; run `npm test -- --reporter=default` to see them. CI uses the default reporter.
 
-## End-to-end smoke (`e2e`)
+## End-to-end (`e2e`): smoke and payment rows
 
-- It proves that the main learner and admin paths render and that the access redirects hold, in a real browser, against a production build. It does not repeat an rls guarantee and it is not a server action test.
+- The smoke rows prove that the main learner and admin paths render and that the access redirects hold, in a real browser, against a production build. They do not repeat an rls guarantee. The payment rows are the server action tests (see Server action rows).
 - `npm run test:e2e` reads the API URL and keys from `npx supabase status` through the host check, builds the app with `buildE2eEnv` (`__tests__/helpers/e2e-env.ts`) and serves it on port 3100. A unit test fails when `app`, `lib` or `proxy.ts` read an environment variable that the map does not set, because the build would then take it from the local environment file, which points at hosted. When code reads a new variable, add it to the map. The run overwrites `.next`: run `npm run build` before `npm start` afterwards.
 - Specs are `__tests__/e2e/<role>.spec.ts` and import `test` from `fixtures.ts`. Names start with the matrix ID, for example `[L5]`. The `setup` project signs in each seed user through the login form once per run and saves the session under `__tests__/e2e/.auth/` (ignored by git).
 - The network guard in `fixtures.ts` aborts every request whose host is not `127.0.0.1` or `localhost` (a CDN, `placehold.co`) and every `/_next/image` request that asks the Next server to fetch such a URL. A request aimed at `*.supabase.co` or `devspace-lms.vercel.app`, a page error and a response with status 500 or more fail the test. Chromium also cannot resolve any host but a local one (`--host-resolver-rules`), because Playwright does not route redirect hops. The one exception: a row that sets `blockedMonacoLoader` (`[S5]` only) marks as handled, in the page, the unhandled rejection whose reason is the `error` Event of the Monaco `loader.js` script element from `cdn.jsdelivr.net`; every other page error still fails. Do not assert what a blocked CDN would load; the classifier is `__tests__/helpers/e2e-network.ts`.
 - Assert seed values (course names, lesson text, URLs), not CSS classes. Wait with Playwright's auto-waiting, never a fixed sleep.
-- Data: a smoke row writes nothing, except the one enrollment path (`[L5]`). A row that writes restores its rows in `afterEach` through the service role (`__tests__/e2e/service-role.ts`), which is used only for preconditions and cleanup, never for the request under test.
+- Data: a smoke row writes nothing, except the one enrollment path (`[L5]`); the payment rows write and follow Server action rows. A row that writes restores its rows in `afterEach` through the service role (`__tests__/e2e/service-role.ts`), which is used only for preconditions and cleanup, never for the request under test.
 - Run `npx supabase db reset`, then `npm run test:e2e` twice and `npm test` once after changing a row that writes.
+
+## Server action rows (`payment-learner.spec.ts`, `payment-admin.spec.ts`)
+
+- The UI drives the normal paths. A hostile path, or anything the UI cannot reach, posts straight to the action endpoint with the `callAction` fixture (`__tests__/e2e/server-action.ts`). It reads the action ID from `.next/server/server-reference-manifest.json` by source file and export name (never written down) and sends the actor's saved session (none for `anon`) and the e2e server's origin. A missing pair, a redirect or an unreadable response throws an error that names the pair; there is no fallback. The lookup and the flight reader are pure (`__tests__/helpers/server-action-core.ts`, unit-tested from a captured response) and rely on Next internals, so a Next update shows up in `npm run test:unit` and in the rows.
+- The e2e server starts through `scripts/e2e/serve.mjs`: `next build` unguarded, `next start` with `__tests__/e2e/server-guard.cjs`. The guard refuses and records every name resolution and connection to a host but `127.0.0.1`, `localhost` and `::1`, and the auto fixture `serverRecords` fails a test during which it recorded one. Records live in the ignored `__tests__/e2e/.server/`.
+- The mail record stops `sendMail` of the bundled nodemailer (Turbopack bundles it, so `server-mail.cjs` rewrites the chunk as it is required) and records recipient and subject. `serverRecords.mailsSent()` lists the mails since the test began: a row that approves asserts exactly its mails, every other row asserts none. Nothing reaches Gmail.
+- A known bug uses `knownBugE2e` (`__tests__/e2e/known-bug.ts`): the same contract as `knownBug`, and the run prints `known bug <id>`. Playwright's `expect` throws a plain `Error` with a `matcherResult`, not an `AssertionError`; `runKnownBug` knows both.
+- Write and cleanup: a payment in any state but a new pending order is created through the actions as the right actor, never by a service-role insert or update (a later guard on `payments` would refuse it). The service role creates coupon fixtures (`E2E-` codes), reads state back and cleans up. `beforeEach` runs `assertPaymentFixturesClean` and `afterEach` runs `restorePaymentFixtures` (payments before coupons), even when the row failed, so a second run, `[E5]`, `[E7]` and `[L2]` still hold. After a killed run, `npx supabase db reset`.
+- Use the saved sessions; never sign in per row.
 
 ## Core rules
 

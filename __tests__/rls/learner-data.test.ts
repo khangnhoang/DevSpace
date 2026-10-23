@@ -75,7 +75,7 @@ describe("payments", () => {
   it("[E5] a student reads only their own payment", async () => {
     const { data, error } = await student.from("payments").select("id, user_id, status");
     expect(error).toBeNull();
-    expect(data).toEqual([{ id: 1, user_id: IDS.student, status: "approved" }]);
+    expect(data).toEqual([{ id: 1, user_id: IDS.student, status: "success" }]);
   });
 
   it("[E6] a learner cannot insert a payment", async () => {

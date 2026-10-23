@@ -1,5 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-import { E2E_ORIGIN, E2E_PORT, buildE2eEnv } from "./__tests__/helpers/e2e-env";
+import { E2E_ORIGIN, buildE2eEnv } from "./__tests__/helpers/e2e-env";
 import { readLocalStack } from "./__tests__/helpers/local-stack";
 
 // The API URL and keys come from `npx supabase status` only, never from a file: the local environment file
@@ -32,7 +32,8 @@ export default defineConfig({
   ],
   webServer: {
     // Building here, not in a separate step, means no run can serve a stale `.next` that points at hosted.
-    command: `npx next build && npx next start -H 127.0.0.1 -p ${E2E_PORT}`,
+    // serve.mjs builds without the server guard and serves with it.
+    command: "node scripts/e2e/serve.mjs",
     url: E2E_ORIGIN,
     // Never reuse a server: one on this port could be a build made with other environment variables.
     reuseExistingServer: false,

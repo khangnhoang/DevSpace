@@ -6,15 +6,15 @@ Plan: [plan.md](plan.md). Problems: [problems.md](problems.md). Git history is t
 
 | Field | Value |
 | --- | --- |
-| Spec revision | `plan.md` r2 (2026-10-22), master plan; U3 detail plan `implementation-plans/u3-vitest-rls/plan.md` r3 (2026-10-23), approved by the Owner. |
-| Current unit / checkpoint | U3 Vitest and RLS tests (branch `test/infra-vitest`): CP1 (`2f4abfb`), CP2 (`94b1426`), the `@types/node` correction (`3905e9a`), CP3 (`58fe82b`), Codex corrections (`1e4401a`, `76b4b42`), state records (this commit); CP4 done, CP5 next |
-| Status | CP1 to CP4 done; Codex diff gate PASS in round 3 on `a024531..76b4b42`; not pushed. |
-| Completed evidence | On `76b4b42`: `npx supabase db reset` exit 0; `npm test` 9 files and 94 tests (30 unit, 64 rls), twice with no reset between; `npx tsc --noEmit` exit 0; `npm run lint` 81 problems; `git diff 8606dcf -- app lib proxy.ts next.config.ts supabase/migrations supabase/rollbacks` empty. CP4 mutations on the local stack: an `anon` grant on `lessons` fails [C3] twice, a `using (true)` SELECT policy on `profiles` fails [P1] and [P2], dropping `prevent_role_escalation` fails [P7]; a permissive UPDATE policy on `chapters` fails the [C7] chapter update and leaves no marker row. CI not run yet (CP5). |
-| Accepted deviations | U3: `vitest.config.mts` instead of `.ts` (no ESM warning); an extra `__tests__/rls/setup.test.ts` (Vitest 5 skips a global setup with no test file); `@types/node` `^22` to match production's Node 22.x (Vitest 5 needs `^22` or `>=24`); [N4]'s admin insert has no returning clause (the admin has no SELECT policy on another user's notification); several matrix rows split into several named tests; the [C7] update and delete targets are marker rows the test creates, not seed rows, so a regression cannot cascade through the seed; the skill is 88 lines plus two references; under an agent environment Vitest uses its minimal reporter, so `knownBug` also prints `known bug <id>` on stdout. U2's accepted deviations (the `lessons.word_count` literal, the baseline's hosted CR bytes, local Postgres 17.11.0.004 against hosted 17.6) are recorded in PR 12 and the baseline header. |
-| Blockers / Owner decisions | none. U3 decisions D15 to D18 taken on 2026-10-23 (in the U3 plan). Dependency findings and the Node 26 decision are in INF-001 and FEAT-001. |
-| Next action | With the Owner's push and PR grants, Main pushes `test/infra-vitest`, opens the PR, watches CI (CP5: the `db` log shows the tests and the `known bug P3/P4/P28` lines) and writes the result into the PR body. |
-| Current authority | the plan commit and the U3 implementation, with local checkpoint commits (granted 2026-10-23). Push, PR creation and merge are not granted; U3 has no hosted step. |
-| Hosted state | baseline recorded as applied by `migration repair`; hosted lists 4 versions, `20261021000000_baseline` first (`list_migrations`, 2026-10-23). U3 has no hosted step. |
+| Spec revision | `plan.md` r2 (2026-10-22), master plan; no unit detail plan active. |
+| Current unit / checkpoint | none active; U3 merged (PR 15, `adb3262`). INF-001 security update on `chore/security-update`, a small task outside the unit plan (Owner decision 2026-10-23). |
+| Status | INF-001 update done, all checks passed; not pushed. |
+| Completed evidence | INF-001 on `chore/security-update` from `adb3262`: `next` and `eslint-config-next` 16.4.3, then `npm audit fix` without `--force`. `npm audit --omit=dev` 17 findings (1 critical, 8 high, 8 moderate) to 5 (`dompurify` critical, `nodemailer` high, 2 moderate, 1 low; none with an in-range fix, listed in FEAT-001). `npm run build` exit 0; `npx tsc --noEmit` exit 0; `npm run lint` 82 problems; `npx supabase db reset` exit 0; `npm test` 9 files, 94 tests, with the `known bug P3/P4/P28` lines. Browser pass on `next dev` against hosted data with the Owner signed in as admin, read only: home, course detail, `try_it`, login, profile, a lesson, admin dashboard, courses and users render with no server error. |
+| Accepted deviations | `npm run lint` 81 to 82: `eslint-config-next` 16.4.x requires `eslint-plugin-react-hooks` ^7.1.0, whose `set-state-in-effect` now also flags existing code at `app/(main)/course/[slug]/page.tsx:117`; the Owner accepted 82 (2026-10-23) and U6 fixes it with the rest. `next` 16.4.3 instead of 16.4.2: it was released during the work and is the latest 16.x. |
+| Blockers / Owner decisions | none. |
+| Next action | With the Owner's grants, Main commits, pushes `chore/security-update`, opens the PR and writes the CI result into its body; then the U4 detail plan. |
+| Current authority | the INF-001 update (plan approved 2026-10-23). Push, PR creation and merge are not granted. |
+| Hosted state | baseline recorded as applied by `migration repair`; hosted lists 4 versions, `20261021000000_baseline` first (`list_migrations`, 2026-10-23). INF-001 has no hosted step. |
 
 ## Milestones
 
@@ -34,4 +34,6 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-23 U2 merged; the push run on `main` passed all five jobs, lint 81 problems (PR 12, `49006a9`).
 - 2026-10-23 U2 CP6: the Owner recorded the baseline on hosted with `migration repair` (4 hosted versions); `db` added to the required checks on `main` (PR 12, `49006a9`).
 - 2026-10-23 U3 detail plan r3 written, Codex plan gate PASS in round 3, approved by the Owner (`a024531`).
-- 2026-10-23 U3 CP1 to CP4: Vitest unit and rls projects, the RLS matrix with P3, P4, P28 as known bugs, the `db` job step and the `test-quality-strategy` skill; mutation check passed; Codex diff gate PASS in round 3 (this commit).
+- 2026-10-23 U3 CP1 to CP4: Vitest unit and rls projects, the RLS matrix with P3, P4, P28 as known bugs, the `db` job step and the `test-quality-strategy` skill; mutation check passed; Codex diff gate PASS in round 3 (`eeea2be`).
+- 2026-10-23 U3 merged; CI on head `eeea2be` passed all five jobs, lint 81 problems (PR 15, `adb3262`).
+- 2026-10-23 INF-001 resolved: `next` 16.4.3 and `npm audit fix`; lint baseline 82 by Owner decision (this commit).

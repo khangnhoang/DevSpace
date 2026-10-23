@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Checks relative markdown links in docs/, .claude/, CLAUDE.md and README.md. It only checks that the target
 // file or folder exists (not anchors). A broken link listed in the baseline is accepted; a new broken link
-// makes the command exit 1. The baseline is empty today; do not add entries for new links, fix the link.
+// makes the command exit 1. Do not add entries for new links, fix the link (the one entry is in a vendored skill).
 //
 // Usage: node scripts/docs/check-links.mjs [--root <dir>] [--baseline <file>]
 // Exit: 0 no new broken link | 1 new broken link | 2 usage or read error.

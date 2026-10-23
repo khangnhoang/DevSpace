@@ -11,7 +11,7 @@ Use for non-trivial frontend work: pages, components, forms, dialogs, tables, le
 
 Do not use for docs only, database-only work, generated files, or a trivial text or class-name change. Visual direction belongs to `frontend-design`. A frontend task must not silently grow into server action, RLS or migration changes: use `server-actions` and `supabase-migration` and stop for a plan if the task needs them.
 
-There are no automated frontend tests yet (test infrastructure is a separate program). Verification is `npx tsc --noEmit`, `npm run lint` without new problems, and manual validation below. Say plainly what was not run.
+The only automated browser tests are the Playwright smoke (`npm run test:e2e`, `test-quality-strategy`); they do not check layout, copy or a changed interaction. Verification is `npx tsc --noEmit`, `npm run lint` without new problems, `npm run test:e2e` when a smoke path is affected, and manual validation below. Say plainly what was not run.
 
 ## Core rules
 

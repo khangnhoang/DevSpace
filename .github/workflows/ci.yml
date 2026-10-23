@@ -82,6 +82,30 @@ jobs:
       # stack only. A failing test, a known bug that stopped reproducing, or a setup failure fails the job.
       - run: npm test
 
+  # Blocking (infrastructure D20). Playwright smoke against its own local Supabase stack, same service list as
+  # `db`; no hosted secret or connection. `npm run test:e2e` reads the stack's URL and keys from
+  # `supabase status`, builds the app with them and serves it on port 3100.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx supabase start -x studio,mailpit,edge-runtime,logflare,vector,imgproxy,supavisor,realtime,postgres-meta
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      # The HTML report exists only when Playwright ran, so a failure in an earlier step uploads nothing.
+      - uses: actions/upload-artifact@v7
+        if: ${{ failure() && hashFiles('playwright-report/**') != '' }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 15

@@ -12,6 +12,11 @@
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
+/playwright/.cache/
+# sessions saved by the e2e setup project
+/__tests__/e2e/.auth/
 
 # next.js
 /.next/

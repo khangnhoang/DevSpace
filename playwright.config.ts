@@ -20,6 +20,9 @@ export default defineConfig({
     ...devices["Desktop Chrome"],
     baseURL: E2E_ORIGIN,
     trace: "retain-on-failure",
+    // Route handlers never see redirect hops, so the browser must be unable to resolve any host but a local one.
+    // Chromium applies the rules to the IP literal too, so 127.0.0.1 is excluded as well.
+    launchOptions: { args: ["--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE localhost, EXCLUDE 127.0.0.1"] },
   },
   projects: [
     // Signs in each seed user once and saves the sessions the specs load (the local Auth limit is 30 sign-ins

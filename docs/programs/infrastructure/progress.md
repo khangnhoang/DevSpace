@@ -6,14 +6,14 @@ Plan: [plan.md](plan.md). Problems: [problems.md](problems.md). Git history is t
 
 | Field | Value |
 | --- | --- |
-| Spec revision | `plan.md` r2 (2026-10-22), master plan; no unit detail plan active. |
-| Current unit / checkpoint | none active; U3 merged (PR 15, `adb3262`). INF-001 security update on `chore/security-update`, a small task outside the unit plan (Owner decision 2026-10-23). |
-| Status | INF-001 update done, all checks passed; not pushed. |
-| Completed evidence | INF-001 on `chore/security-update` from `adb3262`: `next` and `eslint-config-next` 16.4.3, then `npm audit fix` without `--force`. `npm audit --omit=dev` 17 findings (1 critical, 8 high, 8 moderate) to 5 (`dompurify` critical, `nodemailer` high, 2 moderate, 1 low; none with an in-range fix, listed in FEAT-001). `npm run build` exit 0; `npx tsc --noEmit` exit 0; `npm run lint` 82 problems; `npx supabase db reset` exit 0; `npm test` 9 files, 94 tests, with the `known bug P3/P4/P28` lines. Browser pass on `next dev` against hosted data with the Owner signed in as admin, read only: home, course detail, `try_it`, login, profile, a lesson, admin dashboard, courses and users render with no server error. |
-| Accepted deviations | `npm run lint` 81 to 82: `eslint-config-next` 16.4.x requires `eslint-plugin-react-hooks` ^7.1.0, whose `set-state-in-effect` now also flags existing code at `app/(main)/course/[slug]/page.tsx:117`; the Owner accepted 82 (2026-10-23) and U6 fixes it with the rest. `next` 16.4.3 instead of 16.4.2: it was released during the work and is the latest 16.x. |
+| Spec revision | `plan.md` r2 (2026-10-22), master plan; U4 detail plan r2 (2026-10-23), [u4-playwright-smoke/plan.md](implementation-plans/u4-playwright-smoke/plan.md). |
+| Current unit / checkpoint | U4 Playwright smoke, CP1 to CP3 handed to the Sonnet implementor. |
+| Status | U4 plan r2 with Owner decisions D19 to D22; Codex plan gate PASS in round 2, approved by the Owner (2026-10-23). |
+| Completed evidence | none for U4 yet. |
+| Accepted deviations | none for U4. The lint baseline is 82 problems since INF-001 (Owner decision 2026-10-23); U6 fixes them. |
 | Blockers / Owner decisions | none. |
-| Next action | With the Owner's grants, Main commits, pushes `chore/security-update`, opens the PR and writes the CI result into its body; then the U4 detail plan. |
-| Current authority | the INF-001 update (plan approved 2026-10-23). Push, PR creation and merge are not granted. |
+| Next action | The Sonnet implementor does CP1 to CP3 as local commits; Main reviews each, then CP4 (mutation check, Codex diff gate). |
+| Current authority | U4 r2 implementation, CP1 to CP3, local commits only; the plan commit by Main. Push, PR creation and merge are not granted. |
 | Hosted state | baseline recorded as applied by `migration repair`; hosted lists 4 versions, `20261021000000_baseline` first (`list_migrations`, 2026-10-23). INF-001 has no hosted step. |
 
 ## Milestones
@@ -36,4 +36,6 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-23 U3 detail plan r3 written, Codex plan gate PASS in round 3, approved by the Owner (`a024531`).
 - 2026-10-23 U3 CP1 to CP4: Vitest unit and rls projects, the RLS matrix with P3, P4, P28 as known bugs, the `db` job step and the `test-quality-strategy` skill; mutation check passed; Codex diff gate PASS in round 3 (`eeea2be`).
 - 2026-10-23 U3 merged; CI on head `eeea2be` passed all five jobs, lint 81 problems (PR 15, `adb3262`).
-- 2026-10-23 INF-001 resolved: `next` 16.4.3 and `npm audit fix`; lint baseline 82 by Owner decision (this commit).
+- 2026-10-23 INF-001 resolved: `next` 16.4.3 and `npm audit fix`; lint baseline 82 by Owner decision (`1a13906`).
+- 2026-10-23 INF-001 merged; CI on head `9abad27` passed all five jobs, lint 82 problems (PR 16, `fcf4a27`).
+- 2026-10-23 U4 detail plan r2 written, Codex plan gate PASS in round 2, approved by the Owner (this commit).

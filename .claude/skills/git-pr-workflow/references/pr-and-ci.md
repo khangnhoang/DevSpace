@@ -38,7 +38,7 @@ When the Owner says to wait for CI, run `gh pr checks <n> --watch --interval 30`
 
 When CI on a PR reaches a terminal state, red or green, Main writes the result into the body's `CI result` section with `gh pr edit <n> --body-file <file>`, then stops. The PR creation or update grant covers this write and nothing else (`.claude/rules.md` section 4). The Owner decides the merge; nobody merges on their own, and a red result is not fixed without a CI-fix grant.
 
-- Report the latest run for the PR's current head, not an older or cancelled one: the run link, the event, the head commit, and the table Check | Result | Duration | Notes with the five Actions jobs and Vercel.
+- Report the latest run for the PR's current head, not an older or cancelled one: the run link, the event, the head commit, and the table Check | Result | Duration | Notes with the six Actions jobs and Vercel.
 - The `lint` row carries the problem count from the lint step's log ("✖ N problems"); see Watch CI.
 - A check that did not reach its step says `not run`, `skipped` or `cancelled` with the reason (for example no lint count when setup failed).
 - CI evidence lives in the PR body, not in a program's `progress.md` State.

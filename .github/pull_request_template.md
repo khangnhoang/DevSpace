@@ -23,6 +23,7 @@ Run: <link> · Event: <pull_request | push> · Head: <commit>
 | docs | | | |
 | lint | | | problems in the lint step log: N |
 | db | | | |
+| e2e | | | |
 | Vercel | | | |
 
 ## Production impact and pending hosted steps

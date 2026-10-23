@@ -6,14 +6,14 @@ Plan: [plan.md](plan.md). Problems: [problems.md](problems.md). Git history is t
 
 | Field | Value |
 | --- | --- |
-| Spec revision | `plan.md` r2 (2026-10-22), master plan. U5 has no detail plan yet. |
-| Current unit / checkpoint | none active: U4 merged (PR 17, `34b80d9`); U5 Payment-flow tests is next. |
-| Status | U4 merged; U5 not started. |
-| Completed evidence | none for U5 yet. U4 evidence is in its milestones. |
+| Spec revision | `plan.md` r2 (2026-10-22), master plan; U5 detail plan r1 (2026-10-24), [u5-payment-flow/plan.md](implementation-plans/u5-payment-flow/plan.md). |
+| Current unit / checkpoint | U5 Payment-flow tests, plan approved; no checkpoint started. Branch `test/infra-payment-flow` from `main` at `34b80d9`. |
+| Status | Plan r1 approved by the Owner (2026-10-24) after Codex plan gate PASS in round 2 (round 1: server-side name resolution, the CP1 grep, the State). |
+| Completed evidence | none for U5 yet. |
 | Accepted deviations | The lint baseline is 82 problems since INF-001 (Owner decision 2026-10-23); U6 fixes them. |
 | Blockers / Owner decisions | none. |
-| Next action | Main writes the U5 detail plan on `test/infra-payment-flow`. |
-| Current authority | Main's local commits of docs on `test/infra-payment-flow`. Implementation, push, PR creation and merge are not granted. |
+| Next action | With the Owner's implementation grant, a Sonnet session implements CP1 to CP3 on `test/infra-payment-flow`. |
+| Current authority | Main's local docs commits on `test/infra-payment-flow`. Implementation, push, PR creation and merge are not granted. |
 | Hosted state | baseline recorded as applied by `migration repair`; hosted lists 4 versions, `20261021000000_baseline` first (`list_migrations`, 2026-10-23). INF-001 has no hosted step. |
 
 ## Milestones
@@ -41,4 +41,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-23 U4 detail plan r2 written, Codex plan gate PASS in round 2, approved by the Owner (`96668d7`).
 - 2026-10-23 U4 CP1 to CP4: Playwright smoke (22 tests), the `e2e` job, the vendored `playwright-cli` skill; plan r3 adds D23; mutation check passed; Codex diff gate PASS in round 3 (`1ba8712`).
 - 2026-10-23 U4 merged; CI on head `06560e6` and the push run on `main` passed all six jobs, `e2e` included, lint 82 problems (PR 17, `34b80d9`).
-- 2026-10-24 U4 rollout: the Owner added `e2e` to the required checks on `main` (this commit).
+- 2026-10-24 U4 rollout: the Owner added `e2e` to the required checks on `main` (`6258b7f`).
+- 2026-10-24 U5 detail plan r1 written, Codex plan gate PASS in round 2, approved by the Owner (this commit).

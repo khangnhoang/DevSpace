@@ -2,7 +2,7 @@
 
 # Progress — <program name>
 
-Plan: `plan.md`. Problems: `problems.md`. Git history is the final evidence when documents disagree.
+Plan: `plan.md` (an evergreen program: the charter `README.md`). Problems: `problems.md`. Git history is the final evidence when documents disagree.
 
 ## State
 

@@ -24,7 +24,7 @@ Needs an explicit grant. Before a normal push confirm: clean worktree and index;
 3. Check for an existing PR (`gh pr view <branch>`); never create a duplicate. Update title, body, labels or draft state only as asked.
 4. Create with `gh pr create --base main --head <branch> --title "<title>" --body-file <file>`; update with `gh pr edit`. Use an exact title or body when the Owner gives one. Otherwise title and body are in English. Keep the body file out of the commit.
 5. The body follows `.github/pull_request_template.md`: Summary, Changes, Checks run, CI result, Production impact and pending hosted steps, Risks and limits, Follow-ups. `gh pr create --body-file` does not apply the template, so build the body file from it; leave `CI result` as the placeholder table until CI ends (see "Record the CI result"). Link the plan or problem IDs.
-6. After a PR exists, the desktop app's PR tools handle status and auto-fix; do not poll with scheduled tasks.
+6. After a PR exists, the desktop app's PR tools handle status and auto-fix; do not poll with scheduled tasks. When the Owner says to wait for CI, watch in the foreground instead (Watch CI).
 
 PR creation never merges, and update-only permission does not deliver new commits.
 
@@ -32,7 +32,7 @@ PR creation never merges, and update-only permission does not deliver new commit
 
 A PR to `main` runs `.github/workflows/ci.yml`: the jobs `typecheck`, `build`, `docs`, `lint` and `db`, listed by `gh pr checks` next to the Vercel deploy preview. `typecheck`, `build`, `docs` and `db` block; `lint` does not, and runs `npm run lint` in a step with `continue-on-error` until the lint cleanup unit (`docs/programs/infrastructure/`). The `lint` job and its lint step both report success, so a green `lint` check does not mean lint is clean: the lint result is the problem count in the lint step's log (`gh run view <id> --log`, line "✖ N problems"), 81 today. A red `lint` job means setup (checkout, Node, `npm ci`) failed, which is a CI failure. A red `db` job is a real failure: read the failing step in `gh run view <id> --log-failed`. A failed `npx supabase start` step means the local stack did not come up (image pull or container health); a failed `npx supabase db reset` step means the baseline, a migration or the seed did not apply, and the SQL error is in that step's log. Whether `main` requires the blocking jobs is an Owner setting in GitHub, not something the repo enforces; check it with `gh api repos/khangnhoang/DevSpace/branches/main/protection` (read-only).
 
-Use `gh pr checks --watch` (or `gh pr checks`) and report each check's exact terminal state. Do not say CI passed unless GitHub shows a passing state; report pending, failed, skipped and cancelled explicitly with the job names and a short log summary. A failed job's log comes from `gh run view <id> --log-failed`.
+When the Owner says to wait for CI, run `gh pr checks <n> --watch --interval 30` in the foreground, rerun it if the shell timeout ends it first, and keep the turn open until every check is terminal ([Loop 3](../../../../docs/agent-loops.md#loop-3-pr-and-ci)). Otherwise use `gh pr checks --watch` (or `gh pr checks`). Report each check's exact terminal state. Do not say CI passed unless GitHub shows a passing state; report pending, failed, skipped and cancelled explicitly with the job names and a short log summary. A failed job's log comes from `gh run view <id> --log-failed`.
 
 ## Record the CI result
 

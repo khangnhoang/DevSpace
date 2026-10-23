@@ -1,8 +1,8 @@
-<!-- Template: detail plan. Copy to docs/programs/<program>/implementation-plans/u<n>-<slug>/plan.md (or, for a single-unit program, to docs/programs/<program>/plan.md, with "<name> detail plan" in place of "U<n> detail plan"). Fill every <placeholder>, delete this comment. No State section. The final section must be a real Markdown link to progress.md. Spec = binding; facts = frozen evidence; hypotheses = may change. -->
+<!-- Template: detail plan. Copy to docs/programs/<program>/implementation-plans/u<n>-<slug>/plan.md (or, for a single-unit program, to docs/programs/<program>/plan.md, with "<name> detail plan" in place of "U<n> detail plan"). In an evergreen program the plan is an initiative plan at implementation-plans/u<n>-<slug>/plan.md and the "master plan" is the charter README.md. Fill every <placeholder>, delete this comment. No State section. The final section must be a real Markdown link to progress.md. Spec = binding; facts = frozen evidence; hypotheses = may change. -->
 
 # U<n> detail plan — <unit title>
 
-Revision: r<n>, <YYYY-MM-DD>. Owner approval: <date or pending>. Master plan: <link, or "none (single-unit program)">.
+Revision: r<n>, <YYYY-MM-DD>. Owner approval: <date or pending>. Master plan or charter: <link, or "none (single-unit program)">.
 
 ## 1. Binding Spec
 

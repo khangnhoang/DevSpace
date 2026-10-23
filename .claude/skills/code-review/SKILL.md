@@ -64,7 +64,7 @@ Codex reads neither rules nor skills. The brief starts with a "Read first" list;
 
 ## Re-review
 
-Review the correction diff; confirm every Critical and Required is resolved by reading the code, not the author's claim; check new regressions; rerun the affected checks; confirm the correction is a new local commit; update the verdict.
+Review the correction diff; confirm every Critical and Required is resolved by reading the code, not the author's claim; check new regressions; rerun the affected checks; when the reviewed candidate was committed, confirm the correction is a new local commit (an uncommitted candidate is fixed in place, `git-pr-workflow`); update the verdict.
 
 ## Checklist
 

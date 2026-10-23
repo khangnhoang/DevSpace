@@ -5,3 +5,4 @@ A decision that outlives one program or spans programs is recorded here; a decis
 | ADR | Date | Status | Summary |
 | --- | --- | --- | --- |
 | [0001 Modernization roadmap](0001-modernization-roadmap.md) | 2026-10-22 | Accepted | Programs run in the order agent-workflow, infrastructure, techstack-migration; parts the migration replaces are not modernized. |
+| [0002 Program kinds](0002-program-kinds.md) | 2026-10-23 | Accepted | Delivery programs close; evergreen programs own a capability, have a charter README.md and one open initiative at a time; the kind is the Lifecycle value. |

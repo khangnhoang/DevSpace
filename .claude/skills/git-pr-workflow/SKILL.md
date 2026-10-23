@@ -29,11 +29,11 @@ New task branch: read [branch-and-commit.md](references/branch-and-commit.md). S
 
 Read [branch-and-commit.md](references/branch-and-commit.md) when you are about to stage or commit. The gate:
 
-- permission exists; the checkpoint's scope and acceptance are complete; relevant checks ran after the last edit (`npx tsc --noEmit`, `npm run lint` with no new problems, `npm run docs:check`); no conflict marker, debug code or secret; no unresolved decision;
+- permission exists; the checkpoint's scope and acceptance are complete and its self-review passed (`docs/agent-loops.md`, Self-review); relevant checks ran after the last edit (`npx tsc --noEmit`, `npm run lint` with no new problems, `npm run docs:check`); no conflict marker, debug code or secret; no unresolved decision;
 - stage explicit paths (`git add path/a path/b`), not `git add .`, unless the tree began clean and everything is in scope; inspect `git diff --cached` and `git diff --check`;
-- one commit per coherent outcome. Message `<type>(<scope>): <imperative summary>`, entirely in English, no trailing period, no attribution lines, no vague words ("update files", "final fix").
+- one commit per checkpoint (a small task without checkpoints: as `docs/agent-loops.md` Sizing allows); split a checkpoint only for a reason you state in the report (for example a part that must revert alone). Commit in its own message after every edit succeeded, never in parallel with an edit. Message `<type>(<scope>): <imperative summary>`, entirely in English, no trailing period, no attribution lines, no vague words ("update files", "final fix").
 
-Later fixes are new correction commits; never amend a reviewed commit by default.
+Fixes for findings of a review after the commit are new correction commits; never amend a reviewed commit by default.
 
 ## After a checkpoint (report)
 

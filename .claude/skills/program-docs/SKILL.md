@@ -1,13 +1,13 @@
 ---
 name: program-docs
-description: "Contract for the shape of program documentation in DevSpace: master plan, detail plan, progress State, problems, future-features, the docs folders, ADRs, the backlog, and migrating a live program to this shape. Use when creating, updating, reshaping, closing or migrating docs under docs/."
+description: "Contract for the shape of program documentation in DevSpace: the two program kinds (delivery and evergreen), master plan, charter, detail plan, progress State, problems, future-features, the docs folders, ADRs, the backlog, and migrating a live program to this shape. Use when creating, updating, reshaping, closing or migrating docs under docs/."
 ---
 
 # Program docs
 
 ## Use when / do not use when
 
-Use when a task creates, updates, reshapes, closes or migrates program documentation (`plan.md`, `implementation-plans/u<n>-<slug>/plan.md`, `progress.md`, `problems.md`, `future-features.md`), an ADR, `docs/backlog/`, or the `docs/` index.
+Use when a task creates, updates, reshapes, closes or migrates program documentation (`plan.md`, a charter `README.md`, `implementation-plans/u<n>-<slug>/plan.md`, `progress.md`, `problems.md`, `future-features.md`), an ADR, `docs/backlog/`, or the `docs/` index.
 
 Do not use it for product code, for the planning method (the `planning` skill), or merely to read a plan.
 
@@ -18,19 +18,22 @@ This skill owns document shape only: file roles, where State lives, taxonomy, li
 | File | Holds | Must not hold |
 | --- | --- | --- |
 | Master `plan.md` | Goal; numbered, dated Owner decisions (one line each); shared invariants; unit table with dependencies and gates; rollout order; risks; out of scope | State, history, review journal |
+| Charter `README.md` (evergreen only) | The capability and its boundary; numbered, dated Owner decisions (one line each); invariants; the Initiatives table with outcome, dependencies and gates; how an initiative is opened | State, history, review journal |
 | Detail `plan.md` | Binding Spec (outcome, acceptance, scope, guardrails, Owner decisions); repository facts only where they justify a Spec item, with a baseline commit; bounded hypotheses; checkpoint table; risks, rollout, rollback; a link to `progress.md` | State, review journal, detailed code map |
 | `progress.md` | Exactly two sections: `## State` (one block, edited in place) and `## Milestones` (one line each) | Any other section, review rounds, command logs, a copy of the Spec |
 | `problems.md` | Open entries with ID, status, problem, evidence, direction, exit condition; resolved entries as one line | Planning decisions, State |
 | `future-features.md` | Entries `## FEAT-NNN: <title>` with Status, Direction, Target program | Work that is in scope |
 
-A single-unit program uses a detail plan as its root `plan.md` (no `implementation-plans/` folder). A program with `implementation-plans/` has a master plan at the root.
+There are two program kinds ([ADR 0002](../../../docs/adr/0002-program-kinds.md)). A delivery program has a goal and a completion condition. An evergreen program owns a long-lived capability that must be maintained, and runs initiatives that open and close independently.
+
+A single-unit delivery program uses a detail plan as its root `plan.md` (no `implementation-plans/` folder). A delivery program with `implementation-plans/` has a master plan at the root. An evergreen program has no root `plan.md`: its identity is the charter `README.md`, and each initiative has a detail plan under `implementation-plans/`.
 
 Plan shape, checked by `npm run docs:check` (rule `plan-shape`):
 
-- A root `plan.md` titled `# Master plan — <program>` is a master plan, with or without `implementation-plans/`. Once `implementation-plans/` exists, the root plan must be a master plan.
-- Units are numbered `U1`, `U2`, ...: each row of the master plan's Units table starts with its unique `U<n>`.
-- A unit's detail plan sits at `implementation-plans/u<n>-<slug>/plan.md`, is titled `# U<n> detail plan — <title>` with the same `n`, and its `U<n>` is a row of the Units table. A single-unit root detail plan carries no unit ID.
-- Each plan has its template's numbered `##` sections, with the same titles and in the same order; extra sections such as appendices may follow.
+- Delivery: a root `plan.md` titled `# Master plan — <program>` is a master plan, with or without `implementation-plans/`. Once `implementation-plans/` exists, the root plan must be a master plan. Evergreen: the charter is titled `# Charter — <program>` and the program has no root `plan.md` (`file-role`).
+- Units (delivery) and initiatives (evergreen) are numbered `U1`, `U2`, ...: each row of the master plan's Units table, or of the charter's Initiatives table, starts with its unique `U<n>`.
+- A unit's or initiative's detail plan sits at `implementation-plans/u<n>-<slug>/plan.md`, is titled `# U<n> detail plan — <title>` with the same `n`, and its `U<n>` is a row of that table. A single-unit root detail plan carries no unit ID.
+- Each plan and each charter has its template's numbered `##` sections, with the same titles and in the same order; extra sections such as appendices may follow.
 
 ## State has one owner
 
@@ -58,8 +61,10 @@ Closing an entry never implies commit, push or PR permission. Closing a program 
 
 ## Lifecycle, index and ADRs
 
-- A program is a folder under `docs/programs/` with a `progress.md`. Each has one row in the Programs table of `docs/README.md` (`Path`, `Lifecycle`: `active` or `closed`). Status is read from `progress.md`, never copied into the table. To close a program, say in State that it is completed, resolve or move its open problems, review the backlog, and set the row to `closed`.
-- An ADR in `docs/adr/` records a decision that outlives one program or spans programs. A decision that matters to one program stays in its master plan. Every `docs/adr/*.md` except `README.md` is listed in `docs/adr/README.md` with date, status and a one-line summary.
+- A program is a folder under `docs/programs/` with a `progress.md`. Each has one row in the Programs table of `docs/README.md` (`Path`, `Lifecycle`). The kind is the Lifecycle value: `active` or `closed` for a delivery program, `evergreen` for an evergreen one. Status is read from `progress.md`, never copied into the table.
+- Only a delivery program closes: say in State that it is completed, resolve or move its open problems, review the backlog, and set the row to `closed`. An evergreen program never closes. A delivery program that builds a capability may hand it to an evergreen program when it closes.
+- An initiative belongs to exactly one program. One PR may carry work of several programs; a small part in another program is one milestone there citing the PR. An evergreen program has at most one open initiative with a plan at a time; several items may share one initiative, or be one small task with no plan.
+- An ADR in `docs/adr/` records a decision that outlives one program or spans programs. A decision that matters to one program stays in its master plan or charter. Every `docs/adr/*.md` except `README.md` is listed in `docs/adr/README.md` with date, status and a one-line summary.
 - Folder purposes are indexed in `docs/README.md`; update it when a folder's purpose changes.
 
 Docs are in English. Size targets, soft: master plan 150-250 lines, detail plan 150-300, problems entry about 8 lines open and 1 resolved. Exceeding one means removing duplication, not dropping a decision or gate.
@@ -73,12 +78,13 @@ After editing program docs, `docs/README.md`, `docs/adr/` or `docs/backlog/`, ru
 | Resource | Read when | Skip when |
 | --- | --- | --- |
 | [master-plan.md](references/templates/master-plan.md) | creating or reshaping a master `plan.md` | not touching a master plan |
-| [detail-plan.md](references/templates/detail-plan.md) | creating or reshaping a detail plan | not touching a detail plan |
+| [charter.md](references/templates/charter.md) | creating or reshaping the charter `README.md` of an evergreen program | not touching a charter |
+| [detail-plan.md](references/templates/detail-plan.md) | creating or reshaping a detail plan or an initiative plan | not touching a detail plan |
 | [progress.md](references/templates/progress.md) | creating or reshaping a `progress.md`, or you need the State fields or milestone grammar | not touching progress |
 | [problems.md](references/templates/problems.md) | creating or reshaping a `problems.md`, or shrinking a resolved entry | not touching problems |
 | [future-features.md](references/templates/future-features.md) | creating a `future-features.md` or adding an entry | not touching future features |
 | [adr.md](references/templates/adr.md) | creating an ADR | not creating an ADR |
-| [migration.md](references/migration.md) | migrating a live program to this shape, reshaping a single-unit program into a multi-unit one, or replacing its State, plan, progress or problems files | not migrating or reshaping |
+| [migration.md](references/migration.md) | migrating a live program to this shape, reshaping a single-unit program into a multi-unit one, making a delivery program evergreen, or replacing its State, plan, progress or problems files | not migrating or reshaping |
 
 ## Stop when
 

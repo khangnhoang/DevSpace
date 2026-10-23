@@ -1,6 +1,6 @@
 # Migrating or reshaping a live program
 
-Read this only when migrating a live program's docs to the current shape, or reshaping a single-unit program into a multi-unit one. `SKILL.md` stays authoritative for roles, State ownership and stop conditions. Use the templates beside this file; do not copy structure from the old files.
+Read this only when migrating a live program's docs to the current shape, reshaping a single-unit program into a multi-unit one, or making a delivery program evergreen. `SKILL.md` stays authoritative for roles, State ownership and stop conditions. Use the templates beside this file; do not copy structure from the old files.
 
 ## Procedure
 
@@ -24,6 +24,15 @@ Read this only when migrating a live program's docs to the current shape, or res
 2. Write a master plan at the root `plan.md` from the master-plan template: goal, numbered decisions, invariants, a unit table with both units, rollout order.
 3. Fix links and the progress pointer; update State to name the new plan path and revision.
 4. A path that published migrations cite never moves. Keep it in place on the allowlist and put the new unit's plan beside it instead.
+
+## Reshape: a program becomes evergreen
+
+Only on the Owner's decision that the program owns a long-lived capability ([ADR 0002](../../../../docs/adr/0002-program-kinds.md)). Run the Procedure steps 1 to 3 (baseline, meaning checklist, citations) first and steps 5 to 9 after; the steps below replace step 4. If Procedure step 3 finds a published migration citing the root `plan.md`, stop and report: the file cannot be deleted, so the program cannot become evergreen without the Owner's decision on that path.
+
+1. Move the plan content to initiative plans. A single-unit root detail plan moves to `implementation-plans/u1-<slug>/plan.md` with its approved Spec unchanged. A master plan's unit plans stay where they are, with their numbers.
+2. Write the charter `README.md` from the charter template: the master plan's goal becomes the capability and boundary, its decisions and invariants keep their numbers, its Units rows become Initiatives rows (closed units keep their rows), its rollout order and gates become the opening steps. Program risks that still apply go into the charter's Invariants (as the rule that prevents them) or into the initiative plan that owns them; one that fits neither is a reason to stop and report. Out-of-scope items go into the boundary.
+3. Delete the root `plan.md` once the charter holds its meaning, and set the Programs row to `evergreen`.
+4. Fix links to the old root plan (progress pointer, problems, other docs), and update State to name the charter and the initiative plan.
 
 ## Stop
 

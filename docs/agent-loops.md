@@ -24,8 +24,8 @@ If any condition fails, use the planned flow. Steps: size, implement, verify, se
 
 **Medium work.** Past the small-task conditions, with one outcome and low risk:
 
-- inside a program: a normal detail plan at `docs/programs/<program>/implementation-plans/<unit>/plan.md`;
-- outside any program (a backlog entry): no file. Main writes a short plan in chat, the Owner approves it, and it becomes the Sonnet brief. The PR and the entry's `Done` line are the record;
+- inside a program: a normal detail plan at `docs/programs/<program>/implementation-plans/<unit>/plan.md`; medium work that an evergreen program owns is planned as that program's initiative, a detail plan in its `implementation-plans/` (`program-docs` owns the shape);
+- outside any program, when no program owns the capability (a backlog entry): no file. Main writes a short plan in chat, the Owner approves it, and it becomes the Sonnet brief. The PR and the entry's `Done` line are the record;
 - a single-unit program that gains a second unit is reshaped first, by the `program-docs` migration procedure.
 
 **Large or high-risk work.** A plan file, the Codex gate on the plan and on the implementation (`.claude/rules.md` section 3), and an Owner decision for anything the plan cannot settle.
@@ -54,11 +54,14 @@ If any condition fails, use the planned flow. Steps: size, implement, verify, se
 
 - **Trigger:** the Owner asks to inspect PR or CI state, watch checks, open or update a PR, or fix CI. Owner: `git-pr-workflow`.
 - **Mode:** the narrowest the Owner stated. `inspect` and `watch` change nothing. `create PR` and `update PR` do only that action, plus writing that PR's CI result into its body (`.claude/rules.md` section 4). A CI-fix grant covers only the edit, validate, commit and push actions the Owner named; it does not imply commit or push.
+- **Waiting:** when the Owner says to wait for CI, Main keeps the turn open and watches until every check is terminal (command in `pr-and-ci.md`, Watch CI), instead of ending the turn to wait for app events.
 - **Stop** before any ungranted action, a fix that is not small and branch-caused, force-push, branch deletion or merge. Main makes at most two CI self-fix rounds; a third needs the Owner. Implementors never push.
 
 ## Self-review
 
 A pass is one full review of the current candidate. Review after writing a plan, after each checkpoint, and once more over the whole diff before it goes to review or delivery. A later correction gets its own review. Repeat until a pass leaves no `Critical` or `Required` finding; there is no pass cap.
+
+At a checkpoint the order is: finish the work, self-review, fix and review again until a pass leaves no `Critical` or `Required`, and only then commit (when granted). A correction commit answers a finding from a review after the commit (Main, Codex, Owner QA, or the author's own pass over the whole diff), never the author's pre-commit pass.
 
 The method (anchor on the real candidate, falsify, verify) and the finding format are owned by the `code-review` skill (Self-review). A finding that cannot be fixed goes to the Owner through `AskUserQuestion` with a recommended resolution; an implementor returns it to Main instead of asking. Never stop silently or report the work as passed. Self-review does not replace a required Codex review or manual QA, and never widens permission.
 

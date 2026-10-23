@@ -15,7 +15,7 @@ Doc shape (master plan, detail plan, progress, problems) belongs to `program-doc
 
 ## Workflow
 
-1. **Scan before writing.** Read `docs/backlog/` for entries in scope, and the owning program's `plan.md`, `progress.md` and `problems.md`. Pull a matching backlog entry into the plan, or move related entries into a program, instead of duplicating them.
+1. **Scan before writing.** Read `docs/backlog/` for entries in scope, and the owning program's plan (`plan.md`, or the charter `README.md` of an evergreen program), `progress.md` and `problems.md`. Pull a matching backlog entry into the plan, or move related entries into a program, instead of duplicating them.
 2. **Understand the request.** Actor and goal, current and expected behavior, business rules, state transitions, permission-sensitive behavior, data needed, scope and exclusions, failure paths. Do not reduce a business task to its nearest UI.
 3. **Inspect the real repository** before asking anything: entry point, validation and permission, business rule, mutation, persisted state, response, UI feedback. Confirm paths, payload shapes, nullable fields, statuses, RLS behavior and the verification commands that exist. Do not invent files, APIs, scripts or test tooling.
 4. **Classify evidence.** Confirmed facts (code, docs, migrations, hosted metadata snapshot), assumptions, conflicts, open questions. Never present an assumption as a fact or hide a conflict inside the solution.
@@ -39,7 +39,7 @@ Doc shape (master plan, detail plan, progress, problems) belongs to `program-doc
 
 ## Planning a program
 
-A new program starts as a detail plan used as its root `plan.md` (single unit). When it gains a second unit, reshape it with the `program-docs` migration procedure. For a multi-unit program, read [master-plan-workflow.md](references/master-plan-workflow.md).
+A new delivery program starts as a detail plan used as its root `plan.md` (single unit). When it gains a second unit, reshape it with the `program-docs` migration procedure. For a multi-unit program, read [master-plan-workflow.md](references/master-plan-workflow.md). A new evergreen program starts with its charter `README.md` and its first initiative plan; `program-docs` owns the shape.
 
 ## Resources
 

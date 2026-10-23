@@ -134,11 +134,12 @@ describe("the e2e mail record", () => {
     return file;
   }
 
-  // The class has nodemailer's markers (the strings are no-op statements here) or, without them, is an
-  // unrelated class with the same signature.
+  // The two statements of nodemailer's `Mailer#sendMail` that identify it: the property access and the log string.
+  const markers = 'this.transporter.getSocket;"Sending mail using %s/%s";';
+
+  // The class has nodemailer's markers or, without them, is an unrelated class with the same signature.
   function mailerChunk(withMarkers: boolean) {
-    const markers = withMarkers ? `"this.transporter.getSocket";"Sending mail using %s/%s";` : "";
-    return `module.exports=[[1,a=>{class M{sendMail(a,b=null){${markers}throw new Error("the real sendMail ran")}}a.exports=M}]];`;
+    return `module.exports=[[1,a=>{class M{transporter={};sendMail(a,b=null){${withMarkers ? markers : ""}throw new Error("the real sendMail ran")}}a.exports=M}]];`;
   }
 
   const send = (file: string) => `
@@ -190,7 +191,6 @@ describe("the e2e mail record", () => {
 
   describe("patchMailerSource", () => {
     it("rewrites a minified and an unminified definition", () => {
-      const markers = '"this.transporter.getSocket";"Sending mail using %s/%s";';
       expect(patchMailerSource(`class M{sendMail(a,b=null){${markers}}}`)).toBe(
         `class M{sendMail(a,b=null){return globalThis.__e2eRecordMail(a,b);${markers}}}`,
       );
@@ -207,8 +207,6 @@ describe("the e2e mail record", () => {
       const source = "class Other{sendMail(a,b=null){return a+b}}";
       expect(patchMailerSource(source)).toBe(source);
     });
-
-    const markers = '"this.transporter.getSocket";"Sending mail using %s/%s";';
 
     it("does not take a definition with both markers inside a string, a template or a comment", () => {
       // Each source holds the nodemailer marker, so the early return does not hide the case.
@@ -230,7 +228,7 @@ describe("the e2e mail record", () => {
     });
 
     it("does not let a definition borrow the markers of the method after it", () => {
-      // Only Other.sendMail matches the head pattern, and Mailer's markers sit after Other's closed body.
+      // Only Other.sendMail has the shape of nodemailer's, and Mailer's markers sit after Other's closed body.
       const source = `class Other { sendMail(a,b=null) { return a } }
 class Mailer {
   sendMail(a,b) {
@@ -241,23 +239,62 @@ class Mailer {
       expect(() => patchMailerSource(source)).toThrow(/0 nodemailer sendMail definitions/);
     });
 
-    it("finds the body of a definition with a } in a string, a template, a regex and a comment before the markers", () => {
+    it("does not let a regex after if (...) hide the end of a body", () => {
+      // The `{` in the regex is text. A scan that read `/` after `)` as a division would count it as code and let
+      // Other.sendMail run on into helper(), which holds the markers.
+      const source = `class Other {
+  sendMail(a,b=null) {
+    if (a) /[{]x/.test(a);
+  }
+  helper() {
+    this.transporter.getSocket;
+    log("Sending mail using %s/%s");
+  }
+}`;
+      expect(() => patchMailerSource(source)).toThrow(/0 nodemailer sendMail definitions/);
+    });
+
+    it("finds a definition with a } in a string, a template, a regex and a comment before the markers", () => {
       const body = [
         'var s="}",t=`}${"}"}${`{`}`,r=/}[}]/,u=1/2/3,v=i++/2;',
+        "if (x) /[}{]/.test(y);",
         "/* } ' */ // }",
         `x=r.test(s)?{k:"}"}:{};`,
-        `${markers}`,
+        markers,
       ].join("\n");
       const source = `class M{sendMail(a,b=null){\n${body}\n}}`;
       expect(patchMailerSource(source)).toBe(source.replace("sendMail(a,b=null){", "sendMail(a,b=null){return globalThis.__e2eRecordMail(a,b);"));
     });
 
-    it("fails when the scan loses track or the definition never closes", () => {
+    it("does not count markers that only sit in a comment of the sendMail body", () => {
+      const source = `class M{sendMail(a,b=null){/* this.transporter.getSocket; "Sending mail using %s/%s" */\n// this.transporter.getSocket\nreturn a}}\nconst log="Sending mail using %s/%s";`;
+      expect(() => patchMailerSource(source)).toThrow(/0 nodemailer sendMail definitions/);
+    });
+
+    it("does not count a lookalike string, property access or signature", () => {
+      const lookalikes = [
+        'class M{sendMail(a,b=null){this.transporter.getSocket;"Sending mail using %s/%s and more"}}const x="Sending mail using %s/%s";',
+        'class M{sendMail(a,b=null){this.transporter.getSocketX;"Sending mail using %s/%s"}}',
+        'class M{sendMail(a,b=null){"this.transporter.getSocket";"Sending mail using %s/%s"}}',
+        'class M{sendMail(a,b=0){this.transporter.getSocket;"Sending mail using %s/%s"}}',
+        'class M{sendMail(a){this.transporter.getSocket;"Sending mail using %s/%s"}}',
+        'class M{sendMail(a,{b}=null){this.transporter.getSocket;"Sending mail using %s/%s"}}',
+        'class M{sendMail2(a,b=null){this.transporter.getSocket;"Sending mail using %s/%s"}}',
+      ];
+      for (const source of lookalikes) expect(() => patchMailerSource(source)).toThrow(/0 nodemailer sendMail definitions/);
+    });
+
+    it("throws the parse error for a chunk that bundles nodemailer and does not parse", () => {
       const open = `class M{sendMail(a,b=null){${markers}`;
-      expect(() => patchMailerSource(open)).toThrow(/no closing brace/);
-      expect(() => patchMailerSource(`${open}}}"unterminated`)).toThrow(/ends inside a string literal/);
-      expect(() => patchMailerSource(`${open}}}\`unterminated`)).toThrow(/ends inside a template literal/);
-      expect(() => patchMailerSource(`${open}}}/* unterminated`)).toThrow(/ends inside a block comment/);
+      expect(() => patchMailerSource(open)).toThrow(/cannot parse the chunk that bundles nodemailer: .*\(offset \d+\)/);
+      expect(() => patchMailerSource(`${open}}}"unterminated`)).toThrow(/cannot parse the chunk/);
+      expect(() => patchMailerSource(`${open}}}\`unterminated`)).toThrow(/cannot parse the chunk/);
+      expect(() => patchMailerSource(`${open}}}/* unterminated`)).toThrow(/cannot parse the chunk/);
+    });
+
+    it("does not parse a chunk without the nodemailer marker", () => {
+      const source = "this is not JavaScript {{{";
+      expect(patchMailerSource(source)).toBe(source);
     });
 
     it("patches only the definition that carries the nodemailer markers", () => {

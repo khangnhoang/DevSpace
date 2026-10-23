@@ -7,7 +7,7 @@ Found on 2026-10-21 while reading the code and the hosted DB metadata. Items mar
 | P1 | `profiles` SELECT `true` for `public`: anon can read the email, phone, dob, gender, province of everyone | High | **H2** |
 | P2 | `coupons` SELECT `true` for `public`: every code can be listed; `CoursePaymentModal` checks the coupon on the client | Medium | **H2** |
 | P3 | The `reviews` INSERT policy only checks enrollment and does not constrain `user_id = auth.uid()` → a review impersonating someone else | Medium | **H2** |
-| P4 | The `comments` UPDATE policy has no `with_check` → the comment owner can change `user_id` | Low | **H2** |
+| P4 | The `comments` UPDATE policy has no `with_check` → the comment owner can move their comment to another lesson (`lesson_id`); handing it to another `user_id` is blocked, since the check reuses `USING` (infrastructure U3 known-bug test K2) | Low | **H2** |
 | P5 | The code calls the RPC `increment_coupon_usage` but the function does not exist in the DB → coupon usage never increases | Medium | H2 or later |
 | P6 | A coupon is counted when the pending order is created, while `updatePaymentWithCoupon` does not count → inconsistent usage logic | Low | later |
 | P7 | Server components read data with the anon client, not per user | Low | techstack-migration (out of scope for `infrastructure`, its plan section 7) |

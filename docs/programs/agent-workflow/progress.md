@@ -7,13 +7,13 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | `implementation-plans/u3-program-kinds/plan.md` r5 (2026-10-23). |
-| Current unit / checkpoint | U3 program kinds, on branch `docs/program-kinds`: CP1 (`7d95c32`), CP2 (`fd0bd6f`), Main's review correction (`6d0ccb7`), CP2b (`9cf6d2a`) and CP3 (this commit). |
-| Status | automated checks passed; not pushed. CP1 to CP2b passed Main review and the Codex diff gate (2026-10-23). CP3 passed Main self-review and the Codex gate. |
-| Completed evidence | On CP3: `npm run docs:check` 0 violations and 0 broken links, `npm run docs:check:test` 38 pass, `git diff --check` clean; on `9cf6d2a`: `npm run lint` 81 problems, `npx tsc --noEmit` exit 0. `git diff -M` shows the U1 move as a rename that changes only the title, the header pointer line and relative links. |
+| Current unit / checkpoint | none: no initiative is open. |
+| Status | U3 program kinds merged (PR 14, `8606dcf`). |
+| Completed evidence | U3: PR 14 and the milestones below. |
 | Accepted deviations | The U2 plan is a retroactive record of PR 13's chat plan r3, committed after U2 merged (U3 D6). The five Sonnet commits of CP1 and CP2 were squashed into one per checkpoint at the Owner's request (U3 D10). |
 | Blockers / Owner decisions | none. |
-| Next action | The Owner decides on push and PR creation for `docs/program-kinds`; then Main watches CI and writes the result into the PR body. |
-| Current authority | the CP3 commit (granted 2026-10-23). Push, PR creation and merge are not granted. |
+| Next action | none. |
+| Current authority | none. |
 
 ## Milestones
 
@@ -38,4 +38,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-22 Merged to `main` and the AC2 memory mapping applied (PR 6, `50a3075`).
 - 2026-10-22 Program closed; open entries moved to `infrastructure`, `security-hotfix` and the backlog (`7969be9`).
 - 2026-10-23 U2 merged: the CI result in the PR body, the PR template, hosted apply with `db push`, the migration and handoff rules (PR 13, `38d431b`).
-- 2026-10-23 Reopened as an evergreen program: charter, U1 moved, U2 and U3 plans, AW-002 and FEAT-007 back from the backlog, FEAT-010 and FEAT-011 (this commit).
+- 2026-10-23 Reopened as an evergreen program: charter, U1 moved, U2 and U3 plans, AW-002 and FEAT-007 back from the backlog, FEAT-010 and FEAT-011 (`abfa4b3`).
+- 2026-10-23 U3 merged (PR 14, `8606dcf`).

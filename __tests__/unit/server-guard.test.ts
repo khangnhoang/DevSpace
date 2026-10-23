@@ -208,9 +208,56 @@ describe("the e2e mail record", () => {
       expect(patchMailerSource(source)).toBe(source);
     });
 
-    it("leaves the signature inside a string alone", () => {
-      const source = 'const doc="class Other{sendMail(a,b=null){return 1}}";export{doc}';
-      expect(patchMailerSource(source)).toBe(source);
+    const markers = '"this.transporter.getSocket";"Sending mail using %s/%s";';
+
+    it("does not take a definition with both markers inside a string, a template or a comment", () => {
+      // Each source holds the nodemailer marker, so the early return does not hide the case.
+      const inText = [
+        `const doc="class M{sendMail(a,b=null){${markers.replaceAll('"', "'")}}}";export{doc}`,
+        `const doc=\`class M{sendMail(a,b=null){\${1}this.transporter.getSocket;'Sending mail using %s/%s'}}\`;export{doc}`,
+        `// class M{sendMail(a,b=null){this.transporter.getSocket;'Sending mail using %s/%s'}}\nexport{}`,
+        `/* class M{sendMail(a,b=null){this.transporter.getSocket;'Sending mail using %s/%s'}} */export{}`,
+      ];
+      for (const source of inText) expect(() => patchMailerSource(source)).toThrow(/0 nodemailer sendMail definitions/);
+    });
+
+    it("patches the real definition and leaves a copy of it inside a string alone", () => {
+      const real = `class M{sendMail(a,b=null){${markers}}}`;
+      const copy = `const doc="class M{sendMail(c,d=null){${markers.replaceAll('"', "'")}}}";`;
+      expect(patchMailerSource(`${copy}${real}`)).toBe(
+        `${copy}class M{sendMail(a,b=null){return globalThis.__e2eRecordMail(a,b);${markers}}}`,
+      );
+    });
+
+    it("does not let a definition borrow the markers of the method after it", () => {
+      // Only Other.sendMail matches the head pattern, and Mailer's markers sit after Other's closed body.
+      const source = `class Other { sendMail(a,b=null) { return a } }
+class Mailer {
+  sendMail(a,b) {
+    this.transporter.getSocket;
+    log("Sending mail using %s/%s");
+  }
+}`;
+      expect(() => patchMailerSource(source)).toThrow(/0 nodemailer sendMail definitions/);
+    });
+
+    it("finds the body of a definition with a } in a string, a template, a regex and a comment before the markers", () => {
+      const body = [
+        'var s="}",t=`}${"}"}${`{`}`,r=/}[}]/,u=1/2/3,v=i++/2;',
+        "/* } ' */ // }",
+        `x=r.test(s)?{k:"}"}:{};`,
+        `${markers}`,
+      ].join("\n");
+      const source = `class M{sendMail(a,b=null){\n${body}\n}}`;
+      expect(patchMailerSource(source)).toBe(source.replace("sendMail(a,b=null){", "sendMail(a,b=null){return globalThis.__e2eRecordMail(a,b);"));
+    });
+
+    it("fails when the scan loses track or the definition never closes", () => {
+      const open = `class M{sendMail(a,b=null){${markers}`;
+      expect(() => patchMailerSource(open)).toThrow(/no closing brace/);
+      expect(() => patchMailerSource(`${open}}}"unterminated`)).toThrow(/ends inside a string literal/);
+      expect(() => patchMailerSource(`${open}}}\`unterminated`)).toThrow(/ends inside a template literal/);
+      expect(() => patchMailerSource(`${open}}}/* unterminated`)).toThrow(/ends inside a block comment/);
     });
 
     it("patches only the definition that carries the nodemailer markers", () => {

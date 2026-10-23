@@ -9,9 +9,10 @@ export { expect };
 // from a local host. Redirect hops skip the route handler: the browser cannot resolve a non-local host
 // (`playwright.config.ts`) and the request listener still reports a hosted hop.
 // The guard blocks Monaco's CDN loader on /try_it, and `@monaco-editor/loader` then rejects an unhandled promise
-// with an `Event`, which Playwright reports as a page error with an empty name. Only a row that sets
-// `blockedMonacoLoader` tolerates that one error, and only after the loader request has failed.
-const MONACO_LOADER_URL = "https://cdn.jsdelivr.net/npm/monaco-editor@";
+// with the `error` Event of that script element. A row that sets `blockedMonacoLoader` marks exactly that
+// rejection as handled in the page, so Playwright never reports it; any other page error still fails the test.
+const MONACO_LOADER_PREFIX = "https://cdn.jsdelivr.net/npm/monaco-editor@";
+const MONACO_LOADER_SUFFIX = "/min/vs/loader.js";
 
 export const test = base.extend<{ blockedMonacoLoader: boolean }>({
   blockedMonacoLoader: [false, { option: true }],
@@ -32,15 +33,21 @@ export const test = base.extend<{ blockedMonacoLoader: boolean }>({
     context.on("request", (request) => {
       if (classifyRequest(request.url()) === "hosted") problems.add(`request to a hosted host: ${request.url()}`);
     });
-    let monacoLoaderFailed = false;
-    context.on("requestfailed", (request) => {
-      if (request.url().startsWith(MONACO_LOADER_URL)) monacoLoaderFailed = true;
-    });
-    context.on("weberror", (webError) => {
-      const error = webError.error();
-      const monacoEvent = blockedMonacoLoader && monacoLoaderFailed && !error.name && error.message === "Event";
-      if (!monacoEvent) problems.add(`page error: ${error.message}`);
-    });
+    if (blockedMonacoLoader) {
+      await context.addInitScript(
+        ({ prefix, suffix }) => {
+          window.addEventListener("unhandledrejection", (event) => {
+            const reason: unknown = event.reason;
+            const script = reason instanceof Event ? reason.target : null;
+            if (script instanceof HTMLScriptElement && script.src.startsWith(prefix) && script.src.endsWith(suffix)) {
+              event.preventDefault();
+            }
+          });
+        },
+        { prefix: MONACO_LOADER_PREFIX, suffix: MONACO_LOADER_SUFFIX },
+      );
+    }
+    context.on("weberror", (webError) => problems.add(`page error: ${webError.error().message}`));
     context.on("response", (response) => {
       if (response.status() >= 500) problems.add(`HTTP ${response.status()} from ${response.url()}`);
     });

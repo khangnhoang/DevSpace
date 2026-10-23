@@ -31,4 +31,4 @@ DevSpace cases: coupon use counts and reservation (P5, P6), approving or rejecti
 
 ## Verification details
 
-RPC: success, invalid state, unauthorized caller, idempotent retry. Trigger: the effect, and unaffected rows. Race-sensitive change: duplicate, retry or concurrent request, and the final invariant. These are checked on the local stack where the minimal seed allows, otherwise written in the plan as Main's checks; checks not yet run stay `pending`. Automated RLS tests do not exist yet.
+RPC: success, invalid state, unauthorized caller, idempotent retry. Trigger: the effect, and unaffected rows. Race-sensitive change: duplicate, retry or concurrent request, and the final invariant. What the API can reach is covered by an RLS test (`test-quality-strategy`); a race or a function body the API cannot exercise is checked on the local stack where the minimal seed allows, otherwise written in the plan as Main's checks. Checks not yet run stay `pending`.

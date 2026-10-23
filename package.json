@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
     "docs:check-structure": "node scripts/docs/check-structure.mjs",
     "docs:check-links": "node scripts/docs/check-links.mjs",
     "docs:check": "npm run docs:check-structure && npm run docs:check-links",
@@ -44,15 +46,18 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/canvas-confetti": "^1.9.0",
-    "@types/node": "^20",
+    "@types/node": "^22.20.5",
     "@types/nodemailer": "^7.0.5",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-youtube": "^7.6.2",
     "eslint": "^9",
     "eslint-config-next": "^16.0.10",
+    "pg": "^8.23.1",
     "supabase": "2.121.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.0.5"
   }
 }

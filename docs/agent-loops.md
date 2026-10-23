@@ -18,7 +18,7 @@ Size work after routing and again after discovery, before implementing. Measure 
 1. one clear outcome that needs no new Owner decision;
 2. a few commits and no checkpoints (a code commit and a test commit are still fine);
 3. no schema, RLS, grant, auth, payment or admin-permission change;
-4. verifiable at once by commands (`tsc`, lint, `docs:check`, later tests) or one browser pass.
+4. verifiable at once by commands (`tsc`, lint, `docs:check`, `npm test`) or one browser pass.
 
 If any condition fails, use the planned flow. Steps: size, implement, verify, self-review with a `Tự review` block, report. Git only as granted. Close the entry by the `program-docs` rule.
 

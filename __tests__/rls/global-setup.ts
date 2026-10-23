@@ -13,11 +13,12 @@ declare module "vitest" {
   }
 }
 
-type ActorName = "learner" | "admin";
+type ActorName = "learner" | "student" | "admin";
 
 // The passwords are the local test values written in supabase/seed.sql.
 const ACTORS: Record<ActorName, { email: string; password: string }> = {
   learner: { email: "learner@devspace.test", password: "learner-local-pass-1" },
+  student: { email: "student@devspace.test", password: "student-local-pass-1" },
   admin: { email: "admin@devspace.test", password: "admin-local-pass-1" },
 };
 
@@ -44,6 +45,7 @@ export default async function setup(project: TestProject) {
     const stack = readLocalStack(project.config.root);
     const tokens = {
       learner: await signIn(stack.apiUrl, stack.anonKey, "learner"),
+      student: await signIn(stack.apiUrl, stack.anonKey, "student"),
       admin: await signIn(stack.apiUrl, stack.anonKey, "admin"),
     };
     project.provide("localStack", { ...stack, tokens });

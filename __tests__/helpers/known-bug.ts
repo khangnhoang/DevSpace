@@ -14,7 +14,7 @@ function isAssertionError(error: unknown): boolean {
 export async function runKnownBug(
   id: string,
   body: (bug: Bug) => Promise<void>,
-  report: (message: string) => void = () => {},
+  report: (message: string) => void | Promise<void> = () => {},
 ): Promise<void> {
   let calls = 0;
   let reproduced = false;
@@ -36,13 +36,15 @@ export async function runKnownBug(
 
   if (calls === 0) throw new Error(`known bug ${id}: the test never reached its bug(...) assertion`);
   if (fixed) throw new Error(`${id} no longer reproduces: turn this into a normal test and remove knownBug.`);
-  if (reproduced) report(`known bug ${id}`);
+  if (reproduced) await report(`known bug ${id}`);
 }
 
 export function knownBug(id: string, title: string, body: (bug: Bug) => Promise<void>): void {
   it(`${id} ${title}`, async ({ annotate }) => {
-    await runKnownBug(id, body, (message) => {
-      void annotate(message, "known-bug");
+    await runKnownBug(id, body, async (message) => {
+      // The default reporter prints test stdout but hides annotations of a passing test; CI logs need the line.
+      console.info(message);
+      await annotate(message, "known-bug");
     });
   });
 }

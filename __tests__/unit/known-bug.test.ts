@@ -10,9 +10,24 @@ describe("runKnownBug", () => {
         expect(1).toBe(1); // a precondition that holds
         await bug(() => expect("allowed").toBe("denied"));
       },
-      (message) => reports.push(message),
+      (message) => {
+        reports.push(message);
+      },
     );
     expect(reports).toEqual(["known bug P99"]);
+  });
+
+  it("waits for an asynchronous report before it finishes", async () => {
+    let reported = false;
+    await runKnownBug(
+      "P99",
+      async (bug) => bug(() => expect(1).toBe(2)),
+      async () => {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        reported = true;
+      },
+    );
+    expect(reported).toBe(true);
   });
 
   it("fails with a turn-it-into-a-normal-test message once the correct-behavior assertion holds", async () => {

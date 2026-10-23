@@ -19,6 +19,7 @@ describe("rls global setup", () => {
 
   it.each([
     ["learner", "learner@devspace.test"],
+    ["student", "student@devspace.test"],
     ["admin", "admin@devspace.test"],
   ] as const)("provides a token that identifies %s", async (actor, email) => {
     const response = await fetch(`${stack.apiUrl}/auth/v1/user`, {

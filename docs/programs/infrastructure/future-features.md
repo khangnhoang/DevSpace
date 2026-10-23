@@ -10,20 +10,8 @@ Direction the Owner has set that this program delivers in a later unit. Each ent
 - Left after INF-001 (2026-10-23, `npm audit --omit=dev` with `next` 16.4.3): `nodemailer` 7.0.13 high, fixed only in major 10; `dompurify` 3.4.15 critical and high (GHSA-cg2g-xh64-v4q7 and others), pinned exactly by `monaco-editor` 0.57.0, its latest release, so no in-range fix, and `monaco-editor` low through it; `@tailwindcss/typography` 0.5.20 and its `postcss-selector-parser` moderate, where npm offers only a downgrade to 0.5.4. The app never loads that npm `monaco-editor`: `@monaco-editor/loader` loads `monaco-editor` 0.55.1 from jsDelivr at runtime, which `npm audit` cannot see, so the policy also pins and reviews that CDN version. Dev-only: `eslint-config-next` 16.4.3 still pulls a high `fast-glob`, `micromatch` and `braces` chain that npm fixes only by a downgrade.
 - Target program: infrastructure (U7).
 
-## FEAT-002: Test skills
+## Closed
 
-- Status: `test-quality-strategy` part done in PR 15 (U3); `playwright-cli` planned for U4. Moved from `agent-workflow` on 2026-10-22.
-- Direction: port `test-quality-strategy` (in U3) and `playwright-cli` (in U4) from VocaSpace, rewritten for DevSpace. Expand `CLAUDE.md` rule 9 (tests verify observable behavior) into the test skill. A new skill needs the Owner's decision (`.claude/rules.md` section 8); this plan's approval is that decision for these two.
-- Target program: infrastructure (U3, U4).
-
-## FEAT-003: Local database reset and RLS tests in `supabase-migration`
-
-- Status: reset part done in PR 12 (U2); RLS-test part done in PR 15 (U3). Moved from `agent-workflow` on 2026-10-22.
-- Direction: add `supabase db reset` (U2) and the automated RLS tests (U3) to the `supabase-migration` skill, replacing the "no local database" workaround it carries today. Remove the temporary rule in `.claude/rules.md` section 4 (implementors run no database) in U2, keeping hosted access Main-only.
-- Target program: infrastructure (U2, U3).
-
-## FEAT-004: CI step in the workflow and the commands
-
-- Status: U1 part done in PR 11 (CI job, `git-pr-workflow` and `CLAUDE.md` Commands); U2 part (the `db` job) in PR 12; U3 part (`npm test` in `db`, the test commands) in PR 15; U4 adds its commands.
-- Direction: add the CI step to `git-pr-workflow` and its `pr-and-ci.md` reference. The GitHub Actions job must also run `npm run docs:check` and `npm run docs:check:test` (agent-workflow D9). Update the commands section of `CLAUDE.md`: real CI instead of Vercel only, and each later unit adds its test commands.
-- Target program: infrastructure (U1, then U2 to U4 for their commands).
+- FEAT-002 — Done: `test-quality-strategy` ported in U3 (PR 15) and `playwright-cli` vendored in U4 (PR #17)
+- FEAT-003 — Done: `db reset` and the local-stack rule in U2 (PR 12), the RLS tests in `supabase-migration` in U3 (PR #15)
+- FEAT-004 — Done: the CI jobs and their commands in `git-pr-workflow` and `CLAUDE.md`, added by U1 to U3 in PR 11, PR 12 and PR 15, and by U4 (PR #17)

@@ -61,6 +61,8 @@ If any condition fails, use the planned flow. Steps: size, implement, verify, se
 
 A pass is one full review of the current candidate. Review after writing a plan, after each checkpoint, and once more over the whole diff before it goes to review or delivery. A later correction gets its own review. Repeat until a pass leaves no `Critical` or `Required` finding; there is no pass cap.
 
+At a checkpoint the order is: finish the work, self-review, fix and review again until a pass leaves no `Critical` or `Required`, and only then commit (when granted). A correction commit answers a finding from a review after the commit (Main, Codex, Owner QA, or the author's own pass over the whole diff), never the author's pre-commit pass.
+
 The method (anchor on the real candidate, falsify, verify) and the finding format are owned by the `code-review` skill (Self-review). A finding that cannot be fixed goes to the Owner through `AskUserQuestion` with a recommended resolution; an implementor returns it to Main instead of asking. Never stop silently or report the work as passed. Self-review does not replace a required Codex review or manual QA, and never widens permission.
 
 **`Tự review` block.** Every plan and implementation report carries one:

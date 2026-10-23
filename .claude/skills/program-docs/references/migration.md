@@ -33,6 +33,7 @@ Only on the Owner's decision that the program owns a long-lived capability ([ADR
 2. Write the charter `README.md` from the charter template: the master plan's goal becomes the capability and boundary, its decisions and invariants keep their numbers, its Units rows become Initiatives rows (closed units keep their rows), its rollout order and gates become the opening steps. Program risks that still apply go into the charter's Invariants (as the rule that prevents them) or into the initiative plan that owns them; one that fits neither is a reason to stop and report. Out-of-scope items go into the boundary.
 3. Delete the root `plan.md` once the charter holds its meaning, and set the Programs row to `evergreen`.
 4. Fix links to the old root plan (progress pointer, problems, other docs), and update State to name the charter and the initiative plan.
+
 ## Stop
 
 Stop and report when an item cannot be expressed without changing its meaning, a cited path would break, or the baseline moved under the files you are migrating.

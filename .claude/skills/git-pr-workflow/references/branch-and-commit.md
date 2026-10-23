@@ -20,7 +20,7 @@ Do not create, rename, switch, merge or delete branches just to silence a proble
 3. Run or confirm the smallest relevant checks that are still current after the last edit.
 4. Audit: `git status --short`, `git diff --check`, `git diff`, then stage explicit paths (hunks only when they separate cleanly) and read `git diff --cached`.
 5. Look for conflict markers, debug code, unrelated formatting, accidental deletions or renames, and secrets or environment values in the actual staged content. Keyword search is only a supplement.
-6. Create one local commit. Report the hash, message, scope, checks and that nothing was pushed.
+6. Create one local commit for the checkpoint, in its own message after every edit has succeeded: an edit sent in parallel with `git commit` can fail while the commit still runs. Report the hash, message, scope, checks and that nothing was pushed.
 
 A commit may include the implementation plus the tests, types, migration files, comments and docs it directly needs. It must not include pre-existing work, unrelated cleanup, broad formatting, unneeded dependency changes, personal settings, `.env*`, build output or debug dumps. Do not commit `.claude/*.local.json` or `.claude/worktrees/`.
 
@@ -38,6 +38,6 @@ A commit is not final approval. Manual QA may stay pending if reported; it still
 
 ## Corrections and history
 
-New correction commits, each understandable alone, are the default. Amend, squash, rebase and interactive history edits need the Owner's explicit request; before one, name the affected commits, whether they were pushed and whether a force-push would follow (which also needs its own request).
+A finding of the author's pre-commit self-review is fixed before the commit (`docs/agent-loops.md`, Self-review). A finding of a review after the commit, including the author's own pass over the whole diff once the checkpoints are committed, gets a new correction commit, understandable alone; that is the default. Amend, squash, rebase and interactive history edits need the Owner's explicit request; before one, name the affected commits, whether they were pushed and whether a force-push would follow (which also needs its own request).
 
 For merge or rebase conflicts: read both sides and the intent, keep unrelated changes, run the affected checks, and stop when a product decision is needed. Never pick `ours` or `theirs` wholesale. Inspect the state before aborting an operation so resolved work is not lost.

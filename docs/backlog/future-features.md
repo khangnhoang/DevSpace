@@ -14,12 +14,7 @@ Direction the Owner has set that is outside the current scope. Work that is in s
 - Direction: replace the `window.confirm` delete confirmations (comments, admin CRUD of courses/chapters/lessons) with a Dialog. Tracked as P21 in `security-hotfix/problems.md`; `frontend-design` already points to this.
 - Target program: none yet (the foundation PR).
 
-## FEAT-007: Token budget rule
-
-- Status: Deferred; the rule was cut down to "read deliberately" (`CLAUDE.md` rule 6).
-- Direction: revisit a fuller token-budget rule (VocaSpace Core Engineering Rule 6) only if the Owner sets budgets.
-- Target program: none yet.
-
 ## Closed
 
 - FEAT-001 — Moved to [infrastructure](../programs/infrastructure/future-features.md)
+- FEAT-007 — Moved to [agent-workflow](../programs/agent-workflow/future-features.md)

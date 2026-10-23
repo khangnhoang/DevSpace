@@ -1,6 +1,6 @@
-# Agent workflow detail plan — working rules, skills and docs system
+# U1 detail plan — working rules, skills and docs system
 
-Revision: r3, 2026-10-22 (Codex r2 findings applied). Owner approval: pending. Single-unit program, so this detail plan is the program `plan.md` (D14). Progress: [progress.md](progress.md), created in CP4.
+Revision: r3, 2026-10-22 (Codex r2 findings applied). Owner approval: pending. Charter: [README.md](../../README.md); this plan was the program's root `plan.md` (D14) until the program became evergreen on 2026-10-23 ([ADR 0002](../../../../adr/0002-program-kinds.md)). Progress: [progress.md](../../progress.md), created in CP4.
 
 ## 1. Binding Spec
 
@@ -278,4 +278,4 @@ Skill choice: a new RLS policy; a three-PR plan; reviewing a Sonnet PR; opening 
 
 ## 6. Progress
 
-Current State and milestones: [progress.md](progress.md) (created in CP4).
+Current State and milestones: [progress.md](../../progress.md) (created in CP4).

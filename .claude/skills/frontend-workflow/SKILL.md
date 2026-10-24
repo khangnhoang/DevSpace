@@ -11,7 +11,7 @@ Use for non-trivial frontend work: pages, components, forms, dialogs, tables, le
 
 Do not use for docs only, database-only work, generated files, or a trivial text or class-name change. Visual direction belongs to `frontend-design`. A frontend task must not silently grow into server action, RLS or migration changes: use `server-actions` and `supabase-migration` and stop for a plan if the task needs them.
 
-The only automated browser tests are the Playwright suite (`npm run test:e2e`); they do not check layout, copy or a changed interaction. Verification is the commands for a page or UI flow in [test-quality-strategy](../test-quality-strategy/SKILL.md#which-command-for-which-change), then the manual validation below. Say plainly what was not run.
+The only automated browser tests are the Playwright suite (`npm run test:e2e`); they protect only the interactions and copy they assert, so the rest of a UI change (layout, copy and interactions no row asserts) needs manual validation. Verification is the commands for a page or UI flow in [test-quality-strategy](../test-quality-strategy/SKILL.md#which-command-for-which-change), then the manual validation below. Say plainly what was not run.
 
 ## Core rules
 

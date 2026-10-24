@@ -41,7 +41,7 @@ Each of these is a separate grant from the Owner; one never implies another, and
 
 - commit, push, PR creation or update, merge, branch deletion. A PR creation or update grant also covers writing that PR's CI result into its body (`git-pr-workflow`, `pr-and-ci.md`), and nothing else;
 - applying a migration is two grants, *prepare* (the dry run) and *apply*, in the order `supabase-migration` ("Hosted apply") gives; any other write to the hosted database is a grant of its own;
-- CI fixing that needs a push;
+- CI fixing that needs a push; the grant covers only the edit, validate, commit and push actions the Owner named;
 - anything the Owner has not asked for in words.
 
 Standing limits:

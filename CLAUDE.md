@@ -34,7 +34,7 @@ Roadmap, in this order: (1) agent-workflow (rules, skills, docs system), (2) inf
 7. **Surface conflicts, do not average them.** Name the conflicting sources and apply documented precedence. If permission is still unclear, take the narrower action and report it.
 8. **Read before writing.** Inspect the target, nearby contracts and conventions (and the program's plan, progress and problems when they affect scope) before proposing a change.
 9. **Tests verify observable behavior.** Assert the promised contract (inputs, outputs, permissions, persistence), not the implementation; the `test-quality-strategy` skill owns how. Say plainly which checks ran, failed, were skipped or were not possible.
-10. **A finished implementation is a review checkpoint.** Report changed files, checks actually run, remaining risks and a proposed English Conventional Commit message. Commit, push, PR, CI fixing, merge, applying a migration and database writes are separate grants (`.claude/rules.md` section 4).
+10. **A finished implementation is a review checkpoint.** Report changed files, checks actually run, remaining risks and a proposed English Conventional Commit message. Every git, remote and database action needs its own grant (`.claude/rules.md` section 4).
 11. **Match conventions.** Follow the nearby naming, placement, error handling and doc structure, even if you would choose differently. Keep one owner and one source of truth per fact.
 12. **Fail loud.** A blocked, failed, partial or unverified result stays visibly so. Report the exact failure and the smallest thing needed to resume. Do not hide it behind a mock, fallback or weaker check.
 

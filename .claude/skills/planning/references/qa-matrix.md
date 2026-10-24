@@ -19,7 +19,7 @@ Cover, where they apply: each role; the allowed path and the denied path; empty,
 Decide before the final checkpoint, and record exactly one outcome per matrix:
 
 - the seeded local data is enough;
-- specific accounts or rows must be prepared (list them and who creates them): local data is a seed row under the seed rule in [test-quality-strategy](../../test-quality-strategy/SKILL.md) (Test data); a hosted write needs the Owner's approval first and is cleaned up afterwards;
+- specific accounts or rows must be prepared (list them and who creates them): local data is a seed row under the seed rule in [test-quality-strategy](../../test-quality-strategy/SKILL.md) (Test data); a hosted row follows `.claude/rules.md` section 4;
 - no data is needed;
 - blocked until the Owner provides an account or data.
 

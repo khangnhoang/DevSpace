@@ -36,7 +36,7 @@ When the Owner says to wait for CI, run `gh pr checks <n> --watch --interval 30`
 
 ## Record the CI result
 
-When CI on a PR reaches a terminal state, red or green, Main writes the result into the body's `CI result` section with `gh pr edit <n> --body-file <file>`, then stops. The PR creation or update grant covers this write and nothing else (`.claude/rules.md` section 4). The Owner decides the merge; nobody merges on their own, and a red result is not fixed without a CI-fix grant.
+When CI on a PR reaches a terminal state, red or green, Main writes the result into the body's `CI result` section with `gh pr edit <n> --body-file <file>`, then stops. What this write may cover, and who may merge or fix a red result, is owned by `.claude/rules.md` section 4.
 
 - Report the latest run for the PR's current head, not an older or cancelled one: the run link, the event, the head commit, and the table Check | Result | Duration | Notes with the six Actions jobs and Vercel.
 - The `lint` row says pass or fail; on a failure, Notes names the first problems from the step's log.

@@ -229,7 +229,7 @@ export default function Header() {
                 <div className="relative w-14 h-9 shrink-0 rounded overflow-hidden border border-gray-200 bg-gray-100">
                   {course.image_url ? (
                     <>
-                      {/* eslint-disable-next-line @next/next/no-img-element -- search result image with an onError fallback that next/image does not reproduce, tracked in BL-003 */}
+                      {/* eslint-disable-next-line @next/next/no-img-element -- keeps the direct image load and the current onError fallback until a next/image move is verified, tracked in BL-003 */}
                       <img
                         src={course.image_url}
                         alt={course.name}

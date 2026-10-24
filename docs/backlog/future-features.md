@@ -26,6 +26,18 @@ Direction the Owner has set that is outside the current scope. Work that is in s
 - Direction: the U6 manual pass ([plan Appendix B](../programs/infrastructure/implementation-plans/u6-lint-cleanup/plan.md), rows M1 to M12 and M5b) checked by hand what the Playwright smoke does not exercise. The smoke opens the admin lists and the profile (`admin.spec.ts`, `learner.spec.ts`) and drives the payment flow, approve and reject (`payment-*.spec.ts`, so M4 and the approve and reject of M10 are largely covered), but no row runs the Header search (M1), the wrong-password error before a successful sign-in (M2), the review list, paging and edit (M3), comments, notes, the complete button and a full quiz (M5, M5b), the profile edit and transaction filter (M6), the try-it editor (M7), the admin notification bell (M8), the course, chapter and lesson edit and the exercise edit and delete (M9), the admin transaction status filter (M10), the user avatar preview (M11) or the same-password reset message (M12). Add rows that act on these, so later refactors need less manual QA; a delete needs a stub until FEAT-006 replaces `window.confirm`, and confetti and the `onError` image fallback may stay manual.
 - Target program: none yet (app-foundation is the natural owner if its form units want the cover first).
 
+## FEAT-015: Images for the seed courses
+
+- Status: Deferred (Owner decision, agent-workflow U4 D7, 2026-10-25).
+- Direction: give the seed courses invented images so the local stack shows them: image files in the repo uploaded on start through `[storage.buckets.<name>] objects_path` in `supabase/config.toml` (or into a bucket the baseline already has, such as `avatars`), and seed `image_url` values pointing at them (`supabase/seed.sql:39-41` sets none today). The bucket the code uploads to already exists (`supabase/migrations/20261021000000_baseline.sql:1420`), so no migration is needed for it. Also note that the local home page fetches an external placeholder image (`placehold.co`) through `/_next/image`; seed images remove that fetch. `db reset`, `npm test` and `npm run test:e2e` stay green (`test-quality-strategy`, Test data).
+- Target program: none yet (backlog; small task).
+
+## FEAT-016: Local mail into the local stack's mail sink
+
+- Status: Deferred (Owner, agent-workflow U4, 2026-10-25).
+- Direction: `npm run dev` sends mail with Gmail placeholders, so a send fails and is only logged (`lib/email.server.ts:74-76`; `app/action/payment.ts:293` ignores the result). Route local mail into the local stack's mail sink instead (`[local_smtp]` in `supabase/config.toml:106`, with an SMTP port exposed) so a manual pass can read the mail; this needs `lib/email.server.ts:5-9` to take the SMTP host from the environment instead of hard-coding `service: "gmail"`, and the dev env map in `__tests__/helpers/dev-env.ts` to set it. Hosted mail stays Gmail.
+- Target program: none yet (backlog; a small code and config task).
+
 ## Closed
 
 - FEAT-001 — Moved to [infrastructure](../programs/infrastructure/future-features.md)

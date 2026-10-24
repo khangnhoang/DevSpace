@@ -7,12 +7,12 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | `implementation-plans/u4-instructions-sync/plan.md` r6 (2026-10-25). |
-| Current unit / checkpoint | U4 agent instructions match the infrastructure; CP2 done (AC2, AC3, AC4), CP3 next. |
-| Status | Implementation in progress: CP1 and CP2 committed locally; CP3 to CP5 not started. |
-| Completed evidence | U4 plan r5: Codex plan review rounds 1 to 8, last PASS; `npm run docs:check` 0 violations. U4 CP1 and CP2: handoff template and section 7 rules; `migration new` in section 4, permission and CI duplicates replaced by links, the AC4 grep matches only `pr-and-ci.md`; `npm run docs:check` passes after each. U3: PR 14 and the milestones below. |
+| Current unit / checkpoint | U4 agent instructions match the infrastructure; CP3 done (AC5, AC13), CP4 next. |
+| Status | Implementation in progress: CP1 to CP3 committed locally; CP4 and CP5 not started. |
+| Completed evidence | U4 plan r5: Codex plan review rounds 1 to 8, last PASS; `npm run docs:check` 0 violations. U4 CP1 to CP3: handoff template and section 7 rules; `migration new` in section 4, permission and CI duplicates replaced by links, the AC4 grep matches only `pr-and-ci.md`; the change-to-suite table and the seed rule in `test-quality-strategy`, linked from `code-review`, `server-actions` and `planning`; `npm run docs:check` passes after each. U3: PR 14 and the milestones below. |
 | Accepted deviations | none for U4. |
 | Blockers / Owner decisions | none. |
-| Next action | The Sonnet implementor does CP3 to CP5, then Main reviews the commits and runs CP6. |
+| Next action | The Sonnet implementor does CP4 and CP5, then Main reviews the commits and runs CP6. |
 | Current authority | Implementation of CP1 to CP5 by the Sonnet implementor with local commits on `chore/agent-instructions-sync`. Push, PR and merge are not granted. |
 
 ## Milestones
@@ -43,4 +43,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-25 U4 plan r5 approved after the Codex plan gate; AW-006 Direction records U4 D3 and D4 (`ca6a4a2`).
 - 2026-10-25 U4 plan r6: the implementor updates State in its checkpoint commits (D8); AW-007 recorded (`05fdcb8`).
 - 2026-10-25 U4 CP1: handoff template, section 7 one-task and docs-lag rules, Resources row (`ccef754`).
-- 2026-10-25 U4 CP2: `migration new` allowed for implementors in section 4; permission and CI facts have one owner each (this commit).
+- 2026-10-25 U4 CP2: `migration new` allowed for implementors in section 4; permission and CI facts have one owner each (`af8b792`).
+- 2026-10-25 U4 CP3: change-to-suite table and the manual-QA seed rule in `test-quality-strategy`, linked from the verify steps (this commit).

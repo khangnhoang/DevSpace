@@ -60,8 +60,8 @@ describe("buildDevProcessEnv", () => {
   });
 
   it("replaces the inherited Gmail values with the placeholders", () => {
-    expect(env.GMAIL_USER).toBe(buildDevEnv(stack).GMAIL_USER);
-    expect(env.GMAIL_PASS).toBe(buildDevEnv(stack).GMAIL_PASS);
+    expect(env.GMAIL_USER).toBe("dev-placeholder@devspace.test");
+    expect(env.GMAIL_PASS).toBe("dev-placeholder-not-a-password");
     expect(JSON.stringify(env)).not.toContain("owner@gmail.com");
   });
 

@@ -13,9 +13,9 @@ Do not use it to justify committing unfinished, conflicting, unrelated or knowin
 
 ## The rule: no git action beyond what was granted
 
-- Run only the git or remote action the Owner requested, or that a handoff to you granted (for example "local commits per checkpoint"). Commit, push, PR, merge, branch deletion and CI fixing are separate grants; "commit" never implies "push".
+- Which git and remote actions need a grant, and what an implementor may do, is owned by `.claude/rules.md` section 4. Run only the action the Owner requested or a handoff to you granted (for example "local commits per checkpoint").
 - Natural phrasing counts ("commit đi", "create the commit"). Anything vaguer is not a grant: ask, or take the narrower action.
-- An implementor with local-commit authority never pushes, opens a PR or merges, even to fix CI (`.claude/rules.md` section 4). Plans are not committed by default and only after their review passes (`planning`).
+- Plans are not committed by default and only after their review passes (`planning`).
 - Never force-push, `git reset --hard`, `git clean`, `git checkout -- .`, `git restore .`, amend, squash or rebase without the Owner's explicit request. Never skip hooks (`--no-verify`).
 - Do not create a worktree whose `node_modules` is a junction or symlink to another checkout: removing it on Windows can delete the target's `node_modules`.
 
@@ -41,7 +41,7 @@ When the work is done and no commit is granted, report: changed files with the r
 
 ## Push, PR, CI and merge
 
-Read [pr-and-ci.md](references/pr-and-ci.md) before any push, PR, CI or merge request. Short form: a normal push needs a clean tree, the exact branch and range, and an explicit grant; a PR needs the head already on the remote; the PR title and body are in English, follow `.github/pull_request_template.md` and state only what really ran; when CI on the PR ends, red or green, Main writes the result into the body's `CI result` section and stops; CI is the GitHub Actions jobs `typecheck`, `build`, `docs`, `lint`, `db` and `e2e` plus the Vercel deploy preview (`gh pr checks --watch`; every job blocks, `lint` included, and requiring them on `main` is an Owner setting); merge only with explicit permission and never auto-merge unless asked. Who may fix CI, and how many rounds, is owned by `docs/agent-loops.md` Loop 3 and `.claude/rules.md` section 4.
+Read [pr-and-ci.md](references/pr-and-ci.md) before any push, PR, CI or merge request. Short form: a normal push needs a clean tree, the exact branch and range, and an explicit grant; a PR needs the head already on the remote; the PR title and body are in English, follow `.github/pull_request_template.md` and state only what really ran; when CI on the PR ends, red or green, Main writes the result into the body's `CI result` section and stops; the CI jobs, which block and how to read a failure are in `pr-and-ci.md` (`gh pr checks --watch`); merge only with explicit permission and never auto-merge unless asked. Who may fix CI, and how many rounds, is owned by `docs/agent-loops.md` Loop 3 and `.claude/rules.md` section 4.
 
 ## Stop when
 

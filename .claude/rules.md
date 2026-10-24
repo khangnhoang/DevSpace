@@ -80,13 +80,17 @@ Claude memory is not where rules live. Test every candidate memory in this order
 
 Delete a memory line once the owning doc has caught up. A new durable rule goes to its owner as a separate `chore(agent-rules): ...` commit; until then it sits in memory marked "pending move".
 
-**Handoff.** When the Owner asks for a handoff, or a long session must stop with work in flight, Main writes it as one memory file linked from `MEMORY.md`. It holds facts no doc reflects yet (hosted, git and branch state, running processes, idle sessions, grants used and pending, lagging state records), the next task's approved scope item by item, what a later unit owns, and what comes after. It links to the owning docs instead of copying them. Main also gives the Owner a one-line prompt for the new session.
+**Handoff.** When the Owner asks for a handoff, or a long session must stop with work in flight, Main writes it as one memory file linked from `MEMORY.md`. It holds facts no doc reflects yet (hosted, git and branch state, running processes, idle sessions, grants used and pending, lagging state records), the next task's approved scope item by item, what a later unit owns, and what comes after. It links to the owning docs instead of copying them. Main also gives the Owner a one-line prompt for the new session. The template is [handoff.md](skills/program-docs/references/templates/handoff.md).
 
-A handoff is tied to its task and is deleted with it. The task is complete when its PR is merged and the owning docs record every durable fact the handoff held; session facts (running processes, idle sessions, a branch to start from) expire with the task.
+A handoff carries exactly one task, never another task's scope. The docs catch-up of a merged task counts as scope of the next task.
 
-- The session that completes the task deletes the handoff and its `MEMORY.md` line in the same turn it confirms the merge.
-- A session that loads a handoff whose task is already complete (check `git log origin/main` or the PR state) deletes it before any other work.
-- A partly complete task: Main edits the handoff down to what is still open and not yet in a doc, and deletes it when nothing is left.
+A handoff is tied to its task and is deleted with it. The task is complete when its PR is merged and the owning docs record every durable fact the handoff held; session facts (running processes, idle sessions, a branch to start from) expire with the task. Docs usually lag at a merge, and the Owner fixes them in a later PR:
+
+- When the owning docs lag at the merge, Main does not fix them in that turn. It trims the handoff to the lagging doc items only, each naming the doc and the fact it must record, and adds no new task's scope. That task is not complete: its trimmed handoff is not deleted at the merge, and a session that finds the PR merged does not delete it.
+- When the Owner asks for a handoff for a new task, Main writes the new handoff with the catch-up as one scope item ("docs catch-up from PR n") and deletes the old handoff and its `MEMORY.md` line in the same turn. The catch-up ships in the new task's PR.
+- The trimmed handoff is also deleted, with its `MEMORY.md` line, when its docs are updated.
+- When the docs do not lag at the merge, the session that confirms the merge deletes the handoff and its `MEMORY.md` line in that turn, and a session that loads a handoff whose task is complete (check `git log origin/main` or the PR state) deletes it before any other work.
+- A partly complete task before its merge: Main edits the handoff down to what is still open and not yet in a doc, and deletes it when nothing is left.
 - A task the Owner cancels: delete the handoff, and record the reason in the owning doc if one needs it.
 
 ## 8. Changing skills

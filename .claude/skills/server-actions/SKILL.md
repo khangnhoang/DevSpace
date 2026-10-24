@@ -11,7 +11,7 @@ Use when a task adds, changes or reviews a file in `app/action/`, a route handle
 
 Do not use for UI-only state that never crosses to the server. For the database side (policies, RPCs, grants) also use `supabase-migration`; for the screen using the action use `frontend-workflow`.
 
-DevSpace has no Zod and no React Hook Form yet. Schema-based validation and form contracts are deferred to the foundation PR, which extends this skill (`docs/backlog/`); until then validate by hand as below and do not add a validation library inside an unrelated task.
+DevSpace has no Zod and no React Hook Form yet. Schema-based validation and form contracts are deferred to the app-foundation program ([ADR 0003](../../../docs/adr/0003-app-foundation-program.md)), which extends this skill; until then validate by hand as below and do not add a validation library inside an unrelated task.
 
 ## Core rules
 

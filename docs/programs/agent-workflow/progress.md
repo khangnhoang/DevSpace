@@ -7,13 +7,13 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | `implementation-plans/u4-instructions-sync/plan.md` r6 (2026-10-25). |
-| Current unit / checkpoint | U4 agent instructions match the infrastructure; CP4 done (AC6, AC7), CP5 next. |
-| Status | Implementation in progress: CP1 to CP4 committed locally; CP5 not started; the Owner's seed-user sign-in check on `devspace-dev` is pending. |
-| Completed evidence | U4 plan r5: Codex plan review rounds 1 to 8, last PASS; `npm run docs:check` 0 violations. U4 CP1 to CP4: handoff template and section 7 rules; `migration new` in section 4, permission and CI duplicates replaced by links, the AC4 grep matches only `pr-and-ci.md`; the change-to-suite table and the seed rule in `test-quality-strategy`, linked from `code-review`, `server-actions` and `planning`; `npm run dev` on the local stack with its unit tests, `devspace-dev` at `127.0.0.1:3000` checked (origin and Supabase requests all local), `npm run test:e2e` 46 passed, `tsc`, lint and `test:unit` pass; `npm run docs:check` passes after each. U3: PR 14 and the milestones below. |
+| Current unit / checkpoint | U4 agent instructions match the infrastructure; CP5 done (AC8, AC9, AC10); CP1 to CP5 implemented, CP6 (Main) next. |
+| Status | Implementation complete and committed locally (CP1 to CP5); Main review, backlog entries, Codex gate and the Owner's seed-user sign-in check on `devspace-dev` are pending. |
+| Completed evidence | U4 plan r5: Codex plan review rounds 1 to 8, last PASS; `npm run docs:check` 0 violations. U4 CP1 to CP5: handoff template and section 7 rules; `migration new` in section 4, permission and CI duplicates replaced by links, the AC4 grep matches only `pr-and-ci.md`; the change-to-suite table and the seed rule in `test-quality-strategy`, linked from `code-review`, `server-actions` and `planning`; `npm run dev` on the local stack with its unit tests, `devspace-dev` at `127.0.0.1:3000` checked (origin and Supabase requests all local), `npm run test:e2e` 46 passed, `tsc`, lint and `test:unit` pass; `playwright-cli` block covers the references (reference and `LICENSE` blob SHAs equal `5e62bc1`), README and the three stale pointers current; `npm run docs:check` passes after each. U3: PR 14 and the milestones below. |
 | Accepted deviations | none for U4. |
 | Blockers / Owner decisions | none. |
-| Next action | The Sonnet implementor does CP5, then Main reviews the commits and runs CP6; the Owner signs in as a seed user on `devspace-dev` to finish the CP4 browser check. |
-| Current authority | Implementation of CP1 to CP5 by the Sonnet implementor with local commits on `chore/agent-instructions-sync`. Push, PR and merge are not granted. |
+| Next action | Main reviews the commits and runs CP6; the Owner signs in as a seed user on `devspace-dev` to finish the CP4 browser check. |
+| Current authority | Local commits on `chore/agent-instructions-sync` for CP1 to CP5 are done. Push, PR and merge are not granted. |
 
 ## Milestones
 
@@ -45,4 +45,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-25 U4 CP1: handoff template, section 7 one-task and docs-lag rules, Resources row (`ccef754`).
 - 2026-10-25 U4 CP2: `migration new` allowed for implementors in section 4; permission and CI facts have one owner each (`af8b792`).
 - 2026-10-25 U4 CP3: change-to-suite table and the manual-QA seed rule in `test-quality-strategy`, linked from the verify steps (`a01e34d`).
-- 2026-10-25 U4 CP4: `npm run dev` runs on the local stack with a tested environment map, `devspace-dev` uses `127.0.0.1:3000`, manual QA docs run on the seeded local stack (this commit).
+- 2026-10-25 U4 CP4: `npm run dev` runs on the local stack with a tested environment map, `devspace-dev` uses `127.0.0.1:3000`, manual QA docs run on the seeded local stack (`435fd3d`).
+- 2026-10-25 U4 CP5: `playwright-cli` block covers the references, README current, stale pointers fixed (this commit).

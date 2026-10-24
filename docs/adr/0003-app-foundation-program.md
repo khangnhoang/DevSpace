@@ -13,7 +13,7 @@ The roadmap gains a fourth program, `app-foundation`, between infrastructure and
 ## Consequences
 
 - ADR 0001's rule still holds: no unit modernizes a part the migration replaces (for example the Supabase auth helpers).
-- FEAT-005 and FEAT-006 target `app-foundation`; they move into its `future-features.md` when its folder is created with its first unit's plan.
+- FEAT-005 and FEAT-006 target `app-foundation`: when its first unit is planned they enter its plan scope and close in the backlog as `Moved to`.
 - Every unit keeps behavior covered by the U3 to U5 suites and adds tests where it changes a form or a validation contract (`test-quality-strategy`).
 - Until the program's first unit merges, the current skill rules stand: server actions validate by hand and UI work adds no component library.
 - techstack-migration starts later, from forms and Zod schemas that already define the request contracts the NestJS backend validates.

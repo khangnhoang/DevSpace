@@ -47,5 +47,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-24 U5 merged; CI on head `69792f9` and the push run on `main` passed all six jobs, lint 82 problems (PR 18, `b8e3e0f`).
 - 2026-10-25 U6 detail plan r3 written, Codex plan gate PASS in round 3, approved by the Owner (`9e9a492`).
 - 2026-10-25 U6 CP1 to CP3: `any` typed, unused code removed, five D28 suppressions, lint job blocking with `--max-warnings 0`; Codex diff gate PASS in round 2 (`a3a1a45`).
-- 2026-10-25 U6 CP4: manual pass M1 to M12 passed; BL-003 to BL-006 and INF-002 recorded (`9a2e182`).
+- 2026-10-25 U6 CP4: manual pass M1 to M12 and M5b passed, except that the Header image `onError` branch and the confetti canvas were not observed (no seed `image_url`; DOM check only); BL-003 to BL-006 and INF-002 recorded (`9a2e182`).
 - 2026-10-25 U6 merged; CI on head `9a2e182` and the push run on `main` passed all six jobs, `lint` blocking with 0 problems (PR 19, `2b59144`).

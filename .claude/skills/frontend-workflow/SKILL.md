@@ -28,7 +28,7 @@ The only automated browser tests are the Playwright smoke (`npm run test:e2e`, `
 3. **Plan UI and states** with `frontend-design`: hierarchy, actions, dialogs, responsive, accessibility. Decide where each value lives (local, derived, URL, server) and prefer derived values over copies. Avoid independent booleans that allow impossible combinations. Do not add a state library.
 4. **Implement** in the approved scope. Cover the meaningful states: loading, empty, error, success, pending, disabled, permission denied. Read [async-state-and-forms.md](references/async-state-and-forms.md) for any mutation, form, dynamic list or complex client state.
 5. **Performance:** look only for real risks (request waterfalls, duplicate fetches, unnecessary client components, large lists or payloads, images). No speculative `useMemo`, `useCallback` or caching without a reason.
-6. **Verify:** `npx tsc --noEmit`, `npm run lint`, then manual validation: read [manual-ui-validation.md](references/manual-ui-validation.md) before planning or running it.
+6. **Verify:** `npx tsc --noEmit`, `npm run lint`, then manual validation on the seeded local stack: read [manual-ui-validation.md](references/manual-ui-validation.md) before planning or running it.
 7. **Audit the diff:** scope, no unrelated changes, accurate contracts, states and failure paths safe, no duplicate or impossible state, shared components untouched, temporary logs and dead code removed, comments only for non-obvious correctness (`.claude/rules.md` section 9).
 
 ## Hard stops

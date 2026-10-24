@@ -6,7 +6,7 @@ Roadmap, in this order: (1) agent-workflow (rules, skills, docs system), (2) inf
 
 ## Commands
 
-- `npm run dev`, `npm run build`, `npm start`.
+- `npm run dev` runs `next dev` at `http://127.0.0.1:3000` on the local stack and needs it started (see the local database below); it fails with a message when the stack is down and never reaches hosted. The AI key comes from the Owner's environment file. `npm run build`, `npm start`.
 - `npm run lint`: it must report 0 problems, warnings included (`--max-warnings 0`).
 - `npx tsc --noEmit`: type check.
 - `npm run docs:check`: structure and link checks for `docs/`, `.claude/`, `CLAUDE.md`, `README.md`. `npm run docs:check:test` runs its tests.

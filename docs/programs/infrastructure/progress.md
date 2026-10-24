@@ -6,14 +6,14 @@ Plan: [plan.md](plan.md). Problems: [problems.md](problems.md). Git history is t
 
 | Field | Value |
 | --- | --- |
-| Spec revision | `plan.md` r2 (2026-10-22), master plan; U6 detail plan r3 (2026-10-25), [u6-lint-cleanup/plan.md](implementation-plans/u6-lint-cleanup/plan.md). |
-| Current unit / checkpoint | U6 Lint cleanup, CP4 done, CP5 next: branch `chore/infra-lint-cleanup` from `main` at `b8e3e0f`, local only. U5 merged (PR 18, `b8e3e0f`). |
-| Status | U6 CP1 to CP4 done: lint 0, `tsc` 0, the emitted-JS check matches Appendix A (14 SAME, 11 DIFF), the suite matches the baseline, Codex diff gate PASS in round 2, manual pass M1 to M12 and M5b passed. Not pushed. |
-| Completed evidence | U6 code commits `5105d31`, `e2f3395`, `2e612ae`, `a3a1a45`; five D28 suppressions tracked in backlog BL-003. Manual-pass gaps: the Header image `onError` branch and the confetti canvas were not observed (no seed `image_url`; DOM check only). |
-| Accepted deviations | D28 (Owner, 2026-10-25): five line-level lint suppressions with reasons instead of behavior-changing fixes (BL-003). |
-| Blockers / Owner decisions | none. |
-| Next action | CP5 with the Owner's grants: push `chore/infra-lint-cleanup`, open the PR, write the CI result into its body; after merge the Owner adds `lint` to the required checks on `main`. |
-| Current authority | Main's local docs commits (granted 2026-10-25). Push, PR creation and merge are not granted. |
+| Spec revision | `plan.md` r2 (2026-10-22), master plan. U7 has no detail plan yet. |
+| Current unit / checkpoint | U7 Dependency policy, not started: no branch yet (`docs/infra-dependency-policy` per the master plan). U6 merged (PR 19, `2b59144`). |
+| Status | U7 planning has not started. |
+| Completed evidence | none for U7 yet. U6 evidence is in its milestones; its five D28 suppressions are tracked in backlog BL-003. |
+| Accepted deviations | none for U7. |
+| Blockers / Owner decisions | The Owner adds `lint` to the required checks on `main` (after U6, rollout step 5); not yet recorded. |
+| Next action | Main writes the U7 detail plan (FEAT-001) on `docs/infra-dependency-policy` for the Owner's approval; U7 gets no Codex gate (docs only). |
+| Current authority | none for U7. Push, PR creation and merge are separate grants. |
 | Hosted state | baseline recorded as applied by `migration repair`; hosted lists 4 versions, `20261021000000_baseline` first (`list_migrations`, 2026-10-23). INF-001 has no hosted step. |
 
 ## Milestones
@@ -47,4 +47,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-24 U5 merged; CI on head `69792f9` and the push run on `main` passed all six jobs, lint 82 problems (PR 18, `b8e3e0f`).
 - 2026-10-25 U6 detail plan r3 written, Codex plan gate PASS in round 3, approved by the Owner (`9e9a492`).
 - 2026-10-25 U6 CP1 to CP3: `any` typed, unused code removed, five D28 suppressions, lint job blocking with `--max-warnings 0`; Codex diff gate PASS in round 2 (`a3a1a45`).
-- 2026-10-25 U6 CP4: manual pass M1 to M12 passed; BL-003 to BL-006 and INF-002 recorded (this commit).
+- 2026-10-25 U6 CP4: manual pass M1 to M12 passed; BL-003 to BL-006 and INF-002 recorded (`9a2e182`).
+- 2026-10-25 U6 merged; CI on head `9a2e182` and the push run on `main` passed all six jobs, `lint` blocking with 0 problems (PR 19, `2b59144`).

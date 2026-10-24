@@ -1,6 +1,6 @@
 # ADR 0001: Modernization roadmap
 
-Date: 2026-10-22. Status: Accepted.
+Date: 2026-10-22. Status: Accepted; the program order is amended by [ADR 0003](0003-frontend-foundation-program.md).
 
 ## Context
 

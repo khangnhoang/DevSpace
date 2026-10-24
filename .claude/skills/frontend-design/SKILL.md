@@ -13,7 +13,7 @@ Do not use for logic with no visible change, or for data and state mechanics (`f
 
 ## Current stack (G3: only what exists)
 
-Next.js App Router, React 19, Tailwind CSS 4 (`app/globals.css`), `lucide-react` icons, `sonner` toasts (`<Toaster richColors position="top-right" />` in `app/layout.tsx`), and feature components in `app/components/`. There is **no UI library, no shadcn, no form library and no Zod**. Do not install packages, add fonts or an animation library inside a design task without the Owner's permission. A move to shadcn, Zod and React Hook Form is a separate foundation PR that will update this skill (`docs/backlog/`).
+Next.js App Router, React 19, Tailwind CSS 4 (`app/globals.css`), `lucide-react` icons, `sonner` toasts (`<Toaster richColors position="top-right" />` in `app/layout.tsx`), and feature components in `app/components/`. There is **no UI library, no shadcn, no form library and no Zod**. Do not install packages, add fonts or an animation library inside a design task without the Owner's permission. A move to shadcn, Zod and React Hook Form belongs to the app-foundation program ([ADR 0003](../../../docs/adr/0003-app-foundation-program.md)), which will update this skill.
 
 ## Classify the screen first
 
@@ -40,7 +40,7 @@ Scale the process to the change:
 ## Hierarchy, dialogs and feedback
 
 - One obvious primary action; secondary actions subordinate (outline or ghost); destructive actions separated and styled as destructive.
-- **Confirm dialogs.** Destructive actions confirm in a named dialog that shows the object, the action and its consequence, with cancel and confirm and a pending state. The current code uses `window.confirm` (P21); do not add more of them. Until the foundation PR brings a Dialog, build a small local confirm component for new destructive flows, or keep `window.confirm` only where the task forbids new UI and report it.
+- **Confirm dialogs.** Destructive actions confirm in a named dialog that shows the object, the action and its consequence, with cancel and confirm and a pending state. The current code uses `window.confirm` (P21); do not add more of them. Until the app-foundation program brings a Dialog, build a small local confirm component for new destructive flows, or keep `window.confirm` only where the task forbids new UI and report it.
 - Follow the existing toast convention (`sonner`). Feedback says what succeeded or failed, what stays editable and what to do next. No route-specific toast theming.
 - Do not fake success for behavior that is not integrated.
 

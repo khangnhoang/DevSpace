@@ -32,6 +32,7 @@ At most one initiative has an open plan at a time. A closed initiative keeps its
 | U1 [Working rules, skills and docs system](implementation-plans/u1-working-rules/plan.md) | `chore/agent-workflow` | A fresh session finds and follows the working rules, loops and skills; program docs have a machine-checked shape. | none | Owner approval of the plan (2026-10-22) |
 | U2 [CI result in the PR body and hosted apply with db push](implementation-plans/u2-ci-result-db-push/plan.md) | `docs/ci-result-and-db-push` | The CI result goes into the PR body; hosted migrations are applied with `db push` behind two grants; migration and handoff rules. | soft on infrastructure U2 (merged) | Owner approval of chat plan r3 after the Codex plan gate |
 | U3 [Program kinds: delivery and evergreen](implementation-plans/u3-program-kinds/plan.md) | `docs/program-kinds` | Delivery and evergreen programs; `agent-workflow` becomes evergreen; migration citation, CI wait and checkpoint commit rules. | hard on U2 (merged) | Owner approval of the plan after the Codex plan gate |
+| U4 [Agent instructions match the infrastructure](implementation-plans/u4-instructions-sync/plan.md) | `chore/agent-instructions-sync` | AW-006 fixed: handoff template, `npm run dev` and manual QA on the local stack, a seed rule for QA, one suite mapping, one owner for CI facts and permissions, current `README.md` and pointers. | none (U3 merged) | Owner approval of the plan after the Codex plan gate |
 
 ## 5. Opening an initiative
 

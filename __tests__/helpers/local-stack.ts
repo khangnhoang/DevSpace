@@ -17,13 +17,13 @@ export function assertLocalUrl(label: string, value: string, protocols: string[]
     url = new URL(value);
   } catch {
     throw new Error(
-      `${label} is not a valid URL. The rls tests run only against the local Supabase stack (npx supabase start).`,
+      `${label} is not a valid URL. This command runs only against the local Supabase stack (npx supabase start).`,
     );
   }
   if (!protocols.includes(url.protocol) || !LOCAL_HOSTS.has(url.hostname)) {
     throw new Error(
       `${label} points at "${url.hostname}", not the local Supabase stack. ` +
-        "The rls tests run only against 127.0.0.1 or localhost (npx supabase start).",
+        "This command runs only against 127.0.0.1 or localhost (npx supabase start).",
     );
   }
   return value;
@@ -61,7 +61,7 @@ export function readLocalStack(cwd: string): LocalStack {
   } catch (error) {
     const stderr = String((error as { stderr?: unknown }).stderr ?? "").trim();
     throw new Error(
-      "The local Supabase stack is not running, so the rls tests cannot start. " +
+      "The local Supabase stack is not running, so this command cannot start. " +
         `Run npx supabase start and npx supabase db reset first.${stderr ? ` CLI said: ${stderr}` : ""}`,
     );
   }

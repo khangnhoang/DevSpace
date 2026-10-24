@@ -84,6 +84,7 @@ After editing program docs, `docs/README.md`, `docs/adr/` or `docs/backlog/`, ru
 | [problems.md](references/templates/problems.md) | creating or reshaping a `problems.md`, or shrinking a resolved entry | not touching problems |
 | [future-features.md](references/templates/future-features.md) | creating a `future-features.md` or adding an entry | not touching future features |
 | [adr.md](references/templates/adr.md) | creating an ADR | not creating an ADR |
+| [handoff.md](references/templates/handoff.md) | writing or editing a handoff (`.claude/rules.md` section 7) | not writing a handoff |
 | [migration.md](references/migration.md) | migrating a live program to this shape, reshaping a single-unit program into a multi-unit one, making a delivery program evergreen, or replacing its State, plan, progress or problems files | not migrating or reshaping |
 
 ## Stop when

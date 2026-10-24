@@ -47,15 +47,15 @@ If any condition fails, use the planned flow. Steps: size, implement, verify, se
 ## Loop 2: review
 
 - **Trigger:** the Owner asks to review a PR, branch, diff, commit range or checkpoint, or Main reviews an implementor's work. Owner: `code-review`.
-- **Report:** scope reviewed, context read, findings by severity (`Critical`, `Required`, `Suggestion`, `Nit`, `FYI`; the first two block), test assessment, verdict. `Approved` is a review verdict only; it is not a merge or push grant.
+- **Report:** scope reviewed, context read, findings by severity (`Critical`, `Required`, `Suggestion`, `Nit`, `FYI`; the first two block), test assessment, verdict. `Approved` is a review verdict only; it is not a merge or push grant (`.claude/rules.md` section 4).
 - **Stop:** read-only. Do not edit unless the Owner asked for fixes. Do not approve or merge on the Owner's behalf.
 
 ## Loop 3: PR and CI
 
 - **Trigger:** the Owner asks to inspect PR or CI state, watch checks, open or update a PR, or fix CI. Owner: `git-pr-workflow`.
-- **Mode:** the narrowest the Owner stated. `inspect` and `watch` change nothing. `create PR` and `update PR` do only that action, plus writing that PR's CI result into its body (`.claude/rules.md` section 4). A CI-fix grant covers only the edit, validate, commit and push actions the Owner named; it does not imply commit or push.
+- **Mode:** the narrowest the Owner stated. `inspect` and `watch` change nothing; each other mode does only what its grant covers (`.claude/rules.md` section 4).
 - **Waiting:** when the Owner says to wait for CI, Main keeps the turn open and watches until every check is terminal (command in `pr-and-ci.md`, Watch CI), instead of ending the turn to wait for app events.
-- **Stop** before any ungranted action, a fix that is not small and branch-caused, force-push, branch deletion or merge. Main makes at most two CI self-fix rounds; a third needs the Owner. Implementors never push.
+- **Stop** before any ungranted action, a fix that is not small and branch-caused, force-push, branch deletion or merge. Main makes at most two CI self-fix rounds; a third needs the Owner.
 
 ## Self-review
 

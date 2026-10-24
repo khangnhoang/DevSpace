@@ -1,6 +1,6 @@
 // Pure parts of the direct server-action call (__tests__/e2e/server-action.ts): finding an action in the
 // server reference manifest of the build under test, and reading the flight response. Both rely on Next 16.4.3
-// internals (`next` is pinned); a format they do not know fails with a message instead of a guess.
+// internals (`next` is locked by `package-lock.json`); a format they do not know fails with a message instead of a guess.
 
 type ManifestEntry = { workers?: Record<string, unknown>; filename?: string; exportedName?: string };
 export type ServerReferenceManifest = { node?: Record<string, ManifestEntry> };

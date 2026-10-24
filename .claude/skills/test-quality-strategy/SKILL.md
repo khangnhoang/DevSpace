@@ -22,7 +22,7 @@ Do not use for manual browser validation (`frontend-workflow`), for writing the 
 - `vitest.config.mts` defines both projects, turns env-file loading off and runs the `rls` files one at a time. Shared helpers: `__tests__/helpers` (the local-stack host check, `knownBug` and its runner-neutral core, the server action reader) and `__tests__/rls/helpers.ts` (actor clients).
 - The `rls` global setup reads the API URL, database URL and keys from `npx supabase status -o json` only, refuses a host other than `127.0.0.1` or `localhost`, and signs in the seed users once. A test never reads `.env*` or a hosted URL.
 - The seed users (`supabase/seed.sql`, invented): `learner` (enrolled nowhere), `student` (enrolled and paid in course 2), `admin`.
-- The CI job `db` runs `npm test` after `db reset`; the CI job `e2e` runs `npm run test:e2e` on its own local stack. Under an agent environment Vitest uses its `minimal` reporter and hides the `known bug <id>` lines; run `npm test -- --reporter=default` to see them. CI uses the default reporter.
+- Under an agent environment Vitest uses its `minimal` reporter and hides the `known bug <id>` lines; run `npm test -- --reporter=default` to see them. The CI jobs, their reporter and failure reading: [pr-and-ci.md](../git-pr-workflow/references/pr-and-ci.md).
 
 ## End-to-end (`e2e`): smoke and payment rows
 
@@ -75,7 +75,7 @@ For each subject, ask which of these apply and cover them:
 
 - Minimal, deterministic, isolated and clearly named. Rows a test creates carry a marker such as `rls-test` and are removed by the test.
 - A test restores what it changes and removes what it adds, even when it fails (`afterEach` for a shared seed row). A test never depends on another file's writes or on file order, and does not rely on a seed row by accident: assert the seed fact it needs first.
-- New seed rows are invented, use `.test` addresses and explicit ids, and never copy hosted data. `supabase/seed.sql` holds only what the tests need.
+- New seed rows are invented, use `.test` addresses and explicit ids, and never copy hosted data. `supabase/seed.sql` holds what the tests and manual QA need. When a QA pass needs data the seed lacks, the task adds invented rows the same way, and `npx supabase db reset`, `npm test` and `npm run test:e2e` stay green.
 
 ## Mocking
 
@@ -84,6 +84,20 @@ Mock only boundaries outside the subject: email, Gemini, browser APIs. Never moc
 ## Regression
 
 Reproduce the bug first when practical, then write a focused test tied to the observable behavior that was wrong, in the layer where it lives. A bug that is known but not fixed in this change uses the known-bug pattern; never encode an unknown surprising behavior as expected, report it to Main so it is recorded as a problem.
+
+## Which command for which change
+
+Run the row for each kind of change, plus the static checks (`npx tsc --noEmit`, `npm run lint` with 0 problems) for any code change. "Stack" means the local stack started and seeded (`npx supabase start`, `npx supabase db reset`); "Chromium" means `npx playwright install chromium`.
+
+| Change | Run | Needs |
+| --- | --- | --- |
+| Pure helper (`lib`, `__tests__/helpers`) | `npm run test:unit` | nothing |
+| Server action (`app/action`) | `npm run test:unit` for a helper it uses; `npm run test:e2e` for the payment actions (`payment-*.spec.ts`), the only ones with tests | Stack, Chromium |
+| RLS policy, grant or migration | `npx supabase db reset`, then `npm test` (twice after writing rls tests) | Stack |
+| Seed (`supabase/seed.sql`) | `npx supabase db reset`, `npm test`, `npm run test:e2e` | Stack, Chromium |
+| Page or UI flow | `npm run test:e2e` when it touches a smoke or payment path, then the manual pass (`frontend-workflow`) | Stack, Chromium |
+| E2E helper, fixture or env map (`__tests__/e2e`, `__tests__/helpers/e2e-env.ts`, `scripts/e2e`) | `npm run test:unit`, `npm run test:e2e` | Stack, Chromium |
+| Docs only (`docs/`, `.claude/`, `CLAUDE.md`, `README.md`) | `npm run docs:check`; `npm run docs:check:test` when the checker changed | nothing |
 
 ## Running and reporting
 

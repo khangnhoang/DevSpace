@@ -44,7 +44,7 @@ The author's method, for a plan after writing it, for each checkpoint, and over 
 
 1. **Anchor.** Go back to the request, the plan, scope and exclusions, and open the actual files or diff. Not memory, intent or your own summary. Resolve doubts about which candidate is current before judging it.
 2. **Falsify.** List the plausible ways it is wrong: missing requirement, unsupported assumption, wrong owner, unhandled state, scope leakage, stale evidence, a claim stronger than its proof. Test each against the real candidate, with deterministic tools where a machine can decide. Before finishing, check the most plausible reason a reviewer would reject it. Do not invent a defect to complete the step.
-3. **Verify.** Run every check that applies after the last edit (`npx tsc --noEmit`, `npm run lint` (0 problems), `npm run docs:check`, `git diff --stat`). Reuse a passing result only if the last edit cannot affect it and say why. A failed check is not overridden by narrative.
+3. **Verify.** Run every check that applies after the last edit: the commands for this kind of change from [test-quality-strategy](../test-quality-strategy/SKILL.md#which-command-for-which-change), and `git diff --stat`. Reuse a passing result only if the last edit cannot affect it and say why. A failed check is not overridden by narrative.
 4. **Proportion.** Scale depth to risk. No extra role, session or artifact just to show a review happened. Self-review does not replace Codex or manual QA.
 
 Repeat until a pass leaves no `Critical` or `Required`.

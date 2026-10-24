@@ -6,7 +6,7 @@ allowed-tools: Bash(playwright-cli:*) Bash(npx playwright:*) Bash(npx --no-insta
 
 # Browser Automation with playwright-cli
 
-**DevSpace rules.** This skill is `microsoft/playwright-cli` vendored for DevSpace; these rules win over the rest of this file.
+**DevSpace rules.** This skill is `microsoft/playwright-cli` vendored for DevSpace; these rules win over the rest of this file and over every file in `references/`.
 
 - Use when: an agent drives the DevSpace app in a browser from the shell on the Owner's machine (inspect a page, reproduce a UI bug, record evidence), or runs and debugs the e2e suite (`npm run test:e2e`). Do not use when: the built-in browser pane is enough for a manual pass (`frontend-workflow`), or the target is not a local host.
 - Run it as `npx --no-install playwright cli ...` from the pinned `@playwright/test` devDependency. Never install it globally (`npm install -g`); downloading a browser needs the Owner's grant.
@@ -14,6 +14,9 @@ allowed-tools: Bash(playwright-cli:*) Bash(npx playwright:*) Bash(npx --no-insta
 - Never `attach` to a running browser (`--cdp`, `--extension`) without asking the Owner first. The `ask` rules in `.claude/settings.json` back this up.
 - Sign in by loading a session that the e2e setup saved (`__tests__/e2e/.auth/`, created by `npm run test:e2e`). Never type a password.
 - Screenshots, videos and traces go to ignored paths. Attaching one to a PR is a PR update and needs the Owner's grant for that PR. Creating, editing or commenting on an issue needs its own Owner grant for that exact action and target (`.claude/rules.md` section 4).
+- The e2e spec is the contract: when a test fails, never edit it to match the app without the Owner's decision; report a defect instead. This overrides the references that update the spec to match the app.
+- A confirmed bug uses `knownBugE2e` (`test-quality-strategy`), never `test.fixme`, `test.fail` or a skip.
+- e2e specs import `test` and `expect` from the DevSpace fixtures (`__tests__/e2e/fixtures.ts`), never from `@playwright/test`.
 - Provenance: <https://github.com/microsoft/playwright-cli> at commit `b1a5903c5b633b8c9f843ad7b629c2a78437040c`, Apache-2.0 (`LICENSE` in this folder). The `references/` files and `LICENSE` are byte-identical to upstream. To update, take the new upstream files, re-apply the `description` above and this block, compare the reference blob SHAs with `git hash-object`, and run `npm run docs:check`.
 
 ## Quick start

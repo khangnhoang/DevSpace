@@ -41,12 +41,12 @@ Each of these is a separate grant from the Owner; one never implies another, and
 
 - commit, push, PR creation or update, merge, branch deletion. A PR creation or update grant also covers writing that PR's CI result into its body (`git-pr-workflow`, `pr-and-ci.md`), and nothing else;
 - applying a migration is two grants, *prepare* (the dry run) and *apply*, in the order `supabase-migration` ("Hosted apply") gives; any other write to the hosted database is a grant of its own;
-- CI fixing that needs a push;
+- CI fixing that needs a push; the grant covers only the edit, validate, commit and push actions the Owner named;
 - anything the Owner has not asked for in words.
 
 Standing limits:
 
-- Implementors never push, even to fix CI (a CI self-fix push is Main-only and needs an Owner grant for CI fixing), and never call the Supabase MCP. Main hands them database metadata as a snapshot in the brief. They may run the local stack only: `npx supabase start`, `stop`, `status`, `db reset`, and `psql` against `127.0.0.1:54322`. They run nothing that reaches hosted: `link`, `db push`, `db pull`, `migration repair`, `--linked`, or `--db-url` to a hosted host. Hosted access stays Main-only. The checkout is permanently linked to hosted, so any `supabase` command outside that local list may reach production.
+- Implementors never push, open or update a PR, or merge, even to fix CI (a CI self-fix push is Main-only and needs an Owner grant for CI fixing), and never call the Supabase MCP. Main hands them database metadata as a snapshot in the brief. They may run the local stack only: `npx supabase start`, `stop`, `status`, `db reset`, and `psql` against `127.0.0.1:54322`. They may also create a new migration file locally with `npx supabase migration new <name>` (which writes only under `supabase/migrations/`) and write its rollback by hand. They run nothing that reaches hosted: `link`, `db push`, `db pull`, `migration repair`, `--linked`, or `--db-url` to a hosted host. Hosted access stays Main-only. The checkout is permanently linked to hosted, so any `supabase` command outside the local commands above may reach production.
 - Nobody reads or prints `.env*`, and no secret goes into a command, doc or message.
 - The VocaSpace project is off limits. The Owner signs in to the app; agents do not enter passwords.
 - A temporary hosted-database write (a test row, a changed setting) needs the Owner's approval first and is cleaned up afterwards.
@@ -75,18 +75,22 @@ Claude memory is not where rules live. Test every candidate memory in this order
 1. A working rule goes to this file or the owning skill. Example: "Codex runs read-only".
 2. Program state goes to that program's own `progress.md`, `problems.md` or `future-features.md`. Example: the status of H2-2.
 3. A decision that spans programs goes to an ADR. Example: the order of the three roadmap steps.
-4. Work no open program owns goes to `docs/backlog/`. Example: the dependency update policy.
+4. Work no open program owns goes to `docs/backlog/`. Example: a UI bug such as BL-004 (the quiz completion screen).
 5. Memory keeps only facts about the Owner and state that no doc reflects yet. Example: a step outside the repo, or a doc that lags reality.
 
 Delete a memory line once the owning doc has caught up. A new durable rule goes to its owner as a separate `chore(agent-rules): ...` commit; until then it sits in memory marked "pending move".
 
-**Handoff.** When the Owner asks for a handoff, or a long session must stop with work in flight, Main writes it as one memory file linked from `MEMORY.md`. It holds facts no doc reflects yet (hosted, git and branch state, running processes, idle sessions, grants used and pending, lagging state records), the next task's approved scope item by item, what a later unit owns, and what comes after. It links to the owning docs instead of copying them. Main also gives the Owner a one-line prompt for the new session.
+**Handoff.** When the Owner asks for a handoff, or a long session must stop with work in flight, Main writes it as one memory file linked from `MEMORY.md`. It holds facts no doc reflects yet (hosted, git and branch state, running processes, idle sessions, grants used and pending, lagging state records), the next task's approved scope item by item, what a later unit owns, and what comes after. It links to the owning docs instead of copying them. Main also gives the Owner a one-line prompt for the new session. The template is [handoff.md](skills/program-docs/references/templates/handoff.md).
 
-A handoff is tied to its task and is deleted with it. The task is complete when its PR is merged and the owning docs record every durable fact the handoff held; session facts (running processes, idle sessions, a branch to start from) expire with the task.
+A handoff carries exactly one task, never another task's scope. The docs catch-up of a merged task counts as scope of the next task.
 
-- The session that completes the task deletes the handoff and its `MEMORY.md` line in the same turn it confirms the merge.
-- A session that loads a handoff whose task is already complete (check `git log origin/main` or the PR state) deletes it before any other work.
-- A partly complete task: Main edits the handoff down to what is still open and not yet in a doc, and deletes it when nothing is left.
+A handoff is tied to its task and is deleted with it. The task is complete when its PR is merged and the owning docs record every durable fact the handoff held; session facts (running processes, idle sessions, a branch to start from) expire with the task. Docs usually lag at a merge, and the Owner fixes them in a later PR:
+
+- When the owning docs lag at the merge, Main does not fix them in that turn. It trims the handoff to the lagging doc items only, each naming the doc and the fact it must record, and adds no new task's scope. That task is not complete: its trimmed handoff is not deleted at the merge, and a session that finds the PR merged does not delete it.
+- When the Owner asks for a handoff for a new task, Main writes the new handoff with the catch-up as one scope item ("docs catch-up from PR n") and deletes the old handoff and its `MEMORY.md` line in the same turn. The catch-up ships in the new task's PR.
+- The trimmed handoff is also deleted, with its `MEMORY.md` line, when its docs are updated.
+- When the docs do not lag at the merge, the session that confirms the merge deletes the handoff and its `MEMORY.md` line in that turn, and a session that loads a handoff whose task is complete (check `git log origin/main` or the PR state) deletes it before any other work.
+- A partly complete task before its merge: Main edits the handoff down to what is still open and not yet in a doc, and deletes it when nothing is left.
 - A task the Owner cancels: delete the handoff, and record the reason in the owning doc if one needs it.
 
 ## 8. Changing skills

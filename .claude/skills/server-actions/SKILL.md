@@ -11,7 +11,7 @@ Use when a task adds, changes or reviews a file in `app/action/`, a route handle
 
 Do not use for UI-only state that never crosses to the server. For the database side (policies, RPCs, grants) also use `supabase-migration`; for the screen using the action use `frontend-workflow`.
 
-DevSpace has no Zod and no React Hook Form yet. Schema-based validation and form contracts are deferred to the foundation PR, which extends this skill (`docs/backlog/`); until then validate by hand as below and do not add a validation library inside an unrelated task.
+DevSpace has no Zod and no React Hook Form yet. Schema-based validation and form contracts are deferred to the app-foundation program ([ADR 0003](../../../docs/adr/0003-app-foundation-program.md)), which extends this skill; until then validate by hand as below and do not add a validation library inside an unrelated task.
 
 ## Core rules
 
@@ -51,7 +51,7 @@ Read [uploads-and-payments.md](references/uploads-and-payments.md) when the work
 2. List the arguments and, for each, who controls it and what the server derives instead.
 3. Write the checks in the order above, reusing the helpers in `lib/auth.server.ts`. Do not add a second auth helper.
 4. Keep changes surgical. Do not rename actions or reshape results used by other components unless the task says so.
-5. Verify with `npx tsc --noEmit` and `npm run lint` (0 problems), and with a hostile-call reasoning: what if I call this action directly, as another user, as anon, twice, with a wrong id? Say which of those you could actually run.
+5. Verify with the commands for a server action in [test-quality-strategy](../test-quality-strategy/SKILL.md#which-command-for-which-change), and with a hostile-call reasoning: what if I call this action directly, as another user, as anon, twice, with a wrong id? Say which of those you could actually run.
 
 ## Anti-patterns
 

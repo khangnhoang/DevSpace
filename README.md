@@ -33,7 +33,7 @@ Lưu ý: Một số tác vụ gửi email có thể chậm ở request đầu ti
 
 ## 🏗️ Công nghệ sử dụng
 
-* **Frontend:** Next.js 15 (App Router), TypeScript, Tailwind CSS
+* **Frontend:** Next.js 16 và React 19 (App Router), TypeScript, Tailwind CSS
 * **Backend & Database:** Supabase (PostgreSQL)
 * **AI Integration:** Google Gemini API
 * **Email Service:** Nodemailer (SMTP Gmail)
@@ -105,26 +105,29 @@ Hệ thống sử dụng **14 bảng chính**:
 npm install
 ```
 
-### 2. Kiểm tra file `.env.local`
+### 2. Môi trường
 
-File đã được cấu hình sẵn:
-
-* Supabase URL & Keys
-* Gemini API Key
-* Email SMTP (Gmail)
+File môi trường là của Owner, không nằm trong repo và không cần mở hay sửa. Lệnh chạy Supabase local (Docker Desktop phải đang chạy) nằm ở mục Commands của [CLAUDE.md](CLAUDE.md).
 
 ### 3. Chạy ứng dụng
 
 ```bash
+npx supabase start
+npx supabase db reset
 npm run dev
 ```
 
-Truy cập: [http://localhost:3000](http://localhost:3000)
+`npm run dev` chạy trên Supabase local và báo lỗi nếu Supabase local chưa chạy.
+
+Truy cập: [http://127.0.0.1:3000](http://127.0.0.1:3000)
 
 ## 🔐 Tài khoản demo
 
-* **Admin:** [admin@devspace.com](mailto:admin@devspace.com) / 123123
-* **Student:** [student@devspace.com](mailto:student@devspace.com) / 123123
+Ba tài khoản seed của Supabase local (mật khẩu nằm trong `supabase/seed.sql`):
+
+* **Learner:** learner@devspace.test
+* **Student:** student@devspace.test
+* **Admin:** admin@devspace.test
 
 ## ⚠️ Lưu ý
 

@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | `implementation-plans/u3-program-kinds/plan.md` r5 (2026-10-23). |
-| Current unit / checkpoint | none: no initiative is open. |
-| Status | U3 program kinds merged (PR 14, `8606dcf`). |
-| Completed evidence | U3: PR 14 and the milestones below. |
-| Accepted deviations | The U2 plan is a retroactive record of PR 13's chat plan r3, committed after U2 merged (U3 D6). The five Sonnet commits of CP1 and CP2 were squashed into one per checkpoint at the Owner's request (U3 D10). |
+| Spec revision | `implementation-plans/u4-instructions-sync/plan.md` r6 (2026-10-25). |
+| Current unit / checkpoint | U4 agent instructions match the infrastructure; CP1 to CP6 done (AC1 to AC13). |
+| Status | Implementation complete, Codex diff review and the AC12 audit passed; delivery (push, PR, CI, merge) in progress. |
+| Completed evidence | U4 plan r5: Codex plan review rounds 1 to 8, last PASS; `npm run docs:check` 0 violations. U4 CP1 to CP5 and the Main review corrections (implementors never open or update a PR, neutral stack messages, rollback by hand): handoff template and section 7 rules; `migration new` in section 4, permission and CI duplicates replaced by links, the AC4 grep matches only `pr-and-ci.md`; the change-to-suite table and the seed rule in `test-quality-strategy`, linked from `code-review`, `server-actions` and `planning`; `npm run dev` on the local stack with its unit tests, `127.0.0.1:3000` checked (origin and Supabase requests all local), `npm run test:e2e` 46 passed, `tsc`, lint and `test:unit` pass; `playwright-cli` block covers the references (reference and `LICENSE` blob SHAs equal `5e62bc1`), README and the three stale pointers current; `npm run docs:check` passes after each. CP6: backlog BL-007, FEAT-015 and FEAT-016 recorded; the Owner signed in as `learner@devspace.test` at `127.0.0.1:3000`; the Owner rotated the passwords of the two README demo accounts on hosted; the fresh AC12 audit passed after rounds 1 to 4. U3: PR 14 and the milestones below. |
+| Accepted deviations | none for U4. |
 | Blockers / Owner decisions | none. |
-| Next action | Plan one initiative for AW-006 after the ADR 0003 PR (`docs/app-foundation-roadmap`) merges. |
-| Current authority | none. |
+| Next action | Main pushes `chore/agent-instructions-sync`, opens the PR, watches CI and merges when every check is green. |
+| Current authority | The Owner granted push, PR creation, CI wait and merge on a green CI after the audit PASS (2026-10-25). |
 
 ## Milestones
 
@@ -40,3 +40,17 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-23 U2 merged: the CI result in the PR body, the PR template, hosted apply with `db push`, the migration and handoff rules (PR 13, `38d431b`).
 - 2026-10-23 Reopened as an evergreen program: charter, U1 moved, U2 and U3 plans, AW-002 and FEAT-007 back from the backlog, FEAT-010 and FEAT-011 (`abfa4b3`).
 - 2026-10-23 U3 merged (PR 14, `8606dcf`).
+- 2026-10-25 U4 plan r5 approved after the Codex plan gate; AW-006 Direction records U4 D3 and D4 (`ca6a4a2`).
+- 2026-10-25 U4 plan r6: the implementor updates State in its checkpoint commits (D8); AW-007 recorded (`05fdcb8`).
+- 2026-10-25 U4 CP1: handoff template, section 7 one-task and docs-lag rules, Resources row (`ccef754`).
+- 2026-10-25 U4 CP2: `migration new` allowed for implementors in section 4; permission and CI facts have one owner each (`af8b792`).
+- 2026-10-25 U4 CP3: change-to-suite table and the manual-QA seed rule in `test-quality-strategy`, linked from the verify steps (`a01e34d`).
+- 2026-10-25 U4 CP4: `npm run dev` runs on the local stack with a tested environment map, `devspace-dev` uses `127.0.0.1:3000`, manual QA docs run on the seeded local stack (`435fd3d`).
+- 2026-10-25 U4 CP5: `playwright-cli` block covers the references, README current, stale pointers fixed (`1f13cef`).
+- 2026-10-25 U4 Main review corrections: section 4 says implementors never open or update a PR or merge, `readLocalStack` messages are neutral, `migration new` wording (`7a1e240`).
+- 2026-10-25 U4 Codex round 1: the dev env test asserts the Gmail placeholder literals (`af9bce9`).
+- 2026-10-25 U4 Owner QA: `npm run dev` hides the typeless-package warning of its launcher import (`aab40ee`).
+- 2026-10-25 U4 AC12 audit corrections: suite selection, CI facts and permission statements point to their owners (`efae00b`).
+- 2026-10-25 U4 AC12 audit round 2: permission statements outside section 4 reduced to pointers, CI-fix scope moved into section 4 (`a3a2ce8`).
+- 2026-10-25 U4 AC12 audit round 3: CLAUDE.md rule 10 names section 4 as the owner of git, remote and database permissions without restating them (`f6c1ea2`).
+- 2026-10-25 U4 CP6: backlog entries BL-007, FEAT-015 and FEAT-016, AC12 audit PASS (this commit).

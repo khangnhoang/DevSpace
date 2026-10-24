@@ -36,7 +36,12 @@ export default function TransactionsPage() {
   };
 
   useEffect(() => {
-    fetchPayments();
+    // isLoading already starts true, so the mount fetch skips the
+    // setIsLoading(true) that fetchPayments does for the later refetches.
+    getAllPayments().then((data) => {
+      setPayments((data as unknown as PaymentRow[]) || []);
+      setIsLoading(false);
+    });
   }, []);
 
   // Xử lý Duyệt

@@ -135,7 +135,7 @@ export default function ChaptersManagerPage() {
         month: '2-digit',
         day: '2-digit'
       });
-    } catch (e) {
+    } catch {
       return dateString;
     }
   };

@@ -127,7 +127,7 @@ function TryItEditor() {
             toast.error("Có lỗi biên dịch hoặc runtime!");
           else toast.success("Chạy thành công!");
         }
-      } catch (error) {
+      } catch {
         toast.error("Lỗi kết nối Server biên dịch!");
         setConsoleOutput(["Lỗi: Không thể kết nối đến server Piston API."]);
       } finally {

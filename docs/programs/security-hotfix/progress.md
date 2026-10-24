@@ -11,8 +11,8 @@ Plan: `plan.md` (H1) and `plan-h2.md` (H2). Problems: `problems.md`. Git history
 | Status | H1 and H2-1 shipped. H2-2 deferred by the Owner on 2026-10-22. |
 | Completed evidence | H1: PR #2, merged 2026-10-21. H2-1: PR #3 and #4, merged and deployed, migration B `20261021185249` applied, matrix run on production with the results in `plan-h2.md` section 6 (historical, 2026-10-22). Open from that run: 17g fails on the old bug P16 and 17i was skipped. |
 | Accepted deviations | none |
-| Blockers / Owner decisions | H2-2a (P3 and P4: review policy, comment `with_check` and trigger) is small and low risk; do it when work returns to security. H2-2b (P5/P6 and P25: 3 RPCs, `payments_guard`, deploy order, rollback) waits for the `infrastructure` program's payment-flow tests (its unit U5). The Owner put agent-workflow and infrastructure (an isolated environment and GitHub Actions) first because manual testing on production is too heavy. |
-| Next action | none until `infrastructure` U5 merges; the Owner decides when to return to H2-2a. |
+| Blockers / Owner decisions | H2-2a (P3 and P4: review policy, comment `with_check` and trigger) is small and low risk; do it when work returns to security. H2-2b (P5/P6 and P25: 3 RPCs, `payments_guard`, deploy order, rollback) now has its payment-flow tests: `infrastructure` U5 merged, with P5, P6 and P25 as known bugs in `__tests__/e2e/payment-*.spec.ts` (rows K4 to K8). The Owner put agent-workflow and infrastructure (an isolated environment and GitHub Actions) first because manual testing on production is too heavy. |
+| Next action | the Owner decides when to start H2-2a or H2-2b. |
 | Current authority | none: no unit is active, so nothing is permitted here beyond reading. H2-2 needs a new grant from the Owner, and applying any migration to the hosted database is a separate grant. |
 | Hosted state | H1 migration `20261021131351` and H2-1 migrations `20261021181051` (A) and `20261021185249` (B) are applied to `lkvxxrxojjlkchzzqidu`. The H2-2 migration is not written and not applied. |
 
@@ -26,3 +26,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-22 H2-1 code and migrations A and B merged: profile PII, public coupons and paid lesson/quiz content closed (PR 3, `36056ec`).
 - 2026-10-22 H2-1 migration B file renamed to its recorded version (PR 4, `5ae5943`).
 - 2026-10-22 H2-1 production matrix recorded and the Owner deferred H2-2, split into H2-2a (P3, P4) and H2-2b (P5/P6, P25) (`6e8e1b7`).
+- 2026-10-24 `infrastructure` U5 merged: the payment-flow tests H2-2b waited for, with P5, P6 and P25 as known bugs (PR 18, `b8e3e0f`).

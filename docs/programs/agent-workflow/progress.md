@@ -49,4 +49,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-25 U4 CP5: `playwright-cli` block covers the references, README current, stale pointers fixed (`1f13cef`).
 - 2026-10-25 U4 Main review corrections: section 4 says implementors never open or update a PR or merge, `readLocalStack` messages are neutral, `migration new` wording (`7a1e240`).
 - 2026-10-25 U4 Codex round 1: the dev env test asserts the Gmail placeholder literals (`af9bce9`).
-- 2026-10-25 U4 Owner QA: `npm run dev` hides the typeless-package warning of its launcher import (this commit).
+- 2026-10-25 U4 Owner QA: `npm run dev` hides the typeless-package warning of its launcher import (`aab40ee`).
+- 2026-10-25 U4 AC12 audit corrections: suite selection, CI facts and permission statements point to their owners (this commit).

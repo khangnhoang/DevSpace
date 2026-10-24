@@ -1,6 +1,6 @@
 # Branch start, commit and history
 
-Read this when starting or switching a branch, staging, committing, or deciding about a correction, a conflict or history. Permissions are in `SKILL.md`; nothing here grants an action.
+Read this when starting or switching a branch, staging, committing, or deciding about a correction, a conflict or history. Permissions are owned by [`.claude/rules.md`](../../../rules.md) section 4; nothing here grants an action.
 
 ## Starting a task branch
 

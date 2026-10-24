@@ -16,7 +16,7 @@ Database behavior is changed by a migration file, never by dashboard SQL left as
 ## Hard rules
 
 - Files: `supabase/migrations/<timestamp>_<name>.sql` and `supabase/rollbacks/<same-name>.down.sql`. Every migration has a `.down.sql`.
-- A new migration must replay through `npx supabase db reset` after the baseline and the earlier migrations; the CI `db` job fails otherwise.
+- A new migration must replay through `npx supabase db reset` after the baseline and the earlier migrations (CI runs the same replay: [pr-and-ci.md](../git-pr-workflow/references/pr-and-ci.md)).
 - Never edit a published migration. A fix is a new migration. A migration that was applied under a different version is renamed to the recorded version in a separate PR (see the H2-1 history).
 - A migration header cites stable IDs with their program (for example `security-hotfix H2-1a`, `infrastructure D9`, `ADR 0002`), never a doc path or a section number: a published migration is never edited, so a cited path could never move.
 - Who may run which `supabase` command, and what the hosted database allows, is owned by `.claude/rules.md` section 4. The checkout is linked to hosted, so `link`, `db push`, `db pull`, `migration repair` and anything with `--linked` or `--db-url` reach it; the local commands do not. Main hands the implementor a metadata snapshot (policies, grants, constraints, function definitions) in the brief and applies migrations only through "Hosted apply" below, after Codex PASS and the Owner's grants.
@@ -54,7 +54,7 @@ Main applies a repo migration to hosted with `npx supabase db push` from this ch
 4. **Grant 2, apply.** Only if the dry run lists exactly the expected file(s), ask the Owner, naming the project, the commit and the version(s). Right before applying, re-check the project ref and a clean tree at the same commit, and run the dry run again; any difference stops the apply and the prepare step starts over. Then run `npx supabase db push --linked --yes`; `list_migrations` must show the new version under the file's name.
 5. **Stop and report** when the dry run lists anything else or nothing, when the CLI asks for a database password, or on any error. The Owner then decides (for example runs the step themself).
 
-The two grants cover only the dry run and the apply. Postflight on metadata uses Main's standing read-only catalog permission (`.claude/rules.md` section 4); a postflight that reads user data rows or writes a test row needs its own Owner approval first and stays `pending` until it has it.
+The two grants cover only the dry run and the apply. What a postflight may read or write on hosted is owned by `.claude/rules.md` section 4; a postflight check that still lacks its approval stays `pending`.
 
 Never `--include-all`, `--include-seed` (the seed holds invented users with known passwords) or `--include-roles`; never `--db-url`; never the MCP `apply_migration` for a repo migration. The MCP records its own version, so H2-1's hosted version differed from its file name until a rename PR, and it applies the SQL text it is given, which is how `lessons.word_count` was found stored differently on hosted than in the H2-1a file. `db push` applies the file itself under the file's version.
 

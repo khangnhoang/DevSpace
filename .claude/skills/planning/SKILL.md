@@ -26,7 +26,7 @@ Doc shape (master plan, detail plan, progress, problems) belongs to `program-doc
    - **hypotheses**: likely files and wiring, which implementation may replace if the Spec holds.
 7. **Dependencies and PR split.** Order by the real dependency graph (migration, then types and contract, then action, then UI, then QA), not by numbering. One coherent, reviewable, verifiable outcome per PR; do not mix independent product changes or cleanup. Read [pr-breakdown-and-brief.md](references/pr-breakdown-and-brief.md) when the work needs a split, parallel streams or a Sonnet brief.
 8. **Acceptance** as actor + action + condition + expected result ("A learner cannot read paid lesson content without enrolling"), never "the feature works".
-9. **Verification and manual QA.** List only checks that exist today, chosen from [test-quality-strategy](../test-quality-strategy/SKILL.md#which-command-for-which-change) for each kind of change, plus a browser pass and simulated-role SQL on hosted for Main's postflight. A policy or grant change plans its RLS tests. Name what the agent cannot check. For data-dependent or role-dependent behavior, write the QA matrix; read [qa-matrix.md](references/qa-matrix.md).
+9. **Verification and manual QA.** List only checks that exist today, chosen from [test-quality-strategy](../test-quality-strategy/SKILL.md#which-command-for-which-change) for each kind of change, plus the manual pass on the local stack (`frontend-workflow`); when the plan has a hosted rollout step, Main's postflight with simulated-role SQL on hosted (`supabase-migration`). A policy or grant change plans its RLS tests. Name what the agent cannot check. For data-dependent or role-dependent behavior, write the QA matrix; read [qa-matrix.md](references/qa-matrix.md).
 10. **Risks** with impact, mitigation and the earliest checkpoint that exposes them. Expose high-risk assumptions early within a valid order.
 11. **Self-review** the plan (method in `code-review`), then report with a `Tự review` block. A large or high-risk plan goes to the Codex gate; the migration in it is Codex-gated before it is applied.
 
@@ -34,7 +34,7 @@ Doc shape (master plan, detail plan, progress, problems) belongs to `program-doc
 
 - No git action on a plan unless the Owner asked for it. By default a plan is not committed at all.
 - If the Owner granted a commit, commit the plan only after its review passes (self-review, plus Codex PASS when the work is gated or requested). Review rounds run on the uncommitted file; give Codex the working-tree file and a `git diff` against the last committed revision. Keep fixes uncommitted until the pass.
-- Plan approval, implementation permission, commit, push, PR, merge and any hosted step are separate grants. A review verdict grants none of them. A clear current instruction may state the behavior and grant implementation in one turn.
+- Plan approval and implementation permission are separate Owner grants, and so are the git, remote and hosted grants owned by `.claude/rules.md` section 4. A review verdict grants none of them (`docs/agent-loops.md`, Precedence). A clear current instruction may state the behavior and grant implementation in one turn.
 - A PR split is an approval boundary, not a git operation.
 
 ## Planning a program

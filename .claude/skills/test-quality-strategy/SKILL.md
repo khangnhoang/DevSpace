@@ -22,7 +22,7 @@ Do not use for manual browser validation (`frontend-workflow`), for writing the 
 - `vitest.config.mts` defines both projects, turns env-file loading off and runs the `rls` files one at a time. Shared helpers: `__tests__/helpers` (the local-stack host check, `knownBug` and its runner-neutral core, the server action reader) and `__tests__/rls/helpers.ts` (actor clients).
 - The `rls` global setup reads the API URL, database URL and keys from `npx supabase status -o json` only, refuses a host other than `127.0.0.1` or `localhost`, and signs in the seed users once. A test never reads `.env*` or a hosted URL.
 - The seed users (`supabase/seed.sql`, invented): `learner` (enrolled nowhere), `student` (enrolled and paid in course 2), `admin`.
-- CI runs these suites on its own local stacks (jobs and failure reading: [pr-and-ci.md](../git-pr-workflow/references/pr-and-ci.md)). Under an agent environment Vitest uses its `minimal` reporter and hides the `known bug <id>` lines; run `npm test -- --reporter=default` to see them. CI uses the default reporter.
+- Under an agent environment Vitest uses its `minimal` reporter and hides the `known bug <id>` lines; run `npm test -- --reporter=default` to see them. The CI jobs, their reporter and failure reading: [pr-and-ci.md](../git-pr-workflow/references/pr-and-ci.md).
 
 ## End-to-end (`e2e`): smoke and payment rows
 

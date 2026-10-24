@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | `implementation-plans/u3-program-kinds/plan.md` r5 (2026-10-23). |
-| Current unit / checkpoint | none: no initiative is open. |
-| Status | U3 program kinds merged (PR 14, `8606dcf`). |
-| Completed evidence | U3: PR 14 and the milestones below. |
-| Accepted deviations | The U2 plan is a retroactive record of PR 13's chat plan r3, committed after U2 merged (U3 D6). The five Sonnet commits of CP1 and CP2 were squashed into one per checkpoint at the Owner's request (U3 D10). |
+| Spec revision | `implementation-plans/u4-instructions-sync/plan.md` r5 (2026-10-25). |
+| Current unit / checkpoint | U4 agent instructions match the infrastructure; plan approved, CP1 not started. |
+| Status | Plan approved after Codex plan gate PASS (round 8); implementation not started. |
+| Completed evidence | U4 plan r5: Codex plan review rounds 1 to 8, last PASS; `npm run docs:check` 0 violations. U3: PR 14 and the milestones below. |
+| Accepted deviations | none for U4. |
 | Blockers / Owner decisions | none. |
-| Next action | Plan one initiative for AW-006 after the ADR 0003 PR (`docs/app-foundation-roadmap`) merges. |
-| Current authority | none. |
+| Next action | Main asks the Owner for the implementation grant, then starts the Sonnet session for CP1 to CP5. |
+| Current authority | Commit of the U4 plan on `chore/agent-instructions-sync`. Implementation, push, PR and merge are not granted. |
 
 ## Milestones
 
@@ -40,3 +40,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-23 U2 merged: the CI result in the PR body, the PR template, hosted apply with `db push`, the migration and handoff rules (PR 13, `38d431b`).
 - 2026-10-23 Reopened as an evergreen program: charter, U1 moved, U2 and U3 plans, AW-002 and FEAT-007 back from the backlog, FEAT-010 and FEAT-011 (`abfa4b3`).
 - 2026-10-23 U3 merged (PR 14, `8606dcf`).
+- 2026-10-25 U4 plan r5 approved after the Codex plan gate; AW-006 Direction records U4 D3 and D4 (this commit).

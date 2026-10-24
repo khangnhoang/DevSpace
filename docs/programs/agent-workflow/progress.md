@@ -12,7 +12,7 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Completed evidence | U3: PR 14 and the milestones below. |
 | Accepted deviations | The U2 plan is a retroactive record of PR 13's chat plan r3, committed after U2 merged (U3 D6). The five Sonnet commits of CP1 and CP2 were squashed into one per checkpoint at the Owner's request (U3 D10). |
 | Blockers / Owner decisions | none. |
-| Next action | none. |
+| Next action | Plan one initiative for AW-006 after the ADR 0003 PR (`docs/app-foundation-roadmap`) merges. |
 | Current authority | none. |
 
 ## Milestones

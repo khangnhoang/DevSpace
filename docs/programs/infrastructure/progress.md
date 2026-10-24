@@ -11,7 +11,7 @@ Plan: [plan.md](plan.md). Problems: [problems.md](problems.md). Git history is t
 | Status | U7 planning has not started. |
 | Completed evidence | none for U7 yet. U6 evidence is in its milestones; its five D28 suppressions are tracked in backlog BL-003. |
 | Accepted deviations | none for U7. |
-| Blockers / Owner decisions | The Owner adds `lint` to the required checks on `main` (after U6, rollout step 5); not yet recorded. |
+| Blockers / Owner decisions | none. |
 | Next action | Main writes the U7 detail plan (FEAT-001) on `docs/infra-dependency-policy` for the Owner's approval; U7 gets no Codex gate (docs only). |
 | Current authority | none for U7. Push, PR creation and merge are separate grants. |
 | Hosted state | baseline recorded as applied by `migration repair`; hosted lists 4 versions, `20261021000000_baseline` first (`list_migrations`, 2026-10-23). INF-001 has no hosted step. |
@@ -49,3 +49,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-25 U6 CP1 to CP3: `any` typed, unused code removed, five D28 suppressions, lint job blocking with `--max-warnings 0`; Codex diff gate PASS in round 2 (`a3a1a45`).
 - 2026-10-25 U6 CP4: manual pass M1 to M12 and M5b passed, except that the Header image `onError` branch and the confetti canvas were not observed (no seed `image_url`; DOM check only); BL-003 to BL-006 and INF-002 recorded (`9a2e182`).
 - 2026-10-25 U6 merged; CI on head `9a2e182` and the push run on `main` passed all six jobs, `lint` blocking with 0 problems (PR 19, `2b59144`).
+- 2026-10-25 U6 rollout: `lint` added to the required checks on `main` at the Owner's request; `main` now requires all six jobs (this commit).

@@ -1,4 +1,4 @@
-# ADR 0003: Frontend foundation program before the migration
+# ADR 0003: App foundation program before the migration
 
 Date: 2026-10-25. Status: Accepted.
 
@@ -8,13 +8,13 @@ Date: 2026-10-25. Status: Accepted.
 
 ## Decision
 
-The roadmap gains a fourth program, `frontend-foundation`, between infrastructure and techstack-migration: (1) agent-workflow, (2) infrastructure, (3) frontend-foundation, (4) techstack-migration (Next.js + NestJS + PostgreSQL). It is a delivery program that adopts shadcn, Zod and React Hook Form incrementally, one small PR per unit, and updates the skills that describe them. It starts after infrastructure U7 merges. Its scope: shadcn components and React Hook Form on the frontend, and Zod on both sides, as the schema for forms and as server-side validation of the data every server action accepts. The schemas are written to be shared between client and server and to move to the NestJS backend; the program does not restructure server actions beyond their validation.
+The roadmap gains a fourth program, `app-foundation`, between infrastructure and techstack-migration: (1) agent-workflow, (2) infrastructure, (3) app-foundation, (4) techstack-migration (Next.js + NestJS + PostgreSQL). It is a delivery program that adopts shadcn, Zod and React Hook Form incrementally, one small PR per unit, and updates the skills that describe them. It starts after infrastructure U7 merges. Its scope: shadcn components and React Hook Form on the frontend, and Zod on both sides, as the schema for forms and as server-side validation of the data every server action accepts. The schemas are written to be shared between client and server and to move to the NestJS backend; the program does not restructure server actions beyond their validation.
 
 ## Consequences
 
 - ADR 0001's rule still holds: no unit modernizes a part the migration replaces (for example the Supabase auth helpers).
-- FEAT-005 and FEAT-006 target `frontend-foundation`; they move into its `future-features.md` when its folder is created with its first unit's plan.
+- FEAT-005 and FEAT-006 target `app-foundation`; they move into its `future-features.md` when its folder is created with its first unit's plan.
 - Every unit keeps behavior covered by the U3 to U5 suites and adds tests where it changes a form or a validation contract (`test-quality-strategy`).
 - Until the program's first unit merges, the current skill rules stand: server actions validate by hand and UI work adds no component library.
 - techstack-migration starts later, from forms and Zod schemas that already define the request contracts the NestJS backend validates.
-- The program name says frontend, but its Zod units change server-side validation too, so they follow `server-actions` and get the risk handling of server-action changes.
+- Its Zod units change server-side validation, so they follow `server-actions` and get the risk handling of server-action changes.

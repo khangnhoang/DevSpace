@@ -4,7 +4,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { requireAdmin } from "@/lib/auth.server";
 
-export async function generateQuizFromContent(content: string, quantity: number = 1, previousQuestion: any[]) {
+export async function generateQuizFromContent(content: string, quantity: number = 1, previousQuestion: { question: string }[]) {
   const auth = await requireAdmin();
   if ("error" in auth) return { error: auth.error };
 
@@ -75,14 +75,14 @@ export async function generateQuizFromContent(content: string, quantity: number 
     const data = JSON.parse(jsonString);
     return { data };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Log lỗi chi tiết ra terminal của VS Code để bạn đọc
     console.error("❌ LỖI GOOGLE GEMINI:", error);
     
     // Check lỗi phổ biến
-    if (error.message?.includes("API key not valid")) {
+    if ((error as { message?: string }).message?.includes("API key not valid")) {
         return { error: "API Key không hợp lệ hoặc tài khoản bị khóa." };
     }
-    return { error: `Lỗi xử lý: ${error.message}` };
+    return { error: `Lỗi xử lý: ${(error as { message?: string }).message}` };
   }
 }

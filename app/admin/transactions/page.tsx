@@ -9,8 +9,21 @@ import { toast } from "sonner";
 import { Check, X, DollarSign, Loader2 } from "lucide-react";
 import CustomAvatar from "@/app/components/CustomAvatar"; // Nhớ check đường dẫn component này
 
+interface PaymentRow {
+  id: number;
+  status: string;
+  amount?: number;
+  created_at: string;
+  profiles?: {
+    full_name?: string | null;
+    avatar_url?: string | null;
+    email?: string | null;
+  } | null;
+  courses?: { name?: string } | null;
+}
+
 export default function TransactionsPage() {
-  const [payments, setPayments] = useState<any[]>([]);
+  const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all, pending, success, failed
 
@@ -18,12 +31,17 @@ export default function TransactionsPage() {
   const fetchPayments = async () => {
     setIsLoading(true);
     const data = await getAllPayments();
-    setPayments(data || []);
+    setPayments((data as unknown as PaymentRow[]) || []);
     setIsLoading(false);
   };
 
   useEffect(() => {
-    fetchPayments();
+    // isLoading already starts true, so the mount fetch skips the
+    // setIsLoading(true) that fetchPayments does for the later refetches.
+    getAllPayments().then((data) => {
+      setPayments((data as unknown as PaymentRow[]) || []);
+      setIsLoading(false);
+    });
   }, []);
 
   // Xử lý Duyệt

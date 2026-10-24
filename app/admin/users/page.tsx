@@ -18,7 +18,6 @@ import {
   type UserProfile,
   getAllUsersForUsersManager,
   editUser,
-  deleteUser,
   uploadUserAvatar,
 } from "@/lib/supabase";
 import { createNewUser, deleteUserAccount } from "@/app/action/user";
@@ -153,7 +152,7 @@ export default function UsersManagerPage() {
         month: "2-digit",
         year: "numeric",
       });
-    } catch (e) {
+    } catch {
       return dateString;
     }
   };
@@ -500,6 +499,7 @@ export default function UsersManagerPage() {
                     onClick={() => fileInputRef.current?.click()}
                   >
                     {previewUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- blob: preview URL that next/image does not optimize, tracked in BL-003
                       <img
                         src={previewUrl}
                         alt="Avatar Preview"

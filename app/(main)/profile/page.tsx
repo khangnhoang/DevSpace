@@ -58,11 +58,24 @@ const ProfileSkeleton = () => {
   );
 };
 
+interface EditProfileFormData extends ProfileData {
+  file: File | null;
+}
+
 // --- MODAL CHỈNH SỬA PROFILE ---
 interface EditProfileModalProps {
-  userProfile: any;
+  userProfile: ProfileData | null;
   onClose: () => void;
-  onSave: (formData: any) => Promise<void>;
+  onSave: (formData: EditProfileFormData) => Promise<void>;
+}
+
+interface TransactionRow {
+  id: number | string;
+  course_id: number;
+  amount: number;
+  status: string;
+  created_at: string;
+  courses?: { name?: string | null } | null;
 }
 
 const EditProfileModal = ({
@@ -233,7 +246,7 @@ export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<ProfileData | null>(null);
   const [myCourses, setMyCourses] = useState<DashboardCourse[]>([]);
-  const [rawTransactions, setRawTransactions] = useState<any[]>([]); // Data gốc
+  const [rawTransactions, setRawTransactions] = useState<TransactionRow[]>([]); // Data gốc
 
   // State cho bộ lọc & phân trang
   const [statusFilter, setStatusFilter] = useState<
@@ -302,7 +315,7 @@ export default function ProfilePage() {
     currentPage * ITEMS_PER_PAGE,
   );
 
-  const handleUpdateProfile = async (formData: any) => {
+  const handleUpdateProfile = async (formData: EditProfileFormData) => {
     if (!user) {
       toast.error("Không tìm thấy user");
       return;
@@ -446,7 +459,7 @@ export default function ProfilePage() {
                 className="p-1 text-sm bg-transparent outline-none text-gray-700 font-medium cursor-pointer"
                 value={statusFilter}
                 onChange={(e) => {
-                  setStatusFilter(e.target.value as any);
+                  setStatusFilter(e.target.value as typeof statusFilter);
                   setCurrentPage(1); // Reset về trang 1
                 }}
               >

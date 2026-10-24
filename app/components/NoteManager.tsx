@@ -28,9 +28,15 @@ interface Props {
   player: YouTubePlayer | null; // Nhận player để lấy thời gian
 }
 
+interface NoteItem {
+  id: number;
+  content: string;
+  timestamp: number;
+}
+
 export default function NoteManager({ userId, lessonId, player }: Props) {
   const [isOpen, setIsOpen] = useState(false);
-  const [notes, setNotes] = useState<any[]>([]);
+  const [notes, setNotes] = useState<NoteItem[]>([]);
   const [content, setContent] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingNotes, setIsLoadingNotes] = useState(false);

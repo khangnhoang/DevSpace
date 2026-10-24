@@ -30,7 +30,7 @@ export default function Quiz({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [correct, setIsCorrect] = useState<boolean | null>(null);
-  const [isCompleted, setIsCompleted] = useState(false);
+  const [isCompleted] = useState(false);
 
   if (!questions || questions.length === 0) {
     return null;

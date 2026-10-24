@@ -51,7 +51,7 @@ Read [uploads-and-payments.md](references/uploads-and-payments.md) when the work
 2. List the arguments and, for each, who controls it and what the server derives instead.
 3. Write the checks in the order above, reusing the helpers in `lib/auth.server.ts`. Do not add a second auth helper.
 4. Keep changes surgical. Do not rename actions or reshape results used by other components unless the task says so.
-5. Verify with `npx tsc --noEmit` and `npm run lint` (no new problems), and with a hostile-call reasoning: what if I call this action directly, as another user, as anon, twice, with a wrong id? Say which of those you could actually run.
+5. Verify with `npx tsc --noEmit` and `npm run lint` (0 problems), and with a hostile-call reasoning: what if I call this action directly, as another user, as anon, twice, with a wrong id? Say which of those you could actually run.
 
 ## Anti-patterns
 

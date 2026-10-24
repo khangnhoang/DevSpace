@@ -6,14 +6,14 @@ Plan: [plan.md](plan.md). Problems: [problems.md](problems.md). Git history is t
 
 | Field | Value |
 | --- | --- |
-| Spec revision | `plan.md` r2 (2026-10-22), master plan; U5 detail plan r1 (2026-10-24), [u5-payment-flow/plan.md](implementation-plans/u5-payment-flow/plan.md). |
-| Current unit / checkpoint | U5 Payment-flow tests, CP1 to CP4 done; CP5 (PR and CI) not started. Branch `test/infra-payment-flow` from `main` at `34b80d9`, local only. |
-| Status | CP1 to CP3 implemented by Sonnet in local commits up to `71fbf06`; CP4 mutation check passed; Codex diff gate PASS in round 4. |
-| Completed evidence | On `71fbf06`: tsc 0, lint 82, unit 87, `npm test` 152, e2e 46 with `known bug` P5, P6 and P25 lines, local tables restored to the seed and the guard record empty (Main, 2026-10-24). |
-| Accepted deviations | The lint baseline is 82 problems since INF-001 (Owner decision 2026-10-23); U6 fixes them. |
+| Spec revision | `plan.md` r2 (2026-10-22), master plan; U6 detail plan r3 (2026-10-25), [u6-lint-cleanup/plan.md](implementation-plans/u6-lint-cleanup/plan.md). |
+| Current unit / checkpoint | U6 Lint cleanup, CP4 done, CP5 next: branch `chore/infra-lint-cleanup` from `main` at `b8e3e0f`, local only. U5 merged (PR 18, `b8e3e0f`). |
+| Status | U6 CP1 to CP4 done: lint 0, `tsc` 0, the emitted-JS check matches Appendix A (14 SAME, 11 DIFF), the suite matches the baseline, Codex diff gate PASS in round 2, manual pass M1 to M12 and M5b passed. Not pushed. |
+| Completed evidence | U6 code commits `5105d31`, `e2f3395`, `2e612ae`, `a3a1a45`; five D28 suppressions tracked in backlog BL-003. Manual-pass gaps: the Header image `onError` branch and the confetti canvas were not observed (no seed `image_url`; DOM check only). |
+| Accepted deviations | D28 (Owner, 2026-10-25): five line-level lint suppressions with reasons instead of behavior-changing fixes (BL-003). |
 | Blockers / Owner decisions | none. |
-| Next action | With the Owner's grants, push the branch and open the U5 PR (CP5). |
-| Current authority | Implementation of CP1 to CP3 with local commits (granted 2026-10-24). Committing these state records, push, PR creation and merge are not granted. |
+| Next action | CP5 with the Owner's grants: push `chore/infra-lint-cleanup`, open the PR, write the CI result into its body; after merge the Owner adds `lint` to the required checks on `main`. |
+| Current authority | Main's local docs commits (granted 2026-10-25). Push, PR creation and merge are not granted. |
 | Hosted state | baseline recorded as applied by `migration repair`; hosted lists 4 versions, `20261021000000_baseline` first (`list_migrations`, 2026-10-23). INF-001 has no hosted step. |
 
 ## Milestones
@@ -44,3 +44,7 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-24 U4 rollout: the Owner added `e2e` to the required checks on `main` (`6258b7f`).
 - 2026-10-24 U5 detail plan r1 written, Codex plan gate PASS in round 2, approved by the Owner (`9b3cbca`).
 - 2026-10-24 U5 CP1 to CP4: server guard and mail record, direct server action calls, PF, AP, H and K4 to K8 rows; mutation check passed; Codex diff gate PASS in round 4 (`71fbf06`).
+- 2026-10-24 U5 merged; CI on head `69792f9` and the push run on `main` passed all six jobs, lint 82 problems (PR 18, `b8e3e0f`).
+- 2026-10-25 U6 detail plan r3 written, Codex plan gate PASS in round 3, approved by the Owner (`9e9a492`).
+- 2026-10-25 U6 CP1 to CP3: `any` typed, unused code removed, five D28 suppressions, lint job blocking with `--max-warnings 0`; Codex diff gate PASS in round 2 (`a3a1a45`).
+- 2026-10-25 U6 CP4: manual pass M1 to M12 passed; BL-003 to BL-006 and INF-002 recorded (this commit).

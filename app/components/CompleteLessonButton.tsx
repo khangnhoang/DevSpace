@@ -33,7 +33,7 @@ export default function CompleteLessonBtn({
     const randomInRange = (min: number, max: number) =>
       Math.random() * (max - min) + min;
 
-    const interval: any = setInterval(function () {
+    const interval: ReturnType<typeof setInterval> = setInterval(function () {
       const timeLeft = animationEnd - Date.now();
 
       if (timeLeft <= 0) {

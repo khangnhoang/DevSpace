@@ -30,6 +30,14 @@ import Image from "next/image";
 import VideoModal from "@/app/components/VideoModal";
 import CustomAvatar from "@/app/components/CustomAvatar";
 
+interface ReviewItem {
+  id: number | string;
+  rating: number;
+  content: string;
+  created_at: string;
+  profiles?: { full_name?: string | null; avatar_url?: string | null } | null;
+}
+
 // --- 1. COMPONENT REVIEWS (ĐỂ RA NGOÀI ĐỂ TRÁNH LỖI RENDER) ---
 // --- COMPONENT COURSE REVIEWS (BẢN NÂNG CẤP) ---
 // --- COMPONENT COURSE REVIEWS (BẢN FINAL: PHÂN TRANG + FIX LỖI) ---
@@ -40,7 +48,7 @@ const CourseReviews = ({
   courseId: number;
   hasEnrolled: boolean;
 }) => {
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [rating, setRating] = useState(5);
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -114,6 +122,7 @@ const CourseReviews = ({
 
   // Load lần đầu
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- the pagination reset must happen before the refetch; moving it into the async callback changes when "Xem thêm" reappears, tracked in BL-003
     setPage(0);
     setHasMore(true);
     fetchReviews(0, true);
@@ -286,6 +295,7 @@ const CourseReviews = ({
               <div className="shrink-0">
                 <div className="w-10 h-10 bg-linear-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center font-bold text-white text-sm overflow-hidden shadow-md">
                   {review.profiles?.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- review avatar from an arbitrary remote URL; next/image needs a size and remote host config, tracked in BL-003
                     <img
                       src={review.profiles.avatar_url}
                       alt="Ava"
@@ -448,7 +458,7 @@ export default function DetailPage({
           setIsEnrolling(false);
         }
       }
-    } catch (e) {
+    } catch {
       setIsEnrolling(false);
     }
   };

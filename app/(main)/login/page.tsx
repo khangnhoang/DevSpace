@@ -78,7 +78,7 @@ export default function LoginPage() {
         router.refresh();
         setTimeout(() => router.push("/"), 1000);
       }
-    } catch (err) {
+    } catch {
       setMessage({ text: "Lỗi hệ thống, vui lòng thử lại", type: "error" });
     }
     setLoading(false);

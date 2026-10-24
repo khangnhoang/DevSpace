@@ -15,11 +15,9 @@ import type {
   DashboardCourse,
   HomeCourseData,
   AdminCourseData,
-  DashboardStats,
   CourseDetail,
   ExerciseData,
   LessonItem,
-  ChapterItem,
   ProfileData,
   Instructor,
 } from "@/lib/types";
@@ -36,6 +34,16 @@ export const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 // --------------------------------------------------------
 // SECTION A: LOGIC BÀI HỌC (LESSONS)
 // --------------------------------------------------------
+
+// Rows from the untyped client: only the nested shapes these mappers read.
+interface LessonRow {
+  exercises?: { count: number }[] | null;
+  [key: string]: unknown;
+}
+interface ChapterRow {
+  lessons?: LessonRow[] | null;
+  [key: string]: unknown;
+}
 
 export async function getLessonsByCourse(
   courseSlug: string,
@@ -65,16 +73,18 @@ export async function getLessonsByCourse(
     })
     .order("created_at", { referencedTable: "lessons", ascending: true });
 
-  const formattedChapters = (chapters || []).map((ch: any) => ({
+  const formattedChapters = (chapters || []).map((ch: ChapterRow) => ({
     ...ch,
-    lessons: (ch.lessons || []).map((l: any) => ({
+    lessons: (ch.lessons || []).map((l: LessonRow) => ({
       ...l,
       has_exercise: l.exercises && l.exercises[0]?.count > 0,
       exercises: undefined,
     })),
   }));
 
-  return formattedChapters as any[]; // Trả về Chapter[]
+  return formattedChapters as unknown as (DBChapter & {
+    lessons: (DBLesson & { has_video: boolean; has_exercise: boolean })[];
+  })[]; // Trả về Chapter[]
 }
 
 // --------------------------------------------------------
@@ -104,7 +114,7 @@ export async function getExerciseByLesson(lessonSlug: string) {
   }
 
   // 3. Xử lý dữ liệu
-  const courseSlug = (lesson as any).courses?.slug;
+  const courseSlug = (lesson as { courses?: { slug?: string } }).courses?.slug;
 
   return {
     lesson: {
@@ -252,7 +262,7 @@ export async function getAdminCourseData() {
     return [];
   }
 
-  const formattedData = courses?.map((course: any) => {
+  const formattedData = courses?.map((course: { lessons: unknown[]; [key: string]: unknown }) => {
     const { lessons, ...rest } = course;
     return {
       ...rest,
@@ -378,7 +388,7 @@ export async function getChaptersByCourseId(courseId: number) {
   return (data || []) as DBChapter[];
 }
 
-export async function addLesson(lessonData: any) {
+export async function addLesson(lessonData: Record<string, unknown>) {
   const { error } = await supabase.from("lessons").insert({
     title: lessonData.title,
     slug: lessonData.slug,
@@ -396,7 +406,7 @@ export async function deleteLesson(id: number) {
   return { error };
 }
 
-export async function editLesson(id: number, lessonData: any) {
+export async function editLesson(id: number, lessonData: Record<string, unknown>) {
   const { error } = await supabase
     .from("lessons")
     .update({
@@ -438,12 +448,12 @@ export async function deleteChapter(id: number) {
   return { error };
 }
 
-export async function addChapter(dataChapter: any) {
+export async function addChapter(dataChapter: Record<string, unknown>) {
   const { error } = await supabase.from("chapters").insert(dataChapter);
   return { error };
 }
 
-export async function editChapter(id: number, dataChapter: any) {
+export async function editChapter(id: number, dataChapter: Record<string, unknown>) {
   const { error } = await supabase
     .from("chapters")
     .update(dataChapter)
@@ -479,7 +489,7 @@ export async function uploadUserAvatar(file: File) {
 
 export async function editUser(
   id: string,
-  dataUser: any,
+  dataUser: Record<string, unknown>,
   newImageFile?: File | null,
 ) {
   let finalImageUrl = dataUser.avatar_url;
@@ -538,6 +548,20 @@ export async function editExercise(
   return { error };
 }
 
+interface DetailLessonRow {
+  id: number;
+  title: string;
+  slug: string;
+  has_video: boolean | null;
+  word_count: number | null;
+  exercises: { count: number }[];
+}
+interface DetailChapterRow {
+  id: number;
+  title: string;
+  lessons?: DetailLessonRow[] | null;
+}
+
 // wordCount comes from the generated lessons.word_count column (null = no content).
 function estimateTime(wordCount: number | null, hasVideo: boolean): number {
   if (hasVideo) return 600;
@@ -582,7 +606,7 @@ export async function getFullCourseDetail(
         id: instructorData.id,
         bio: instructorData.bio,
         job_title: instructorData.job_title,
-        profiles: (profileData as any) || null,
+        profiles: (profileData as Instructor["profiles"]) || null,
       }
     : null;
 
@@ -598,10 +622,10 @@ export async function getFullCourseDetail(
   let totalSeconds = 0;
   let lessonCount = 0;
 
-  const formattedChapters = (chapter || []).map((ch: any) => ({
+  const formattedChapters = (chapter || []).map((ch: DetailChapterRow) => ({
     id: ch.id,
     title: ch.title,
-    lessons: (ch.lessons || []).map((l: any) => {
+    lessons: (ch.lessons || []).map((l: DetailLessonRow): LessonItem => {
       lessonCount++;
       const hasVideo = !!l.has_video;
       const duration = estimateTime(l.word_count, hasVideo);
@@ -676,8 +700,14 @@ export async function checkHasEnroll(slug: string, userId: string | null) {
   return !!enrollment;
 }
 
+interface SortableLessonRow {
+  order_index?: number | null;
+  created_at: string;
+  chapters?: { order_index?: number | null } | { order_index?: number | null }[] | null;
+}
+
 // Hàm helper để lấy order index của chương an toàn (đặt ở ngoài hoặc trong file utils)
-const getChapterOrder = (lesson: any) => {
+const getChapterOrder = (lesson: SortableLessonRow) => {
   // Supabase trả về object hoặc mảng tùy vào quan hệ, handle cả 2 cho chắc
   const chapter = Array.isArray(lesson.chapters)
     ? lesson.chapters[0]
@@ -703,7 +733,7 @@ export async function getLastAccessedLessonSlug(
   }
 
   // 2. Sắp xếp bài học chuẩn luồng: Chương trước -> Bài trước
-  const allLessons = [...rawLessons].sort((a: any, b: any) => {
+  const allLessons = [...rawLessons].sort((a: SortableLessonRow, b: SortableLessonRow) => {
     const chapA = getChapterOrder(a);
     const chapB = getChapterOrder(b);
 
@@ -814,7 +844,7 @@ export async function getLastAccessedLessonId(
   }
 
   // 🔥 FIX CHUẨN: Sort logic NULLS LAST & Không mutate gốc
-  const allLessons = [...rawLessons].sort((a: any, b: any) => {
+  const allLessons = [...rawLessons].sort((a: SortableLessonRow, b: SortableLessonRow) => {
     const chapA = getChapterOrder(a);
     const chapB = getChapterOrder(b);
 

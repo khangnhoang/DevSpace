@@ -1,12 +1,11 @@
 "use client";
 import React, { useState } from "react";
-import { QRCodeSVG } from "qrcode.react";
 import { X, Loader2, Copy, Check, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { cancelPayment, updatePaymentWithCoupon } from "@/app/action/payment";
 
 interface Props {
-  course: any;
+  course: { name: string; slug: string; price: number };
   userId: string;
   paymentId: number | null;
   onClose: () => void;
@@ -65,7 +64,7 @@ export default function CoursePaymentModal({
           `Đã áp dụng mã! Giá mới: ${res.newAmount.toLocaleString()}đ`,
         );
       }
-    } catch (err) {
+    } catch {
       toast.error("Lỗi khi kiểm tra mã");
     } finally {
       setCheckingCode(false);
@@ -87,7 +86,7 @@ export default function CoursePaymentModal({
       });
       onClose();
       onSuccess();
-    } catch (error) {
+    } catch {
       toast.error("Có lỗi xảy ra");
     } finally {
       setIsLoading(false);
@@ -165,6 +164,7 @@ export default function CoursePaymentModal({
           <div className="w-full bg-blue-50 border border-blue-200 p-4 rounded-xl flex flex-col items-center gap-4">
             {/* Ảnh QR từ VietQR */}
             <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-100">
+              {/* eslint-disable-next-line @next/next/no-img-element -- payment QR from an external URL; next/image would proxy it through /_next/image, tracked in BL-003 */}
               <img
                 src={qrUrl}
                 alt="QR Payment"

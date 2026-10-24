@@ -6,6 +6,7 @@ import NotFoundLesson from "@/app/components/NotFoundLesson";
 import Quiz, { QuizQuestion } from "@/app/components/Quiz";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
+import type { DBExercise } from "@/lib/types";
 
 interface Props {
   params: Promise<{ course: string; slug: string }>;
@@ -58,7 +59,7 @@ export default async function QuizPage({ params }: Props) {
     );
   }
 
-  const quizQuestions: QuizQuestion[] = exercisesRaw.map((ex: any) => ({
+  const quizQuestions: QuizQuestion[] = exercisesRaw.map((ex: DBExercise) => ({
     id: ex.id,
     question: ex.question,
     options: [ex.option_a, ex.option_b, ex.option_c, ex.option_d],

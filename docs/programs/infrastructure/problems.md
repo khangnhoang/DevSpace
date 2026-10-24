@@ -4,7 +4,13 @@ Plan: [plan.md](plan.md). Progress: [progress.md](progress.md).
 
 ## Open
 
-None.
+### INF-002: seeded quiz answers never match
+
+- Status: Open (2026-10-25).
+- Problem: `supabase/seed.sql` stores `correct_answer` `A`, `B` and `C` for exercises 1 to 3, while the admin form writes `a` to `d` and `Quiz.tsx:83` compares the selected lowercase option value exactly, so no answer to a seeded quiz is ever accepted on the local stack and in CI.
+- Evidence: `supabase/seed.sql` exercises rows; `app/admin/lessons/page.tsx` (the `a` to `d` values); `app/components/Quiz.tsx:83` and `:149`; found while planning the U6 manual pass, which sets lowercase answers in a temporary fixture. The U6 manual pass (M9) also showed the admin edit form opening exercise 3 with an empty correct-answer select.
+- Direction: change the three seed rows to lowercase in a later infrastructure unit (U6 changes no seed, G6); whether hosted data mixes cases is a separate read-only check.
+- Exit condition: the seeded quizzes on `bien-va-kieu-du-lieu` and `cau-truc-mot-trang-html` accept their correct answers after `db reset`.
 
 ## Resolved
 

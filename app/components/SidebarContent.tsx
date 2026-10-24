@@ -47,7 +47,7 @@ export default function SidebarContent({
   // State
   const [completedIds, setCompletedIds] = useState<number[]>([]);
   const [openChapters, setOpenChapters] = useState<Record<number, boolean>>({});
-  const [lastAccessLessonId, setLastAccessLessonId] = useState<number | null>(
+  const [, setLastAccessLessonId] = useState<number | null>(
     null
   );
   const allLessons = chapters.flatMap((c) => c.lessons || []);

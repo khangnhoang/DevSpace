@@ -64,7 +64,7 @@ export async function updatePaymentWithCoupon(
       newAmount: finalAmount,
       discountPercent: coupon.discount_percent as number,
     };
-  } catch (e) {
+  } catch {
     return { error: "Lỗi hệ thống" };
   }
 }
@@ -168,7 +168,7 @@ export async function cancelPayment(paymentId: number | null) {
     if (error || !updated || updated.length === 0)
       return { error: "Không thể hủy giao dịch này" };
     return { success: true };
-  } catch (error) {
+  } catch {
     return { error: "Lỗi hủy giao dịch" };
   }
 }
@@ -322,7 +322,7 @@ export async function rejectPayment(paymentId: number) {
 
     revalidatePath("/admin/transactions");
     return { success: true };
-  } catch (error) {
+  } catch {
     return { error: "Lỗi hủy đơn" };
   }
 }

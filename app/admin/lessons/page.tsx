@@ -25,11 +25,27 @@ import {
 } from "@/lib/supabase";
 import MdxEditor from "@/app/components/MdxEditor";
 import { generateQuizFromContent } from "@/app/action/gemini";
+import type { DBExercise, ExerciseData } from "@/lib/types";
 import { getLessonsForAdmin } from "@/app/action/lessons";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 const ITEMS_PER_PAGE = 10;
+
+// Runtime shape of getLessonsForAdmin rows: the client types a joined relation
+// as an array, but each lesson has one course and one chapter.
+interface LessonAdminRow {
+  id: number;
+  title: string;
+  slug: string;
+  content?: string | null;
+  course_id: number;
+  chapter_id: number | null;
+  video_url?: string | null;
+  order_index?: number | null;
+  courses?: { name?: string } | null;
+  chapters?: { title?: string } | null;
+}
 
 export default function LessonsManagerPage() {
   const router = useRouter();
@@ -57,8 +73,8 @@ export default function LessonsManagerPage() {
     "**Viết nội dung bài học ở đây...**"
   );
   const [orderIndex, setOrderIndex] = useState<number | "">("");
-  const [lessons, setLessons] = useState<Array<any>>([]);
-  const [exercise, setExercise] = useState<Array<any>>([]);
+  const [lessons, setLessons] = useState<LessonAdminRow[]>([]);
+  const [exercise, setExercise] = useState<DBExercise[]>([]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCourse, setFilterCourse] = useState<number | 0>(0);
@@ -81,7 +97,7 @@ export default function LessonsManagerPage() {
     setIsOpenForm(true);
   };
 
-  const handOpenEditForm = (lesson: any) => {
+  const handOpenEditForm = (lesson: LessonAdminRow) => {
     setEditLessonId(lesson.id);
     setTitle(lesson.title);
     setSlug(lesson.slug);
@@ -93,7 +109,7 @@ export default function LessonsManagerPage() {
     setIsOpenForm(true);
   };
 
-  const handleOpenEditExerciseForm = (exercise: any) => {
+  const handleOpenEditExerciseForm = (exercise: DBExercise) => {
     setEditExerciseId(exercise.id);
     setQuestion(exercise.question);
     setOptionA(exercise.option_a);
@@ -204,7 +220,7 @@ export default function LessonsManagerPage() {
     }
   };
 
-  const handleDeleteExercise = async (exercise: any) => {
+  const handleDeleteExercise = async (exercise: DBExercise) => {
     const confirmDelete = confirm(
       `Bạn có chắc chắn muốn xóa câu hỏi "${exercise.question}" không?`
     );
@@ -271,7 +287,7 @@ export default function LessonsManagerPage() {
 
     try {
       await Promise.all(
-        res.data.map((q: any) => {
+        res.data.map((q: ExerciseData) => {
           addExercise(editLessonId, {
             question: q.question,
             option_a: q.option_a,
@@ -317,7 +333,7 @@ export default function LessonsManagerPage() {
   useEffect(() => {
     const fetchLessonsData = async () => {
       const data = await getLessonsForAdmin();
-      setLessons(data);
+      setLessons(data as unknown as LessonAdminRow[]);
     };
     fetchLessonsData();
   }, [refreshKey]);
@@ -483,7 +499,7 @@ export default function LessonsManagerPage() {
                     <td className="py-3 px-6 hidden lg:table-cell align-middle text-gray-400 text-sm">
                       <div
                         className="truncate max-w-full"
-                        title={lesson.order_index}
+                        title={lesson.order_index as unknown as string}
                       >
                         {lesson.order_index || "N/A"}
                       </div>

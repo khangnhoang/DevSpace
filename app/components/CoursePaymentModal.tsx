@@ -1,12 +1,11 @@
 "use client";
 import React, { useState } from "react";
-import { QRCodeSVG } from "qrcode.react";
 import { X, Loader2, Copy, Check, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { cancelPayment, updatePaymentWithCoupon } from "@/app/action/payment";
 
 interface Props {
-  course: any;
+  course: { name: string; slug: string; price: number };
   userId: string;
   paymentId: number | null;
   onClose: () => void;

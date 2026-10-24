@@ -18,7 +18,6 @@ import {
   type UserProfile,
   getAllUsersForUsersManager,
   editUser,
-  deleteUser,
   uploadUserAvatar,
 } from "@/lib/supabase";
 import { createNewUser, deleteUserAccount } from "@/app/action/user";

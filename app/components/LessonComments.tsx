@@ -30,9 +30,22 @@ interface Props {
   onClose: () => void;
 }
 
+interface CommentItem {
+  id: number;
+  user_id: string;
+  content: string;
+  created_at: string;
+  deleted_at?: string | null;
+  profiles?: {
+    full_name?: string | null;
+    avatar_url?: string | null;
+    role?: string | null;
+  } | null;
+}
+
 export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
   // State dữ liệu
-  const [comments, setComments] = useState<any[]>([]);
+  const [comments, setComments] = useState<CommentItem[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -66,7 +79,7 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
         if (!lessonId) return;
         setLoading(true);
         const data = await getCommentByLesson(lessonId);
-        setComments(data || []);
+        setComments((data as unknown as CommentItem[]) || []);
         setLoading(false);
       };
       fetchComments();
@@ -127,7 +140,7 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
   };
 
   // 5. Xử lý Bắt đầu Sửa
-  const startEdit = (comment: any) => {
+  const startEdit = (comment: CommentItem) => {
     setEditingId(comment.id);
     setEditContent(comment.content);
     setOpenMenuId(null); // Đóng menu

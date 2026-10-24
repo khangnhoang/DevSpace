@@ -20,8 +20,17 @@ function timeAgo(dateString: string) {
   return `${days} ngày trước`;
 }
 
+interface NotificationItem {
+  id: number;
+  title: string;
+  message: string;
+  link?: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
 export default function HeaderAdmin() {
-  const [notifications, setNotifications] = useState<Array<any>>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [showNotiDropdown, setShowNotiDropdown] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -101,7 +110,7 @@ export default function HeaderAdmin() {
   }, []);
 
   // Xử lý đọc 1 tin
-  const handleReadNotification = async (notification: any) => {
+  const handleReadNotification = async (notification: NotificationItem) => {
     if (!notification.is_read) {
       const { error } = await supabase
         .from("notifications")

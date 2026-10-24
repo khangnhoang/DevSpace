@@ -16,6 +16,14 @@ import {
 import { User } from "@supabase/supabase-js";
 import CustomAvatar from "./CustomAvatar";
 
+interface SearchResult {
+  id: number;
+  slug: string;
+  name: string;
+  image_url?: string | null;
+  price: number;
+}
+
 export default function Header() {
   const router = useRouter();
 
@@ -25,7 +33,7 @@ export default function Header() {
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);

@@ -57,11 +57,11 @@ export default function ResetPasswordPage() {
       setTimeout(() => {
         router.push("/");
       }, 1500);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Lỗi đổi mật khẩu:", error);
-      if (error?.code === "same_password") {
+      if ((error as { code?: string } | null | undefined)?.code === "same_password") {
         toast.error("Mật khẩu mới phải khác mật khẩu cũ");
-      } else if (error?.code === "weak_password") {
+      } else if ((error as { code?: string } | null | undefined)?.code === "weak_password") {
         toast.error("Mật khẩu quá yếu");
       } else {
         toast.error("Không đổi được mật khẩu, vui lòng thử lại");

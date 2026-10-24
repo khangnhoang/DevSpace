@@ -30,6 +30,14 @@ import Image from "next/image";
 import VideoModal from "@/app/components/VideoModal";
 import CustomAvatar from "@/app/components/CustomAvatar";
 
+interface ReviewItem {
+  id: number | string;
+  rating: number;
+  content: string;
+  created_at: string;
+  profiles?: { full_name?: string | null; avatar_url?: string | null } | null;
+}
+
 // --- 1. COMPONENT REVIEWS (ĐỂ RA NGOÀI ĐỂ TRÁNH LỖI RENDER) ---
 // --- COMPONENT COURSE REVIEWS (BẢN NÂNG CẤP) ---
 // --- COMPONENT COURSE REVIEWS (BẢN FINAL: PHÂN TRANG + FIX LỖI) ---
@@ -40,7 +48,7 @@ const CourseReviews = ({
   courseId: number;
   hasEnrolled: boolean;
 }) => {
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [rating, setRating] = useState(5);
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);

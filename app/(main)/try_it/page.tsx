@@ -1,5 +1,6 @@
 "use client";
-import { useState, Suspense, useMemo } from "react";
+import { useState, Suspense } from "react";
+import type { ReactNode } from "react";
 import { Play, FileCode, FileJson, Cpu } from "lucide-react";
 import Editor from "@monaco-editor/react";
 import { useSearchParams } from "next/navigation";
@@ -245,7 +246,15 @@ function TryItEditor() {
 }
 
 // 👇 3. COMPONENT NÚT BẤM CÓ CURSOR-POINTER
-const TabBtn = ({ active, onClick, icon, label, color }: any) => (
+interface TabBtnProps {
+  active: boolean;
+  onClick: () => void;
+  icon: ReactNode;
+  label: string;
+  color: string;
+}
+
+const TabBtn = ({ active, onClick, icon, label, color }: TabBtnProps) => (
   <button
     onClick={onClick}
     // Đã thêm cursor-pointer

@@ -16,6 +16,11 @@ interface CoursesClientProps {
   courses: AdminCourseData[];
 }
 
+// Result of addCourse, which may also carry the failed instructor insert.
+interface WithInsertError {
+  insertError?: { message?: string };
+}
+
 // Type cho giảng viên
 interface InstructorData {
   id: number;
@@ -49,7 +54,7 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
   useEffect(() => {
     const fetchIns = async () => {
       const { data } = await getInstructors();
-      if (data) setInstructors(data as any);
+      if (data) setInstructors(data as unknown as InstructorData[]);
     };
     fetchIns();
   }, []);
@@ -82,7 +87,7 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
     setIsOpenForm(true);
   };
 
-  const handleOpenEdit = (course: any) => {
+  const handleOpenEdit = (course: AdminCourseData) => {
     setEditId(course.id);
     setName(course.name);
     setSlug(course.slug);
@@ -154,10 +159,10 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
 
     setIsSaving(false);
 
-    if (result?.error || (result as any)?.insertError) {
+    if (result?.error || (result as WithInsertError | undefined)?.insertError) {
       toast.error(
         "Lỗi cập nhật: " +
-          (result?.error?.message || (result as any)?.insertError?.message),
+          (result?.error?.message || (result as WithInsertError | undefined)?.insertError?.message),
       );
     } else {
       toast.success(

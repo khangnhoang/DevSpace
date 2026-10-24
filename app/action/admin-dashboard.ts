@@ -64,6 +64,23 @@ export async function getAdminDashboardStats() {
   }
 }
 
+interface ProgressActivityRow {
+  user_id: string;
+  created_at: string;
+  lessons?: { title?: string; courses?: { name?: string } | null } | null;
+}
+
+interface EnrollmentActivityRow {
+  user_id: string;
+  created_at: string;
+  courses?: { name?: string } | null;
+}
+
+interface CourseEnrollmentRow {
+  name: string;
+  enrollments?: { count: number }[];
+}
+
 export async function getTopStudents() {
   if ("error" in (await requireAdmin())) return [];
   try {
@@ -77,7 +94,7 @@ export async function getTopStudents() {
     // BƯỚC 2: Tính toán thủ công
     const leaderboard: Record<string, number> = {};
 
-    progressData.forEach((row: any) => {
+    progressData.forEach((row: { user_id: string | null }) => {
       const uid = row.user_id;
       if (uid) {
         leaderboard[uid] = (leaderboard[uid] || 0) + 1;
@@ -165,7 +182,7 @@ export async function getRecentActivities() {
       .limit(5);
 
     // 3. Chuẩn hóa dữ liệu
-    const formattedProgress = (progressData || []).map((item: any) => ({
+    const formattedProgress = ((progressData || []) as unknown as ProgressActivityRow[]).map((item) => ({
       type: "completion",
       user_id: item.user_id,
       timestamp: new Date(item.created_at).getTime(),
@@ -174,7 +191,7 @@ export async function getRecentActivities() {
       sub_content: item.lessons?.courses?.name,
     }));
 
-    const formattedEnrollment = (enrollmentData || []).map((item: any) => ({
+    const formattedEnrollment = ((enrollmentData || []) as unknown as EnrollmentActivityRow[]).map((item) => ({
       type: "enrollment",
       user_id: item.user_id,
       timestamp: new Date(item.created_at).getTime(),
@@ -244,7 +261,7 @@ export async function getAdminCourseChartData() {
 
   // Transform data
   const rawData =
-    courses?.map((course: any) => ({
+    courses?.map((course: CourseEnrollmentRow) => ({
       name: course.name,
       // enrollments trả về mảng object [{count: n}] do dùng select count
       value: course.enrollments?.[0]?.count || 0,

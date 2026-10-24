@@ -5,14 +5,13 @@ import {
   Trophy,
   Activity,
   BookCheck,
-  User,
   PenLine,
   Book,
   DollarSign,
   TrendingUp,
   Users,
-  FileCheck,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import {
   getAdminDashboardStats,
   getAdminCourseChartData,
@@ -23,7 +22,15 @@ import TransactionChart from "../components/TransactionChart";
 import CustomAvatar from "../components/CustomAvatar";
 
 // --- COMPONENT STAT CARD (PHIÊN BẢN MODERN) ---
-const StatCard = ({ title, value, icon: Icon, color, subValue }: any) => (
+interface StatCardProps {
+  title: string;
+  value?: number | string;
+  icon: LucideIcon;
+  color: string;
+  subValue?: string;
+}
+
+const StatCard = ({ title, value, icon: Icon, color, subValue }: StatCardProps) => (
   <div className="relative overflow-hidden rounded-2xl border border-gray-800 bg-[#1A1D24] p-6 hover:border-gray-600 transition-all duration-300 group shadow-lg">
     <div className="flex items-center justify-between z-10 relative">
       <div>
@@ -151,7 +158,7 @@ export default async function AdminPage() {
             </div>
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
               <ul className="space-y-4">
-                {topStudents?.map((student: any, index: number) => (
+                {topStudents?.map((student, index: number) => (
                   <li
                     key={student.id}
                     className="flex items-center gap-3 p-3 rounded-xl bg-[#0F1116]/50 hover:bg-[#252830] transition-colors border border-gray-800/50"
@@ -207,7 +214,7 @@ export default async function AdminPage() {
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
               {recentActivities.length > 0 ? (
                 <ul className="relative border-l border-gray-700 ml-3 space-y-6">
-                  {recentActivities.map((act: any, index: number) => (
+                  {recentActivities.map((act, index: number) => (
                     <li key={index} className="pl-6 relative">
                       <span
                         className={`absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full ring-4 ring-[#1A1D24] ${act.type === "enrollment" ? "bg-green-500" : "bg-blue-500"}`}

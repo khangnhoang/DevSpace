@@ -116,7 +116,4 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      # Non-blocking until U6 fixes the existing problems (infrastructure D4): the step shows as failed
-      # and keeps its log, the job still succeeds. Setup failures above still fail the job.
       - run: npm run lint
-        continue-on-error: true

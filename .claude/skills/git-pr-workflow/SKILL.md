@@ -29,7 +29,7 @@ New task branch: read [branch-and-commit.md](references/branch-and-commit.md). S
 
 Read [branch-and-commit.md](references/branch-and-commit.md) when you are about to stage or commit. The gate:
 
-- permission exists; the checkpoint's scope and acceptance are complete and its self-review passed (`docs/agent-loops.md`, Self-review); relevant checks ran after the last edit (`npx tsc --noEmit`, `npm run lint` with no new problems, `npm run docs:check`); no conflict marker, debug code or secret; no unresolved decision;
+- permission exists; the checkpoint's scope and acceptance are complete and its self-review passed (`docs/agent-loops.md`, Self-review); relevant checks ran after the last edit (`npx tsc --noEmit`, `npm run lint` with 0 problems, `npm run docs:check`); no conflict marker, debug code or secret; no unresolved decision;
 - stage explicit paths (`git add path/a path/b`), not `git add .`, unless the tree began clean and everything is in scope; inspect `git diff --cached` and `git diff --check`;
 - one commit per checkpoint (a small task without checkpoints: as `docs/agent-loops.md` Sizing allows); split a checkpoint only for a reason you state in the report (for example a part that must revert alone). Commit in its own message after every edit succeeded, never in parallel with an edit. Message `<type>(<scope>): <imperative summary>`, entirely in English, no trailing period, no attribution lines, no vague words ("update files", "final fix").
 
@@ -41,7 +41,7 @@ When the work is done and no commit is granted, report: changed files with the r
 
 ## Push, PR, CI and merge
 
-Read [pr-and-ci.md](references/pr-and-ci.md) before any push, PR, CI or merge request. Short form: a normal push needs a clean tree, the exact branch and range, and an explicit grant; a PR needs the head already on the remote; the PR title and body are in English, follow `.github/pull_request_template.md` and state only what really ran; when CI on the PR ends, red or green, Main writes the result into the body's `CI result` section and stops; CI is the GitHub Actions jobs `typecheck`, `build`, `docs`, `lint`, `db` and `e2e` plus the Vercel deploy preview (`gh pr checks --watch`; `lint` never turns red for lint problems, `db` and `e2e` block, and requiring them on `main` is an Owner setting); merge only with explicit permission and never auto-merge unless asked. Who may fix CI, and how many rounds, is owned by `docs/agent-loops.md` Loop 3 and `.claude/rules.md` section 4.
+Read [pr-and-ci.md](references/pr-and-ci.md) before any push, PR, CI or merge request. Short form: a normal push needs a clean tree, the exact branch and range, and an explicit grant; a PR needs the head already on the remote; the PR title and body are in English, follow `.github/pull_request_template.md` and state only what really ran; when CI on the PR ends, red or green, Main writes the result into the body's `CI result` section and stops; CI is the GitHub Actions jobs `typecheck`, `build`, `docs`, `lint`, `db` and `e2e` plus the Vercel deploy preview (`gh pr checks --watch`; every job blocks, `lint` included, and requiring them on `main` is an Owner setting); merge only with explicit permission and never auto-merge unless asked. Who may fix CI, and how many rounds, is owned by `docs/agent-loops.md` Loop 3 and `.claude/rules.md` section 4.
 
 ## Stop when
 

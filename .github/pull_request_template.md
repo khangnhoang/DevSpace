@@ -21,7 +21,7 @@ Run: <link> · Event: <pull_request | push> · Head: <commit>
 | typecheck | | | |
 | build | | | |
 | docs | | | |
-| lint | | | problems in the lint step log: N |
+| lint | | | |
 | db | | | |
 | e2e | | | |
 | Vercel | | | |

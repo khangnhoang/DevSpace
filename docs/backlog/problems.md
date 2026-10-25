@@ -44,17 +44,10 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Direction: small UI fix: close the menu in `handleLogout` (and check whether the menu should also close on route change), then check sign out and sign in by hand.
 - Exit condition: after signing out and signing in again, the avatar menu is closed until clicked.
 
-### BL-007: README published two hosted demo accounts with their password
-
-- Status: Fixed on hosted, awaiting delivery (the Owner set new passwords for both accounts on 2026-10-25; the README lines were removed in `1f13cef`). Closes as one `Done` line when the U4 PR exists.
-- Problem: `README.md:124-127` at `5e62bc1` listed `admin@devspace.com` and `student@devspace.com` with a shared weak password in plain text. U4 removed the lines, but they stay in Git history, so if the accounts exist on hosted they can be signed in to, one of them possibly as admin.
-- Evidence: `git show 5e62bc1:README.md`, lines 124-127. The same password is the old admin-page default that [security-hotfix](../programs/security-hotfix/plan.md) section 6 already asks the Owner to rotate.
-- Direction: the Owner checks on hosted whether the two accounts exist and rotates their passwords or deletes them, alongside the security-hotfix rotation step. No agent reads user rows or signs in for this.
-- Exit condition: neither account can sign in with the published password.
-
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.
 
 - AW-002 — Moved to [agent-workflow](../programs/agent-workflow/problems.md)
 - BL-001 — Done: the docs checker treats a `Moved to` line as a pointer and the moved FEAT entries use the template lines again (PR #8)
+- BL-007 — Done: README demo accounts removed and their hosted passwords rotated by the Owner (PR #21)

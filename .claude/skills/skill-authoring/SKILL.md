@@ -1,6 +1,6 @@
 ---
 name: skill-authoring
-description: "How to add, edit, split or remove a DevSpace skill or reference: any change to a SKILL.md or to a file under .claude/skills/*/references/, its description, the skill-shape check of npm run docs:check, where a new instruction belongs (skill, reference, rule, loop, ADR or program doc), and the read-only instruction audit. Use before you add a reference to a skill, extend or edit a skill, write a skill description or fix a skill-shape failure, when deciding where a new rule goes, or when auditing the agent instructions."
+description: "How a DevSpace skill or reference under .claude/skills/ is created, changed, split, maintained, reviewed and audited, where an instruction belongs (skill, reference, rule, loop, ADR or program doc), the skill-shape check and the read-only instruction audit. Use when adding, editing, splitting, reviewing or maintaining a skill or reference, when deciding where a new rule goes, or when auditing the agent instructions."
 ---
 
 # Skill authoring

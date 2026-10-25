@@ -15,7 +15,7 @@ Do not use it to follow a skill, to edit program docs (`program-docs`), or to ch
 
 These rules about skills have an owner that is not this skill. Read the owner, do not copy it here.
 
-- Who owns what (roles and permissions, timing and stop rules, procedures): the header of `.claude/rules.md` and `docs/agent-loops.md` line 3.
+- Who owns what (roles and permissions, timing and stop rules, procedures): the header of `.claude/rules.md` and the opening paragraph of `docs/agent-loops.md`.
 - A more specific skill wins over the loops: `docs/agent-loops.md`, Precedence and safety.
 - Skills, rules and docs are in English: `.claude/rules.md` section 1 (Owner and language).
 - Which skills an implementor loads before committing and for self-review: `.claude/rules.md` section 2 (Roles).
@@ -39,7 +39,7 @@ Placement is decided by load time. `CLAUDE.md` and the files it imports load in 
 | a decision that outlives one program or spans programs | an ADR (`program-docs`) |
 | state, plans or open problems of a program | the program's docs (`program-docs`) |
 
-A skill reference is not a second skill: a folder with only reference-like content for one skill stays inside that skill.
+Detail that only one skill uses goes in that skill's `references/`, never in a new skill folder.
 
 ## What a skill holds
 
@@ -54,7 +54,7 @@ Required, and checked by `npm run docs:check` (the rule ID is in the failure lin
 | Rule ID | A skill must |
 | --- | --- |
 | `skill-file` | have `.claude/skills/<dir>/SKILL.md` |
-| `skill-frontmatter` | open with a `---` block of single-line `key: value` lines (key `[a-z][a-z0-9-]*`, no repeated key); a value that starts with `"` is one double-quoted string with no `"` or backslash inside; no YAML block scalar, list or single quote |
+| `skill-frontmatter` | open with a `---` block of single-line `key: value` lines (key `[a-z][a-z0-9-]*`, no repeated key); a value that starts with `"` is one double-quoted string with no `"` or backslash inside; no YAML block scalar, list, flow list or map (`[...]`, `{...}`) or single quote |
 | `skill-name` | have `name` equal to the folder name |
 | `skill-description` | have a non-empty `description` |
 | `skill-use-when` | have a line `## Use when / do not use when` outside code |

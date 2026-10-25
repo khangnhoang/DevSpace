@@ -92,6 +92,8 @@ test("skill-frontmatter: block, line syntax, duplicate keys and quoting", () => 
   assertViolation(bad(`---\nname: alpha\ndescription: "a \\" b"\n---\n${USE_WHEN}\n`), SKILL("alpha"), "skill-frontmatter", 3);
   assertViolation(bad(`---\nname: alpha\ndescription: 'single'\n---\n${USE_WHEN}\n`), SKILL("alpha"), "skill-frontmatter", 3);
   assertViolation(bad(`---\nname: alpha\ndescription: >\n  folded\n---\n${USE_WHEN}\n`), SKILL("alpha"), "skill-frontmatter", 3);
+  assertViolation(bad(`---\nname: alpha\ndescription: d\nallowed-tools: [a, b]\n---\n${USE_WHEN}\n`), SKILL("alpha"), "skill-frontmatter", 4);
+  assertViolation(bad(`---\nname: alpha\ndescription: d\nkey: {a: b}\n---\n${USE_WHEN}\n`), SKILL("alpha"), "skill-frontmatter", 4);
   assertClean(bad(`---\nname: alpha\ndescription: plain text: with colon\nallowed-tools: Bash(x:*)\n---\n${USE_WHEN}\n`));
   assertClean(bad(`---\r\nname: alpha\r\ndescription: "quoted: ok"\r\n---\r\n${USE_WHEN}\r\n`));
 });

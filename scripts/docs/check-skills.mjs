@@ -109,8 +109,8 @@ function parseFrontmatter(lines, report) {
       report(n, "skill-frontmatter", `frontmatter key "${key}" appears twice`);
       continue;
     }
-    if (value.startsWith("'") || BLOCK_SCALAR.test(value)) {
-      report(n, "skill-frontmatter", `the value of "${key}" must be a single-line plain or double-quoted string`);
+    if (value.startsWith("'") || value.startsWith("[") || value.startsWith("{") || BLOCK_SCALAR.test(value)) {
+      report(n, "skill-frontmatter", `the value of "${key}" must be a single-line plain or double-quoted string, not a flow list or map`);
       keys.set(key, { n, value: null });
       continue;
     }

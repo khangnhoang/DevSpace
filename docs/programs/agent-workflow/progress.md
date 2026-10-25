@@ -8,11 +8,11 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | --- | --- |
 | Spec revision | `implementation-plans/u5-skill-authoring/plan.md` r7 (2026-10-26), approved by the Owner on 2026-10-26. |
 | Current unit / checkpoint | U5 `skill-authoring` skill and the skill-shape check; CP1 and CP2 delivered by the Sonnet implementor and corrected after Main's review, CP3 next. |
-| Status | Plan approved; CP1 and CP2 done locally (skill, templates, audit reference, section 8 trimmed, skill-shape check); CP3 is Main's. |
-| Completed evidence | U5 plan: Codex plan review rounds 1 to 6, last PASS on r7; `npm run docs:check` 0 violations. U4 merged in PR 21 (`4fa5731`); the PR 21 CI run passed all six jobs and Vercel. U3: PR 14 and the milestones below. |
+| Status | CP1 and CP2 done locally with two Main and Codex correction commits; the Codex diff gate passed in round 2; AC8 ran on 2026-10-26 and case 1 failed (see Blockers). |
+| Completed evidence | U5 plan: Codex plan review rounds 1 to 6, last PASS on r7. U5 diff `7d954cc..fa24371`: Main review, Codex diff review rounds 1 and 2, last PASS; `npm run docs:check` 0 violations, `docs:check:test` 48 pass, lint and `tsc` pass, `playwright-cli` files equal `4fa5731`; AW-008 recorded for the shared link parser. U4 merged in PR 21 (`4fa5731`); the PR 21 CI run passed all six jobs and Vercel. U3: PR 14 and the milestones below. |
 | Accepted deviations | none for U5. |
-| Blockers / Owner decisions | none. |
-| Next action | Main reviews the CP1 and CP2 commits, then runs CP3 (AC8 and the Codex diff gate). |
+| Blockers / Owner decisions | AC8: two fresh Sonnet medium sessions in plan mode. Case 2 ("Fix the logout menu bug") did not load `skill-authoring` (pass). Case 1 ("Add a reference to server-actions for upload limits") did not load or read `skill-authoring` and planned the edit straight from `server-actions` (fail). Neither session loaded any skill, `planning` and `frontend-workflow` included. The Owner decides the next step. |
+| Next action | The Owner decides how to answer the AC8 failure; then push and PR. |
 | Current authority | The Owner approved U5 r7 and granted its plan commit and its implementation by the Sonnet implementor with local commits per checkpoint (2026-10-26). No push, PR or merge grant. |
 
 ## Milestones
@@ -59,4 +59,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-26 U5 CP1: `skill-authoring` with templates and the audit reference, section 8 trimmed to the permission rules, pointers fixed (`af720ff`).
 - 2026-10-26 U5 CP2: skill-shape check with tests chained into `docs:check` and `docs:check:test`, the `playwright-cli` allowlist entry, the charter invariant names `skill-authoring` (`059b57a`).
 - 2026-10-26 U5 Main review corrections: flow lists and maps rejected in skill frontmatter, rules linked by section name (`17fa0ea`).
-- 2026-10-26 U5 Codex diff round 1: the skill check reads links with the `check-links` reader, the related-rules list holds only labels and owners, AW-008 recorded (this commit).
+- 2026-10-26 U5 Codex diff round 1: the skill check reads links with the `check-links` reader, the related-rules list holds only labels and owners, AW-008 recorded (`fa24371`).
+- 2026-10-26 U5 AC8 case 1 failed; the `skill-authoring` description now leads with the files that trigger it (this commit).

@@ -7,12 +7,12 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | `implementation-plans/u5-skill-authoring/plan.md` r7 (2026-10-26), approved by the Owner on 2026-10-26. |
-| Current unit / checkpoint | U5 `skill-authoring` skill and the skill-shape check; CP1 and CP2 handed to the Sonnet implementor. |
-| Status | Plan approved; CP1 done (skill, templates, audit reference, section 8 trimmed); CP2 in progress. |
+| Current unit / checkpoint | U5 `skill-authoring` skill and the skill-shape check; CP1 and CP2 delivered by the Sonnet implementor, CP3 next. |
+| Status | Plan approved; CP1 and CP2 done locally (skill, templates, audit reference, section 8 trimmed, skill-shape check); CP3 is Main's. |
 | Completed evidence | U5 plan: Codex plan review rounds 1 to 6, last PASS on r7; `npm run docs:check` 0 violations. U4 merged in PR 21 (`4fa5731`); the PR 21 CI run passed all six jobs and Vercel. U3: PR 14 and the milestones below. |
 | Accepted deviations | none for U5. |
 | Blockers / Owner decisions | none. |
-| Next action | The Sonnet implementor delivers CP1 and CP2 with a local commit each; Main reviews them, then runs CP3 (AC8 and the Codex diff gate). |
+| Next action | Main reviews the CP1 and CP2 commits, then runs CP3 (AC8 and the Codex diff gate). |
 | Current authority | The Owner approved U5 r7 and granted its plan commit and its implementation by the Sonnet implementor with local commits per checkpoint (2026-10-26). No push, PR or merge grant. |
 
 ## Milestones
@@ -56,4 +56,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-25 U4 CP6: backlog entries BL-007, FEAT-015 and FEAT-016, AC12 audit PASS (`30b27dc`).
 - 2026-10-25 U4 merged; AW-006 and BL-007 resolved (PR 21, `4fa5731`).
 - 2026-10-26 U5 plan r7 approved after the Codex plan gate; PR 21 docs catch-up (`7d954cc`).
-- 2026-10-26 U5 CP1: `skill-authoring` with templates and the audit reference, section 8 trimmed to the permission rules, pointers fixed (this commit).
+- 2026-10-26 U5 CP1: `skill-authoring` with templates and the audit reference, section 8 trimmed to the permission rules, pointers fixed (`af720ff`).
+- 2026-10-26 U5 CP2: skill-shape check with tests chained into `docs:check` and `docs:check:test`, the `playwright-cli` allowlist entry, the charter invariant names `skill-authoring` (this commit).

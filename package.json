@@ -11,9 +11,10 @@
     "test:unit": "vitest run --project unit",
     "test:e2e": "node scripts/e2e/run.mjs",
     "docs:check-structure": "node scripts/docs/check-structure.mjs",
+    "docs:check-skills": "node scripts/docs/check-skills.mjs",
     "docs:check-links": "node scripts/docs/check-links.mjs",
-    "docs:check": "npm run docs:check-structure && npm run docs:check-links",
-    "docs:check:test": "node --test scripts/docs/check-structure.test.mjs scripts/docs/check-links.test.mjs"
+    "docs:check": "npm run docs:check-structure && npm run docs:check-skills && npm run docs:check-links",
+    "docs:check:test": "node --test scripts/docs/check-structure.test.mjs scripts/docs/check-skills.test.mjs scripts/docs/check-links.test.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.34.0",

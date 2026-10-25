@@ -100,7 +100,7 @@ function readInlineDestination(text, start) {
 
 // Collects inline link destinations `[text](dest)` and reference definitions `[label]: dest "title"`.
 // Every definition is checked, so full, collapsed and shortcut reference links are all covered.
-function extractTargets(text) {
+export function extractTargets(text) {
   const targets = [];
   const stripped = stripCode(text);
   for (const match of stripped.matchAll(/\]\(/g)) {
@@ -113,7 +113,7 @@ function extractTargets(text) {
   return targets;
 }
 
-function toLocalPath(target) {
+export function toLocalPath(target) {
   if (!target || target.startsWith("#") || target.startsWith("/")) return null;
   if (/^[a-z][a-z0-9+.-]*:/i.test(target)) return null;
   const withoutFragment = target.split(/[#?]/)[0];

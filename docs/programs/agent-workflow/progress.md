@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | `implementation-plans/u4-instructions-sync/plan.md` r6 (2026-10-25). |
-| Current unit / checkpoint | U4 agent instructions match the infrastructure; CP1 to CP6 done (AC1 to AC13). |
-| Status | Implementation complete, Codex diff review and the AC12 audit passed; delivery (push, PR, CI, merge) in progress. |
-| Completed evidence | U4 plan r5: Codex plan review rounds 1 to 8, last PASS; `npm run docs:check` 0 violations. U4 CP1 to CP5 and the Main review corrections (implementors never open or update a PR, neutral stack messages, rollback by hand): handoff template and section 7 rules; `migration new` in section 4, permission and CI duplicates replaced by links, the AC4 grep matches only `pr-and-ci.md`; the change-to-suite table and the seed rule in `test-quality-strategy`, linked from `code-review`, `server-actions` and `planning`; `npm run dev` on the local stack with its unit tests, `127.0.0.1:3000` checked (origin and Supabase requests all local), `npm run test:e2e` 46 passed, `tsc`, lint and `test:unit` pass; `playwright-cli` block covers the references (reference and `LICENSE` blob SHAs equal `5e62bc1`), README and the three stale pointers current; `npm run docs:check` passes after each. CP6: backlog BL-007, FEAT-015 and FEAT-016 recorded; the Owner signed in as `learner@devspace.test` at `127.0.0.1:3000`; the Owner rotated the passwords of the two README demo accounts on hosted; the fresh AC12 audit passed after rounds 1 to 4. U3: PR 14 and the milestones below. |
-| Accepted deviations | none for U4. |
+| Spec revision | `implementation-plans/u5-skill-authoring/plan.md` r7 (2026-10-26), approved by the Owner on 2026-10-26. |
+| Current unit / checkpoint | U5 `skill-authoring` skill and the skill-shape check; CP1 and CP2 delivered by the Sonnet implementor and corrected after Main's review, CP3 next. |
+| Status | CP1 to CP3 done locally: the Codex diff gate passed in round 2 and AC8 passed both cases; push and PR wait for the Owner. |
+| Completed evidence | U5 plan: Codex plan review rounds 1 to 6, last PASS on r7. U5 diff `7d954cc..fa24371`: Main review, Codex diff review rounds 1 and 2, last PASS; `npm run docs:check` 0 violations, `docs:check:test` 48 pass, lint and `tsc` pass, `playwright-cli` files equal `4fa5731`; AW-008 recorded for the shared link parser. AC8 (2026-10-26, two fresh Sonnet medium sessions in plan mode): the "add a reference to server-actions for upload limits" session read `skill-authoring/SKILL.md` before planning; the "fix the logout menu bug" session read only `Header.tsx`. U4 merged in PR 21 (`4fa5731`); the PR 21 CI run passed all six jobs and Vercel. U3: PR 14 and the milestones below. |
+| Accepted deviations | none for U5. |
 | Blockers / Owner decisions | none. |
-| Next action | Main pushes `chore/agent-instructions-sync`, opens the PR, watches CI and merges when every check is green. |
-| Current authority | The Owner granted push, PR creation, CI wait and merge on a green CI after the audit PASS (2026-10-25). |
+| Next action | The Owner grants push and PR creation for `chore/skill-authoring`. |
+| Current authority | The Owner approved U5 r7 and granted its plan commit and its implementation by the Sonnet implementor with local commits per checkpoint (2026-10-26). No push, PR or merge grant. |
 
 ## Milestones
 
@@ -53,4 +53,12 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-25 U4 AC12 audit corrections: suite selection, CI facts and permission statements point to their owners (`efae00b`).
 - 2026-10-25 U4 AC12 audit round 2: permission statements outside section 4 reduced to pointers, CI-fix scope moved into section 4 (`a3a2ce8`).
 - 2026-10-25 U4 AC12 audit round 3: CLAUDE.md rule 10 names section 4 as the owner of git, remote and database permissions without restating them (`f6c1ea2`).
-- 2026-10-25 U4 CP6: backlog entries BL-007, FEAT-015 and FEAT-016, AC12 audit PASS (this commit).
+- 2026-10-25 U4 CP6: backlog entries BL-007, FEAT-015 and FEAT-016, AC12 audit PASS (`30b27dc`).
+- 2026-10-25 U4 merged; AW-006 and BL-007 resolved (PR 21, `4fa5731`).
+- 2026-10-26 U5 plan r7 approved after the Codex plan gate; PR 21 docs catch-up (`7d954cc`).
+- 2026-10-26 U5 CP1: `skill-authoring` with templates and the audit reference, section 8 trimmed to the permission rules, pointers fixed (`af720ff`).
+- 2026-10-26 U5 CP2: skill-shape check with tests chained into `docs:check` and `docs:check:test`, the `playwright-cli` allowlist entry, the charter invariant names `skill-authoring` (`059b57a`).
+- 2026-10-26 U5 Main review corrections: flow lists and maps rejected in skill frontmatter, rules linked by section name (`17fa0ea`).
+- 2026-10-26 U5 Codex diff round 1: the skill check reads links with the `check-links` reader, the related-rules list holds only labels and owners, AW-008 recorded (`fa24371`).
+- 2026-10-26 U5 description rewrite after a misread AC8 result (`863c83c`).
+- 2026-10-26 U5 AC8 passed both cases; the `skill-authoring` description is back to the Codex-reviewed text (this commit).

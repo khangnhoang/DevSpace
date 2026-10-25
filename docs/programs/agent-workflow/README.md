@@ -13,15 +13,16 @@ One line each: number, date, decision. The decisions of each initiative stay in 
 
 1. (2026-10-23) `agent-workflow` is an evergreen program: its first plan is U1, PR 13's chat plan r3 is U2, and the program-kinds plan is U3 (U3 D6, ADR 0002).
 2. (2026-10-23) The evergreen candidates are recorded in FEAT-010 with their opening conditions and are not opened; performance skills are a deferred future feature of this program, FEAT-011 (U3 D9).
+3. (2026-10-25) A `skill-authoring` skill owns how skills and references are written and maintained, the procedural rules of `.claude/rules.md` section 8 move into it, and `npm run docs:check` checks skill shape; this replaces the D4 reason for dropping FEAT-009 (U5 D1 to D3).
 
 ## 3. Invariants
 
 Each initiative keeps these; the rule itself lives with its owner.
 
-- One owner per rule, with links elsewhere (`.claude/rules.md` section 8) — prevents copies that drift apart.
-- A skill states only what DevSpace has today, and no skill widens a permission (`.claude/rules.md` section 8) — prevents agents running tools that do not exist or reading a skill as a grant.
+- One owner per rule, with links elsewhere (`skill-authoring`, Choosing where an instruction goes) — prevents copies that drift apart.
+- A skill states only what DevSpace has today (`skill-authoring`, What a skill holds), and no skill widens a permission (`.claude/rules.md` section 8) — prevents agents running tools that do not exist or reading a skill as a grant.
 - Every Codex brief starts with a "Read first" list (`code-review`, Codex) — prevents Codex reviewing against its own defaults.
-- `npm run docs:check` enforces only what `program-docs` and its templates state (`program-docs`, Verify) — prevents the check and the skill disagreeing.
+- `npm run docs:check` enforces only what `program-docs` and its templates state (`program-docs`, Verify) and what `skill-authoring` states as required (`skill-authoring`, Shape) — prevents the check and the skill disagreeing.
 
 ## 4. Initiatives
 
@@ -33,6 +34,7 @@ At most one initiative has an open plan at a time. A closed initiative keeps its
 | U2 [CI result in the PR body and hosted apply with db push](implementation-plans/u2-ci-result-db-push/plan.md) | `docs/ci-result-and-db-push` | The CI result goes into the PR body; hosted migrations are applied with `db push` behind two grants; migration and handoff rules. | soft on infrastructure U2 (merged) | Owner approval of chat plan r3 after the Codex plan gate |
 | U3 [Program kinds: delivery and evergreen](implementation-plans/u3-program-kinds/plan.md) | `docs/program-kinds` | Delivery and evergreen programs; `agent-workflow` becomes evergreen; migration citation, CI wait and checkpoint commit rules. | hard on U2 (merged) | Owner approval of the plan after the Codex plan gate |
 | U4 [Agent instructions match the infrastructure](implementation-plans/u4-instructions-sync/plan.md) | `chore/agent-instructions-sync` | AW-006 fixed: handoff template, `npm run dev` and manual QA on the local stack, a seed rule for QA, one suite mapping, one owner for CI facts and permissions, current `README.md` and pointers. | none (U3 merged) | Owner approval of the plan after the Codex plan gate |
+| U5 [Skill authoring skill and the skill-shape check](implementation-plans/u5-skill-authoring/plan.md) | `chore/skill-authoring` | `skill-authoring` owns the skill procedure, section 8 keeps only the permission rules, `docs:check` checks skill shape; the PR 21 docs catch-up. | none (U4 merged) | Owner approval of the plan after the Codex plan gate |
 
 ## 5. Opening an initiative
 

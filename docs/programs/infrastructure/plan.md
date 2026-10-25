@@ -39,7 +39,7 @@ Progress: [progress.md](progress.md). Problems: [problems.md](problems.md). Futu
 - A unit does not change product behavior, except the lint fixes in U6, which must keep behavior identical and are covered by the U3 to U5 tests — prevents a hidden regression inside an infrastructure PR.
 - Published migrations are never edited; the baseline is a new file ordered before them that holds the pre-H1 schema, and `supabase db reset` must replay baseline plus all published migrations unchanged and end with a catalog that matches hosted — prevents a local schema that differs from hosted, or a replay that fails because the baseline already contains H1 and H2-1.
 - A known bug is never fixed inside a test unit; it is an expected failure with its problem ID that runs, fails on the assertion about that bug, and reports when it unexpectedly passes; a setup, sign-in or connection failure never counts as reproducing it — prevents untracked behavior changes, false confidence, and keeps H2-2 scope with security-hotfix.
-- A skill, rule or `CLAUDE.md` line states only tooling that exists on `main` after that unit merges (`.claude/rules.md` section 8) — prevents agents following instructions for tools that do not exist.
+- A skill, rule or `CLAUDE.md` line states only tooling that exists on `main` after that unit merges (`skill-authoring`, What a skill holds) — prevents agents following instructions for tools that do not exist.
 - No unit modernizes code the techstack migration will replace (the Supabase auth helpers, P7) — prevents work that is thrown away (ADR 0001).
 
 ## 4. Units

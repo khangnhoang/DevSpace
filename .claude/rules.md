@@ -95,11 +95,9 @@ A handoff is tied to its task and is deleted with it. The task is complete when 
 
 ## 8. Changing skills
 
-- Skills live in `.claude/skills/<name>/SKILL.md`. Each rule has one owner: this file owns roles and permissions, `docs/agent-loops.md` owns timing and stop rules, skills own procedures. Do not restate another owner's rule; link to it.
-- A skill states only what DevSpace has today. Missing tooling is named once as deferred, with no steps.
-- Keep a skill at about 150 lines, with frontmatter `name` and `description`, "Use when" and "Do not use when", and a read condition for every reference. Run `npm run docs:check` after editing.
-- A new skill, or one that widens a permission, needs the Owner's decision. No skill can widen section 4.
-- A vendored third-party skill (`playwright-cli`) keeps its upstream body byte for byte, except the frontmatter `description` and one DevSpace block under the H1. The DevSpace block wins over that body, and the length target applies to the block.
+- A new skill, or one that widens a permission, needs the Owner's decision.
+- No skill can widen section 4.
+- The procedure for creating, changing and maintaining skills is owned by the `skill-authoring` skill.
 
 ## 9. Code comments
 

@@ -11,6 +11,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, posix, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { extractTargets, toLocalPath } from "./check-links.mjs";
 import { repoFileIndex } from "./repo-files.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
@@ -129,32 +130,13 @@ function parseFrontmatter(lines, report) {
   return keys;
 }
 
-// Link targets used outside code: inline `[text](target)` and definitions `[id]: target`. Inline code is
-// dropped first so a link shown as an example does not count.
-function linkTargets(lines) {
-  const targets = [];
-  for (const line of lines) {
-    if (line.code) continue;
-    const stripped = line.text.replace(/(`+)[^`\n]*?\1/g, "");
-    for (const match of stripped.matchAll(/\]\(<?([^)>\s]+)/g)) targets.push(match[1]);
-    const definition = /^ {0,3}\[(?!\^)[^\]\n]+\]:[ \t]*<?([^>\s]+)/.exec(stripped);
-    if (definition) targets.push(definition[1]);
-  }
-  return targets;
-}
-
-function resolvedLinks(lines, skillDir) {
+// Files the links of SKILL.md point to, read with the reader of `check-links.mjs` so both checks agree on
+// destinations (code, angle brackets, nested parentheses, fragments).
+function resolvedLinks(text, skillDir) {
   const resolved = new Set();
-  for (const target of linkTargets(lines)) {
-    const path = target.split("#")[0];
-    if (path === "" || path.startsWith("/") || /^[a-z][a-z0-9+.-]*:/i.test(path)) continue;
-    let decoded = path;
-    try {
-      decoded = decodeURIComponent(path);
-    } catch {
-      // a target that does not decode is compared as written
-    }
-    resolved.add(posix.join(skillDir, decoded));
+  for (const target of extractTargets(text)) {
+    const local = toLocalPath(target);
+    if (local) resolved.add(posix.join(skillDir, local));
   }
   return resolved;
 }
@@ -172,7 +154,8 @@ export function checkSkills(root) {
       report(1, "skill-file", `${skillDir} has no SKILL.md`);
       continue;
     }
-    const lines = readFileSync(join(root, skillRel), "utf8").split(/\r?\n/);
+    const text = readFileSync(join(root, skillRel), "utf8");
+    const lines = text.split(/\r?\n/);
     const keys = parseFrontmatter(lines, report);
     if (keys) {
       const name = keys.get("name");
@@ -192,7 +175,7 @@ export function checkSkills(root) {
     if (!marked.some((line) => !line.code && line.text.trimEnd() === USE_WHEN_HEADING)) {
       report(1, "skill-use-when", `no "${USE_WHEN_HEADING}" heading`);
     }
-    const linked = resolvedLinks(marked, skillDir);
+    const linked = resolvedLinks(text, skillDir);
     for (const rel of files.filter((file) => file.startsWith(`${skillDir}/references/`))) {
       if (!linked.has(rel)) {
         violations.push({ file: rel, line: 1, rule: "skill-reference-link", message: `${rel} is not linked from ${skillRel}` });

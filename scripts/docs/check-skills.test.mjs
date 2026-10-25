@@ -136,6 +136,8 @@ test("skill-reference-link: every file under references/ must be linked from SKI
   assertViolation(run({ [SKILL("beta")]: external }), ref, "skill-reference-link", 1);
   const inline = skill({ name: "beta", body: `${USE_WHEN}\n\n[one](references/one.md#a) [two](./references/deep/two.md)\n` });
   assertClean(run({ [SKILL("beta")]: inline }));
+  const paren = skill({ name: "beta", body: `${USE_WHEN}\n\n[one](references/one.md) [two](references/deep/two.md) [p](references/a(v2).md) [s](<references/a b.md>)\n` });
+  assertClean(run({ [path("beta", "references/a(v2).md")]: "x\n", [path("beta", "references/a b.md")]: "x\n", [SKILL("beta")]: paren }));
   assertClean(run({ [path("beta", "references/templates/skill.md")]: "x\n", [SKILL("beta")]: skill({ name: "beta", body: `${USE_WHEN}\n\n[a](references/one.md)\n[b]: references/deep/two.md\n[c]: <references/templates/skill.md>\n` }) }));
 });
 

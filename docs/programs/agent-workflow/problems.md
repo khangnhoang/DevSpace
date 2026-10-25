@@ -20,6 +20,14 @@ Charter: `README.md`. Progress: `progress.md`.
 - Direction: reword section 2 so the shortcut cannot read as a ban; the Owner names other rules as found; a read-only audit traces each rule in `CLAUDE.md`, `.claude/rules.md`, `docs/agent-loops.md` and the skills to the Owner decision or commit that introduced it and to the place it belongs, using the `skill-authoring` audit reference that U5 writes; the audit and the moves it proposes are one agent-workflow initiative after U5 (U5 D8).
 - Exit condition: every rule the Owner flags is reworded, removed or confirmed, and section 2 states the shortcut unambiguously.
 
+### AW-008: The docs link parsers count some links inside code and accept a bare `](`
+
+- Status: Open (2026-10-26, Codex U5 diff review round 1).
+- Problem: `scripts/docs/check-links.mjs` (`stripCode`, `extractTargets`), which `check-skills.mjs` reuses after U5, strips inline code one line at a time (a code span across lines still yields its links), accepts a closing fence with trailing text, and reads `](target)` without an opening `[label]` as a link. A link shown only as an example can count, and a stray `](` can satisfy `skill-reference-link`.
+- Evidence: Codex U5 diff review round 1 (session `01a17436-2457-7e23-bf3c-25bf1f91ccea`), findings 1 and 2, checked by Main against the source on 2026-10-26; no real doc in the repo hits these cases today (`npm run docs:check` passes).
+- Direction: one parser change in `check-links.mjs` with fixtures (CommonMark closing fence, code spans across lines, an opening label required), so both checks keep one link reader.
+- Exit condition: the three cases have failing fixtures that pass after the fix, and `npm run docs:check` still passes.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

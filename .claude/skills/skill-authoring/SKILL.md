@@ -15,13 +15,13 @@ Do not use it to follow a skill, to edit program docs (`program-docs`), or to ch
 
 These rules about skills have an owner that is not this skill. Read the owner, do not copy it here.
 
-- Who owns what (roles and permissions, timing and stop rules, procedures): the header of `.claude/rules.md` and the opening paragraph of `docs/agent-loops.md`.
-- A more specific skill wins over the loops: `docs/agent-loops.md`, Precedence and safety.
-- Skills, rules and docs are in English: `.claude/rules.md` section 1 (Owner and language).
-- Which skills an implementor loads before committing and for self-review: `.claude/rules.md` section 2 (Roles).
-- A durable rule moves from memory into its owning skill as a `chore(agent-rules): ...` commit: `.claude/rules.md` section 7 (Memory).
-- Read each matching skill completely: `CLAUDE.md`, Core engineering rules, rule 6.
-- A skill changes in the same PR as the tooling it describes: infrastructure master plan, Owner decisions, decision 9 (`docs/programs/infrastructure/plan.md`).
+- The ownership split: the header of `.claude/rules.md` and the opening paragraph of `docs/agent-loops.md`.
+- Precedence of a skill over the loops: `docs/agent-loops.md`, Precedence and safety.
+- Language of skills, rules and docs: `.claude/rules.md` section 1 (Owner and language).
+- Skills an implementor loads: `.claude/rules.md` section 2 (Roles).
+- Moving a durable rule out of memory: `.claude/rules.md` section 7 (Memory).
+- Reading matching skills: `CLAUDE.md`, Core engineering rules, rule 6.
+- Skills and the tooling they describe: infrastructure master plan, Owner decisions, decision 9 (`docs/programs/infrastructure/plan.md`).
 
 ## Choosing where an instruction goes
 

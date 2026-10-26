@@ -6,14 +6,14 @@ Plan: [plan.md](plan.md). Problems: [problems.md](problems.md). Git history is t
 
 | Field | Value |
 | --- | --- |
-| Spec revision | `plan.md` r2 (2026-10-22), master plan. U7 has no detail plan yet. |
-| Current unit / checkpoint | U7 Dependency policy, not started: no branch yet (`docs/infra-dependency-policy` per the master plan). U6 merged (PR 19, `2b59144`). |
-| Status | U7 planning has not started. |
-| Completed evidence | none for U7 yet. U6 evidence is in its milestones; its five D28 suppressions are tracked in backlog BL-003. |
+| Spec revision | `plan.md` r2 (2026-10-22), master plan; entry plan `implementation-plans/feat-017-ci-docs-skip/plan.md` r2 (2026-10-26), approved by the Owner on 2026-10-26 after the Codex plan gate. U7 has no detail plan yet. |
+| Current unit / checkpoint | FEAT-017 (skip `db` and `e2e` on docs-only PRs) on `ci/skip-heavy-jobs-docs-only`: plan r2 approved, CP1 next (Sonnet implementor). U7 Dependency policy not started. U6 merged (PR 19, `2b59144`). |
+| Status | FEAT-017 plan approved; implementation not started. U7 planning has not started. |
+| Completed evidence | FEAT-017 plan: Codex plan review rounds 1 and 2, PASS on r2 (session `01a17846-c110-73a1-916a-4d1197f66e48`). None for U7 yet. U6 evidence is in its milestones; its five D28 suppressions are tracked in backlog BL-003. |
 | Accepted deviations | none for U7. |
 | Blockers / Owner decisions | none. |
-| Next action | Main writes the U7 detail plan (FEAT-001) on `docs/infra-dependency-policy` for the Owner's approval; U7 gets no Codex gate (docs only). |
-| Current authority | none for U7. Push, PR creation and merge are separate grants. |
+| Next action | The Sonnet implementor delivers FEAT-017 CP1 and CP2 with a local commit each. After FEAT-017, Main writes the U7 detail plan (FEAT-001) on `docs/infra-dependency-policy`; U7 gets no Codex gate (docs only). |
+| Current authority | The Owner approved FEAT-017 r2 and granted its plan commit and its implementation by the Sonnet implementor with local commits per checkpoint (2026-10-26). No push, PR or merge grant. None for U7. |
 | Hosted state | baseline recorded as applied by `migration repair`; hosted lists 4 versions, `20261021000000_baseline` first (`list_migrations`, 2026-10-23). INF-001 has no hosted step. |
 
 ## Milestones
@@ -49,4 +49,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-25 U6 CP1 to CP3: `any` typed, unused code removed, five D28 suppressions, lint job blocking with `--max-warnings 0`; Codex diff gate PASS in round 2 (`a3a1a45`).
 - 2026-10-25 U6 CP4: manual pass M1 to M12 and M5b passed, except that the Header image `onError` branch and the confetti canvas were not observed (no seed `image_url`; DOM check only); BL-003 to BL-006 and INF-002 recorded (`9a2e182`).
 - 2026-10-25 U6 merged; CI on head `9a2e182` and the push run on `main` passed all six jobs, `lint` blocking with 0 problems (PR 19, `2b59144`).
-- 2026-10-25 U6 rollout: `lint` added to the required checks on `main` at the Owner's request; `main` now requires all six jobs (this commit).
+- 2026-10-25 U6 rollout: `lint` added to the required checks on `main` at the Owner's request; `main` now requires all six jobs (`262613c`).
+- 2026-10-26 FEAT-017 entry plan r2 approved after the Codex plan gate; agent-workflow PR 24 docs catch-up (this commit).

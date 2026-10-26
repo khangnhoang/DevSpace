@@ -18,8 +18,8 @@ Direction the Owner has set that this program delivers in a later unit. Each ent
 
 ## FEAT-017: Skip the database and e2e jobs on documentation-only pull requests
 
-- Status: Planned after agent-workflow AW-010 merges (Owner decision, 2026-10-26); then planned as an entry plan of this program, with the Codex gate on its plan and diff (CI change).
-- Direction: every pull request runs all six jobs, so a docs-only PR waits about 7 minutes for `db` and `e2e` (PR 23: `e2e` 6m44s). Owner decisions (2026-10-26): skip only `db` and `e2e`; a PR counts as docs-only when every changed file is under `docs/**` or `.claude/skills/**`, or is `.claude/rules.md`, `CLAUDE.md`, `README.md` or another `.md` file, and any other file runs everything; a push to `main` always runs everything; detect the changed files with `git diff` in the workflow, without a third-party action. A workflow-level `paths:` filter cannot be used, because branch protection requires all six checks and a skipped workflow leaves them pending; a job skipped by `if:` counts as passed.
+- Status: Implemented locally on `ci/skip-heavy-jobs-docs-only` (CP1, CP2 of the [entry plan](implementation-plans/feat-017-ci-docs-skip/plan.md) r2); Main review and the Codex diff gate passed, delivery (PR) is next; once merged it stays open, delivered and awaiting the first docs-only PR, until AC1 is observed, then closes in that PR's docs catch-up.
+- Direction: every pull request runs all six jobs, so a docs-only PR waits about 7 minutes for `db` and `e2e` (PR 23: `e2e` 6m44s). Owner decisions (2026-10-26): skip only `db` and `e2e`; a PR counts as docs-only when every changed file is a `.md` file or the vendored `.claude/skills/playwright-cli/LICENSE` (narrowed after Codex plan round 1), and any other file runs everything; a push to `main` always runs everything; detect the changed files with `git diff` in the workflow, without a third-party action. A workflow-level `paths:` filter cannot be used, because branch protection requires all six checks and a skipped workflow leaves them pending; a job skipped by `if:` counts as passed.
 - Target program: infrastructure.
 
 ## Closed

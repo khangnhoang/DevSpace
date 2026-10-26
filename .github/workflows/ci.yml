@@ -15,8 +15,38 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# Job ids are the check names that branch protection requires: do not rename them or add `name:`.
+# Job ids are the check names that branch protection requires: do not rename them or add `name:`. The
+# required ones are typecheck, build, docs, db, e2e and lint; `changes` is a helper and not required.
 jobs:
+  # Decides whether a pull request changes only docs (scripts/ci/docs-only.mjs, infrastructure FEAT-017), so `db`
+  # and `e2e` can be skipped. It is not a required check. `set -o pipefail` fails the step when the diff or the
+  # classifier fails, and the output is written only after both succeeded. `--no-renames` lists the old path of
+  # a rename too, and `-z` keeps odd file names whole. The classifier runs as it is at the base commit, not as the
+  # PR changes it: a PR that breaks it (for example, always `true`) could otherwise skip the tests that check it.
+  # A base without the script (the PR that adds it) fails `git show`, the step fails and `db` and `e2e` run.
+  changes:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      docs_only: ${{ steps.classify.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - id: classify
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -eo pipefail
+          git show "$BASE_SHA:scripts/ci/docs-only.mjs" > "$RUNNER_TEMP/docs-only.mjs"
+          docs_only=$(git diff --name-only -z --no-renames "$BASE_SHA...$HEAD_SHA" | node "$RUNNER_TEMP/docs-only.mjs")
+          echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
+
   typecheck:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -65,6 +95,12 @@ jobs:
   # unused containers; Storage stays for the `storage` schema the baseline's policies use, and Auth for the
   # `auth` schema its trigger and the seed's users use (Kong and PostgREST stay as the API in front).
   db:
+    # Skipped only for a pull request that the classifier called docs-only. Fail-open: a failed, skipped or
+    # silent classifier, and every push to main, run this job. `!cancelled()` (not `always()`) keeps a cancelled
+    # run from starting it. A bare `needs` would skip the job when the classifier fails, and a skipped required
+    # job counts as passed.
+    needs: changes
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -86,6 +122,9 @@ jobs:
   # `db`; no hosted secret or connection. `npm run test:e2e` reads the stack's URL and keys from
   # `supabase status`, builds the app with them and serves it on port 3100.
   e2e:
+    # Same skip condition as `db`.
+    needs: changes
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:

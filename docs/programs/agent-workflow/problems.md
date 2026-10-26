@@ -28,14 +28,6 @@ Charter: `README.md`. Progress: `progress.md`.
 - Direction: (Owner, 2026-10-26) small independent items may share one PR, each with its own commits and its own verification in the PR body; an item that needs the Codex gate or a hosted step does not join a batch; independent checkpoints run the easiest to verify first; a plan may hold a checkpoint for another program's or the backlog's item, which still closes in its own records. One agent-workflow PR of its own, after the CI change.
 - Exit condition: `planning` states these rules, and `npm run docs:check` passes.
 
-### AW-010: Follow-up work of a delivery program must edit its master plan
-
-- Status: Open (2026-10-26, Owner).
-- Problem: a delivery program with `implementation-plans/` accepts a detail plan only as a unit row `U<n>` of its master plan (`program-docs` Plan shape, `plan-shape` check), so every follow-up (a fix or a feature recorded in `problems.md` or `future-features.md`) must first revise the master plan. That mixes the program's goal with work found later, and adds a master-plan review. Examples: infrastructure FEAT-014 ("Needs a master-plan revision before it starts") and FEAT-017.
-- Evidence: `program-docs` Plan shape and `scripts/docs` on `bd19c18`; the Owner's discussion on 2026-10-26.
-- Direction: (Owner, 2026-10-26) besides `u<n>-<slug>/plan.md`, `implementation-plans/` accepts an entry plan `<id>-<slug>/plan.md` for an ID that exists, open or resolved, in the same program's `problems.md` or `future-features.md`; it needs no Units row. `program-docs`, its template and the `plan-shape` check change together, with tests. The risk gates are unchanged. This ships before FEAT-017.
-- Exit condition: an entry plan passes `npm run docs:check`, a plan whose ID is in neither file fails it, the tests cover both, and `program-docs` states the rule.
-
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.
@@ -46,3 +38,4 @@ One line each: ID, status, one-line outcome. Details stay in Git.
 - AW-003 — Moved 2026-10-22 to [security-hotfix](../security-hotfix/problems.md); it waits for H2-2.
 - AW-006 — Resolved 2026-10-25: U4 fixed every item and the fresh read-only audit passed (PR 21, `4fa5731`).
 - AW-007 — Resolved 2026-10-26: U6 audited every instruction, the Owner decided each item, and section 2 states when Main edits state records (PR 23, `bd19c18`).
+- AW-010 — Resolved 2026-10-26: U7 added entry plans, so a delivery program plans a `problems.md` or `future-features.md` entry without revising its master plan (PR 24, `85248b2`).

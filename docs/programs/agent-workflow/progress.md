@@ -7,13 +7,13 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | none open. AW-009 runs as a small task (charter section 5, step 2) from a chat plan r2 the Owner approved on 2026-10-27; the last initiative, U7 (`implementation-plans/u7-entry-plans/plan.md` r1), is merged. |
-| Current unit / checkpoint | AW-009 (the `planning` PR batch rule, the active-implementor rule and the plan approval questions) on `chore/planning-pr-batching`, with the infrastructure PR 25 docs catch-up and the FEAT-017 AC1 observation. Edits done by Main, uncommitted; the Codex diff review passed; commit is next. |
+| Current unit / checkpoint | AW-009 (the `planning` PR batch rule, the active-implementor rule and the plan approval questions) in PR 26 on `chore/planning-pr-batching` (`18d5fd3`, `3f271cd`, `e16beb8`), with the infrastructure PR 25 docs catch-up and the FEAT-017 closing commit. |
 | Status | AW-009 in progress; AW-008 and AW-011 open. |
-| Completed evidence | U7 is in its milestones. AW-009: Codex diff review (requested by the Owner) rounds 1, 3 and 5 CHANGES REQUIRED, rounds 2, 4 and 6 PASS (round 6 after the `skill-authoring` audit fixes) with 0 Critical and 0 Required (session `01a17940-6d1c-7b52-8c83-2816e6b0f2cc`); `docs:check` 0 new violations; every changed file is `.md`. PR CI once it runs. |
+| Completed evidence | U7 is in its milestones. AW-009: Codex diff review (requested by the Owner) rounds 1, 3 and 5 CHANGES REQUIRED, rounds 2, 4 and 6 PASS (round 6 after the `skill-authoring` audit fixes) with 0 Critical and 0 Required (session `01a17940-6d1c-7b52-8c83-2816e6b0f2cc`); `docs:check` 0 new violations; PR 26 CI in its body. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | The commit, push and PR grants, each asked separately; then the FEAT-017 AC1 observation on the PR. |
-| Current authority | The Owner approved the AW-009 chat plan r2 and granted its implementation by Main up to the Codex diff review, without commit (2026-10-27). Commit, push, PR and merge are separate grants. |
+| Next action | The Owner decides on merging PR 26; then the docs catch-up (AW-009 resolved, milestone hashes). |
+| Current authority | The Owner granted the AW-009 implementation, its three commits, the push and PR 26, and the FEAT-017 closing commit and its push (2026-10-27). No merge grant. |
 
 ## Milestones
 

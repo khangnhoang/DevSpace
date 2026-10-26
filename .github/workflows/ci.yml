@@ -135,7 +135,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx supabase start -x studio,mailpit,edge-runtime,logflare,vector,imgproxy,supavisor,realtime,postgres-meta
-      - run: npx playwright install --with-deps chromium
+      # No `--with-deps`: the runner image already has every library the headless shell needs, and the apt
+      # step only added fonts and patch upgrades while it took 2 to 15 minutes on a slow Ubuntu mirror
+      # (infrastructure FEAT-018). A library the image drops later makes the browser launch fail, so the job
+      # fails rather than passes. `--only-shell` skips the full Chromium build, which the default headless
+      # Chromium in playwright.config.ts (no `channel`) does not launch.
+      - run: npx playwright install --only-shell chromium
       - run: npm run test:e2e
       # The HTML report exists only when Playwright ran, so a failure in an earlier step uploads nothing.
       - uses: actions/upload-artifact@v7

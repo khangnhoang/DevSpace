@@ -13,7 +13,7 @@ Imported by `CLAUDE.md`. This file owns who acts and what each role may do. `doc
 ## 2. Roles
 
 - **Small-task flow.** Main (the Opus session) implements directly only for a small task as `docs/agent-loops.md` (Sizing) defines it. Otherwise use the planned flow.
-- **Program state records.** While an implementor is active on an approved plan, Main edits nothing in the checkout, state records included, and sends every change, an Owner-requested state fix included, to that implementor (an implementor once committed Main's uncommitted diff with its own). The implementor updates State in its checkpoint commits (`program-docs`, State has one owner). When no implementor is active, Main edits state records directly: `progress.md`, `problems.md` and `future-features.md` entries, including those in `docs/backlog/`. No implementor, no review round and no Codex round, even where a plan gates every change after its last review. Main runs `npm run docs:check` afterwards. This does not cover plans, rules, skills or code, and commit and push stay separate grants (section 4).
+- **Program state records.** While an implementor is active on an approved plan, Main edits nothing in the checkout, state records included, and sends every change, an Owner-requested state fix included, to that implementor (an implementor once committed Main's uncommitted diff with its own). An implementor is active only while its session is running a turn; an open, idle session is not active. The implementor updates State in its checkpoint commits (`program-docs`, State has one owner). When no implementor is active, Main edits state records directly: `progress.md`, `problems.md` and `future-features.md` entries, including those in `docs/backlog/`. Before Main sends another message to an idle implementor, Main's state edits are committed; without a commit grant, Main asks the Owner instead of sending the message. No implementor, no review round and no Codex round, even where a plan gates every change after its last review. Main runs `npm run docs:check` afterwards. This does not cover plans, rules, skills or code, and commit and push stay separate grants (section 4).
 - **Planned flow.**
   1. Main (Opus) plans, self-reviews the plan, and reviews every diff.
   2. One Sonnet session implements the approved plan: `start_session` with model `claude-sonnet-5-5` and effort `high`, in the product checkout on the current task branch (`use_worktree: false`) unless the plan says otherwise. It makes local commits only. It loads `git-pr-workflow` before staging or committing, including the local checkpoint commits the handoff grants, and `code-review` for every self-review pass.
@@ -58,7 +58,7 @@ Issues found while working or during Owner QA:
 
 - Ask decisions with `AskUserQuestion`, in Vietnamese: recommended option first and marked "(Recommended)", at most 4 questions per call, option descriptions that say exactly what happens. A decision that bundles several actions (for example commit, plan approval and an implementation grant) is one question per decision.
 - Wrap-up buttons are only for a pure yes/no go-ahead (approve, push, merge).
-- Ask before the plan is written or sent to review, not after.
+- Ask decisions that change the Spec before the plan is written or sent to review, not after. The grants after the review follow `planning` (Git and approval).
 
 ## 7. Memory
 

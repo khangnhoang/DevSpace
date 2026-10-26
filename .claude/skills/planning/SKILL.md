@@ -35,6 +35,7 @@ Doc shape (master plan, detail plan, progress, problems) belongs to `program-doc
 - No git action on a plan unless the Owner asked for it. By default a plan is not committed at all.
 - If the Owner granted a commit, commit the plan only after its review passes (self-review, plus Codex PASS when the work is gated or requested). Review rounds run on the uncommitted file; give Codex the working-tree file and a `git diff` against the last committed revision. Keep fixes uncommitted until the pass.
 - Plan approval and implementation permission are separate Owner grants, and so are the git, remote and hosted grants owned by `.claude/rules.md` section 4. A review verdict grants none of them (`docs/agent-loops.md`, Precedence). A clear current instruction may state the behavior and grant implementation in one turn.
+- After the plan passes its review (self-review, or Codex PASS when the work is gated), Main summarizes in chat what the Owner must read in the plan (the Owner decisions, the binding Spec items, the risks), then asks the grants in this order: approve the plan, commit the plan (only when the plan is a file), implement, following `.claude/rules.md` section 6 (Asking decisions).
 - A PR split is an approval boundary, not a git operation.
 
 ## Planning a program

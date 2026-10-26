@@ -22,7 +22,7 @@ Include:
 
 - the plan path and revision, and the checkpoints to implement (hand over all of them in one dispatch; split only when a later checkpoint needs an Owner decision based on an earlier result);
 - the authority the Owner granted (for example local commits per checkpoint, as English Conventional Commits); the standing limits, no push, PR or merge, no Supabase MCP and no `.env*`, are owned by `.claude/rules.md` section 4;
-- the sources to read first, including every matching skill;
+- the sources to read first, including every skill whose Use when covers the work the brief hands over (`docs/agent-loops.md`, Sizing);
 - a hosted database metadata snapshot when the work touches the database (the implementor cannot reach hosted: `.claude/rules.md` section 4);
 - files and domains not to touch; how to size the work if it grows (return to Main, do not widen scope);
 - concerns the plan does not cover, stated as a risk to prove with the expected result;

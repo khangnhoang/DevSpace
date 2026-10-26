@@ -7,13 +7,13 @@ Plan: [plan.md](plan.md). Problems: [problems.md](problems.md). Git history is t
 | Field | Value |
 | --- | --- |
 | Spec revision | `plan.md` r2 (2026-10-22), master plan. The FEAT-017 entry plan r2 is closed. U7 has no detail plan yet. |
-| Current unit / checkpoint | No open unit. FEAT-017 closed: merged in PR 25 (`df7e4f4`), AC1 observed on PR 26. U7 Dependency policy not started. |
-| Status | FEAT-017 done; every acceptance item observed (AC1 on PR 26, CI result in the PR 26 body). U7 planning has not started. |
-| Completed evidence | FEAT-017 is in its milestones; CI results are in the PR 25 and PR 26 bodies. None for U7 yet. U6 evidence is in its milestones; its five D28 suppressions are tracked in backlog BL-003. |
+| Current unit / checkpoint | FEAT-018 (install the e2e browser without apt) merged in PR 27 (`80916d6`); open until the install step stays under 30 seconds on the next pushes to `main`. FEAT-017 closed (PR 25, PR 26). U7 Dependency policy not started. |
+| Status | FEAT-018 delivered; the first push run on `main` met its acceptance (milestone), more push runs are awaited. U7 planning has not started. |
+| Completed evidence | FEAT-017 and FEAT-018 are in their milestones; CI results are in the PR 25, PR 26 and PR 27 bodies. None for U7 yet. U6 evidence is in its milestones; its five D28 suppressions are tracked in backlog BL-003. |
 | Accepted deviations | none for U7. |
 | Blockers / Owner decisions | none. |
-| Next action | Main writes the U7 detail plan (FEAT-001) on `docs/infra-dependency-policy` when the Owner names it; U7 gets no Codex gate (docs only). |
-| Current authority | none for infrastructure. The FEAT-017 closing commit on PR 26 was granted by the Owner (2026-10-27) and is used. None for U7. |
+| Next action | Observe the browser install step on the push run after the agent-workflow AW-011 PR merges; FEAT-018 closes in the docs of the task after it. Main writes the U7 detail plan (FEAT-001) on `docs/infra-dependency-policy` when the Owner names it; U7 gets no Codex gate (docs only). |
+| Current authority | none for infrastructure. None for U7. |
 | Hosted state | baseline recorded as applied by `migration repair`; hosted lists 4 versions, `20261021000000_baseline` first (`list_migrations`, 2026-10-23). INF-001 has no hosted step. |
 
 ## Milestones
@@ -55,4 +55,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-26 FEAT-017 CP2: `changes` job and the `db`/`e2e` skip condition in `ci.yml`, `pr-and-ci.md` and records; not run on GitHub yet (`3a820e8`).
 - 2026-10-26 FEAT-017 correction `24b9745` (Codex round 1); CP3 Main review and Codex diff gate passed; State before the PR (`06c67c9`).
 - 2026-10-26 FEAT-017 merged; PR CI passed all six jobs with `changes` failing as expected, the push run on `main` passed all six with `changes` skipped (PR 25, `df7e4f4`).
-- 2026-10-27 FEAT-017 AC1 observed on PR 26 (`db` and `e2e` skipped, the four other jobs passed, mergeable); FEAT-017 closed (this commit).
+- 2026-10-27 FEAT-017 AC1 observed on PR 26 (`db` and `e2e` skipped, the four other jobs passed, mergeable); FEAT-017 closed (`ffaf0d3`).
+- 2026-10-27 FEAT-018 merged; the push run on `main` passed all six jobs and the browser install step took 6 seconds (PR 27, `80916d6`).

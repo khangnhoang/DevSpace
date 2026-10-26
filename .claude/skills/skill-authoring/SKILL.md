@@ -20,7 +20,7 @@ These rules about skills have an owner that is not this skill. Read the owner, d
 - Language of skills, rules and docs: `.claude/rules.md` section 1 (Owner and language).
 - Skills an implementor loads: `.claude/rules.md` section 2 (Roles).
 - Moving a durable rule out of memory: `.claude/rules.md` section 7 (Memory).
-- Reading matching skills: `CLAUDE.md`, Core engineering rules, rule 6.
+- Reading matching skills: `CLAUDE.md`, Core engineering rules, rule 6; when and against what work they are matched: `docs/agent-loops.md`, Sizing.
 - Skills and the tooling they describe: infrastructure master plan, Owner decisions, decision 9 (`docs/programs/infrastructure/plan.md`).
 
 ## Choosing where an instruction goes

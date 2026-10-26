@@ -11,7 +11,7 @@ When an agent plans, checkpoints, reviews, watches CI and stops. `.claude/rules.
 
 ## Sizing
 
-Size work after routing and again after discovery, before implementing. Measure outcome, risk, permissions, dependencies and verification, not file count. Re-sizing during work may deepen the process or stop it; it never grants a permission.
+Size work after routing and again after discovery, before implementing. At the size after discovery, list the work: each action it takes (plan, edit, review, commit, PR, migration, Codex), each file it changes and each file or diff it reviews, and read every skill whose Use when covers one of them (`CLAUDE.md` rule 6); a read-only review counts. Re-match when the work gains an action or a file. Measure outcome, risk, permissions, dependencies and verification, not file count. Re-sizing during work may deepen the process or stop it; it never grants a permission.
 
 **Small task.** Main implements directly only when the Owner named a specific item (for example "handle P16") and all four conditions hold:
 

@@ -1,4 +1,4 @@
-<!-- Template: handoff. Copy to the Claude memory folder as one file per task, fill every <placeholder>, delete this comment, and link it from MEMORY.md. A handoff carries exactly one task (.claude/rules.md section 7); link to the owning docs instead of copying them. -->
+<!-- Template: handoff. Copy to the Claude memory folder as one file per task, fill every <placeholder>, delete this comment, and link it from MEMORY.md. A handoff carries exactly one task (.claude/rules.md section 7) and holds only the facts no doc reflects yet, plus the next task's approved scope; link to the owning docs instead of copying them. -->
 
 ---
 name: <task-id>-handoff

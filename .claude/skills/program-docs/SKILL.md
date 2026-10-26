@@ -11,7 +11,7 @@ Use when a task creates, updates, reshapes, closes or migrates program documenta
 
 Do not use it for product code, for the planning method (the `planning` skill), or merely to read a plan.
 
-This skill owns document shape only: file roles, where State lives, taxonomy, lifecycle and the migration procedure. A docs edit never grants commit, push, PR, merge or database permission (`.claude/rules.md` section 4). Build new docs from the templates below, never by copying an old program's structure.
+This skill owns document shape only: file roles, where State lives, taxonomy, lifecycle and the migration procedure. A docs edit grants nothing (`docs/agent-loops.md`, Precedence and safety; `.claude/rules.md` section 4). Build new docs from the templates below, never by copying an old program's structure.
 
 ## File roles
 
@@ -26,7 +26,7 @@ This skill owns document shape only: file roles, where State lives, taxonomy, li
 
 There are two program kinds ([ADR 0002](../../../docs/adr/0002-program-kinds.md)). A delivery program has a goal and a completion condition. An evergreen program owns a long-lived capability that must be maintained, and runs initiatives that open and close independently.
 
-A single-unit delivery program uses a detail plan as its root `plan.md` (no `implementation-plans/` folder). A delivery program with `implementation-plans/` has a master plan at the root. An evergreen program has no root `plan.md`: its identity is the charter `README.md`, and each initiative has a detail plan under `implementation-plans/`.
+A new delivery program starts single-unit, and a single-unit delivery program uses a detail plan as its root `plan.md` (no `implementation-plans/` folder). A delivery program with `implementation-plans/` has a master plan at the root. An evergreen program has no root `plan.md`: its identity is the charter `README.md`, and each initiative has a detail plan under `implementation-plans/`.
 
 Plan shape, checked by `npm run docs:check` (rule `plan-shape`):
 
@@ -57,7 +57,7 @@ Every entry is open with its fields, or closed as exactly one line that keeps it
 - `<ID> — Moved to [<program>](<link>)`.
 - `<ID> — Dropped: <reason>`.
 
-Closing an entry never implies commit, push or PR permission. Closing a program includes a backlog review with the Owner.
+Closing an entry grants nothing (`.claude/rules.md` section 4). Closing a program includes a backlog review with the Owner.
 
 ## Lifecycle, index and ADRs
 
@@ -67,7 +67,7 @@ Closing an entry never implies commit, push or PR permission. Closing a program 
 - An ADR in `docs/adr/` records a decision that outlives one program or spans programs. A decision that matters to one program stays in its master plan or charter. Every `docs/adr/*.md` except `README.md` is listed in `docs/adr/README.md` with date, status and a one-line summary.
 - Folder purposes are indexed in `docs/README.md`; update it when a folder's purpose changes.
 
-Docs are in English. Size targets, soft: master plan 150-250 lines, detail plan 150-300, problems entry about 8 lines open and 1 resolved. Exceeding one means removing duplication, not dropping a decision or gate.
+Docs language: `.claude/rules.md` section 1. Size targets, soft: master plan 150-250 lines, detail plan 150-300, problems entry about 8 lines open and 1 resolved. Exceeding one means removing duplication, not dropping a decision or gate.
 
 ## Verify
 

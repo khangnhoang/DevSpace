@@ -28,7 +28,7 @@ A commit is not final approval. Manual QA may stay pending if reported; it still
 
 ## Message
 
-`<type>(<scope>): <imperative summary>`, with types `feat fix refactor test docs chore perf build ci revert`. All of it in English. Add a body only when the reason, a compatibility point, a risk or a known limit is not obvious. Good: `fix(profile): send null for an empty date of birth`. Bad: `fix issue`, `update files`, `done`.
+`<type>(<scope>): <imperative summary>`, with types `feat fix refactor test docs chore perf build ci revert`. Language: [`.claude/rules.md`](../../../rules.md) section 1. Add a body only when the reason, a compatibility point, a risk or a known limit is not obvious. Good: `fix(profile): send null for an empty date of birth`. Bad: `fix issue`, `update files`, `done`.
 
 ## Failures
 

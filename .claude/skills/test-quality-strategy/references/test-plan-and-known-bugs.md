@@ -36,6 +36,6 @@ knownBug("P28", "[K3] a learner can change their own profiles.email", async (bug
 - While the bug exists, the correct-behavior assertion fails, the test passes and the run prints `known bug <id>`.
 - When the bug is fixed the assertion holds and the test fails with "`<id>` no longer reproduces: turn this into a normal test". Move the assertion out of `bug(...)`, rename the test to a normal one, and remove `knownBug`.
 - Anything else fails the test: a failed precondition, a sign-in or network error, an unexpected error code such as `23505`, an error thrown inside the check, a body that never reaches `bug(...)`, or two `bug(...)` calls.
-- Update the problem record's status through Main when the test turns normal; this skill does not own state records.
+- Update the problem record's status when the test turns normal; who edits state records is owned by [`.claude/rules.md`](../../../rules.md) section 2 (Roles).
 - The helper's own unit test (`__tests__/unit/known-bug.test.ts`) covers all three outcomes. Change the helper only with that test.
 - A surprising behavior you find while writing a test is not encoded as expected. Stop on that case and report the observed response to Main.

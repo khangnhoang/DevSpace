@@ -1,39 +1,31 @@
 # Working rules
 
-Imported by `CLAUDE.md`. This file owns who acts and what each role may do. `docs/agent-loops.md` owns sizing, timing and stop rules. Skills own procedures. Codex does not load this file; its brief repeats what it needs (section 3).
+Imported by `CLAUDE.md`. This file owns who acts and what each role may do. `docs/agent-loops.md` owns sizing, timing and stop rules. Skills own procedures. Codex does not load this file; its brief carries what it needs ([codex-brief.md](skills/code-review/references/codex-brief.md)).
 
 ## 1. Owner and language
 
 - The Owner built DevSpace alone and decides scope, risk and permissions.
 - Chat replies, `AskUserQuestion` questions and options, and wrap-up recaps and buttons are in Vietnamese, in natural wording. Keep code identifiers, paths, commands and exact errors as they are.
 - Code, code comments, commits, PRs, skills, rules and every repo doc are in English. UI copy keeps the product's Vietnamese.
+- Reports from an implementor or Codex to Main are in English.
 - The Owner's current instruction about language wins over this section.
 
 ## 2. Roles
 
-- **Small-task flow.** Main (the Opus session) implements directly only when the Owner names a specific item and it passes the four small-task conditions in `docs/agent-loops.md` (Sizing). Otherwise use the planned flow.
-- **Program state records.** Main edits state records directly: `progress.md`, `problems.md` and `future-features.md` entries, including those in `docs/backlog/`. No implementor, no review round and no Codex round, even where a plan gates every change after its last review. Main runs `npm run docs:check` afterwards. This does not cover plans, rules, skills or code, and commit and push stay separate grants (section 4).
+- **Small-task flow.** Main (the Opus session) implements directly only for a small task as `docs/agent-loops.md` (Sizing) defines it. Otherwise use the planned flow.
+- **Program state records.** While an implementor is active on an approved plan, Main edits nothing in the checkout, state records included, and sends every change, an Owner-requested state fix included, to that implementor (an implementor once committed Main's uncommitted diff with its own). The implementor updates State in its checkpoint commits (`program-docs`, State has one owner). When no implementor is active, Main edits state records directly: `progress.md`, `problems.md` and `future-features.md` entries, including those in `docs/backlog/`. No implementor, no review round and no Codex round, even where a plan gates every change after its last review. Main runs `npm run docs:check` afterwards. This does not cover plans, rules, skills or code, and commit and push stay separate grants (section 4).
 - **Planned flow.**
   1. Main (Opus) plans, self-reviews the plan, and reviews every diff.
-  2. One Sonnet session implements the approved plan: `start_session` with model `claude-sonnet-5-5` and effort `high`, in the product checkout on the current task branch (`use_worktree: false`) unless the plan says otherwise (the CP6 simulated sessions keep their approved worktree setup). It makes local commits only. It loads `git-pr-workflow` before staging or committing, including the local checkpoint commits the handoff grants, and `code-review` for every self-review pass.
+  2. One Sonnet session implements the approved plan: `start_session` with model `claude-sonnet-5-5` and effort `high`, in the product checkout on the current task branch (`use_worktree: false`) unless the plan says otherwise. It makes local commits only. It loads `git-pr-workflow` before staging or committing, including the local checkpoint commits the handoff grants, and `code-review` for every self-review pass.
   3. `start_session` caps effort at Main's own, so check the new session with `get_session` and fix it with `set_session_effort(high)`, ideally before it begins real work.
   4. When the session ends a turn, Main reads the full report and checks the real diff and commits. Corrections go to the same session with `SendMessage`. Repeat until the review passes, then report to the Owner.
 - Large or high-risk work (auth, payment or coupon, admin permissions, schema or migration, data deletion, CI or deploy, the backend migration) adds the Codex gate on the plan and on the implementation diff.
-- While an implementor owns a plan, Main does not edit the product code or the tests that plan covers.
 
 ## 3. Codex gate
 
 - Codex reviews high-risk work (section 2), every migration before it is applied, and anything the Owner asks for. Codex is read-only; Main runs it and decides what to do with its findings.
-- Run it from the Bash tool. In PowerShell `codex` resolves to a blocked `codex.ps1`:
-
-  ```bash
-  codex exec - -m gpt-6.1-sol -c model_reasoning_effort='"high"' -c sandbox_mode='"read-only"' -o <out> < <prompt>
-  ```
-
-- Later rounds of the same review: `codex exec resume <id> -` with the same flags, `-o` and stdin. Resume does not keep the first round's flags, so repeat them and check the log header. A new target gets a fresh session. If resume fails on a thread-store conflict (another Codex thread holds the writer), do not start a competing session: give the Owner the round prompt to paste into the thread that holds it.
-- Codex loads neither this file nor the skills. Every brief starts with a "Read first" list of the rules and skills that apply (`code-review` has the template).
-- Loop fix and re-review until PASS. Ask the Owner only when a finding needs a new decision.
 - Small fixes during Owner QA (copy, layout, styling) get no Codex round.
+- How to run Codex, resume a review and write its brief: [codex-brief.md](skills/code-review/references/codex-brief.md).
 
 ## 4. Permissions
 
@@ -80,7 +72,7 @@ Claude memory is not where rules live. Test every candidate memory in this order
 
 Delete a memory line once the owning doc has caught up. A new durable rule goes to its owner as a separate `chore(agent-rules): ...` commit; until then it sits in memory marked "pending move".
 
-**Handoff.** When the Owner asks for a handoff, or a long session must stop with work in flight, Main writes it as one memory file linked from `MEMORY.md`. It holds facts no doc reflects yet (hosted, git and branch state, running processes, idle sessions, grants used and pending, lagging state records), the next task's approved scope item by item, what a later unit owns, and what comes after. It links to the owning docs instead of copying them. Main also gives the Owner a one-line prompt for the new session. The template is [handoff.md](skills/program-docs/references/templates/handoff.md).
+**Handoff.** When the Owner asks for a handoff, or a long session must stop with work in flight, Main writes it as one memory file linked from `MEMORY.md` and gives the Owner a one-line prompt for the new session. What it holds is in the template, [handoff.md](skills/program-docs/references/templates/handoff.md).
 
 A handoff carries exactly one task, never another task's scope. The docs catch-up of a merged task counts as scope of the next task.
 
@@ -98,10 +90,3 @@ A handoff is tied to its task and is deleted with it. The task is complete when 
 - A new skill, or one that widens a permission, needs the Owner's decision.
 - No skill can widen section 4.
 - The procedure for creating, changing and maintaining skills is owned by the `skill-authoring` skill.
-
-## 9. Code comments
-
-- Comment why, a boundary or a hidden constraint (RLS and auth assumptions, migration order, concurrency, external service limits, a workaround), never what the code plainly says.
-- Prefer a clearer name or simpler flow over a comment. One comment for adjacent code that shares a rule. No JSDoc on routine code.
-- A TODO states the missing work, why it waits, and where it is tracked. Remove it when the condition ends.
-- Update comments that your change makes false; report misleading ones elsewhere instead of cleaning up silently.

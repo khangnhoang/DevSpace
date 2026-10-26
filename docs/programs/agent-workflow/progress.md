@@ -7,12 +7,12 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | `implementation-plans/u6-instruction-audit/plan.md` r2 (2026-10-26), approved by the Owner on 2026-10-26. |
-| Current unit / checkpoint | U6 instruction audit and the AW-007 rewording; CP1 next (Sonnet implementor). |
-| Status | plan approved; implementation not started. |
-| Completed evidence | U6 audit: Main's table cross-checked by Codex (read-only) in five rounds, PASS on r5 (session `01a17792-e074-70d0-ba30-5293368281fb`). U6 plan: Codex plan review rounds 1 and 2, PASS on r2 (session `01a177ce-f2d5-7fa3-9713-11f8c19162aa`). |
+| Current unit / checkpoint | U6 instruction audit and the AW-007 rewording; CP1 done, CP2 next (Sonnet implementor). |
+| Status | CP1 committed locally; CP2 not started; Main review (CP3) and the Codex diff gate pending. |
+| Completed evidence | U6 audit: Main's table cross-checked by Codex (read-only) in five rounds, PASS on r5 (session `01a17792-e074-70d0-ba30-5293368281fb`). U6 plan: Codex plan review rounds 1 and 2, PASS on r2 (session `01a177ce-f2d5-7fa3-9713-11f8c19162aa`). U6 CP1 (AC1-AC5 and the section 1 part of AC6): `npm run docs:check` and the `rg` checks passed. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | The Sonnet implementor delivers CP1 and CP2 with a local commit each. |
+| Next action | The Sonnet implementor delivers CP2 with a local commit. |
 | Current authority | The Owner approved U6 r2 and granted its plan commit and its implementation by the Sonnet implementor with local commits per checkpoint (2026-10-26). No push, PR or merge grant. |
 
 ## Milestones
@@ -63,4 +63,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-26 U5 description rewrite after a misread AC8 result (`863c83c`).
 - 2026-10-26 U5 AC8 passed both cases; the `skill-authoring` description is back to the Codex-reviewed text (`db51b04`).
 - 2026-10-26 U5 merged (PR 22, `c9741e7`).
-- 2026-10-26 U6 plan r2 approved after the Codex plan gate; PR 22 docs catch-up (this commit).
+- 2026-10-26 U6 plan r2 approved after the Codex plan gate; PR 22 docs catch-up (`c84ffa1`).
+- 2026-10-26 U6 CP1: Codex running rules, handoff contents and code-comment rule moved to their owners, test command lines trimmed, Main and implementor editing rule reworded (this commit).

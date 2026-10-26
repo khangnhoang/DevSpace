@@ -9,7 +9,7 @@ description: "Test quality for DevSpace automated tests: what the unit, rls and 
 
 Use when you write, change, review or plan a test under `__tests__/`, when a policy, grant or security change needs denied-path tests, when a bug fix needs a regression test, or when you report test results.
 
-Do not use for manual browser validation (`frontend-workflow`), for writing the migration itself (`supabase-migration`), or for plan structure (`planning`). Only the payment actions have server action tests (the `payment-*.spec.ts` rows): do not claim coverage for another action.
+Do not use for manual browser validation (`frontend-workflow`), for writing the migration itself (`supabase-migration`), or for plan structure (`planning`). Only the payment actions have server action tests (the `payment-*.spec.ts` rows): do not claim coverage for another action: verify the others by commands and a manual browser pass, and report what was not verified.
 
 ## What exists
 
@@ -17,7 +17,7 @@ Do not use for manual browser validation (`frontend-workflow`), for writing the 
 | --- | --- | --- | --- |
 | `unit` | `__tests__/unit/**/*.test.ts` | `npm run test:unit` | nothing (no Docker) |
 | `rls` | `__tests__/rls/**/*.test.ts` | `npm test` (runs both layers) | the local stack started and seeded: `npx supabase start`, `npx supabase db reset` |
-| `e2e` | `__tests__/e2e/*.spec.ts` (Playwright, Chromium) | `npm run test:e2e` | the local stack started and seeded, and Chromium (`npx playwright install chromium`) |
+| `e2e` | `__tests__/e2e/*.spec.ts` (Playwright, Chromium) | `npm run test:e2e` | the local stack started and seeded, and Chromium (`npx playwright install chromium`, about 180 MB, once per machine) |
 
 - `vitest.config.mts` defines both projects, turns env-file loading off and runs the `rls` files one at a time. Shared helpers: `__tests__/helpers` (the local-stack host check, `knownBug` and its runner-neutral core, the server action reader) and `__tests__/rls/helpers.ts` (actor clients).
 - The `rls` global setup reads the API URL, database URL and keys from `npx supabase status -o json` only, refuses a host other than `127.0.0.1` or `localhost`, and signs in the seed users once. A test never reads `.env*` or a hosted URL.
@@ -27,7 +27,7 @@ Do not use for manual browser validation (`frontend-workflow`), for writing the 
 ## End-to-end (`e2e`): smoke and payment rows
 
 - The smoke rows prove that the main learner and admin paths render and that the access redirects hold, in a real browser, against a production build. They do not repeat an rls guarantee. The payment rows are the server action tests (see Server action rows).
-- `npm run test:e2e` reads the API URL and keys from `npx supabase status` through the host check, builds the app with `buildE2eEnv` (`__tests__/helpers/e2e-env.ts`) and serves it on port 3100. A unit test fails when `app`, `lib` or `proxy.ts` read an environment variable that the map does not set, because the build would then take it from the local environment file, which points at hosted. When code reads a new variable, add it to the map. The run overwrites `.next`: run `npm run build` before `npm start` afterwards.
+- `npm run test:e2e` reads the API URL and keys from `npx supabase status` through the host check, builds the app with `buildE2eEnv` (`__tests__/helpers/e2e-env.ts`) and serves it on port 3100, and never reuses a server. A unit test fails when `app`, `lib` or `proxy.ts` read an environment variable that the map does not set, because the build would then take it from the local environment file, which points at hosted. When code reads a new variable, add it to the map. The run overwrites `.next`: run `npm run build` before `npm start` afterwards.
 - Specs are `__tests__/e2e/<role>.spec.ts` and import `test` from `fixtures.ts`. Names start with the matrix ID, for example `[L5]`. The `setup` project signs in each seed user through the login form once per run and saves the session under `__tests__/e2e/.auth/` (ignored by git).
 - The network guard in `fixtures.ts` aborts every request whose host is not `127.0.0.1` or `localhost` (a CDN, `placehold.co`) and every `/_next/image` request that asks the Next server to fetch such a URL. A request aimed at `*.supabase.co` or `devspace-lms.vercel.app`, a page error and a response with status 500 or more fail the test. Chromium also cannot resolve any host but a local one (`--host-resolver-rules`), because Playwright does not route redirect hops. The one exception: a row that sets `blockedMonacoLoader` (`[S5]` only) marks as handled, in the page, the unhandled rejection whose reason is the `error` Event of the Monaco `loader.js` script element from `cdn.jsdelivr.net`; every other page error still fails. Do not assert what a blocked CDN would load; the classifier is `__tests__/helpers/e2e-network.ts`.
 - Assert seed values (course names, lesson text, URLs), not CSS classes. Wait with Playwright's auto-waiting, never a fixed sleep.

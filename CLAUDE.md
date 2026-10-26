@@ -12,8 +12,9 @@ Roadmap, in this order: (1) agent-workflow (rules, skills, docs system), (2) inf
 - `npm run docs:check`: structure and link checks for `docs/`, `.claude/`, `CLAUDE.md`, `README.md`. `npm run docs:check:test` runs its tests.
 - CI runs on every pull request to `main` and every push to `main`, with no hosted secret. The jobs, which of them block and how to read a failure: [pr-and-ci.md](.claude/skills/git-pr-workflow/references/pr-and-ci.md).
 - Local database (Docker Desktop running): `npx supabase start`, `npx supabase db reset` (baseline, migrations, then the invented seed in `supabase/seed.sql`, which holds the users `learner@devspace.test`, `student@devspace.test` and `admin@devspace.test`), `npx supabase stop`. The checkout stays linked to hosted, so only these local commands are routine; hosted applies follow `supabase-migration` ("Hosted apply").
-- `npm test` runs the Vitest `unit` and `rls` projects; `rls` needs the local stack started and `db reset` done. `npm run test:unit` runs the unit tests alone and needs no Docker. Under an agent environment Vitest prints a minimal report that hides the `known bug <id>` lines; run `npm test -- --reporter=default` to see them.
-- `npm run test:e2e` runs the Playwright smoke in Chromium (`__tests__/e2e`): it needs the local stack started and `db reset` done, builds the app with the local stack's URL and keys, serves it on port 3100 and never reuses a server. It overwrites `.next`, so run `npm run build` before `npm start` afterwards. The first run on a machine needs `npx playwright install chromium` (about 180 MB). The server runs behind a network guard and a mail record, and the payment rows call the payment server actions directly (`__tests__/e2e/payment-*.spec.ts`). The other server actions have no tests: verify them by commands and a manual browser pass, and report what was not verified.
+- `npm test` runs the Vitest `unit` and `rls` projects; `rls` needs the local stack started and `db reset` done. See [test-quality-strategy](.claude/skills/test-quality-strategy/SKILL.md).
+- `npm run test:unit` runs the unit tests alone and needs no Docker.
+- `npm run test:e2e` runs the Playwright smoke in Chromium: it needs the local stack started, `db reset` done and Chromium installed (`npx playwright install chromium`), and it overwrites `.next`, so run `npm run build` before `npm start` afterwards. See [test-quality-strategy](.claude/skills/test-quality-strategy/SKILL.md).
 
 ## Code map
 
@@ -37,6 +38,7 @@ Roadmap, in this order: (1) agent-workflow (rules, skills, docs system), (2) inf
 10. **A finished implementation is a review checkpoint.** Report changed files, checks actually run, remaining risks and a proposed English Conventional Commit message. Permissions for git, remote and database actions are owned by `.claude/rules.md` section 4.
 11. **Match conventions.** Follow the nearby naming, placement, error handling and doc structure, even if you would choose differently. Keep one owner and one source of truth per fact.
 12. **Fail loud.** A blocked, failed, partial or unverified result stays visibly so. Report the exact failure and the smallest thing needed to resume. Do not hide it behind a mock, fallback or weaker check.
+13. **Comment the why.** Comment why, a boundary or a hidden constraint (RLS and auth assumptions, migration order, concurrency, external service limits, a workaround), never what the code plainly says; prefer a clearer name or simpler flow, one comment for adjacent code that shares a rule, and no JSDoc on routine code. A TODO states the missing work, why it waits and where it is tracked, and is removed when the condition ends. Update comments that your change makes false; report misleading ones elsewhere instead of cleaning up silently.
 
 ## Imports
 

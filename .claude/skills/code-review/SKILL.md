@@ -51,7 +51,7 @@ Repeat until a pass leaves no `Critical` or `Required`.
 
 ## Codex
 
-Codex reads neither rules nor skills. The brief starts with a "Read first" list; read [codex-brief.md](references/codex-brief.md) before writing one. Main verifies every Codex finding against the repo before acting.
+Read [codex-brief.md](references/codex-brief.md) before running Codex, resuming a review or writing a brief.
 
 ## Resources
 

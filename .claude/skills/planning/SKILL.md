@@ -1,15 +1,15 @@
 ---
 name: planning
-description: "Planning workflow for DevSpace work past the small-task conditions: repository discovery, Owner decisions, master vs detail plan, PR breakdown, acceptance, verification and manual QA matrix, and the Sonnet implementation brief. Use before coding anything that is not a small task, when splitting work into PRs, or when writing or revising a plan."
+description: "Planning workflow for DevSpace work past the small-task conditions: repository discovery, Owner decisions, master vs detail plan, PR breakdown and batching small independent items into one PR, acceptance, verification and manual QA matrix, and the Sonnet implementation brief. Use before coding anything that is not a small task, when splitting work into PRs or batching small items into one, or when writing or revising a plan."
 ---
 
 # Planning
 
 ## Use when / do not use when
 
-Use when the work is not a small task (`docs/agent-loops.md` Sizing owns the four conditions and the medium and large flows): unclear scope, several files or domains, a schema, RLS, auth, payment or permission change, PR splitting, a plan to write or revise, or an implementation brief to hand to Sonnet.
+Use when the work is not a small task (`docs/agent-loops.md` Sizing owns the four conditions and the medium and large flows): unclear scope, several files or domains, a schema, RLS, auth, payment or permission change, PR splitting, batching small independent items into one PR, a plan to write or revise, or an implementation brief to hand to Sonnet.
 
-Do not use for a small task the Owner named (Main implements directly), a pure text fix, or implementing an already approved plan with no new conflict. Planning-only and read-only requests stay non-implementation: "analyze", "inspect" or "plan" is not permission to code.
+Do not use for a single small task the Owner named (Main implements directly), a pure text fix, or implementing an already approved plan with no new conflict. Planning-only and read-only requests stay non-implementation: "analyze", "inspect" or "plan" is not permission to code.
 
 Doc shape (master plan, detail plan, progress, problems) belongs to `program-docs`; read it before writing or reshaping plan files. Domain rules belong to `supabase-migration`, `server-actions`, `frontend-design` and `frontend-workflow`; read those that match and reconcile them before ordering work.
 
@@ -24,7 +24,7 @@ Doc shape (master plan, detail plan, progress, problems) belongs to `program-doc
    - **Spec** (binding): outcome, observable acceptance, scope and non-goals, Owner decisions, and only guardrails whose omission causes a concrete failure;
    - **facts** (frozen evidence with a baseline commit): only those that justify a Spec item;
    - **hypotheses**: likely files and wiring, which implementation may replace if the Spec holds.
-7. **Dependencies and PR split.** Order by the real dependency graph (migration, then types and contract, then action, then UI, then QA), not by numbering. One coherent, reviewable, verifiable outcome per PR; do not mix independent product changes or cleanup. Read [pr-breakdown-and-brief.md](references/pr-breakdown-and-brief.md) when the work needs a split, parallel streams or a Sonnet brief.
+7. **Dependencies and PR split.** Order by the real dependency graph (migration, then types and contract, then action, then UI, then QA), not by numbering; the parts of one item always follow that order. One coherent, reviewable, verifiable outcome per PR, with one exception, a batch: small independent items (different files, verified separately, neither affects the other) may share one PR, each with its own commits and its own verification in the PR body. An item that needs the Codex gate or a hosted step does not join a batch. Inside a batch, the items run the easiest to verify first. A batch may hold an item of another program or of the backlog; how each part is recorded and closed in its own records follows `program-docs` (Lifecycle, index and ADRs; Problems and future features; Backlog). Read [pr-breakdown-and-brief.md](references/pr-breakdown-and-brief.md) when the work needs a split, parallel streams or a Sonnet brief.
 8. **Acceptance** as actor + action + condition + expected result ("A learner cannot read paid lesson content without enrolling"), never "the feature works".
 9. **Verification and manual QA.** List only checks that exist today, chosen from [test-quality-strategy](../test-quality-strategy/SKILL.md#which-command-for-which-change) for each kind of change, plus the manual pass on the local stack (`frontend-workflow`); when the plan has a hosted rollout step, Main's postflight with simulated-role SQL on hosted (`supabase-migration`). A policy or grant change plans its RLS tests. Name what the agent cannot check. For data-dependent or role-dependent behavior, write the QA matrix; read [qa-matrix.md](references/qa-matrix.md).
 10. **Risks** with impact, mitigation and the earliest checkpoint that exposes them. Expose high-risk assumptions early within a valid order.
@@ -51,7 +51,7 @@ The shape of a new program, delivery or evergreen, and the reshape of a single-u
 
 ## Red flags
 
-Implementation starting during discovery; paths or contracts proposed before inspection; assumptions stated as facts; hidden conflicts; PR order by number; missing scope, exclusions or verification; invented tooling; file count used as a size rule; unrelated outcomes in one PR; no manual QA for non-trivial UI; progress marked done before verification; a plan committed before it passed review.
+Implementation starting during discovery; paths or contracts proposed before inspection; assumptions stated as facts; hidden conflicts; PR order by number; missing scope, exclusions or verification; invented tooling; file count used as a size rule; dependent items, or an item with the Codex gate or a hosted step, batched into one PR; a batched item without its own commits or verification; no manual QA for non-trivial UI; progress marked done before verification; a plan committed before it passed review.
 
 ## Final check
 

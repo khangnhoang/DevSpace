@@ -4,7 +4,7 @@ Read this when splitting work into PRs or checkpoints, deciding whether streams 
 
 ## Slicing
 
-Pick the strategy the dependency graph needs: vertical (one complete safe behavior across layers), foundation-first, contract-first, migration-first, risk-first or docs-first. A PR or checkpoint is one coherent, reviewable outcome; it may span several files and layers when they serve one contract. Do not combine independent product changes, cleanup or different dependency chains. File and line counts are signals, not limits.
+Pick the strategy the dependency graph needs: vertical (one complete safe behavior across layers), foundation-first, contract-first, migration-first, risk-first or docs-first. A PR or checkpoint is one coherent, reviewable outcome; it may span several files and layers when they serve one contract. Do not combine independent product changes, cleanup or different dependency chains, except as a batch that `planning` (Workflow, Dependencies and PR split) allows. File and line counts are signals, not limits.
 
 For each PR record: title and outcome; depends on; must merge before; parallel-safe or not; scope and out of scope; expected and untouched files or domains; binding guardrails; hypotheses; acceptance; automated checks; manual QA; risks; completion criteria.
 

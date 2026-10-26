@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | none open. AW-009 runs as a small task (charter section 5, step 2) from a chat plan r2 the Owner approved on 2026-10-27; the last initiative, U7 (`implementation-plans/u7-entry-plans/plan.md` r1), is merged. |
-| Current unit / checkpoint | AW-009 (the `planning` PR batch rule, the active-implementor rule and the plan approval questions) in PR 26 on `chore/planning-pr-batching` (`18d5fd3`, `3f271cd`, `e16beb8`), with the infrastructure PR 25 docs catch-up and the FEAT-017 closing commit. |
-| Status | AW-009 in progress; AW-008 and AW-011 open. |
-| Completed evidence | U7 is in its milestones. AW-009: Codex diff review (requested by the Owner) rounds 1, 3 and 5 CHANGES REQUIRED, rounds 2, 4 and 6 PASS (round 6 after the `skill-authoring` audit fixes) with 0 Critical and 0 Required (session `01a17940-6d1c-7b52-8c83-2816e6b0f2cc`); `docs:check` 0 new violations; PR 26 CI in its body. |
+| Spec revision | none open. AW-011 runs as a small task (charter section 5, step 2) from a chat plan r1 the Owner approved on 2026-10-27; the last initiative, U7 (`implementation-plans/u7-entry-plans/plan.md` r1), is merged. |
+| Current unit / checkpoint | AW-011 (match skills to the work after discovery) on `chore/skill-rematch`, with the PR 26 and PR 27 docs catch-up. Edits by Main, committed locally under the Owner's grant; Codex diff review next. |
+| Status | AW-011 in progress; AW-008 open. |
+| Completed evidence | U7 and AW-009 are in their milestones. AW-011: none yet. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | The Owner decides on merging PR 26; then the docs catch-up (AW-009 resolved, milestone hashes). |
-| Current authority | The Owner granted the AW-009 implementation, its three commits, the push and PR 26, and the FEAT-017 closing commit and its push (2026-10-27). No merge grant. |
+| Next action | Rule edits, self-review, audit, commit, then Codex diff review until PASS; push and PR are separate grants. |
+| Current authority | The Owner approved the AW-011 chat plan r1 and granted its implementation by Main with local commits (2026-10-27). Push, PR and merge are separate grants. |
 
 ## Milestones
 
@@ -75,4 +75,6 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-26 U7 CP2: `program-docs` states the entry-plan rule, the detail-plan and master-plan templates name entry plans (`9bda2d0`).
 - 2026-10-26 U7 CP3 Main review passed; State before the PR (`8c4806c`).
 - 2026-10-26 U7 merged; AW-010 resolved (PR 24, `85248b2`); PR 24 docs catch-up (`e9b6915`).
-- 2026-10-27 AW-009 as a small task: chat plan r2 approved; the Owner items recorded in AW-009, AW-011 recorded, infrastructure PR 25 docs catch-up (this commit).
+- 2026-10-27 AW-009 as a small task: chat plan r2 approved; the Owner items recorded in AW-009, AW-011 recorded, infrastructure PR 25 docs catch-up (`18d5fd3`).
+- 2026-10-27 AW-009 merged; AW-009 resolved (PR 26, `723b985`).
+- 2026-10-27 AW-011 as a small task: chat plan r1 approved; the Owner decision recorded in AW-011, PR 26 and PR 27 docs catch-up (this commit).

@@ -7,13 +7,13 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | `implementation-plans/u7-entry-plans/plan.md` r1 (2026-10-26), approved by the Owner on 2026-10-26. |
-| Current unit / checkpoint | U7 entry plans (AW-010) on `chore/entry-detail-plans`; CP1 and CP2 committed locally, CP3 (Main review of the whole diff) next. U6 merged (PR 23, `bd19c18`); its docs catch-up ships with U7. |
-| Status | CP1 (check and tests) and CP2 (skill, templates, records) implemented; not pushed; no Codex gate (U7 D4). |
-| Completed evidence | U6 is in its milestones; PR 23 CI run 40313536955 passed all six jobs and Vercel. U7 CP1 and CP2 are in the milestones; `npm run docs:check:test` and `npm run docs:check` passed after CP2. |
+| Current unit / checkpoint | U7 entry plans (AW-010) on `chore/entry-detail-plans`; CP3 done (Main review passed with no correction). U6 merged (PR 23, `bd19c18`); its docs catch-up ships with U7. |
+| Status | implementation complete; PR to `main` open, not merged; no Codex gate (U7 D4). |
+| Completed evidence | U6 is in its milestones; PR 23 CI run 40313536955 passed all six jobs and Vercel. U7 CP1 and CP2 are in the milestones; `npm run docs:check:test` and `npm run docs:check` passed after CP2 (54 of 54 tests); Main review CP3: 0 Critical, 0 Required. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | Main reviews the U7 diff (CP3); corrections go to the implementor. |
-| Current authority | The Owner approved U7 r1 and granted its plan commit and its implementation by the Sonnet implementor with local commits per checkpoint (2026-10-26). No push, PR or merge grant. |
+| Next action | CI on the PR, then the Owner decides the merge; after the merge, the docs catch-up resolves AW-010 and deletes the AW-007 handoff. |
+| Current authority | The Owner approved U7 r1 and granted its plan commit and its implementation by the Sonnet implementor with local commits per checkpoint (2026-10-26), then this State commit, push and PR creation (2026-10-26). No merge grant. |
 
 ## Milestones
 
@@ -72,4 +72,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-26 U6 merged; AW-007 resolved (PR 23, `bd19c18`).
 - 2026-10-26 U7 plan r1 approved; PR 23 docs catch-up; AW-009, AW-010 and infrastructure FEAT-017 recorded (`4d7fec5`).
 - 2026-10-26 U7 CP1: the structure check accepts entry plans of delivery programs and looks their IDs up in the program's own problems.md and future-features.md, with tests (`f2844c8`).
-- 2026-10-26 U7 CP2: `program-docs` states the entry-plan rule, the detail-plan and master-plan templates name entry plans (this commit).
+- 2026-10-26 U7 CP2: `program-docs` states the entry-plan rule, the detail-plan and master-plan templates name entry plans (`9bda2d0`).
+- 2026-10-26 U7 CP3 Main review passed; State before the PR (this commit).

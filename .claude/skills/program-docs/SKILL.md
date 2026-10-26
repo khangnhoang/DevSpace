@@ -7,7 +7,7 @@ description: "Contract for the shape of program documentation in DevSpace: the t
 
 ## Use when / do not use when
 
-Use when a task creates, updates, reshapes, closes or migrates program documentation (`plan.md`, a charter `README.md`, `implementation-plans/u<n>-<slug>/plan.md`, `progress.md`, `problems.md`, `future-features.md`), an ADR, `docs/backlog/`, or the `docs/` index.
+Use when a task creates, updates, reshapes, closes or migrates program documentation (`plan.md`, a charter `README.md`, `implementation-plans/u<n>-<slug>/plan.md` or an entry plan at `implementation-plans/<id>-<slug>/plan.md`, `progress.md`, `problems.md`, `future-features.md`), an ADR, `docs/backlog/`, or the `docs/` index.
 
 Do not use it for product code, for the planning method (the `planning` skill), or merely to read a plan.
 
@@ -33,6 +33,7 @@ Plan shape, checked by `npm run docs:check` (rule `plan-shape`):
 - Delivery: a root `plan.md` titled `# Master plan — <program>` is a master plan, with or without `implementation-plans/`. Once `implementation-plans/` exists, the root plan must be a master plan. Evergreen: the charter is titled `# Charter — <program>` and the program has no root `plan.md` (`file-role`).
 - Units (delivery) and initiatives (evergreen) are numbered `U1`, `U2`, ...: each row of the master plan's Units table, or of the charter's Initiatives table, starts with its unique `U<n>`.
 - A unit's or initiative's detail plan sits at `implementation-plans/u<n>-<slug>/plan.md`, is titled `# U<n> detail plan — <title>` with the same `n`, and its `U<n>` is a row of that table. A single-unit root detail plan carries no unit ID.
+- An entry plan (delivery programs only) plans follow-up work recorded in the program's own `problems.md` or `future-features.md` without a Units row and without revising the master plan. It sits at `implementation-plans/<id>-<slug>/plan.md` with the ID in lowercase (`feat-017-ci-docs-skip`), is titled `# <ID> detail plan — <title>` with the same ID (`# FEAT-017 detail plan — <title>`), and its ID is an open entry (`### <ID>:` in `problems.md`, `## FEAT-NNN:` in `future-features.md`), a resolved line of `problems.md`, or a `Done` or `Dropped` line under `## Closed` of that program's own files. Another program's entry and a `Moved to` line do not count, so a plan moves with its entry. An evergreen program has no entry plans: its initiatives stay `u<n>-<slug>` charter rows. Any folder in `implementation-plans/`, entry plans included, makes the root `plan.md` a master plan.
 - Each plan and each charter has its template's numbered `##` sections, with the same titles and in the same order; extra sections such as appendices may follow.
 
 ## State has one owner
@@ -79,7 +80,7 @@ After editing program docs, `docs/README.md`, `docs/adr/` or `docs/backlog/`, ru
 | --- | --- | --- |
 | [master-plan.md](references/templates/master-plan.md) | creating or reshaping a master `plan.md` | not touching a master plan |
 | [charter.md](references/templates/charter.md) | creating or reshaping the charter `README.md` of an evergreen program | not touching a charter |
-| [detail-plan.md](references/templates/detail-plan.md) | creating or reshaping a detail plan or an initiative plan | not touching a detail plan |
+| [detail-plan.md](references/templates/detail-plan.md) | creating or reshaping a detail plan, an initiative plan or an entry plan | not touching a detail plan |
 | [progress.md](references/templates/progress.md) | creating or reshaping a `progress.md`, or you need the State fields or milestone grammar | not touching progress |
 | [problems.md](references/templates/problems.md) | creating or reshaping a `problems.md`, or shrinking a resolved entry | not touching problems |
 | [future-features.md](references/templates/future-features.md) | creating a `future-features.md` or adding an entry | not touching future features |

@@ -7,12 +7,12 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | `implementation-plans/u7-entry-plans/plan.md` r1 (2026-10-26), approved by the Owner on 2026-10-26. |
-| Current unit / checkpoint | U7 entry plans (AW-010) on `chore/entry-detail-plans`; CP1 next (Sonnet implementor). U6 merged (PR 23, `bd19c18`); its docs catch-up ships with U7. |
-| Status | plan approved; implementation not started; no Codex gate (U7 D4). |
-| Completed evidence | U6 is in its milestones; PR 23 CI run 40313536955 passed all six jobs and Vercel. |
+| Current unit / checkpoint | U7 entry plans (AW-010) on `chore/entry-detail-plans`; CP1 and CP2 committed locally, CP3 (Main review of the whole diff) next. U6 merged (PR 23, `bd19c18`); its docs catch-up ships with U7. |
+| Status | CP1 (check and tests) and CP2 (skill, templates, records) implemented; not pushed; no Codex gate (U7 D4). |
+| Completed evidence | U6 is in its milestones; PR 23 CI run 40313536955 passed all six jobs and Vercel. U7 CP1 and CP2 are in the milestones; `npm run docs:check:test` and `npm run docs:check` passed after CP2. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | The Sonnet implementor delivers CP1 and CP2 with a local commit each. |
+| Next action | Main reviews the U7 diff (CP3); corrections go to the implementor. |
 | Current authority | The Owner approved U7 r1 and granted its plan commit and its implementation by the Sonnet implementor with local commits per checkpoint (2026-10-26). No push, PR or merge grant. |
 
 ## Milestones
@@ -70,4 +70,6 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-26 U6 Codex diff round 1 corrections: the new-program starting rule added to `program-docs`, test coverage pointer names the sections that hold it, a stale template reference fixed (`b3ed33a`).
 - 2026-10-26 U6 Main review of the round 1 correction: the single-unit rule in `program-docs` keeps both meanings (`bb7fd53`).
 - 2026-10-26 U6 merged; AW-007 resolved (PR 23, `bd19c18`).
-- 2026-10-26 U7 plan r1 approved; PR 23 docs catch-up; AW-009, AW-010 and infrastructure FEAT-017 recorded (this commit).
+- 2026-10-26 U7 plan r1 approved; PR 23 docs catch-up; AW-009, AW-010 and infrastructure FEAT-017 recorded (`4d7fec5`).
+- 2026-10-26 U7 CP1: the structure check accepts entry plans of delivery programs and looks their IDs up in the program's own problems.md and future-features.md, with tests (`f2844c8`).
+- 2026-10-26 U7 CP2: `program-docs` states the entry-plan rule, the detail-plan and master-plan templates name entry plans (this commit).

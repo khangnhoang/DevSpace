@@ -26,7 +26,7 @@ This skill owns document shape only: file roles, where State lives, taxonomy, li
 
 There are two program kinds ([ADR 0002](../../../docs/adr/0002-program-kinds.md)). A delivery program has a goal and a completion condition. An evergreen program owns a long-lived capability that must be maintained, and runs initiatives that open and close independently.
 
-A new delivery program starts single-unit: a detail plan as its root `plan.md` (no `implementation-plans/` folder). A delivery program with `implementation-plans/` has a master plan at the root. An evergreen program has no root `plan.md`: its identity is the charter `README.md`, and each initiative has a detail plan under `implementation-plans/`.
+A new delivery program starts single-unit, and a single-unit delivery program uses a detail plan as its root `plan.md` (no `implementation-plans/` folder). A delivery program with `implementation-plans/` has a master plan at the root. An evergreen program has no root `plan.md`: its identity is the charter `README.md`, and each initiative has a detail plan under `implementation-plans/`.
 
 Plan shape, checked by `npm run docs:check` (rule `plan-shape`):
 

@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | none open. The last initiative, U7 (`implementation-plans/u7-entry-plans/plan.md` r1), is merged. |
-| Current unit / checkpoint | No open initiative. U7 merged (PR 24, `85248b2`); its docs catch-up ships on `ci/skip-heavy-jobs-docs-only` with infrastructure FEAT-017. |
-| Status | idle; AW-008 and AW-009 open. |
-| Completed evidence | U7 is in its milestones. |
+| Spec revision | none open. AW-009 runs as a small task (charter section 5, step 2) from a chat plan r2 the Owner approved on 2026-10-27; the last initiative, U7 (`implementation-plans/u7-entry-plans/plan.md` r1), is merged. |
+| Current unit / checkpoint | AW-009 (the `planning` PR batch rule, the active-implementor rule and the plan approval questions) on `chore/planning-pr-batching`, with the infrastructure PR 25 docs catch-up and the FEAT-017 AC1 observation. Edits done by Main, uncommitted; the Codex diff review passed; commit is next. |
+| Status | AW-009 in progress; AW-008 and AW-011 open. |
+| Completed evidence | U7 is in its milestones. AW-009: Codex diff review (requested by the Owner) rounds 1, 3 and 5 CHANGES REQUIRED, rounds 2, 4 and 6 PASS (round 6 after the `skill-authoring` audit fixes) with 0 Critical and 0 Required (session `01a17940-6d1c-7b52-8c83-2816e6b0f2cc`); `docs:check` 0 new violations; every changed file is `.md`. PR CI once it runs. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | AW-009 (the `planning` PR rule) as its own PR after FEAT-017; the Owner names it. |
-| Current authority | none for agent-workflow. Commit, push, PR and merge are separate grants. |
+| Next action | The commit, push and PR grants, each asked separately; then the FEAT-017 AC1 observation on the PR. |
+| Current authority | The Owner approved the AW-009 chat plan r2 and granted its implementation by Main up to the Codex diff review, without commit (2026-10-27). Commit, push, PR and merge are separate grants. |
 
 ## Milestones
 
@@ -75,3 +75,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-26 U7 CP2: `program-docs` states the entry-plan rule, the detail-plan and master-plan templates name entry plans (`9bda2d0`).
 - 2026-10-26 U7 CP3 Main review passed; State before the PR (`8c4806c`).
 - 2026-10-26 U7 merged; AW-010 resolved (PR 24, `85248b2`); PR 24 docs catch-up (`e9b6915`).
+- 2026-10-27 AW-009 as a small task: chat plan r2 approved; the Owner items recorded in AW-009, AW-011 recorded, infrastructure PR 25 docs catch-up (this commit).

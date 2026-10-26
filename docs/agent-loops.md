@@ -34,7 +34,7 @@ If any condition fails, use the planned flow. Steps: size, implement, verify, se
 
 - **Trigger:** an explicit planning request, unclear scope, multi-step or cross-domain work, anything touching DB, RLS, auth, permissions, payment or deployment, PR breakdown, unclear acceptance.
 - **Owner:** the `planning` skill. Read-only: analyze and propose; implement only when the Owner clearly asked for it and no skill sets a hard stop.
-- **Report:** goal, in and out of scope, confirmed facts, assumptions, open questions, dependency order, acceptance, verification, risks and a `Tự review` block.
+- **Report:** goal, in and out of scope, confirmed facts, assumptions, open questions, dependency order, acceptance, verification, risks and a `Tự review` block. Then the approval questions in `planning` (Git and approval).
 - **Stop** and ask instead of implementing when the Owner asked for planning only, a guess would change business behavior, the work touches a high-risk area without a grant, a skill or the repo state sets a hard stop, or the request and the repo conflict.
 
 ## Loop 1: checkpoint

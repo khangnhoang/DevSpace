@@ -35,7 +35,7 @@ Report findings with severity (Critical, Required, Suggestion, Nit, FYI), file:l
 
 ## Rules
 
-- Codex loads neither `.claude/rules.md` nor the skills, so every brief starts with a "Read first" list of the rules and skills that apply (the template below). For a later round (Running Codex), the prompt lists what changed since the last round.
+- Codex loads neither `.claude/rules.md` nor the skills, so every brief starts with a "Read first" list of the rules and skills that apply (the Template section). For a later round (Running Codex), the prompt lists what changed since the last round.
 - Give it the real files or diff, not a summary. A plan under review that is not committed is given as the working-tree file and a diff.
 - Main checks each finding against the repo; Codex output is advisory until verified. Loop until PASS, and ask the Owner only when a finding needs a new decision.
 - A migration review (when it is required: `.claude/rules.md` section 3) covers the SQL, the rollback, RLS and grants, and the rollout order.

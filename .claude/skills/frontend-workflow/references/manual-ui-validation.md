@@ -6,7 +6,7 @@ Read this before planning, running or reporting manual UI validation. The Playwr
 
 1. Manual QA runs on the seeded local stack: `npx supabase start` if it is down, and `npx supabase db reset` first when the data matters. Reset or stop the stack only after confirming no test run or other pass is using it (it is shared with `npm test` and `npm run test:e2e`; separate stacks are infrastructure FEAT-014).
 2. Start the dev server with `preview_start` using the `devspace-dev` entry in `.claude/launch.json` (`npm run dev` on the local stack, `http://127.0.0.1:3000`). Do not start servers from the shell. Reuse a healthy server and an open tab; do not restart them without a reason. Check that `location.origin` is `http://127.0.0.1:3000`.
-3. **The Owner signs in** as a `.test` seed user (the users are listed in `CLAUDE.md`, Commands, Local database; the passwords are in `supabase/seed.sql`). Ask the Owner to sign in as the needed role in the pane and wait (`.claude/rules.md` section 4). When the pass needs data the seed lacks, add it to the seed under the rule in [test-quality-strategy](../../test-quality-strategy/SKILL.md) (Test data).
+3. **The Owner signs in** as a `.test` seed user (the users are listed in `CLAUDE.md`, Commands, Local database; the passwords are in `supabase/seed.sql`). Agents never type passwords or tokens: ask the Owner to sign in as the needed role in the pane and wait (`.claude/rules.md` section 4). When the pass needs data the seed lacks, add it to the seed under the rule in [test-quality-strategy](../../test-quality-strategy/SKILL.md) (Test data).
 4. Define the exact checks first: role and route, the action, the expected result, including what must be denied.
 
 ## What the local stack cannot show

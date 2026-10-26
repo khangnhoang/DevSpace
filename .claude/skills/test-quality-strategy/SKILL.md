@@ -9,7 +9,7 @@ description: "Test quality for DevSpace automated tests: what the unit, rls and 
 
 Use when you write, change, review or plan a test under `__tests__/`, when a policy, grant or security change needs denied-path tests, when a bug fix needs a regression test, or when you report test results.
 
-Do not use for manual browser validation (`frontend-workflow`), for writing the migration itself (`supabase-migration`), or for plan structure (`planning`). Only the payment actions have server action tests (the `payment-*.spec.ts` rows): do not claim coverage for another action: verify the others by commands and a manual browser pass, and report what was not verified.
+Do not use for manual browser validation (`frontend-workflow`), for writing the migration itself (`supabase-migration`), or for plan structure (`planning`). Only the payment actions have server action tests (the `payment-*.spec.ts` rows): do not claim coverage for another action. Verify the others by commands and a manual browser pass, and report what was not verified.
 
 ## What exists
 

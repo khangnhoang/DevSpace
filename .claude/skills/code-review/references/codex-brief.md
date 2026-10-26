@@ -19,7 +19,7 @@ Read first (in this order, completely):
 1. CLAUDE.md
 2. .claude/rules.md
 3. docs/agent-loops.md
-4. .claude/skills/<skill>/SKILL.md for each skill that matches the target: <list>
+4. .claude/skills/<skill>/SKILL.md for each skill whose Use when covers the target's work (`docs/agent-loops.md`, Sizing): <list>
 5. The plan: <path and revision>
 
 Role: read-only reviewer. Do not edit files, run the app, call the database or any network service, or read .env*.

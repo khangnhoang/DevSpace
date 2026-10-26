@@ -28,12 +28,13 @@ export function isDocsOnly(paths) {
 }
 
 // `git diff -z` ends every path with NUL, so input that does not end with one was cut off, and an empty
-// segment is not a path. Both throw instead of guessing.
+// segment is not a path. Both throw instead of guessing. `ignoreBOM` keeps a leading U+FEFF in the first path:
+// the default decoder strips it, and a BOM-prefixed LICENSE path would then match the allowlist.
 /** @param {Buffer} input */
 export function parsePaths(input) {
   if (input.length === 0) return [];
   if (input[input.length - 1] !== 0) throw new Error("input is not NUL-terminated");
-  const text = new TextDecoder("utf-8", { fatal: true }).decode(input);
+  const text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(input);
   const paths = text.slice(0, -1).split("\0");
   if (paths.some((path) => path === "")) throw new Error("input holds an empty path");
   return paths;

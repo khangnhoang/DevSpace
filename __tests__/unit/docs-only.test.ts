@@ -86,6 +86,10 @@ describe("parsePaths", () => {
     expect(parsePaths(Buffer.from(nul("docs/my notes.md", "a\nb.md")))).toEqual(["docs/my notes.md", "a\nb.md"]);
   });
 
+  it("keeps a leading byte order mark inside the first path", () => {
+    expect(parsePaths(Buffer.from(`\uFEFF${nul(LICENSE)}`))).toEqual([`\uFEFF${LICENSE}`]);
+  });
+
   it("returns an empty list for empty input", () => {
     expect(parsePaths(Buffer.alloc(0))).toEqual([]);
   });
@@ -117,6 +121,10 @@ describe("docs-only CLI", () => {
 
   it("keeps a path with a space whole", () => {
     expect(runCli(nul("docs/my notes.md"))).toEqual({ stdout: "true\n", status: 0 });
+  });
+
+  it("prints false for a path with a leading byte order mark that hides the allowlisted LICENSE", () => {
+    expect(runCli(Buffer.from(`\uFEFF${nul(LICENSE)}`))).toEqual({ stdout: "false\n", status: 0 });
   });
 
   it("never prints true for newline-separated input", () => {

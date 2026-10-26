@@ -21,7 +21,9 @@ jobs:
   # Decides whether a pull request changes only docs (scripts/ci/docs-only.mjs, infrastructure FEAT-017), so `db`
   # and `e2e` can be skipped. It is not a required check. `set -o pipefail` fails the step when the diff or the
   # classifier fails, and the output is written only after both succeeded. `--no-renames` lists the old path of
-  # a rename too, and `-z` keeps odd file names whole.
+  # a rename too, and `-z` keeps odd file names whole. The classifier runs as it is at the base commit, not as the
+  # PR changes it: a PR that breaks it (for example, always `true`) could otherwise skip the tests that check it.
+  # A base without the script (the PR that adds it) fails `git show`, the step fails and `db` and `e2e` run.
   changes:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -41,7 +43,8 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -eo pipefail
-          docs_only=$(git diff --name-only -z --no-renames "$BASE_SHA...$HEAD_SHA" | node scripts/ci/docs-only.mjs)
+          git show "$BASE_SHA:scripts/ci/docs-only.mjs" > "$RUNNER_TEMP/docs-only.mjs"
+          docs_only=$(git diff --name-only -z --no-renames "$BASE_SHA...$HEAD_SHA" | node "$RUNNER_TEMP/docs-only.mjs")
           echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
 
   typecheck:

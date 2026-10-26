@@ -14,6 +14,10 @@
 // - Evergreen programs: the Programs lifecycle `evergreen` selects a charter README.md (title, five sections,
 //   Initiatives table) and initiative plans checked against that table; a root plan.md, a missing charter, a bad
 //   title, sections, IDs and a README.md in a delivery program each fail with the right rule.
+// - Entry plans: a delivery program's `implementation-plans/<id>-<slug>/plan.md` passes when its ID is an open,
+//   resolved, Done or Dropped entry of that program's own problems.md or future-features.md; another program's
+//   entry, a `Moved` line, a title or folder mismatch, an uppercase or slugless folder, an evergreen program
+//   and a root detail plan each fail.
 // - Invariant: the result depends only on the fixture tree, never on the real docs/.
 // - Last verified with: `npm run docs:check:test`.
 
@@ -327,6 +331,92 @@ test("plan-shape: role by title, template sections, unit IDs, folders and titles
   const missing = run({ [notInTable]: UNIT_DETAIL.replace("# U1 detail plan", "# U2 detail plan") });
   assertViolation(missing, notInTable, "plan-shape", 1);
   assert.match(missing.stderr, /U2 is not a row of the master plan's Units table/);
+});
+
+// An entry plan: a delivery program's detail plan for an ID of its own problems.md or future-features.md,
+// at implementation-plans/<id>-<slug>/plan.md, with no Units row.
+const entryPath = (folder, program = "alpha") => `docs/programs/${program}/implementation-plans/${folder}/plan.md`;
+const entryPlan = (id) => UNIT_DETAIL.replace("# U1 detail plan", `# ${id} detail plan`);
+const ENTRY_PATH = entryPath("feat-010-idea");
+const ALPHA_FEATURES = "docs/programs/alpha/future-features.md";
+const ALPHA_PROBLEMS = "docs/programs/alpha/problems.md";
+
+test("entry plan (AC1): an open future-features entry of the program needs no Units row", () => {
+  assertClean(run({ [ENTRY_PATH]: entryPlan("FEAT-010") }));
+});
+
+test("entry plan (AC2): every home of an ID in the program's own two files passes", () => {
+  const entry = (folder, id) => ({ [entryPath(folder)]: entryPlan(id) });
+  assertClean(run(entry("alpha-001-something", "ALPHA-001")));
+  assertClean(run(entry("alpha-000-old", "ALPHA-000")));
+  const closed = `# F\n\n${FEATURE("FEAT-010")}\n## Closed\n\n- FEAT-012 — Done: shipped (PR #3)\n- FEAT-013 — Dropped: not needed\n`;
+  assertClean(run({ [ALPHA_FEATURES]: closed, ...entry("feat-012-shipped", "FEAT-012") }));
+  assertClean(run({ [ALPHA_FEATURES]: closed, ...entry("feat-013-dropped", "FEAT-013") }));
+});
+
+test("entry plan (AC3): an ID outside the program's own entries is a plan-shape violation", () => {
+  const unknown = entryPath("feat-099-nowhere");
+  const result = run({ [unknown]: entryPlan("FEAT-099") });
+  assertViolation(result, unknown, "plan-shape", 1);
+  assert.match(result.stderr, /FEAT-099 is not an open or closed entry/);
+  // Another program's entry (solo's problem, the backlog's feature) does not count.
+  const solo = entryPath("solo-001-other");
+  assertViolation(run({ [solo]: entryPlan("SOLO-001") }), solo, "plan-shape", 1);
+  const backlog = entryPath("feat-001-backlog");
+  assertViolation(run({ [backlog]: entryPlan("FEAT-001") }), backlog, "plan-shape", 1);
+  // A `Moved to` line is a pointer to the new home, not an entry of this program.
+  const movedFeature = entryPath("feat-014-gone");
+  assertViolation(
+    run({
+      [ALPHA_FEATURES]: `# F\n\n${FEATURE("FEAT-010")}\n## Closed\n\n- FEAT-014 — Moved to [beta](../beta/future-features.md)\n`,
+      "docs/programs/beta/future-features.md": `# F\n\n${FEATURE("FEAT-014")}`,
+      [movedFeature]: entryPlan("FEAT-014"),
+    }),
+    movedFeature,
+    "plan-shape",
+    1,
+  );
+  const movedProblem = entryPath("alpha-009-gone");
+  assertViolation(
+    run({
+      [ALPHA_PROBLEMS]: problems(OPEN_ENTRY("ALPHA-001"), "- ALPHA-009 — Moved 2026-01-01 to [beta](../beta/plan.md)"),
+      [movedProblem]: entryPlan("ALPHA-009"),
+    }),
+    movedProblem,
+    "plan-shape",
+    1,
+  );
+  // Folder ID and title ID differ.
+  const mismatch = run({ [ENTRY_PATH]: entryPlan("FEAT-011") });
+  assertViolation(mismatch, ENTRY_PATH, "plan-shape", 1);
+  assert.match(mismatch.stderr, /title says FEAT-011 but the folder says feat-010/);
+  // Folder ID not lowercase, or no slug.
+  const upper = entryPath("FEAT-010-idea");
+  assertViolation(run({ [upper]: entryPlan("FEAT-010") }), upper, "plan-shape", 1);
+  const noSlug = entryPath("feat-010");
+  assertViolation(run({ [noSlug]: entryPlan("FEAT-010") }), noSlug, "plan-shape", 1);
+  // A malformed title is reported even when the folder is valid.
+  assertViolation(run({ [ENTRY_PATH]: UNIT_DETAIL.replace("# U1 detail plan", "# Idea plan") }), ENTRY_PATH, "plan-shape", 1);
+});
+
+test("entry plan (AC4): an evergreen program's initiatives stay u<n> charter rows", () => {
+  const evergreenEntry = `${GAMMA}/implementation-plans/gamma-001-thing/plan.md`;
+  const result = run({ ...EVERGREEN, [evergreenEntry]: entryPlan("GAMMA-001") });
+  assertViolation(result, evergreenEntry, "plan-shape", 1);
+  assert.match(result.stderr, /evergreen program/);
+});
+
+test("entry plan (AC5): a program with a detail plan as root still needs a master plan", () => {
+  const solo = "docs/programs/solo/plan.md";
+  assertViolation(run({ [entryPath("solo-001-thing", "solo")]: entryPlan("SOLO-001") }), solo, "plan-shape", 1);
+});
+
+test("entry plan: unit folders keep their rules", () => {
+  const badUnit = "docs/programs/alpha/implementation-plans/U1-first/plan.md";
+  assertViolation(run({ [UNIT_PATH]: null, [badUnit]: UNIT_DETAIL }), badUnit, "plan-shape", 1);
+  // A unit plan is not an entry plan: it still needs its Units row.
+  const notInTable = "docs/programs/alpha/implementation-plans/u2-second/plan.md";
+  assertViolation(run({ [notInTable]: UNIT_DETAIL.replace("# U1 detail plan", "# U2 detail plan") }), notInTable, "plan-shape", 1);
 });
 
 const EVERGREEN = evergreenTree();

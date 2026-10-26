@@ -74,6 +74,10 @@ const CHARTER_TITLE = /^Charter — \S/;
 const UNIT_ID = /^U(\d+)\b/;
 const UNIT_FOLDER = /^implementation-plans\/u(\d+)-[a-z0-9]+(?:-[a-z0-9]+)*\/plan\.md$/;
 const UNIT_TITLE = /^U(\d+) detail plan — \S/;
+// An entry plan belongs to an ID of its program's own problems.md or future-features.md (delivery programs
+// only): the folder carries the lowercase ID and a slug, the title the ID as written in the entry.
+const ENTRY_FOLDER = /^implementation-plans\/([a-z][a-z0-9]*(?:-[a-z][a-z0-9]*)*-\d+)-[a-z0-9]+(?:-[a-z0-9]+)*\/plan\.md$/;
+const ENTRY_TITLE = /^([A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*-\d+) detail plan — \S/;
 const ROOT_DETAIL_TITLE = /^(?!U\d+ ).+ detail plan — \S/;
 
 // Milestone grammar from the progress template: `- YYYY-MM-DD <text> (<ref>)`, final period optional.
@@ -325,7 +329,10 @@ function reportDeclarations(doc, report, rule, closingTitle) {
 }
 
 // `backlog` switches the Resolved section to the three closed forms of the backlog (Done, Moved to, Dropped).
+// Returns the IDs the file holds (open entries and resolved lines); a `Moved` line points elsewhere, so it is
+// not one of them.
 function checkProblems(doc, report, { backlog = false } = {}) {
+  const owned = new Set();
   const h2 = doc.headings.filter((heading) => heading.level === 2);
   const open = h2.find((heading) => heading.title === "Open");
   const resolved = h2.find((heading) => heading.title === "Resolved");
@@ -350,8 +357,12 @@ function checkProblems(doc, report, { backlog = false } = {}) {
     );
     for (const entry of entries) {
       const id = ID_PATTERN.exec(entry.title)?.[1];
-      if (id) noteId(id, entry.n);
-      else report(entry.n, "problems-shape", "open entry heading has no ID such as `PREFIX-001`");
+      if (id) {
+        noteId(id, entry.n);
+        owned.add(id);
+      } else {
+        report(entry.n, "problems-shape", "open entry heading has no ID such as `PREFIX-001`");
+      }
       const body = sectionLines(doc, entry, 3);
       for (const field of OPEN_ENTRY_FIELDS) {
         if (!hasField(body, field)) {
@@ -369,8 +380,12 @@ function checkProblems(doc, report, { backlog = false } = {}) {
       if (/^[-*+] /.test(line.text)) {
         started = true;
         const id = RESOLVED_PATTERN.exec(line.text)?.[1];
-        if (id) noteId(id, line.n);
-        else report(line.n, "problems-shape", "a resolved entry must start with its ID and an em dash, such as `- PREFIX-001 — ...`");
+        if (id) {
+          noteId(id, line.n);
+          if (!/^[-*+]\s+\**[^\s*]+\**\s+— Moved\b/.test(line.text)) owned.add(id);
+        } else {
+          report(line.n, "problems-shape", "a resolved entry must start with its ID and an em dash, such as `- PREFIX-001 — ...`");
+        }
         if (backlog && !CLOSED_PATTERN.test(line.text.trimEnd())) {
           report(
             line.n,
@@ -389,12 +404,14 @@ function checkProblems(doc, report, { backlog = false } = {}) {
       }
     }
   }
+  return owned;
 }
 
 // `seenIds` is shared by every future-features file, so a FEAT ID is unique across the whole repository.
 // A `Moved to` line points at the entry's new home instead of declaring it, so it goes to `moved` and is
-// checked after every file has been read.
+// checked after every file has been read. Returns the IDs the file holds (open and Done or Dropped).
 function checkFutureFeatures(doc, report, seenIds, moved) {
+  const owned = new Set();
   const noteId = (id, n) => {
     const first = seenIds.get(id);
     if (first) {
@@ -414,6 +431,7 @@ function checkFutureFeatures(doc, report, seenIds, moved) {
           moved.push({ id: closed[1], n: line.n, report });
         } else if (closed) {
           noteId(closed[1], line.n);
+          owned.add(closed[1]);
         } else {
           report(
             line.n,
@@ -430,6 +448,7 @@ function checkFutureFeatures(doc, report, seenIds, moved) {
       continue;
     }
     noteId(id, heading.n);
+    owned.add(id);
     const body = sectionLines(doc, heading, 2);
     for (const field of FEATURE_FIELDS) {
       if (!hasField(body, field)) {
@@ -437,6 +456,7 @@ function checkFutureFeatures(doc, report, seenIds, moved) {
       }
     }
   }
+  return owned;
 }
 
 function checkPlan(doc, kind, report, programDir) {
@@ -467,9 +487,9 @@ function checkPlan(doc, kind, report, programDir) {
 }
 
 // Template sections, unit IDs and titles of a plan. Returns the unit numbers of a master plan's Units table
-// or a charter's Initiatives table, or the unit number a unit detail plan claims, so they can be matched
-// once every plan has been read.
-function checkPlanShape(doc, kind, relInProgram, report) {
+// or a charter's Initiatives table, or the unit number a unit detail plan claims, or the ID an entry plan
+// claims, so they can be matched once every plan and entry file has been read.
+function checkPlanShape(doc, kind, relInProgram, report, evergreen) {
   const title = doc.headings.find((heading) => heading.level === 1);
   const sections = doc.headings.filter((heading) => heading.level === 2);
   PLAN_SECTIONS[kind].forEach((expected, index) => {
@@ -502,10 +522,24 @@ function checkPlanShape(doc, kind, relInProgram, report) {
     return {};
   }
   const folder = UNIT_FOLDER.exec(relInProgram)?.[1];
+  const entryFolder = folder ? undefined : ENTRY_FOLDER.exec(relInProgram)?.[1];
   const id = UNIT_TITLE.exec(title?.title ?? "")?.[1];
-  if (!folder) report(1, "plan-shape", "a unit detail plan sits at implementation-plans/u<n>-<slug>/plan.md");
-  if (!id) report(title?.n ?? 1, "plan-shape", 'a unit detail plan is titled "# U<n> detail plan — <title>"');
-  else if (folder && folder !== id) report(title?.n ?? 1, "plan-shape", `title says U${id} but the folder says u${folder}`);
+  const entryId = ENTRY_TITLE.exec(title?.title ?? "")?.[1];
+  if (entryFolder) {
+    if (evergreen) {
+      report(1, "plan-shape", "an evergreen program has no entry plans; each initiative sits at implementation-plans/u<n>-<slug>/plan.md and is a row of the charter's Initiatives table");
+      return {};
+    }
+    if (!entryId) report(title?.n ?? 1, "plan-shape", 'an entry plan is titled "# <ID> detail plan — <title>", such as "# FEAT-017 detail plan — <title>"');
+    else if (entryId.toLowerCase() !== entryFolder) report(title?.n ?? 1, "plan-shape", `title says ${entryId} but the folder says ${entryFolder}`);
+    else return { entry: entryId };
+    return {};
+  }
+  if (!folder) {
+    report(1, "plan-shape", "a detail plan sits at implementation-plans/u<n>-<slug>/plan.md, or, for an entry of a delivery program, at implementation-plans/<id>-<slug>/plan.md with the ID in lowercase");
+  }
+  if (!id && !(entryId && !folder)) report(title?.n ?? 1, "plan-shape", 'a unit detail plan is titled "# U<n> detail plan — <title>"');
+  else if (id && folder && folder !== id) report(title?.n ?? 1, "plan-shape", `title says U${id} but the folder says u${folder}`);
   return { unit: id ?? folder };
 }
 
@@ -578,6 +612,12 @@ export function checkStructure(root) {
   const movedFeatures = [];
   const unitsByProgram = new Map();
   const claimedUnits = [];
+  const claimedEntries = [];
+  const entryIdsByProgram = new Map();
+  const ownEntryIds = (dir) => {
+    if (!entryIdsByProgram.has(dir)) entryIdsByProgram.set(dir, new Set());
+    return entryIdsByProgram.get(dir);
+  };
 
   // The kind of a program is the Lifecycle value of its Programs row, so the index is read before the
   // program files are.
@@ -611,12 +651,13 @@ export function checkStructure(root) {
     } else if (role === "progress") {
       checkProgress(doc, report);
     } else if (role === "problems") {
-      checkProblems(doc, report);
+      for (const id of checkProblems(doc, report)) ownEntryIds(dir).add(id);
     } else if (role !== "future") {
       checkPlan(doc, role, report, dir);
-      const shape = checkPlanShape(doc, role, relInProgram, report);
+      const shape = checkPlanShape(doc, role, relInProgram, report, evergreen);
       if (shape.units) unitsByProgram.set(dir, shape.units);
       if (shape.unit) claimedUnits.push({ dir, unit: shape.unit, report });
+      if (shape.entry) claimedEntries.push({ dir, id: shape.entry, report });
     }
   }
   for (const { dir, unit, report } of claimedUnits) {
@@ -633,7 +674,16 @@ export function checkStructure(root) {
   // across the whole repository.
   for (const doc of docs.values()) {
     if (posix.basename(doc.rel) === "future-features.md") {
-      checkFutureFeatures(doc, reportFor(doc.rel), featureIds, movedFeatures);
+      const owned = checkFutureFeatures(doc, reportFor(doc.rel), featureIds, movedFeatures);
+      const dir = programOf(doc.rel);
+      if (dir && doc.rel === `${dir}/future-features.md`) for (const id of owned) ownEntryIds(dir).add(id);
+    }
+  }
+  // An entry plan's ID is looked up only in its own program's two files, so another program's entry or a
+  // `Moved` pointer does not satisfy it.
+  for (const { dir, id, report } of claimedEntries) {
+    if (!ownEntryIds(dir).has(id)) {
+      report(1, "plan-shape", `${id} is not an open or closed entry of this program's problems.md or future-features.md (a "Moved" line does not count)`);
     }
   }
   const movedOnce = new Set();

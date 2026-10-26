@@ -2,7 +2,7 @@
 
 # Master plan — <program name>
 
-Progress: `progress.md`. Problems: `problems.md`. Each unit has a detail plan at `implementation-plans/u<n>-<slug>/plan.md`.
+Progress: `progress.md`. Problems: `problems.md`. Each unit has a detail plan at `implementation-plans/u<n>-<slug>/plan.md`; follow-up work from `problems.md` or `future-features.md` may have an entry plan at `implementation-plans/<id>-<slug>/plan.md` with no Units row.
 
 ## 1. Goal and outcome
 

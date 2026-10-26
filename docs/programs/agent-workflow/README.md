@@ -35,6 +35,7 @@ At most one initiative has an open plan at a time. A closed initiative keeps its
 | U3 [Program kinds: delivery and evergreen](implementation-plans/u3-program-kinds/plan.md) | `docs/program-kinds` | Delivery and evergreen programs; `agent-workflow` becomes evergreen; migration citation, CI wait and checkpoint commit rules. | hard on U2 (merged) | Owner approval of the plan after the Codex plan gate |
 | U4 [Agent instructions match the infrastructure](implementation-plans/u4-instructions-sync/plan.md) | `chore/agent-instructions-sync` | AW-006 fixed: handoff template, `npm run dev` and manual QA on the local stack, a seed rule for QA, one suite mapping, one owner for CI facts and permissions, current `README.md` and pointers. | none (U3 merged) | Owner approval of the plan after the Codex plan gate |
 | U5 [Skill authoring skill and the skill-shape check](implementation-plans/u5-skill-authoring/plan.md) | `chore/skill-authoring` | `skill-authoring` owns the skill procedure, section 8 keeps only the permission rules, `docs:check` checks skill shape; the PR 21 docs catch-up. | none (U4 merged) | Owner approval of the plan after the Codex plan gate |
+| U6 [Instruction audit and the AW-007 rewording](implementation-plans/u6-instruction-audit/plan.md) | `chore/instruction-audit` | Every audit item is moved, linked, reworded, removed or confirmed as the Owner decided; section 2 states when Main edits state records; the PR 22 docs catch-up. | none (U5 merged) | Owner approval of the plan after the Codex plan gate |
 
 ## 5. Opening an initiative
 

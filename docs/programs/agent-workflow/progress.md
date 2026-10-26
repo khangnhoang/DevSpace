@@ -7,12 +7,12 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | `implementation-plans/u6-instruction-audit/plan.md` r2 (2026-10-26), approved by the Owner on 2026-10-26. |
-| Current unit / checkpoint | U6 instruction audit and the AW-007 rewording; CP1 and CP2 done; CP3 Main review corrections and Codex diff round 1 corrections done; Codex diff round 2 next. |
-| Status | CP1 and CP2 the Main review corrections and the Codex round 1 corrections committed locally; Codex diff round 2 pending. |
-| Completed evidence | U6 audit: Main's table cross-checked by Codex (read-only) in five rounds, PASS on r5 (session `01a17792-e074-70d0-ba30-5293368281fb`). U6 plan: Codex plan review rounds 1 and 2, PASS on r2 (session `01a177ce-f2d5-7fa3-9713-11f8c19162aa`). U6 CP1 (AC1-AC5 and the section 1 part of AC6): `npm run docs:check` and the `rg` checks passed. U6 CP2 (rest of AC6, AC7, AC9, AC10): `npm run docs:check` and `npm run docs:check:test` passed; `playwright-cli` references and `LICENSE` hash equal to `c9741e7`, its `SKILL.md` differs only in the DevSpace block. |
+| Current unit / checkpoint | U6 instruction audit and the AW-007 rewording; U6 CP3 done (Main review and the Codex diff gate PASS in round 2). |
+| Status | implementation complete and committed locally; not pushed. |
+| Completed evidence | U6 audit: Main's table cross-checked by Codex (read-only) in five rounds, PASS on r5 (session `01a17792-e074-70d0-ba30-5293368281fb`). U6 plan: Codex plan review rounds 1 and 2, PASS on r2 (session `01a177ce-f2d5-7fa3-9713-11f8c19162aa`). U6 CP1 (AC1-AC5 and the section 1 part of AC6): `npm run docs:check` and the `rg` checks passed. U6 CP2 (rest of AC6, AC7, AC9, AC10): `npm run docs:check` and `npm run docs:check:test` passed; `playwright-cli` references and `LICENSE` hash equal to `c9741e7`, its `SKILL.md` differs only in the DevSpace block. U6 Codex diff gate: rounds 1 and 2, PASS on round 2 (session `01a177df-ef7b-7d82-a803-1b657eedd841`). |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | Main runs Codex diff round 2. |
+| Next action | The Owner grants push and PR creation; after the merge, the docs catch-up resolves AW-007. |
 | Current authority | The Owner approved U6 r2 and granted its plan commit and its implementation by the Sonnet implementor with local commits per checkpoint (2026-10-26). No push, PR or merge grant. |
 
 ## Milestones
@@ -68,4 +68,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-26 U6 CP2: restatements in skills and references replaced by pointers to their owners, language rule linked, `--no-verify` and attribution lines removed, wording fixes (`c263587`).
 - 2026-10-26 U6 CP3 Main review corrections: the password-and-token prohibition restored in manual UI validation, sentence split in `test-quality-strategy` (`2df8637`).
 - 2026-10-26 U6 Codex diff round 1 corrections: the new-program starting rule added to `program-docs`, test coverage pointer names the sections that hold it, a stale template reference fixed (`b3ed33a`).
-- 2026-10-26 U6 Main review of the round 1 correction: the single-unit rule in `program-docs` keeps both meanings (this commit).
+- 2026-10-26 U6 Main review of the round 1 correction: the single-unit rule in `program-docs` keeps both meanings (`bb7fd53`).

@@ -12,14 +12,6 @@ Charter: `README.md`. Progress: `progress.md`.
 - Direction: keep the link, because a copied template must keep a working `progress.md` link; move the progress template and the detail template together.
 - Exit condition: none needed while both templates stay in the same folder; reopen if one of them moves.
 
-### AW-007: Rules the Owner did not approve, or worded against the Owner's intent
-
-- Status: Open (2026-10-25, Owner during U4 planning).
-- Problem: some rules exist that the Owner did not request or approve, or that do not say what the Owner meant. Known case: `.claude/rules.md:15` ("Main edits state records directly … No implementor") was meant as a shortcut for Main (State after a Codex PASS, an entry the Owner asks to record) but reads as "only Main edits State"; Codex U4 plan round 1 and Main read it that way and nearly added a stop before every implementor commit.
-- Evidence: U4 plan r2 AC11 and its r6 correction (U4 D8); the Owner's statement of intent on 2026-10-25.
-- Direction: reword section 2 so the shortcut cannot read as a ban; the Owner names other rules as found; a read-only audit traces each rule in `CLAUDE.md`, `.claude/rules.md`, `docs/agent-loops.md` and the skills to the Owner decision or commit that introduced it and to the place it belongs, using the `skill-authoring` audit reference that U5 writes; the audit and the moves it proposes are one agent-workflow initiative after U5 (U5 D8).
-- Exit condition: every rule the Owner flags is reworded, removed or confirmed, and section 2 states the shortcut unambiguously.
-
 ### AW-008: The docs link parsers count some links inside code and accept a bare `](`
 
 - Status: Open (2026-10-26, Codex U5 diff review round 1).
@@ -27,6 +19,22 @@ Charter: `README.md`. Progress: `progress.md`.
 - Evidence: Codex U5 diff review round 1 (session `01a17436-2457-7e23-bf3c-25bf1f91ccea`), findings 1 and 2, checked by Main against the source on 2026-10-26; no real doc in the repo hits these cases today (`npm run docs:check` passes).
 - Direction: one parser change in `check-links.mjs` with fixtures (CommonMark closing fence, code spans across lines, an opening label required), so both checks keep one link reader.
 - Exit condition: the three cases have failing fixtures that pass after the fix, and `npm run docs:check` still passes.
+
+### AW-009: The planning PR rule forbids batching small independent fixes
+
+- Status: Open (2026-10-26, Owner).
+- Problem: `planning` Workflow step 7 says "do not mix independent product changes or cleanup", so small fixes of different programs or the backlog (for example AW-008 and BL-004) each need their own PR, although they touch different files, are verified separately and do not affect each other. The checkpoint order for independent items is not stated either.
+- Evidence: the Owner's discussion on 2026-10-26 after PR 23. ADR 0002 decision 4 and `program-docs` (Lifecycle, index and ADRs) already allow one PR to carry work of several programs, each part recorded in its own program.
+- Direction: (Owner, 2026-10-26) small independent items may share one PR, each with its own commits and its own verification in the PR body; an item that needs the Codex gate or a hosted step does not join a batch; independent checkpoints run the easiest to verify first; a plan may hold a checkpoint for another program's or the backlog's item, which still closes in its own records. One agent-workflow PR of its own, after the CI change.
+- Exit condition: `planning` states these rules, and `npm run docs:check` passes.
+
+### AW-010: Follow-up work of a delivery program must edit its master plan
+
+- Status: Open (2026-10-26, Owner).
+- Problem: a delivery program with `implementation-plans/` accepts a detail plan only as a unit row `U<n>` of its master plan (`program-docs` Plan shape, `plan-shape` check), so every follow-up (a fix or a feature recorded in `problems.md` or `future-features.md`) must first revise the master plan. That mixes the program's goal with work found later, and adds a master-plan review. Examples: infrastructure FEAT-014 ("Needs a master-plan revision before it starts") and FEAT-017.
+- Evidence: `program-docs` Plan shape and `scripts/docs` on `bd19c18`; the Owner's discussion on 2026-10-26.
+- Direction: (Owner, 2026-10-26) besides `u<n>-<slug>/plan.md`, `implementation-plans/` accepts an entry plan `<id>-<slug>/plan.md` for an ID that exists, open or resolved, in the same program's `problems.md` or `future-features.md`; it needs no Units row. `program-docs`, its template and the `plan-shape` check change together, with tests. The risk gates are unchanged. This ships before FEAT-017.
+- Exit condition: an entry plan passes `npm run docs:check`, a plan whose ID is in neither file fails it, the tests cover both, and `program-docs` states the rule.
 
 ## Resolved
 
@@ -37,3 +45,4 @@ One line each: ID, status, one-line outcome. Details stay in Git.
 - AW-001 — Moved 2026-10-22 to [infrastructure](../infrastructure/problems.md), unit U1.
 - AW-003 — Moved 2026-10-22 to [security-hotfix](../security-hotfix/problems.md); it waits for H2-2.
 - AW-006 — Resolved 2026-10-25: U4 fixed every item and the fresh read-only audit passed (PR 21, `4fa5731`).
+- AW-007 — Resolved 2026-10-26: U6 audited every instruction, the Owner decided each item, and section 2 states when Main edits state records (PR 23, `bd19c18`).

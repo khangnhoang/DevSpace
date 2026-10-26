@@ -16,6 +16,12 @@ Direction the Owner has set that this program delivers in a later unit. Each ent
 - Direction: run two local Supabase stacks instead of one: `dev` (seed data, manual QA) and `test` (the `rls` and `e2e` suites, each on a fresh `db reset`, still cleaning up after themselves), with distinct `project_id`s and port ranges, shared migrations and seed, and test helpers that read the `test` stack. A stack is started only when needed and stopped after use; every start and stop is confirmed (`supabase status` and `docker ps` for that `project_id`), not assumed from the command's exit; a reset needs to know who owns the stack. A third stack (separate `rls` and `e2e`) was considered and not chosen: double the containers for little gain. CI is unaffected (one stack per job). Needs a master-plan revision before it starts.
 - Target program: infrastructure.
 
+## FEAT-017: Skip the database and e2e jobs on documentation-only pull requests
+
+- Status: Planned after agent-workflow AW-010 merges (Owner decision, 2026-10-26); then planned as an entry plan of this program, with the Codex gate on its plan and diff (CI change).
+- Direction: every pull request runs all six jobs, so a docs-only PR waits about 7 minutes for `db` and `e2e` (PR 23: `e2e` 6m44s). Owner decisions (2026-10-26): skip only `db` and `e2e`; a PR counts as docs-only when every changed file is under `docs/**` or `.claude/skills/**`, or is `.claude/rules.md`, `CLAUDE.md`, `README.md` or another `.md` file, and any other file runs everything; a push to `main` always runs everything; detect the changed files with `git diff` in the workflow, without a third-party action. A workflow-level `paths:` filter cannot be used, because branch protection requires all six checks and a skipped workflow leaves them pending; a job skipped by `if:` counts as passed.
+- Target program: infrastructure.
+
 ## Closed
 
 - FEAT-002 — Done: `test-quality-strategy` ported in U3 (PR 15) and `playwright-cli` vendored in U4 (PR #17)

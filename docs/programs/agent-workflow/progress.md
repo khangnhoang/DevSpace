@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | `implementation-plans/u6-instruction-audit/plan.md` r2 (2026-10-26), approved by the Owner on 2026-10-26. |
-| Current unit / checkpoint | U6 instruction audit and the AW-007 rewording; U6 CP3 done (Main review and the Codex diff gate PASS in round 2). |
-| Status | implementation complete and committed locally; not pushed. |
-| Completed evidence | U6 audit: Main's table cross-checked by Codex (read-only) in five rounds, PASS on r5 (session `01a17792-e074-70d0-ba30-5293368281fb`). U6 plan: Codex plan review rounds 1 and 2, PASS on r2 (session `01a177ce-f2d5-7fa3-9713-11f8c19162aa`). U6 CP1 (AC1-AC5 and the section 1 part of AC6): `npm run docs:check` and the `rg` checks passed. U6 CP2 (rest of AC6, AC7, AC9, AC10): `npm run docs:check` and `npm run docs:check:test` passed; `playwright-cli` references and `LICENSE` hash equal to `c9741e7`, its `SKILL.md` differs only in the DevSpace block. U6 Codex diff gate: rounds 1 and 2, PASS on round 2 (session `01a177df-ef7b-7d82-a803-1b657eedd841`). |
+| Spec revision | `implementation-plans/u7-entry-plans/plan.md` r1 (2026-10-26), approved by the Owner on 2026-10-26. |
+| Current unit / checkpoint | U7 entry plans (AW-010) on `chore/entry-detail-plans`; CP1 next (Sonnet implementor). U6 merged (PR 23, `bd19c18`); its docs catch-up ships with U7. |
+| Status | plan approved; implementation not started; no Codex gate (U7 D4). |
+| Completed evidence | U6 is in its milestones; PR 23 CI run 40313536955 passed all six jobs and Vercel. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | The Owner grants push and PR creation; after the merge, the docs catch-up resolves AW-007. |
-| Current authority | The Owner approved U6 r2 and granted its plan commit and its implementation by the Sonnet implementor with local commits per checkpoint (2026-10-26). No push, PR or merge grant. |
+| Next action | The Sonnet implementor delivers CP1 and CP2 with a local commit each. |
+| Current authority | The Owner approved U7 r1 and granted its plan commit and its implementation by the Sonnet implementor with local commits per checkpoint (2026-10-26). No push, PR or merge grant. |
 
 ## Milestones
 
@@ -69,3 +69,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-26 U6 CP3 Main review corrections: the password-and-token prohibition restored in manual UI validation, sentence split in `test-quality-strategy` (`2df8637`).
 - 2026-10-26 U6 Codex diff round 1 corrections: the new-program starting rule added to `program-docs`, test coverage pointer names the sections that hold it, a stale template reference fixed (`b3ed33a`).
 - 2026-10-26 U6 Main review of the round 1 correction: the single-unit rule in `program-docs` keeps both meanings (`bb7fd53`).
+- 2026-10-26 U6 merged; AW-007 resolved (PR 23, `bd19c18`).
+- 2026-10-26 U7 plan r1 approved; PR 23 docs catch-up; AW-009, AW-010 and infrastructure FEAT-017 recorded (this commit).

@@ -74,4 +74,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-26 U7 CP1: the structure check accepts entry plans of delivery programs and looks their IDs up in the program's own problems.md and future-features.md, with tests (`f2844c8`).
 - 2026-10-26 U7 CP2: `program-docs` states the entry-plan rule, the detail-plan and master-plan templates name entry plans (`9bda2d0`).
 - 2026-10-26 U7 CP3 Main review passed; State before the PR (`8c4806c`).
-- 2026-10-26 U7 merged; AW-010 resolved (PR 24, `85248b2`); PR 24 docs catch-up (this commit).
+- 2026-10-26 U7 merged; AW-010 resolved (PR 24, `85248b2`); PR 24 docs catch-up (`e9b6915`).

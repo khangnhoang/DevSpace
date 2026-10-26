@@ -7,12 +7,12 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | `implementation-plans/u6-instruction-audit/plan.md` r2 (2026-10-26), approved by the Owner on 2026-10-26. |
-| Current unit / checkpoint | U6 instruction audit and the AW-007 rewording; CP1 done, CP2 next (Sonnet implementor). |
-| Status | CP1 committed locally; CP2 not started; Main review (CP3) and the Codex diff gate pending. |
-| Completed evidence | U6 audit: Main's table cross-checked by Codex (read-only) in five rounds, PASS on r5 (session `01a17792-e074-70d0-ba30-5293368281fb`). U6 plan: Codex plan review rounds 1 and 2, PASS on r2 (session `01a177ce-f2d5-7fa3-9713-11f8c19162aa`). U6 CP1 (AC1-AC5 and the section 1 part of AC6): `npm run docs:check` and the `rg` checks passed. |
+| Current unit / checkpoint | U6 instruction audit and the AW-007 rewording; CP1 and CP2 done; Main review (CP3) next. |
+| Status | CP1 and CP2 committed locally; Main review (CP3) and the Codex diff gate pending. |
+| Completed evidence | U6 audit: Main's table cross-checked by Codex (read-only) in five rounds, PASS on r5 (session `01a17792-e074-70d0-ba30-5293368281fb`). U6 plan: Codex plan review rounds 1 and 2, PASS on r2 (session `01a177ce-f2d5-7fa3-9713-11f8c19162aa`). U6 CP1 (AC1-AC5 and the section 1 part of AC6): `npm run docs:check` and the `rg` checks passed. U6 CP2 (rest of AC6, AC7, AC9, AC10): `npm run docs:check` and `npm run docs:check:test` passed; `playwright-cli` references and `LICENSE` hash equal to `c9741e7`, its `SKILL.md` differs only in the DevSpace block. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | The Sonnet implementor delivers CP2 with a local commit. |
+| Next action | Main reviews the whole diff (CP3), sends corrections to the implementor, then runs the Codex diff gate. |
 | Current authority | The Owner approved U6 r2 and granted its plan commit and its implementation by the Sonnet implementor with local commits per checkpoint (2026-10-26). No push, PR or merge grant. |
 
 ## Milestones
@@ -64,4 +64,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-26 U5 AC8 passed both cases; the `skill-authoring` description is back to the Codex-reviewed text (`db51b04`).
 - 2026-10-26 U5 merged (PR 22, `c9741e7`).
 - 2026-10-26 U6 plan r2 approved after the Codex plan gate; PR 22 docs catch-up (`c84ffa1`).
-- 2026-10-26 U6 CP1: Codex running rules, handoff contents and code-comment rule moved to their owners, test command lines trimmed, Main and implementor editing rule reworded (this commit).
+- 2026-10-26 U6 CP1: Codex running rules, handoff contents and code-comment rule moved to their owners, test command lines trimmed, Main and implementor editing rule reworded (`20003ba`).
+- 2026-10-26 U6 CP2: restatements in skills and references replaced by pointers to their owners, language rule linked, `--no-verify` and attribution lines removed, wording fixes (this commit).

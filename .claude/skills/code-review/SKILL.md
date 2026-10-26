@@ -11,7 +11,7 @@ Use when reviewing a completed checkpoint, correction commit, branch, PR, diff, 
 
 Do not use to write the plan (`planning`), to commit (`git-pr-workflow`), or for domain rules (`supabase-migration`, `server-actions`, `frontend-design`, `frontend-workflow`; read the ones that match before issuing findings).
 
-Review is read-only. Edit only when the Owner asked for fixes or the workflow allows them. A verdict never grants commit, push, PR, merge or a hosted step.
+Review is read-only. Edit only when the Owner asked for fixes or the workflow allows them. A verdict grants nothing (`docs/agent-loops.md`, Precedence and safety).
 
 ## Review workflow
 

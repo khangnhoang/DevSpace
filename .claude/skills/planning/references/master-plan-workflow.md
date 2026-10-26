@@ -10,7 +10,7 @@ Read this when writing or materially revising a master plan for a multi-unit pro
 4. Split into units by dependency and verification boundary. For each unit: outcome, hard or soft dependencies, and the gate to start or enable it (Owner approval, merge of another unit, a hosted rollout step).
 5. Write the rollout order, including hosted steps and what must be true before each. Respect compatibility between old code, new code and the database (see `supabase-migration`).
 6. Write shared invariants with the failure each prevents, program risks and explicit exclusions.
-7. Keep State out of the plan: `progress.md` owns it, and the plan links to it.
+7. Keep State out of the plan: `program-docs` (State has one owner) says where it lives.
 
 ## Revision
 
@@ -24,4 +24,4 @@ Read this when writing or materially revising a master plan for a multi-unit pro
 - Every dependency and gate has evidence, or is marked unknown rather than assumed.
 - Acceptance is observable and sits close to the unit that introduces the behavior.
 - No material decision is deferred to the implementor.
-- The plan ends at planning: it grants no implementation, git or hosted permission.
+- The plan ends at planning: it grants no permission (`.claude/rules.md` section 4).

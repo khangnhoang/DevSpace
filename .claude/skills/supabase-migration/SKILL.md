@@ -11,13 +11,13 @@ Use when a task touches tables, columns, constraints, indexes, migrations or rol
 
 Do not use for UI work with no database dependency. For server action contracts use `server-actions`; for ordering and PR split use `planning`.
 
-Database behavior is changed by a migration file, never by dashboard SQL left as the final state. This is a high-risk area: the plan is Codex-gated and so is every migration before it is applied (`.claude/rules.md` section 3).
+Database behavior is changed by a migration file, never by dashboard SQL left as the final state. This is a high-risk area, so the Codex gate applies (`.claude/rules.md` section 3).
 
 ## Hard rules
 
 - Files: `supabase/migrations/<timestamp>_<name>.sql` and `supabase/rollbacks/<same-name>.down.sql`. Every migration has a `.down.sql`.
 - A new migration must replay through `npx supabase db reset` after the baseline and the earlier migrations (CI runs the same replay: [pr-and-ci.md](../git-pr-workflow/references/pr-and-ci.md)).
-- Never edit a published migration. A fix is a new migration. A migration that was applied under a different version is renamed to the recorded version in a separate PR (see the H2-1 history).
+- Never edit a published migration. A fix is a new migration.
 - A migration header cites stable IDs with their program (for example `security-hotfix H2-1a`, `infrastructure D9`, `ADR 0002`), never a doc path or a section number: a published migration is never edited, so a cited path could never move.
 - Who may run which `supabase` command, and what the hosted database allows, is owned by `.claude/rules.md` section 4. The checkout is linked to hosted, so `link`, `db push`, `db pull`, `migration repair` and anything with `--linked` or `--db-url` reach it; the local commands do not. Main hands the implementor a metadata snapshot (policies, grants, constraints, function definitions) in the brief and applies migrations only through "Hosted apply" below, after Codex PASS and the Owner's grants.
 - Local verification is `npx supabase db reset` on the local stack (baseline, published migrations, minimal invented seed); what the implementor may run is owned by `.claude/rules.md` section 4, and for a schema-shaping change Main also compares the local catalog with hosted. The implementor writes the SQL, the rollback and a verification plan from the snapshot. Main runs the preflight and postflight checks on hosted; checks not yet run stay `pending` in the report. A policy or grant change adds or updates RLS tests (`test-quality-strategy`) and `npm test` passes on the local stack before any hosted step; Main's hosted postflight stays. The baseline was recorded in hosted history once, through `migration repair` by the Owner; later migrations go through "Hosted apply".

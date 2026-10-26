@@ -12,7 +12,7 @@ Imported by `CLAUDE.md`. This file owns who acts and what each role may do. `doc
 
 ## 2. Roles
 
-- **Small-task flow.** Main (the Opus session) implements directly only when the Owner names a specific item and it passes the four small-task conditions in `docs/agent-loops.md` (Sizing). Otherwise use the planned flow.
+- **Small-task flow.** Main (the Opus session) implements directly only for a small task as `docs/agent-loops.md` (Sizing) defines it. Otherwise use the planned flow.
 - **Program state records.** While an implementor is active on an approved plan, Main edits nothing in the checkout, state records included, and sends every change, an Owner-requested state fix included, to that implementor (an implementor once committed Main's uncommitted diff with its own). The implementor updates State in its checkpoint commits (`program-docs`, State has one owner). When no implementor is active, Main edits state records directly: `progress.md`, `problems.md` and `future-features.md` entries, including those in `docs/backlog/`. No implementor, no review round and no Codex round, even where a plan gates every change after its last review. Main runs `npm run docs:check` afterwards. This does not cover plans, rules, skills or code, and commit and push stay separate grants (section 4).
 - **Planned flow.**
   1. Main (Opus) plans, self-reviews the plan, and reviews every diff.

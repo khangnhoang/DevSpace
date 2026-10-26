@@ -1,6 +1,6 @@
 # Push, PR, CI and merge
 
-Read this before any push, PR creation or update, check watching, CI failure or merge. Every step still needs its own grant; the narrowest mode the Owner stated applies (`docs/agent-loops.md` Loop 3).
+Read this before any push, PR creation or update, check watching, CI failure or merge. Grants are owned by `.claude/rules.md` section 4; the narrowest mode the Owner stated applies (`docs/agent-loops.md` Loop 3).
 
 ## Preconditions
 
@@ -15,18 +15,18 @@ Do not install or authenticate `gh`, switch to the raw REST API, or copy a token
 
 ## Push
 
-Needs an explicit grant. Before a normal push confirm: clean worktree and index; the exact branch and commit range; the configured upstream; refreshed remote state with ahead/behind counts; and that a normal push is enough (force-push is never implied). After it, check that the remote head equals the local head and divergence is `0 behind / 0 ahead`. For multi-checkpoint work, push once after the final self-review passes and later push only correction commits, each after its own self-review; this order grants nothing.
+Needs a push grant (`.claude/rules.md` section 4). Before a normal push confirm: clean worktree and index; the exact branch and commit range; the configured upstream; refreshed remote state with ahead/behind counts; and that a normal push is enough (force-push is never implied). After it, check that the remote head equals the local head and divergence is `0 behind / 0 ahead`. For multi-checkpoint work, push once after the final self-review passes and later push only correction commits, each after its own self-review.
 
 ## Create or update a PR
 
 1. Build the content from evidence: `git log --oneline main..HEAD`, `git diff --stat main...HEAD`, the plan, progress and the checks that really ran. Do not invent tests, QA, decisions or risks; mark unknown what you cannot confirm.
 2. Check that the head branch is already on the remote. If not, stop and ask for push permission. Never accept an interactive `gh` offer to push or fork.
 3. Check for an existing PR (`gh pr view <branch>`); never create a duplicate. Update title, body, labels or draft state only as asked.
-4. Create with `gh pr create --base main --head <branch> --title "<title>" --body-file <file>`; update with `gh pr edit`. Use an exact title or body when the Owner gives one. Otherwise title and body are in English. Keep the body file out of the commit.
+4. Create with `gh pr create --base main --head <branch> --title "<title>" --body-file <file>`; update with `gh pr edit`. Use an exact title or body when the Owner gives one. Otherwise title and body follow the language rule in `.claude/rules.md` section 1. Keep the body file out of the commit.
 5. The body follows `.github/pull_request_template.md`: Summary, Changes, Checks run, CI result, Production impact and pending hosted steps, Risks and limits, Follow-ups. `gh pr create --body-file` does not apply the template, so build the body file from it; leave `CI result` as the placeholder table until CI ends (see "Record the CI result"). Link the plan or problem IDs.
 6. After a PR exists, the desktop app's PR tools handle status and auto-fix; do not poll with scheduled tasks. When the Owner says to wait for CI, watch in the foreground instead (Watch CI).
 
-PR creation never merges, and update-only permission does not deliver new commits.
+Creating, updating, pushing and merging are separate grants (`.claude/rules.md` section 4).
 
 ## Watch CI
 

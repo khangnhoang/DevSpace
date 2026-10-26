@@ -2,7 +2,7 @@
 
 Read this when a plan has manual QA that depends on data, user roles or hosted state. Skip it otherwise.
 
-DevSpace has a local Supabase stack with a minimal invented seed (three users: a learner, a student enrolled in the paid course and an admin; two courses), RLS tests for the database boundaries, and a Playwright suite (`npm run test:e2e`) that covers the smoke paths of the main learner and admin flows and the payment rows; nothing else automated drives a browser. Rows that only prove a policy or grant belong in `__tests__/rls` (`test-quality-strategy`); the manual matrix keeps what only a browser shows. The Owner signs in; agents never enter credentials. So QA is a table the plan writes before implementation reaches its last checkpoint.
+DevSpace has a local Supabase stack with a minimal invented seed (three users: a learner, a student enrolled in the paid course and an admin; two courses), RLS tests for the database boundaries, and a Playwright suite (`npm run test:e2e`) that covers the smoke paths of the main learner and admin flows and the payment rows; nothing else automated drives a browser. Rows that only prove a policy or grant belong in `__tests__/rls` (`test-quality-strategy`); the manual matrix keeps what only a browser shows. The Owner signs in (`.claude/rules.md` section 4). So QA is a table the plan writes before implementation reaches its last checkpoint.
 
 ## Matrix
 

@@ -19,7 +19,7 @@ Doc shape (master plan, detail plan, progress, problems) belongs to `program-doc
 2. **Understand the request.** Actor and goal, current and expected behavior, business rules, state transitions, permission-sensitive behavior, data needed, scope and exclusions, failure paths. Do not reduce a business task to its nearest UI.
 3. **Inspect the real repository** before asking anything: entry point, validation and permission, business rule, mutation, persisted state, response, UI feedback. Confirm paths, payload shapes, nullable fields, statuses, RLS behavior and the verification commands that exist. Do not invent files, APIs, scripts or test tooling.
 4. **Classify evidence.** Confirmed facts (code, docs, migrations, hosted metadata snapshot), assumptions, conflicts, open questions. Never present an assumption as a fact or hide a conflict inside the solution.
-5. **Ask the Owner before writing**, not after: decisions the repo cannot answer and that change the Spec (product behavior, scope, permission, risk). Use `AskUserQuestion` in Vietnamese (`.claude/rules.md` section 6). Do not ask the Owner about repo facts or reversible implementation details.
+5. **Ask the Owner before the plan is written** (`.claude/rules.md` section 6 owns the rule and the format): decisions the repo cannot answer and that change the Spec (product behavior, scope, permission, risk). Do not ask the Owner about repo facts or reversible implementation details.
 6. **Write the plan** at the size the Sizing rules give. Keep three things apart:
    - **Spec** (binding): outcome, observable acceptance, scope and non-goals, Owner decisions, and only guardrails whose omission causes a concrete failure;
    - **facts** (frozen evidence with a baseline commit): only those that justify a Spec item;
@@ -39,7 +39,7 @@ Doc shape (master plan, detail plan, progress, problems) belongs to `program-doc
 
 ## Planning a program
 
-A new delivery program starts as a detail plan used as its root `plan.md` (single unit). When it gains a second unit, reshape it with the `program-docs` migration procedure. For a multi-unit program, read [master-plan-workflow.md](references/master-plan-workflow.md). A new evergreen program starts with its charter `README.md` and its first initiative plan; `program-docs` owns the shape.
+The shape of a new program, delivery or evergreen, and the reshape of a single-unit program that gains a second unit belong to `program-docs` (File roles and the migration procedure). For a multi-unit program, read [master-plan-workflow.md](references/master-plan-workflow.md).
 
 ## Resources
 

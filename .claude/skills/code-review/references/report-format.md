@@ -18,7 +18,7 @@ For a `Suggestion`, write "Suggested improvement" instead of "Required change". 
 
 ## Report
 
-Write to the Owner in Vietnamese through Main; an implementor or Codex report to Main is in English. Keep identifiers, paths, commands and exact errors.
+Report language: `.claude/rules.md` section 1. Keep identifiers, paths, commands and exact errors.
 
 ```text
 ## Scope reviewed

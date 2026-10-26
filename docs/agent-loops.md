@@ -4,7 +4,7 @@ When an agent plans, checkpoints, reviews, watches CI and stops. `.claude/rules.
 
 ## Precedence and safety
 
-- A more specific skill wins over this file. When permission is unclear, take the narrower action and report the ambiguity.
+- A more specific skill wins over this file. When permission is unclear, `.claude/rules.md` section 4 says what to do.
 - A direct Owner instruction may narrow scope or make a task read-only.
 - Remote, destructive, database, auth, RLS, payment, deployment and merge actions need an explicit grant at the right level (`.claude/rules.md` section 4).
 - Review verdicts, CI classifications and checkpoint summaries are information. They never grant permission to stage, commit, push, open a PR, merge, deploy or write to a database.

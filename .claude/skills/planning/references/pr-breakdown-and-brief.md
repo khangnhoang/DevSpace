@@ -21,13 +21,13 @@ The plan file is the source of truth and wins on any conflict. The brief names i
 Include:
 
 - the plan path and revision, and the checkpoints to implement (hand over all of them in one dispatch; split only when a later checkpoint needs an Owner decision based on an earlier result);
-- the authority: local commits only, English Conventional Commits, no push, PR or merge; never call the Supabase MCP; never read `.env*`;
+- the authority the Owner granted (for example local commits per checkpoint, as English Conventional Commits); the standing limits, no push, PR or merge, no Supabase MCP and no `.env*`, are owned by `.claude/rules.md` section 4;
 - the sources to read first, including every matching skill;
-- a database metadata snapshot when the work touches the database (the implementor cannot query it);
+- a hosted database metadata snapshot when the work touches the database (the implementor cannot reach hosted: `.claude/rules.md` section 4);
 - files and domains not to touch; how to size the work if it grows (return to Main, do not widen scope);
 - concerns the plan does not cover, stated as a risk to prove with the expected result;
 - the report: per checkpoint the changed files and why, the checks run with exact results, a `Tự review` block, deviations from the plan, remaining risks, the commit list.
 
 The implementor stops and reports on any mismatch with the plan, a missing decision, or a finding that needs the Owner; it does not ask the Owner itself.
 
-After starting the session, check its effort with `get_session` and fix it with `set_session_effort` (`.claude/rules.md` section 2).
+After starting the session, check and fix its effort as `.claude/rules.md` section 2 (Roles) says.

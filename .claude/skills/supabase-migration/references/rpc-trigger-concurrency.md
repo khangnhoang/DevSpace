@@ -16,7 +16,7 @@ For every RPC review report each boundary, even when the answer is "unknown" or 
 
 ## Triggers
 
-Inspect existing triggers first. Reuse a shared helper such as `handle_updated_at` if it exists and fits. State the intended effect and any effect on unrelated rows; do not touch auth provisioning triggers (`handle_new_user`) unless the task is about provisioning. Do not report a planned trigger test as executed.
+Inspect existing triggers first. Reuse an existing trigger helper from the snapshot when one fits. State the intended effect and any effect on unrelated rows; do not touch auth provisioning triggers (`handle_new_user`) unless the task is about provisioning. Do not report a planned trigger test as executed.
 
 ## Races and idempotency
 

@@ -6,14 +6,14 @@ Plan: [plan.md](plan.md). Problems: [problems.md](problems.md). Git history is t
 
 | Field | Value |
 | --- | --- |
-| Spec revision | `plan.md` r2 (2026-10-22), master plan. The FEAT-017 entry plan r2 is closed. U7 has no detail plan yet. |
-| Current unit / checkpoint | FEAT-018 (install the e2e browser without apt) merged in PR 27 (`80916d6`); open until the install step stays under 30 seconds on the next pushes to `main`. FEAT-017 closed (PR 25, PR 26). U7 Dependency policy not started. |
-| Status | FEAT-018 delivered; the first push run on `main` met its acceptance (milestone), more push runs are awaited. U7 planning has not started. |
-| Completed evidence | FEAT-017 and FEAT-018 are in their milestones; CI results are in the PR 25, PR 26 and PR 27 bodies. None for U7 yet. U6 evidence is in its milestones; its five D28 suppressions are tracked in backlog BL-003. |
+| Spec revision | `plan.md` r2 (2026-10-22), master plan; U7 detail plan `implementation-plans/u7-dependency-policy/plan.md` r4 (2026-10-27, adds D7), Codex plan gate PASS in round 4, approved by the Owner on 2026-10-27. |
+| Current unit / checkpoint | U7 Dependency policy (FEAT-001, with INF-002 batched) on `docs/infra-dependency-policy`; plan written, no checkpoint started. |
+| Status | U7 plan r4 approved; implementation of CP1 to CP3 starting. |
+| Completed evidence | U1 to U6, FEAT-017 and FEAT-018 are in their milestones; the five U6 D28 suppressions are tracked in backlog BL-003. U7 plan r4: Codex plan gate PASS in round 4, 0 Critical and 0 Required (session `01a17c8f-c114-7cb1-a896-17699bfb4688`). |
 | Accepted deviations | none for U7. |
-| Blockers / Owner decisions | none. |
-| Next action | Observe the browser install step on the push run after the agent-workflow AW-011 PR merges; FEAT-018 closes in the docs of the task after it. Main writes the U7 detail plan (FEAT-001) on `docs/infra-dependency-policy` when the Owner names it; U7 gets no Codex gate (docs only). |
-| Current authority | none for infrastructure. None for U7. |
+| Blockers / Owner decisions | none. U7 decisions D1 to D7 are in its plan. |
+| Next action | A Sonnet session implements CP1 to CP3 with local commits; Main reviews and runs CP4. U7 gets no Codex gate on the diff (plan section 1.4). |
+| Current authority | The Owner approved U7 plan r4 and granted the plan commit and the implementation of CP1 to CP3 by a Sonnet session with local commits per checkpoint (2026-10-27). Push, PR and merge are separate grants. |
 | Hosted state | baseline recorded as applied by `migration repair`; hosted lists 4 versions, `20261021000000_baseline` first (`list_migrations`, 2026-10-23). INF-001 has no hosted step. |
 
 ## Milestones
@@ -57,3 +57,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-26 FEAT-017 merged; PR CI passed all six jobs with `changes` failing as expected, the push run on `main` passed all six with `changes` skipped (PR 25, `df7e4f4`).
 - 2026-10-27 FEAT-017 AC1 observed on PR 26 (`db` and `e2e` skipped, the four other jobs passed, mergeable); FEAT-017 closed (`ffaf0d3`).
 - 2026-10-27 FEAT-018 merged; the push run on `main` passed all six jobs and the browser install step took 6 seconds (PR 27, `80916d6`).
+- 2026-10-27 U7 detail plan r4 written with Owner decisions D1 to D7, Codex plan gate PASS in round 4, approved by the Owner; FEAT-018 closed, the install step stayed under 30 seconds on the push runs after PR 27 and PR 28 (this commit).

@@ -44,6 +44,14 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Direction: small UI fix: close the menu in `handleLogout` (and check whether the menu should also close on route change), then check sign out and sign in by hand.
 - Exit condition: after signing out and signing in again, the avatar menu is closed until clicked.
 
+### BL-008: the admin course list falls back to an image that does not exist
+
+- Status: Open (2026-10-27).
+- Problem: `app/admin/courses/coursesclient.tsx:198` shows `/placeholder.jpg` for a course without `image_url`, but `public/` has no such file, so the image request fails with a 404 and the course card shows a broken image.
+- Evidence: the `e2e` web server logs `internal image response failed for /placeholder.jpg 404` in CI runs 40374119999, 40379238483 and 40383406684, before and after infrastructure FEAT-018; the tests still pass. The seed sets no `image_url` (`supabase/seed.sql`), and the line above is the only reference to the file in `app` and `lib`.
+- Direction: small UI task: add a fallback image to `public/` or render a placeholder block instead, and check the admin course list by hand; FEAT-015 (seed images) would hide the 404 locally but not fix the fallback.
+- Exit condition: the admin course list shows a working fallback for a course without an image, and the `e2e` log has no `/placeholder.jpg 404`.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

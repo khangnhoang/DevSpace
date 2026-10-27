@@ -16,16 +16,10 @@ Direction the Owner has set that this program delivers in a later unit. Each ent
 - Direction: run two local Supabase stacks instead of one: `dev` (seed data, manual QA) and `test` (the `rls` and `e2e` suites, each on a fresh `db reset`, still cleaning up after themselves), with distinct `project_id`s and port ranges, shared migrations and seed, and test helpers that read the `test` stack. A stack is started only when needed and stopped after use; every start and stop is confirmed (`supabase status` and `docker ps` for that `project_id`), not assumed from the command's exit; a reset needs to know who owns the stack. A third stack (separate `rls` and `e2e`) was considered and not chosen: double the containers for little gain. CI is unaffected (one stack per job). Needs a master-plan revision before it starts.
 - Target program: infrastructure.
 
-## FEAT-018: Install the e2e browser without apt
-
-- Status: delivered in PR 27 (`80916d6`; Owner approved option A on 2026-10-27); the install step took 6 seconds on the first push run on `main`; awaiting the next push runs before it closes.
-- Direction: the `e2e` job installs only the headless shell, `npx playwright install --only-shell chromium`, without `--with-deps`. Over 13 CI runs (2026-10-24 to 2026-10-26) the step took 17 to 30 seconds in 10 runs and 2m39s, 9m24s and 15m02s in 3 (median 23s), the slow time spent in apt fetching up to 24.9 MB of fonts and patch upgrades (`libnss3`, `xvfb`) from `azure.archive.ubuntu.com` at 19 to 185 kB/s (16.9 MB in the 15m02s run); the browser downloads took about 8 seconds every time. Every library Chromium needs was already the newest version on the `ubuntu-26.04` image, and no e2e test compares screenshots. Not chosen: the image's Google Chrome through `channel: "chrome"` in CI (a different version and headless mode from the local run, moving with each image update), and `--with-deps --only-shell` (apt still runs).
-- Acceptance: the `e2e` job passes all 46 tests with no `Installing dependencies` in the step log, and the step stays under 30 seconds on the next pushes to `main`.
-- Target program: infrastructure.
-
 ## Closed
 
 - FEAT-002 — Done: `test-quality-strategy` ported in U3 (PR 15) and `playwright-cli` vendored in U4 (PR #17)
 - FEAT-003 — Done: `db reset` and the local-stack rule in U2 (PR 12), the RLS tests in `supabase-migration` in U3 (PR #15)
 - FEAT-004 — Done: the CI jobs and their commands in `git-pr-workflow` and `CLAUDE.md`, added by U1 to U3 in PR 11, PR 12 and PR 15, and by U4 (PR #17)
 - FEAT-017 — Done: `db` and `e2e` are skipped on docs-only pull requests, delivered in PR 25 and AC1 observed on the first docs-only PR (PR #26)
+- FEAT-018 — Done: the `e2e` job installs only the headless shell without apt; the push run on `main` after PR 28 (run 40383406684) passed all six jobs and 46 tests with the install step at 5 seconds and no `Installing dependencies` (PR #27)

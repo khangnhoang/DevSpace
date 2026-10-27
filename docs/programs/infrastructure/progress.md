@@ -8,11 +8,11 @@ Plan: [plan.md](plan.md). Problems: [problems.md](problems.md). Git history is t
 | --- | --- |
 | Spec revision | `plan.md` r2 (2026-10-22), master plan; U7 detail plan `implementation-plans/u7-dependency-policy/plan.md` r4 (2026-10-27, adds D7), Codex plan gate PASS in round 4, approved by the Owner on 2026-10-27. |
 | Current unit / checkpoint | U7 Dependency policy (FEAT-001, with INF-002 batched) on `docs/infra-dependency-policy`; CP1 (INF-002), CP2 (skill) and CP3 (records) committed; CP4 (AC8 trigger check) is Main's. |
-| Status | U7 CP1 to CP4 done and reviewed by Main; the Appendix A manual rows Q1 to Q4 (AC6) are pending an Owner sign-in; `npm test` 192 passed and `npm run test:e2e` 46 passed after `db reset`. |
+| Status | U7 CP1 to CP4 done and reviewed by Main; AC6 manual rows Q1 to Q4 passed. Ready for push and PR. |
 | Completed evidence | U1 to U6, FEAT-017 and FEAT-018 are in their milestones; the five U6 D28 suppressions are tracked in backlog BL-003. U7 plan r4: Codex plan gate PASS in round 4, 0 Critical and 0 Required (session `01a17c8f-c114-7cb1-a896-17699bfb4688`). |
 | Accepted deviations | U7 (Main review of `8e58883..7bc78e9`): the FEAT-014 Direction sentence "Needs a master-plan revision before it starts" moved into its backlog Status; FEAT-001's "Found" and "Left" bullets trimmed to a pointer at the backlog entries; the `dependency-updates` `@supabase/ssr` row says a security fix is the only reason to update (ADR 0001 says only not to modernize); `@types/nodemailer` sits in BL-009 with `nodemailer`. |
 | Blockers / Owner decisions | none. U7 decisions D1 to D7 are in its plan. |
-| Next action | The Owner runs the QA rows Q1 to Q4 of the plan's Appendix A (they need a sign-in); then push and PR (separate grants). U7 gets no Codex gate on the diff (plan section 1.4). |
+| Next action | Push and PR (separate Owner grants). After the merge: FEAT-001 closes, the first dependency check runs, and the program closes (plan section 5). U7 gets no Codex gate on the diff (plan section 1.4). |
 | Current authority | The Owner approved U7 plan r4 and granted the plan commit and the implementation of CP1 to CP3 by a Sonnet session with local commits per checkpoint (2026-10-27). Push, PR and merge are separate grants. |
 | Hosted state | baseline recorded as applied by `migration repair`; hosted lists 4 versions, `20261021000000_baseline` first (`list_migrations`, 2026-10-23). INF-001 has no hosted step. |
 
@@ -62,4 +62,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-27 U7 CP2: `dependency-updates` skill, the `test-quality-strategy` Dependency row and the `code-review` and `program-docs` pointers (`b8dbc6e`).
 - 2026-10-27 U7 CP3: FEAT-014 moved to the backlog, FEAT-019, FEAT-020 and BL-009 added, FEAT-001 delivered awaiting merge (`7bc78e9`).
 - 2026-10-27 U7 correction after Main review: every added package adds its dependency row, INF-002 line cites its commit, milestones and deviations recorded (`30da7c8`).
-- 2026-10-27 U7 CP4: Main review of `8e58883..30da7c8` passed; AC8 passed, the nodemailer planning session loaded `dependency-updates` and the BL-004 planning session loaded no skill (sessions `local_11cbcd4a`, `local_f764c8ef`) (this commit).
+- 2026-10-27 U7 CP4: Main review of `8e58883..30da7c8` passed; AC8 passed, the nodemailer planning session loaded `dependency-updates` and the BL-004 planning session loaded no skill (sessions `local_11cbcd4a`, `local_f764c8ef`) (`7165565`).
+- 2026-10-27 U7 AC6: manual rows Q1 to Q4 passed on the seeded local stack, the Owner signed in as `student@devspace.test` and `admin@devspace.test` (this commit).

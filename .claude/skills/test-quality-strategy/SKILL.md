@@ -97,6 +97,7 @@ Run the row for each kind of change, plus the static checks (`npx tsc --noEmit`,
 | Seed (`supabase/seed.sql`) | `npx supabase db reset`, `npm test`, `npm run test:e2e` | Stack, Chromium |
 | Page or UI flow | `npm run test:e2e` when it touches a smoke or payment path, then the manual pass (`frontend-workflow`) | Stack, Chromium |
 | E2E helper, fixture or env map (`__tests__/e2e`, `__tests__/helpers/e2e-env.ts`, `scripts/e2e`) | `npm run test:unit`, `npm run test:e2e` | Stack, Chromium |
+| Dependency (`package.json`, `package-lock.json`); procedure per update type: [dependency-updates](../dependency-updates/SKILL.md) | static checks, `npm run build`, `npm test`, `npm run test:e2e` | Stack, Chromium |
 | Docs only (`docs/`, `.claude/`, `CLAUDE.md`, `README.md`) | `npm run docs:check`; `npm run docs:check:test` when the checker changed | nothing |
 
 ## Running and reporting

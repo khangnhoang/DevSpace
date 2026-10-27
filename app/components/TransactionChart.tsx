@@ -34,7 +34,7 @@ export default function TransactionChart({ data }: ChartProps) {
             <Tooltip 
               contentStyle={{ backgroundColor: '#0f1116', border: 'none', borderRadius: '8px'}} 
               itemStyle={{color: '#fff'}}
-              formatter={(value: number) => [`${value} học viên`, 'Số lượng']}
+              formatter={(value) => [`${value} học viên`, 'Số lượng']}
             />
           </PieChart>
         </ResponsiveContainer>

@@ -11,7 +11,7 @@ Use when a task adds, removes or updates a package in `package.json` or `package
 
 Do not use it for a change that touches no dependency, for reviewing a dependency diff (`code-review`, [special-cases.md](../code-review/references/special-cases.md), Dependency), or for the Supabase migration workflow (`supabase-migration`).
 
-Whether an install, update or removal is allowed at all is owned by `.claude/rules.md` section 4 ([rules](../../rules.md)): it needs the Owner's request or an approved plan. This skill says how, not whether. It holds no list of current versions, outdated packages or open findings; those are state, recorded in the backlog and the program docs (`program-docs`).
+Whether an install, update or removal is allowed at all is owned by `.claude/rules.md` section 4 ([rules](../../rules.md)): it needs the Owner's request or an approved plan. This skill says how, not whether. It holds no list of current versions, outdated packages or open findings; those are state, recorded in the `dependency-maintenance` program docs (`program-docs`).
 
 ## Workflow
 
@@ -36,7 +36,7 @@ A major is its own task. Size it by [docs/agent-loops.md](../../../docs/agent-lo
 
 - Order by impact: a finding on a production runtime path first (`npm audit --omit=dev`), dev-only findings after.
 - Prefer the smallest in-range fix. `npm audit fix` is read as a lockfile diff before it is kept; `npm audit fix --force` is never used, because it installs a major or a downgrade without a plan.
-- A finding with no in-range fix is not forced: it becomes a backlog entry that names the advisory, the affected path and the fixed version, and the fix runs as a major or minor task above.
+- A finding with no in-range fix is not forced: it becomes an entry in `dependency-maintenance` `problems.md` that names the advisory, the affected path and the fixed version, and the fix runs as a major or minor task above.
 - A fix is not postponed to the next regular update when it affects a production runtime path.
 
 ### Add a package
@@ -53,7 +53,7 @@ A manual review at fixed points: Main runs it when a delivery program opens or c
 
 1. Run `npm outdated`, `npm audit` and `npm audit --omit=dev`.
 2. Review every row of the table below, the exact pins included (Supabase CLI, `@playwright/test`, the Monaco CDN version, the Node major), against the latest release and advisories.
-3. Change no file except records. A patch update becomes one small task. Each minor, major or security update not yet tracked becomes or updates an entry in `docs/backlog/` (one entry per package), in the shape `program-docs` gives.
+3. Change no file except records. A patch update becomes one small task. Each minor, major or security update not yet tracked becomes or updates an entry of the `dependency-maintenance` program (one entry per package; `problems.md` for a security finding, `future-features.md` otherwise), in the shape `program-docs` gives, or is named in the section 2 facts of an initiative plan of that program that will update it.
 4. Install nothing: an update starts only on the Owner's request (`.claude/rules.md` section 4).
 
 ## Dependency rows
@@ -62,7 +62,7 @@ A package that was already in `package.json` before this skill and has no specia
 
 | Dependency | Where it is set | Rule |
 | --- | --- | --- |
-| Node | Vercel project setting (production), `node-version` in every job of `.github/workflows/ci.yml`, the `@types/node` major in `package.json` | Production, CI and `@types/node` use one Node major. A change of any of them moves all three in one task. The move to Node 26 is backlog FEAT-019, not a step here. |
+| Node | Vercel project setting (production), `node-version` in every job of `.github/workflows/ci.yml`, the `@types/node` major in `package.json` | Production, CI and `@types/node` use one Node major. A change of any of them moves all three in one task. The move to Node 26 is FEAT-019 in `dependency-maintenance`, not a step here. |
 | Supabase CLI (`supabase`) | exact pin in `package.json` | Never a range. An update is accepted only when `npx supabase db reset`, the local catalog compared with the hosted catalog (Main-only, `.claude/rules.md` section 4) and the full suite stay green. |
 | `@playwright/test` | exact pin in `package.json`; CI installs the browser with `npx playwright install --only-shell chromium` in the `e2e` job | Never a range. An update runs `npm run test:e2e` locally, and the CI `e2e` job must pass with the browser install step unchanged. |
 | `next` with `eslint-config-next` | both in `package.json` | They move together to the same version. Run `npm run build` and `npm run lint` besides the Dependency row; the server action tests read Next internals, so a Next update can fail them first (`test-quality-strategy`, Server action rows). |

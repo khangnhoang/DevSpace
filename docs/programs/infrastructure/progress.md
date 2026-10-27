@@ -7,8 +7,8 @@ Plan: [plan.md](plan.md). Problems: [problems.md](problems.md). Git history is t
 | Field | Value |
 | --- | --- |
 | Spec revision | `plan.md` r2 (2026-10-22), master plan; U7 detail plan `implementation-plans/u7-dependency-policy/plan.md` r4 (2026-10-27, adds D7), Codex plan gate PASS in round 4, approved by the Owner on 2026-10-27. |
-| Current unit / checkpoint | U7 Dependency policy (FEAT-001, with INF-002 batched) on `docs/infra-dependency-policy`; plan written, no checkpoint started. |
-| Status | U7 plan r4 approved; implementation of CP1 to CP3 starting. |
+| Current unit / checkpoint | U7 Dependency policy (FEAT-001, with INF-002 batched) on `docs/infra-dependency-policy`; CP1 (INF-002) committed, CP2 next. |
+| Status | U7 CP1 done except the Appendix A manual rows Q1 to Q4, which need an Owner sign-in and are pending; `npm test` 192 passed and `npm run test:e2e` 46 passed after `db reset`. |
 | Completed evidence | U1 to U6, FEAT-017 and FEAT-018 are in their milestones; the five U6 D28 suppressions are tracked in backlog BL-003. U7 plan r4: Codex plan gate PASS in round 4, 0 Critical and 0 Required (session `01a17c8f-c114-7cb1-a896-17699bfb4688`). |
 | Accepted deviations | none for U7. |
 | Blockers / Owner decisions | none. U7 decisions D1 to D7 are in its plan. |

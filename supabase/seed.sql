@@ -87,9 +87,9 @@ insert into public.payments (id, user_id, course_id, amount, status) overriding 
   values (1, '33333333-3333-4333-8333-333333333333', 2, 199000, 'success');
 
 insert into public.exercises (id, lesson_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation) values
-  (1, 3, 'Từ khóa nào khai báo biến có thể gán lại?', 'let', 'const', 'fixed', 'static', 'A', 'let khai báo biến có thể gán lại giá trị.'),
-  (2, 3, 'Từ khóa nào khai báo hằng số?', 'var', 'const', 'set', 'def', 'B', 'const khai báo biến không gán lại được.'),
-  (3, 1, 'Thẻ nào bao quanh toàn bộ nội dung hiển thị của trang?', 'head', 'title', 'body', 'meta', 'C', 'Nội dung hiển thị nằm trong thẻ body.');
+  (1, 3, 'Từ khóa nào khai báo biến có thể gán lại?', 'let', 'const', 'fixed', 'static', 'a', 'let khai báo biến có thể gán lại giá trị.'),
+  (2, 3, 'Từ khóa nào khai báo hằng số?', 'var', 'const', 'set', 'def', 'b', 'const khai báo biến không gán lại được.'),
+  (3, 1, 'Thẻ nào bao quanh toàn bộ nội dung hiển thị của trang?', 'head', 'title', 'body', 'meta', 'c', 'Nội dung hiển thị nằm trong thẻ body.');
 
 insert into public.coupons (id, code, discount_percent, max_uses, used_count, is_active) overriding system value
   values (1, 'LOCAL10', 10, 100, 0, true);

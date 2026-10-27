@@ -52,6 +52,14 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Direction: small UI task: add a fallback image to `public/` or render a placeholder block instead, and check the admin course list by hand; FEAT-015 (seed images) would hide the 404 locally but not fix the fallback.
 - Exit condition: the admin course list shows a working fallback for a course without an image, and the `e2e` log has no `/placeholder.jpg 404`.
 
+### BL-010: hosted `exercises` rows may hold uppercase correct answers
+
+- Status: Open (2026-10-27).
+- Problem: the seed stored `correct_answer` as `A`, `B` and `C` while `Quiz.tsx:83` compares the selected lowercase option exactly (infrastructure INF-002, fixed in the seed only). The hosted `exercises` table may hold uppercase answers too, and then those quizzes never accept a correct answer on production.
+- Evidence: found as the separate read-only check named in INF-002; nothing has been read from hosted. The admin form writes `a` to `d` (`app/admin/lessons/page.tsx`), so only rows created another way can differ.
+- Direction: count `exercises` rows whose `correct_answer` is not one of `a` to `d`, read-only on hosted (reading data rows needs the Owner's approval, `.claude/rules.md` section 4). If any exist, fix them through a reviewed data change (a separate grant), or make the comparison case-insensitive.
+- Exit condition: hosted `exercises` holds only lowercase answers, or the Owner confirms there are none.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

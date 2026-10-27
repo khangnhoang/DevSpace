@@ -63,6 +63,7 @@ Closing an entry grants nothing (`.claude/rules.md` section 4). Closing a progra
 ## Lifecycle, index and ADRs
 
 - A program is a folder under `docs/programs/` with a `progress.md`. Each has one row in the Programs table of `docs/README.md` (`Path`, `Lifecycle`). The kind is the Lifecycle value: `active` or `closed` for a delivery program, `evergreen` for an evergreen one. Status is read from `progress.md`, never copied into the table.
+- Opening and closing a delivery program each include the dependency check ([dependency-updates](../dependency-updates/SKILL.md), Dependency check).
 - Only a delivery program closes: say in State that it is completed, resolve or move its open problems, review the backlog, and set the row to `closed`. An evergreen program never closes. A delivery program that builds a capability may hand it to an evergreen program when it closes.
 - An initiative belongs to exactly one program. One PR may carry work of several programs; a small part in another program is one milestone there citing the PR. An evergreen program has at most one open initiative with a plan at a time; several items may share one initiative, or be one small task with no plan.
 - An ADR in `docs/adr/` records a decision that outlives one program or spans programs. A decision that matters to one program stays in its master plan or charter. Every `docs/adr/*.md` except `README.md` is listed in `docs/adr/README.md` with date, status and a one-line summary.

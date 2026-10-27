@@ -6,14 +6,14 @@ Plan: [plan.md](plan.md). Problems: [problems.md](problems.md). Git history is t
 
 | Field | Value |
 | --- | --- |
-| Spec revision | `plan.md` r2 (2026-10-22), master plan. The FEAT-017 entry plan r2 is closed. U7 has no detail plan yet. |
-| Current unit / checkpoint | FEAT-018 (install the e2e browser without apt) merged in PR 27 (`80916d6`); open until the install step stays under 30 seconds on the next pushes to `main`. FEAT-017 closed (PR 25, PR 26). U7 Dependency policy not started. |
-| Status | FEAT-018 delivered; the first push run on `main` met its acceptance (milestone), more push runs are awaited. U7 planning has not started. |
-| Completed evidence | FEAT-017 and FEAT-018 are in their milestones; CI results are in the PR 25, PR 26 and PR 27 bodies. None for U7 yet. U6 evidence is in its milestones; its five D28 suppressions are tracked in backlog BL-003. |
-| Accepted deviations | none for U7. |
-| Blockers / Owner decisions | none. |
-| Next action | Observe the browser install step on the push run after the agent-workflow AW-011 PR merges; FEAT-018 closes in the docs of the task after it. Main writes the U7 detail plan (FEAT-001) on `docs/infra-dependency-policy` when the Owner names it; U7 gets no Codex gate (docs only). |
-| Current authority | none for infrastructure. None for U7. |
+| Spec revision | `plan.md` r2 (2026-10-22), master plan; U7 detail plan `implementation-plans/u7-dependency-policy/plan.md` r4 (2026-10-27, adds D7), Codex plan gate PASS in round 4, approved by the Owner on 2026-10-27. |
+| Current unit / checkpoint | U7 Dependency policy (FEAT-001, with INF-002 batched) on `docs/infra-dependency-policy`; CP1 (INF-002), CP2 (skill) and CP3 (records) committed; CP4 (AC8 trigger check) is Main's. |
+| Status | U7 CP1 to CP4 done and reviewed by Main; AC6 manual rows Q1 to Q4 passed. Ready for push and PR. |
+| Completed evidence | U1 to U6, FEAT-017 and FEAT-018 are in their milestones; the five U6 D28 suppressions are tracked in backlog BL-003. U7 plan r4: Codex plan gate PASS in round 4, 0 Critical and 0 Required (session `01a17c8f-c114-7cb1-a896-17699bfb4688`). |
+| Accepted deviations | U7 (Main review of `8e58883..7bc78e9`): the FEAT-014 Direction sentence "Needs a master-plan revision before it starts" moved into its backlog Status; FEAT-001's "Found" and "Left" bullets trimmed to a pointer at the backlog entries; the `dependency-updates` `@supabase/ssr` row says a security fix is the only reason to update (ADR 0001 says only not to modernize); `@types/nodemailer` sits in BL-009 with `nodemailer`. |
+| Blockers / Owner decisions | none. U7 decisions D1 to D7 are in its plan. |
+| Next action | Push and PR (separate Owner grants). After the merge: FEAT-001 closes, the first dependency check runs, and the program closes (plan section 5). U7 gets no Codex gate on the diff (plan section 1.4). |
+| Current authority | The Owner approved U7 plan r4 and granted the plan commit and the implementation of CP1 to CP3 by a Sonnet session with local commits per checkpoint (2026-10-27). Push, PR and merge are separate grants. |
 | Hosted state | baseline recorded as applied by `migration repair`; hosted lists 4 versions, `20261021000000_baseline` first (`list_migrations`, 2026-10-23). INF-001 has no hosted step. |
 
 ## Milestones
@@ -57,3 +57,10 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-26 FEAT-017 merged; PR CI passed all six jobs with `changes` failing as expected, the push run on `main` passed all six with `changes` skipped (PR 25, `df7e4f4`).
 - 2026-10-27 FEAT-017 AC1 observed on PR 26 (`db` and `e2e` skipped, the four other jobs passed, mergeable); FEAT-017 closed (`ffaf0d3`).
 - 2026-10-27 FEAT-018 merged; the push run on `main` passed all six jobs and the browser install step took 6 seconds (PR 27, `80916d6`).
+- 2026-10-27 U7 detail plan r4 written with Owner decisions D1 to D7, Codex plan gate PASS in round 4, approved by the Owner; FEAT-018 closed, the install step stayed under 30 seconds on the push runs after PR 27 and PR 28 (`f12257d`).
+- 2026-10-27 U7 CP1: seeded quiz answers lowercase, BL-010 opened, INF-002 resolved; `npm test` 192 and `npm run test:e2e` 46 passed, manual rows Q1 to Q4 pending for the Owner (`8e58883`).
+- 2026-10-27 U7 CP2: `dependency-updates` skill, the `test-quality-strategy` Dependency row and the `code-review` and `program-docs` pointers (`b8dbc6e`).
+- 2026-10-27 U7 CP3: FEAT-014 moved to the backlog, FEAT-019, FEAT-020 and BL-009 added, FEAT-001 delivered awaiting merge (`7bc78e9`).
+- 2026-10-27 U7 correction after Main review: every added package adds its dependency row, INF-002 line cites its commit, milestones and deviations recorded (`30da7c8`).
+- 2026-10-27 U7 CP4: Main review of `8e58883..30da7c8` passed; AC8 passed, the nodemailer planning session loaded `dependency-updates` and the BL-004 planning session loaded no skill (sessions `local_11cbcd4a`, `local_f764c8ef`) (`7165565`).
+- 2026-10-27 U7 AC6: manual rows Q1 to Q4 passed on the seeded local stack, the Owner signed in as `student@devspace.test` and `admin@devspace.test` (this commit).

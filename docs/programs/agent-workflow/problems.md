@@ -20,14 +20,6 @@ Charter: `README.md`. Progress: `progress.md`.
 - Direction: one parser change in `check-links.mjs` with fixtures (CommonMark closing fence, code spans across lines, an opening label required), so both checks keep one link reader.
 - Exit condition: the three cases have failing fixtures that pass after the fix, and `npm run docs:check` still passes.
 
-### AW-011: No step re-matches skills to the files a task will change
-
-- Status: Open (2026-10-27, Owner).
-- Problem: Main picks skills from the kind of request, not from the files the work changes. The AW-009 request was "write a plan", so Main loaded `planning` only; the plan then edited `planning/SKILL.md` and its reference, which `skill-authoring` covers, and `skill-authoring` was never read. `CLAUDE.md` rule 6 says to read each matching skill but not when; the small-task steps in `docs/agent-loops.md` (Sizing) have no step that re-matches skills after discovery; the Codex brief template (`code-review`, `codex-brief.md`) takes its skill list from Main, so Codex misses the same skill. The Sonnet brief (`pr-breakdown-and-brief.md`) takes its skill list the same way.
-- Evidence: AW-009 on 2026-10-27: the chat plan's `Tự review` sources, the `planning` Final check and the Codex round 1 brief all omit `skill-authoring`; the Owner caught it, and Codex round 3 with `skill-authoring` found 2 Required (session `01a17940-6d1c-7b52-8c83-2816e6b0f2cc`). The `skill-authoring` description names editing a skill, so the description was not the cause.
-- Direction: after discovery and before editing, list the files the work will change and load every skill whose Use when covers them; the Codex brief's skill list comes from that same file list. Main proposes the owner of each step (`docs/agent-loops.md` Sizing or Loop 0, `codex-brief.md`) in its own plan. (Owner, 2026-10-27) The match is by the work, not only the files it changes: each action, each file it changes and each file or diff it reviews; a read-only review loads skills too. Home: `docs/agent-loops.md` Sizing. The Codex and Sonnet briefs take their skill list from the same list.
-- Exit condition: `docs/agent-loops.md` Sizing states the re-match step, the Codex and Sonnet briefs take their skill list from it, and `npm run docs:check` passes.
-
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.
@@ -40,3 +32,4 @@ One line each: ID, status, one-line outcome. Details stay in Git.
 - AW-007 — Resolved 2026-10-26: U6 audited every instruction, the Owner decided each item, and section 2 states when Main edits state records (PR 23, `bd19c18`).
 - AW-010 — Resolved 2026-10-26: U7 added entry plans, so a delivery program plans a `problems.md` or `future-features.md` entry without revising its master plan (PR 24, `85248b2`).
 - AW-009 — Resolved 2026-10-27: `planning` allows a batch of small independent items in one PR and states the plan approval questions, and `.claude/rules.md` section 2 defines an active implementor (PR 26, `723b985`).
+- AW-011 — Resolved 2026-10-27: `docs/agent-loops.md` Sizing matches skills to the work after discovery, and the Codex and Sonnet briefs take their skill list from it (PR 28, `7ad7a92`).

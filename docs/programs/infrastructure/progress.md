@@ -7,12 +7,12 @@ Plan: [plan.md](plan.md). Problems: [problems.md](problems.md). Git history is t
 | Field | Value |
 | --- | --- |
 | Spec revision | `plan.md` r2 (2026-10-22), master plan; U7 detail plan `implementation-plans/u7-dependency-policy/plan.md` r4 (2026-10-27, adds D7), Codex plan gate PASS in round 4, approved by the Owner on 2026-10-27. |
-| Current unit / checkpoint | U7 Dependency policy (FEAT-001, with INF-002 batched) on `docs/infra-dependency-policy`; CP1 (INF-002) and CP2 (skill) committed, CP3 next. |
-| Status | U7 CP2 done (`dependency-updates` skill, `test-quality-strategy` row, two pointers). CP1 done except the Appendix A manual rows Q1 to Q4, which need an Owner sign-in and are pending; `npm test` 192 passed and `npm run test:e2e` 46 passed after `db reset`. |
+| Current unit / checkpoint | U7 Dependency policy (FEAT-001, with INF-002 batched) on `docs/infra-dependency-policy`; CP1 (INF-002), CP2 (skill) and CP3 (records) committed; CP4 (AC8 trigger check) is Main's. |
+| Status | U7 CP3 done (FEAT-014 moved to the backlog, FEAT-019, FEAT-020 and BL-009 added, FEAT-001 delivered awaiting merge). CP2 done (`dependency-updates` skill, `test-quality-strategy` row, two pointers). CP1 done except the Appendix A manual rows Q1 to Q4, which need an Owner sign-in and are pending; `npm test` 192 passed and `npm run test:e2e` 46 passed after `db reset`. |
 | Completed evidence | U1 to U6, FEAT-017 and FEAT-018 are in their milestones; the five U6 D28 suppressions are tracked in backlog BL-003. U7 plan r4: Codex plan gate PASS in round 4, 0 Critical and 0 Required (session `01a17c8f-c114-7cb1-a896-17699bfb4688`). |
 | Accepted deviations | none for U7. |
 | Blockers / Owner decisions | none. U7 decisions D1 to D7 are in its plan. |
-| Next action | A Sonnet session implements CP1 to CP3 with local commits; Main reviews and runs CP4. U7 gets no Codex gate on the diff (plan section 1.4). |
+| Next action | Main reviews the CP1 to CP3 diff and runs CP4; the Owner QA rows Q1 to Q4 of the plan's Appendix A are still pending. U7 gets no Codex gate on the diff (plan section 1.4). |
 | Current authority | The Owner approved U7 plan r4 and granted the plan commit and the implementation of CP1 to CP3 by a Sonnet session with local commits per checkpoint (2026-10-27). Push, PR and merge are separate grants. |
 | Hosted state | baseline recorded as applied by `migration repair`; hosted lists 4 versions, `20261021000000_baseline` first (`list_migrations`, 2026-10-23). INF-001 has no hosted step. |
 

@@ -52,6 +52,14 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Direction: small UI task: add a fallback image to `public/` or render a placeholder block instead, and check the admin course list by hand; FEAT-015 (seed images) would hide the 404 locally but not fix the fallback.
 - Exit condition: the admin course list shows a working fallback for a course without an image, and the `e2e` log has no `/placeholder.jpg 404`.
 
+### BL-009: security findings with no in-range fix
+
+- Status: Open (2026-10-27, recorded by infrastructure U7).
+- Problem: `npm audit` (2026-10-27) reports 5 findings that `npm audit fix` cannot fix in range: `nodemailer` 7.0.13 high, fixed only in 10.2.1 (with `@types/nodemailer`, which moves with it); `dompurify` critical, pinned exactly by the latest `monaco-editor` 0.57.0, and `monaco-editor` low through it; `@tailwindcss/typography` and `postcss-selector-parser` moderate, where npm offers only a downgrade. Dev-only: the `eslint-config-next` chain (`fast-glob`, `micromatch`, `braces`) is fixed only by a downgrade.
+- Evidence: `npm audit` and `npm audit --omit=dev` on 2026-10-27; infrastructure INF-001 left the same findings. The app never loads the npm `monaco-editor`: `@monaco-editor/loader` loads 0.55.1 from the CDN, which `npm audit` cannot see (`dependency-updates`, Monaco row).
+- Direction: `nodemailer` 10 as a major task (mail is a server path: check the mail record in the e2e suite); review the Monaco advisories against the CDN version and the `dompurify` use; wait for upstream fixes for the rest, re-checking at each dependency check. Never `npm audit fix --force`.
+- Exit condition: `npm audit --omit=dev` reports no critical or high finding, and every remaining finding is accepted by the Owner in this entry.
+
 ### BL-010: hosted `exercises` rows may hold uppercase correct answers
 
 - Status: Open (2026-10-27).

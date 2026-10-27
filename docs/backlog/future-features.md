@@ -44,19 +44,9 @@ Direction the Owner has set that is outside the current scope. Work that is in s
 - Direction: run two local Supabase stacks instead of one: `dev` (seed data, manual QA) and `test` (the `rls` and `e2e` suites, each on a fresh `db reset`, still cleaning up after themselves), with distinct `project_id`s and port ranges, shared migrations and seed, and test helpers that read the `test` stack. A stack is started only when needed and stopped after use; every start and stop is confirmed (`supabase status` and `docker ps` for that `project_id`), not assumed from the command's exit; a reset needs to know who owns the stack. A third stack (separate `rls` and `e2e`) was considered and not chosen: double the containers for little gain. CI is unaffected (one stack per job).
 - Target program: none yet (backlog; a program if the Owner opens one).
 
-## FEAT-019: Node 26 for production, CI and `@types/node`
-
-- Status: Deferred until Node 26 enters LTS (scheduled 2026-10-28); Owner decision D3 of infrastructure U7 (2026-10-27) and the Owner decision of 2026-10-23.
-- Direction: move the three places that set the Node major to 26 in one task, skipping 24: the Vercel production setting, `node-version` in every job of `.github/workflows/ci.yml`, and `@types/node`. They differ today, and the `dependency-updates` Node row requires one major; the Owner's machine follows. Codex-gated because it changes CI and deploy (`.claude/rules.md` section 3). Out of this entry: an `engines` field or `.nvmrc` unless the task's plan decides it.
-- Target program: none yet (backlog; its own Codex-gated task).
-
-## FEAT-020: major updates waiting
-
-- Status: Deferred (recorded by infrastructure U7 from `npm outdated`, 2026-10-27).
-- Direction: one task per major, each sized by `docs/agent-loops.md` Sizing and following `dependency-updates` (Major): `typescript` 5 to 7, `eslint` 9 to 10, `lucide-react` 0.x to 1, `@google/genai` 1 to 2. `nodemailer` and `@types/nodemailer` are in BL-009, `@types/node` in FEAT-019. `@supabase/ssr` 0.7 to 0.12 is an auth helper and waits for the techstack migration (ADR 0001). The list is a snapshot: re-run `npm outdated` when a task starts.
-- Target program: none yet (backlog; small tasks).
-
 ## Closed
 
 - FEAT-001 — Moved to [infrastructure](../programs/infrastructure/future-features.md)
 - FEAT-007 — Moved to [agent-workflow](../programs/agent-workflow/future-features.md)
+- FEAT-019 — Moved to [dependency-maintenance](../programs/dependency-maintenance/future-features.md)
+- FEAT-020 — Moved to [dependency-maintenance](../programs/dependency-maintenance/future-features.md)

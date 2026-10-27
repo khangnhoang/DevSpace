@@ -18,5 +18,6 @@ Status lives in each program's `progress.md`, never in this table.
 | Path | Lifecycle | Purpose |
 | --- | --- | --- |
 | `programs/agent-workflow` | evergreen | Agent rules, skills, lifecycle loops and docs checks for working on DevSpace with Claude Code and Codex. |
-| `programs/infrastructure` | active | Test infrastructure (Vitest, Playwright), an isolated Supabase local with seed data, and CI on GitHub Actions. |
+| `programs/infrastructure` | closed | Test infrastructure (Vitest, Playwright), an isolated Supabase local with seed data, and CI on GitHub Actions. |
+| `programs/dependency-maintenance` | evergreen | Keeping dependencies current and safe: the dependency check results, update initiatives and dependency findings ([ADR 0004](adr/0004-dependency-maintenance-program.md)). |
 | `programs/security-hotfix` | active | Security fixes H1 and H2 (privilege escalation, data exposure, write integrity); H2-2 is deferred. |

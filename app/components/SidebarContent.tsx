@@ -70,6 +70,9 @@ export default function SidebarContent({
 
   useEffect(() => {
     let channel: RealtimeChannel;
+    // Cleanup can run before the awaits below finish, while `channel` is still unset. A channel created after that
+    // would never be removed, and the next mount would get it back by topic and throw on `.on()` after `subscribe()`.
+    let cancelled = false;
 
     const initDataAndRealtime = async () => {
       try {
@@ -93,6 +96,7 @@ export default function SidebarContent({
         // Gọi lần đầu
         await fetchProgress();
         setIsLoading(false); // Tắt loading sau khi fetch xong
+        if (cancelled) return;
 
         // 2. Đăng ký Realtime (Lắng nghe bảng user_progress)
         channel = supabase
@@ -122,6 +126,7 @@ export default function SidebarContent({
 
     // Cleanup khi unmount
     return () => {
+      cancelled = true;
       if (channel) supabase.removeChannel(channel);
     };
   }, [courseSlug]);

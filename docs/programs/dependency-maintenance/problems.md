@@ -30,10 +30,10 @@ Charter: [README.md](README.md). Progress: [progress.md](progress.md).
 
 ### DM-003: sidebar realtime channel leaks on early unmount
 
-- Status: Open (2026-10-27, found by U1 manual QA); fixed in U1 by c7c8da4, closes when the U1 PR merges.
+- Status: Open (2026-10-27, found by U1 manual QA); fixed in U1 by c7c8da4 and e753175, closes when the U1 PR merges.
 - Problem: on every `/learn` page the console shows `Lỗi khởi tạo sidebar: Error: cannot add postgres_changes callbacks for realtime:sidebar_progress_tracking after subscribe()` and Next shows "1 Issue". The sidebar effect created its channel only after `getUser` and `fetchProgress`; when the component unmounted first (always in dev under StrictMode's double effect, in production when the user leaves while the sidebar loads), cleanup ran while `channel` was unset, the first channel leaked, and the next mount got it back by topic and called `.on()` on a subscribed channel.
-- Evidence: `app/components/SidebarContent.tsx`, the `useEffect` from line 71. `@supabase/supabase-js` 2.83.0 (realtime-js) accepted `.on()` after `subscribe()`; 2.118.0 throws in `RealtimeChannel`, so the update exposed an app bug. The e2e page-error guard never saw it (`npm run test:e2e` 46 passed on 2.118.0): the suite runs a production build, which has no StrictMode double effect.
-- Direction: a `cancelled` flag set in cleanup and checked before the channel is created (c7c8da4).
+- Evidence: `app/components/SidebarContent.tsx`, the `useEffect` from line 71. `@supabase/supabase-js` 2.83.0 (realtime-js) accepted `.on()` after `subscribe()`; 2.118.0 throws in `RealtimeChannel`, so the update exposed an app bug. The e2e page-error guard never saw it (`npm run test:e2e` 46 passed on 2.118.0): the suite runs a production build, which has no StrictMode double effect. A second cause, found by Codex: the course layout keeps the desktop `Sidebar` mounted (`app/(main)/learn/[course]/layout.tsx`) and the mobile menu mounts a second `SidebarContent` (`app/components/MobileSidebar.tsx`), and both called `supabase.channel("sidebar_progress_tracking")`, so the second got the first's subscribed instance and threw on `.on()`.
+- Direction: a `cancelled` flag set in cleanup and checked before the channel is created (c7c8da4), and a topic of its own for each effect run, `sidebar_progress_tracking:<uuid>`, so cleanup removes only its own channel (e753175).
 - Exit condition: the U1 PR is merged and the console on `/learn` pages shows no sidebar error.
 
 ## Resolved

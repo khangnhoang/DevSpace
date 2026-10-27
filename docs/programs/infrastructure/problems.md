@@ -12,4 +12,4 @@ One line each: ID, status, one-line outcome. Details stay in Git.
 
 - AW-001 — Resolved 2026-10-23: the CI job `docs` runs `npm run docs:check` and `npm run docs:check:test` on every pull request and push to `main` (PR 11, run 39821844267).
 - INF-001 — Resolved 2026-10-23: `next` and `eslint-config-next` 16.4.3 plus `npm audit fix` took `npm audit --omit=dev` from 17 findings to 5, none critical or high with an in-range fix; the 5 left are in FEAT-001 (PR 16, `1a13906`).
-- INF-002 — Resolved 2026-10-27: the seed stores lowercase answers `a`, `b`, `c` for exercises 1 to 3, so the seeded quizzes accept their correct answers; whether hosted rows mix cases is backlog BL-010 (this commit).
+- INF-002 — Resolved 2026-10-27: the seed stores lowercase answers `a`, `b`, `c` for exercises 1 to 3, so the seeded quizzes accept their correct answers; whether hosted rows mix cases is backlog BL-010 (`8e58883`).

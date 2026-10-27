@@ -41,7 +41,7 @@ A major is its own task. Size it by [docs/agent-loops.md](../../../docs/agent-lo
 
 ### Add a package
 
-Check necessity, existing alternatives, maintenance, security status, license and runtime versus dev placement (`code-review`, Dependency). Install an exact or ranged version as the neighbouring entries do. A package with a special case adds its own row to the table in the same PR.
+Check necessity, existing alternatives, maintenance, security status, license and runtime versus dev placement (`code-review`, Dependency). Install an exact or ranged version as the neighbouring entries do. Every added package adds its own row to the table in the same PR: where its version is set and its rule, or "no rule beyond the procedures above" when it has no special case.
 
 ### Remove a package
 
@@ -58,7 +58,7 @@ A manual review at fixed points: Main runs it when a delivery program opens or c
 
 ## Dependency rows
 
-A package already in `package.json` with no special case has no row and follows the procedures above. A row lists only where the version is set and what an update must prove.
+A package that was already in `package.json` before this skill and has no special case has no row and follows the procedures above; a package added later always has one. A row lists only where the version is set and what an update must prove.
 
 | Dependency | Where it is set | Rule |
 | --- | --- | --- |
@@ -80,5 +80,5 @@ A package already in `package.json` with no special case has no row and follows 
 - [ ] the change is classified and its procedure followed; each touched package's row was read
 - [ ] the Dependency row of `test-quality-strategy` ran after the last edit, with counts reported
 - [ ] `package.json` and `package-lock.json` changed together, and nothing unrelated
-- [ ] a new special-case package added its row, a removed one lost its row
+- [ ] every added package added its row, a removed one lost its row
 - [ ] a dependency check changed only records and installed nothing

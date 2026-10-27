@@ -70,8 +70,10 @@ export default function SidebarContent({
 
   useEffect(() => {
     let channel: RealtimeChannel;
-    // Cleanup can run before the awaits below finish, while `channel` is still unset. A channel created after that
-    // would never be removed, and the next mount would get it back by topic and throw on `.on()` after `subscribe()`.
+    // Two things make a shared topic throw on `.on()` after `subscribe()`, because supabase.channel() returns the
+    // existing channel for a topic: cleanup can run before the awaits finish, while `channel` is still unset (a
+    // leaked channel), and the layout keeps the desktop sidebar mounted while the mobile menu mounts a second one.
+    // So skip creating the channel after cleanup, and give each run its own topic so cleanup removes only its own.
     let cancelled = false;
 
     const initDataAndRealtime = async () => {
@@ -100,7 +102,7 @@ export default function SidebarContent({
 
         // 2. Đăng ký Realtime (Lắng nghe bảng user_progress)
         channel = supabase
-          .channel("sidebar_progress_tracking")
+          .channel(`sidebar_progress_tracking:${crypto.randomUUID()}`)
           .on(
             "postgres_changes",
             {

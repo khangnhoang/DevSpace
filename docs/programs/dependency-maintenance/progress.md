@@ -12,7 +12,7 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Completed evidence | U1: CI on PR 31 green at `60edc82` (typecheck, build, docs, lint, db 192 passed, e2e 46 passed; run 40503679316). Historical, first dependency check (2026-10-27, on `3ea4a09`): `npm outdated` lists the majors of FEAT-020 and BL-009, `@types/node` (FEAT-019) and `@supabase/ssr` (ADR 0001); the Monaco CDN is 0.55.1 against 0.57.0 (BL-009); `npm audit` unchanged (BL-009); six runtime packages with no import (DM-001). |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | Main: DM-001, then the Codex gate on the implementation of this batch. |
+| Next action | Main: the Codex gate on the implementation of this batch; push and PR need their own Owner grants. |
 | Current authority | The Owner granted local commits for DM-002, DM-001 and this catch-up on `chore/dm-001-002` (2026-10-28). Push, PR and merge are not granted; the Codex gate on the implementation comes before any push. |
 
 ## Milestones
@@ -31,4 +31,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-27 U1 DM-003 second cause: each sidebar realtime effect run gets its own topic, because the desktop and mobile sidebars were mounted together and shared one channel, fixed in e753175 (c251710).
 - 2026-10-27 U1 DM-003 re-checked by Main on the dev server: no sidebar console error at desktop and 375x812 width (mobile menu opened, closed and reopened), and a local `user_progress` insert refreshed every mounted sidebar; Codex diff gate PASS on 4a1202d..c251710 (60edc82).
 - 2026-10-27 U1 merged: in-range patch and minor updates with CI green; DM-003 resolved (PR 31, `0e8ed24`).
-- 2026-10-28 DM-002 fixed, closes when this PR merges: the `dependency-updates` skill gains the trial install and the type-only edit rule; the trial steps were run once on the baseline (`tsc`, lint and build pass) (this commit).
+- 2026-10-28 DM-002 fixed, closes when this PR merges: the `dependency-updates` skill gains the trial install and the type-only edit rule; the trial steps were run once on the baseline (`tsc`, lint and build pass) (3c29a26).
+- 2026-10-28 DM-001 fixed, closes when this PR merges: six runtime packages with no import removed; tsc, lint and build pass, `npm test` 192 passed, `npm run test:e2e` 46 passed, `npm audit` unchanged at 5 findings (this commit).

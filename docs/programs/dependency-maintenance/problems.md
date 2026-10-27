@@ -20,6 +20,14 @@ Charter: [README.md](README.md). Progress: [progress.md](progress.md).
 - Direction: confirm each one with a wider search (dynamic imports, CSS, scripts), then remove the unused ones with `dependency-updates` (Remove a package) in a small initiative. `@radix-ui/react-slot` and `class-variance-authority` are what shadcn components use, so ask `app-foundation` before removing them.
 - Exit condition: every package in `dependencies` is imported or kept with a stated reason in this entry.
 
+### DM-002: dependency plans are written without a trial install
+
+- Status: Open (2026-10-27, found during U1).
+- Problem: the `dependency-updates` procedure and the U1 plan discovery read changelogs but never install the targets before the plan is approved, so type fallout of newer type definitions shows up only during implementation and stops it for a plan revision.
+- Evidence: U1 stopped twice under G2 for type-only errors: `@supabase/supabase-js` 2.118.0 in `__tests__/rls/content.test.ts` (plan r2, D4) and `recharts` 3.10.1 in `app/components/TransactionChart.tsx` (plan r3, D5).
+- Direction: after U1, add a discovery step to `dependency-updates` (through `skill-authoring`): install the targets in a throwaway copy of the checkout, run `npx tsc --noEmit`, `npm run lint` and `npm run build`, and record the fallout in the plan's repository facts; and state the type-only edit rule (U1 G7) there, so a later plan does not need it.
+- Exit condition: the skill holds the trial install and the type-only edit rule.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

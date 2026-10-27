@@ -1,6 +1,6 @@
 # U1 detail plan — In-range patch and minor updates
 
-Revision: r1, 2026-10-27. Owner approval: 2026-10-27. Master plan or charter: [charter](../../README.md) (Initiatives row U1).
+Revision: r3, 2026-10-27 (r1 and r2 approved 2026-10-27; r2 added D4; r3 adds G7 and D5 and narrows G2). Owner approval: 2026-10-27. Master plan or charter: [charter](../../README.md) (Initiatives row U1).
 
 ## 1. Binding Spec
 
@@ -25,7 +25,7 @@ Outcome: every package that the first dependency check (2026-10-27) found behind
   - majors (FEAT-020, BL-009 `nodemailer` 10), the Node version (FEAT-019), the Supabase CLI (D2), `@supabase/ssr`;
   - `npm update` of the whole tree or `npm audit fix` (only the listed packages are installed);
   - removing unused packages (DM-001);
-  - any edit of product code, config or tests: a breaking change or a needed code edit stops U1 for that package (G2), and the fix is planned as its own task (`dependency-updates`, Minor and Major);
+  - any edit of product code, config or tests: a breaking change or a needed code edit stops U1 for that package (G2), and the fix is planned as its own task (`dependency-updates`, Minor and Major). The one exception is a type-only edit under G7;
   - the Monaco CDN version (BL-009).
 
 ### 1.3 Execution guardrails
@@ -33,11 +33,12 @@ Outcome: every package that the first dependency check (2026-10-27) found behind
 | Guardrail | Failure if omitted |
 | --- | --- |
 | G1. Before each package group, read its changelog or release notes from the current to the target version, and list breaking changes and deprecations in the report. | A behavior change ships unnoticed because the suite does not cover it. |
-| G2. A changelog breaking change, a failing check, or a needed edit of any file other than `package.json`, `package-lock.json` and the AC7 records (this program's `progress.md` and the U1 row of its charter) stops the implementor; it reports to Main and edits nothing else. Main takes the package out of U1 through `planning` with the Owner. | A version bump quietly turns into a code change nobody planned or reviewed. |
+| G2. A changelog breaking change in an API the app or its tests use, a runtime behavior change, a failing check that G7 does not repair, or a needed edit of any file other than `package.json`, `package-lock.json`, the AC7 records (this program's `progress.md` and the U1 row of its charter) and a G7 edit stops the implementor; it reports to Main and edits nothing else. Main takes the package out of U1 through `planning` with the Owner. | A version bump quietly turns into a code change nobody planned or reviewed. |
 | G3. Install with `npm install <pkg>@<target>` (several packages of one group in one command), never `npm update`, `npm audit fix` or `--force`, and confirm with `npm ls <pkg>` that the resolved version is the target. | Unlisted packages move, or a major or downgrade slips in. |
 | G4. `@supabase/supabase-js` is its own checkpoint, followed by `npm test` (the rls project signs in and checks RLS) and `npm run test:e2e` (sign-in and the payment flow). | An auth or session change from 35 minor versions hides among other updates. |
 | G5. Baseline screenshots of the anonymous pages in Appendix A are taken on `npm run dev` before CP1, at the same viewport as the comparison after CP5. | A Tailwind 4.3 styling change has nothing to be compared against. |
 | G6. Nothing reaches hosted; the local stack only (`.claude/rules.md` section 4). | An update test writes to production. |
+| G7. When an updated package's own types make `npx tsc --noEmit` or `npm run build` fail, the implementor may edit the failing lines that use that package, in app or test code, under all of these limits: only type syntax changes (an annotation, a type argument, a type-only import), so the emitted JavaScript stays the same; no `any`, `as` cast, non-null assertion or `@ts-` directive; no change to runtime code, test names, rows, values, assertions or test count; no other line. The edit goes in the commit of that package's checkpoint, and the report lists each one with the error it fixes; Main and the Codex diff gate review them. A fix that needs more is G2. | Every type fallout of a newer type definition stops the work for a plan revision, though no behavior changes (U1 CP3 and CP4, D5). |
 
 ### 1.4 Owner decisions that bind this initiative
 
@@ -45,6 +46,8 @@ Outcome: every package that the first dependency check (2026-10-27) found behind
 - D1 (2026-10-27) Scope: every patch and minor within the current major, nothing else (the Owner chose "Patch và minor").
 - D2 (2026-10-27) The Supabase CLI stays at 2.121.0: it was installed recently; the next dependency check reviews it again.
 - D3 (2026-10-27) U1 ships in its own PR, after the PR that opens this program and closes infrastructure.
+- D4 (2026-10-27) `@supabase/supabase-js` 2.118.0 stays in U1. Its stricter `insert` types make `npx tsc --noEmit` fail in `__tests__/rls/content.test.ts` (the `[C7] cannot insert` and the update and delete target inserts pass a union of three row shapes, `newRows[table]` and `targetRows[table]`). The Owner allowed a type-only edit of that file to compile again: no change to test names, rows, values, assertions, the tables covered or the number of tests, and no `@ts-` directive or `any`; nothing else in the file or in other tests changes. Verification: `npx tsc --noEmit` passes, `npm test` still reports 192 passed with the three known bugs, and the nine C7 rows of that file pass. r3 makes this allowance general as G7; the D4 edit is a G7 edit.
+- D5 (2026-10-27) After `recharts` 3.10.1 made `app/components/TransactionChart.tsx` fail `tsc` (the Tooltip `formatter` annotates `value: number`, now `ValueType | undefined`), the Owner chose one general rule for type fallout (G7) over a plan revision per error, and `recharts` stays in U1.
 
 ## 2. Repository facts
 
@@ -83,8 +86,8 @@ Baseline: `3ea4a09`, checked 2026-10-27 (`npm outdated`, `npm audit`, `npm view`
 | CP0 | Baseline: Appendix A anonymous screenshots on the current versions. | Files in the session scratchpad, named per row; nothing committed. |
 | CP1 | React group updated. | `npx tsc --noEmit`, `npm run lint`, `npm run build`; changelog notes. |
 | CP2 | Tailwind group updated. | Same as CP1; Appendix A anonymous rows compared with CP0. |
-| CP3 | `@supabase/supabase-js` updated (G4). | Same as CP1, plus `npx supabase db reset`, `npm test`, `npm run test:e2e`. |
-| CP4 | Other and Dev groups updated. | Same as CP1. |
+| CP3 | `@supabase/supabase-js` updated (G4), with the D4 test type edit. | Same as CP1, plus `npx supabase db reset`, `npm test`, `npm run test:e2e`; the D4 verification. |
+| CP4 | Other and Dev groups updated, with G7 edits where the new types need them (`recharts` in `TransactionChart.tsx`). | Same as CP1. |
 | CP5 | Full verification and records. | `npx supabase db reset`, `npm test`, `npm run test:e2e`, `npm outdated` (AC2), `npm audit` and `npm audit --omit=dev` (AC3); Appendix A signed-in rows by Main with the Owner's sign-in; State and the U1 row. |
 
 ## 5. Risks, rollout and rollback

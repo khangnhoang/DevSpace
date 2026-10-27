@@ -20,6 +20,22 @@ Charter: [README.md](README.md). Progress: [progress.md](progress.md).
 - Direction: confirm each one with a wider search (dynamic imports, CSS, scripts), then remove the unused ones with `dependency-updates` (Remove a package) in a small initiative. `@radix-ui/react-slot` and `class-variance-authority` are what shadcn components use, so ask `app-foundation` before removing them.
 - Exit condition: every package in `dependencies` is imported or kept with a stated reason in this entry.
 
+### DM-002: dependency plans are written without a trial install
+
+- Status: Open (2026-10-27, found during U1).
+- Problem: the `dependency-updates` procedure and the U1 plan discovery read changelogs but never install the targets before the plan is approved, so type fallout of newer type definitions shows up only during implementation and stops it for a plan revision.
+- Evidence: U1 stopped twice under G2 for type-only errors: `@supabase/supabase-js` 2.118.0 in `__tests__/rls/content.test.ts` (plan r2, D4) and `recharts` 3.10.1 in `app/components/TransactionChart.tsx` (plan r3, D5).
+- Direction: after U1, add a discovery step to `dependency-updates` (through `skill-authoring`): install the targets in a throwaway copy of the checkout, run `npx tsc --noEmit`, `npm run lint` and `npm run build`, and record the fallout in the plan's repository facts; and state the type-only edit rule (U1 G7) there, so a later plan does not need it.
+- Exit condition: the skill holds the trial install and the type-only edit rule.
+
+### DM-003: sidebar realtime channel leaks on early unmount
+
+- Status: Open (2026-10-27, found by U1 manual QA); fixed in U1 by c7c8da4 and e753175, closes when the U1 PR merges.
+- Problem: on every `/learn` page the console shows `Lỗi khởi tạo sidebar: Error: cannot add postgres_changes callbacks for realtime:sidebar_progress_tracking after subscribe()` and Next shows "1 Issue". The sidebar effect created its channel only after `getUser` and `fetchProgress`; when the component unmounted first (always in dev under StrictMode's double effect, in production when the user leaves while the sidebar loads), cleanup ran while `channel` was unset, the first channel leaked, and the next mount got it back by topic and called `.on()` on a subscribed channel.
+- Evidence: `app/components/SidebarContent.tsx`, the `useEffect` from line 71. `@supabase/supabase-js` 2.83.0 (realtime-js) accepted `.on()` after `subscribe()`; 2.118.0 throws in `RealtimeChannel`, so the update exposed an app bug. The e2e page-error guard never saw it (`npm run test:e2e` 46 passed on 2.118.0): the suite runs a production build, which has no StrictMode double effect. A second cause, found by Codex: the course layout keeps the desktop `Sidebar` mounted (`app/(main)/learn/[course]/layout.tsx`) and the mobile menu mounts a second `SidebarContent` (`app/components/MobileSidebar.tsx`), and both called `supabase.channel("sidebar_progress_tracking")`, so the second got the first's subscribed instance and threw on `.on()`.
+- Direction: a `cancelled` flag set in cleanup and checked before the channel is created (c7c8da4), and a topic of its own for each effect run, `sidebar_progress_tracking:<uuid>`, so cleanup removes only its own channel (e753175).
+- Exit condition: the U1 PR is merged and the console on `/learn` pages shows no sidebar error.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

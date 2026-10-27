@@ -70,6 +70,11 @@ export default function SidebarContent({
 
   useEffect(() => {
     let channel: RealtimeChannel;
+    // Two things make a shared topic throw on `.on()` after `subscribe()`, because supabase.channel() returns the
+    // existing channel for a topic: cleanup can run before the awaits finish, while `channel` is still unset (a
+    // leaked channel), and the layout keeps the desktop sidebar mounted while the mobile menu mounts a second one.
+    // So skip creating the channel after cleanup, and give each run its own topic so cleanup removes only its own.
+    let cancelled = false;
 
     const initDataAndRealtime = async () => {
       try {
@@ -93,10 +98,11 @@ export default function SidebarContent({
         // Gọi lần đầu
         await fetchProgress();
         setIsLoading(false); // Tắt loading sau khi fetch xong
+        if (cancelled) return;
 
         // 2. Đăng ký Realtime (Lắng nghe bảng user_progress)
         channel = supabase
-          .channel("sidebar_progress_tracking")
+          .channel(`sidebar_progress_tracking:${crypto.randomUUID()}`)
           .on(
             "postgres_changes",
             {
@@ -122,6 +128,7 @@ export default function SidebarContent({
 
     // Cleanup khi unmount
     return () => {
+      cancelled = true;
       if (channel) supabase.removeChannel(channel);
     };
   }, [courseSlug]);

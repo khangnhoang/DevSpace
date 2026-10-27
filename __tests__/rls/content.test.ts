@@ -105,7 +105,7 @@ describe("a learner cannot write content", () => {
     it(`[C7] cannot insert a valid row into ${table}`, async () => {
       const before = must(await fixtures.from(table).select("id")).length;
 
-      const { data, error } = await learner.from(table).insert(newRows[table]).select("id");
+      const { data, error } = await learner.from(table).insert<(typeof newRows)[typeof table]>(newRows[table]).select("id");
       expect(data).toBeNull();
       expectDenied(error);
       expect(must(await fixtures.from(table).select("id"))).toHaveLength(before);
@@ -115,7 +115,7 @@ describe("a learner cannot write content", () => {
     // rows that afterEach already removes are touched (a deleted seed course would cascade into its children).
     it(`[C7] updates no row of ${table}`, async () => {
       const column = unchangedColumn[table];
-      const { id } = must(await fixtures.from(table).insert(targetRows[table]).select("id").single());
+      const { id } = must(await fixtures.from(table).insert<(typeof targetRows)[typeof table]>(targetRows[table]).select("id").single());
       const before = must(await fixtures.from(table).select(`id, ${column}`).eq("id", id).single());
 
       const { data, error } = await learner.from(table).update(changes[table]).eq("id", id).select("id");
@@ -125,7 +125,7 @@ describe("a learner cannot write content", () => {
     });
 
     it(`[C7] deletes no row of ${table}`, async () => {
-      const { id } = must(await fixtures.from(table).insert(targetRows[table]).select("id").single());
+      const { id } = must(await fixtures.from(table).insert<(typeof targetRows)[typeof table]>(targetRows[table]).select("id").single());
 
       const { data, error } = await learner.from(table).delete().eq("id", id).select("id");
       expect(error).toBeNull();

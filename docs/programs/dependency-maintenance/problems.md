@@ -22,7 +22,7 @@ Charter: [README.md](README.md). Progress: [progress.md](progress.md).
 
 ### DM-002: dependency plans are written without a trial install
 
-- Status: Open (2026-10-27, found during U1).
+- Status: Open (2026-10-27, found during U1); fixed on `chore/dm-001-002` (2026-10-28), closes when its PR merges.
 - Problem: the `dependency-updates` procedure and the U1 plan discovery read changelogs but never install the targets before the plan is approved, so type fallout of newer type definitions shows up only during implementation and stops it for a plan revision.
 - Evidence: U1 stopped twice under G2 for type-only errors: `@supabase/supabase-js` 2.118.0 in `__tests__/rls/content.test.ts` (plan r2, D4) and `recharts` 3.10.1 in `app/components/TransactionChart.tsx` (plan r3, D5).
 - Direction: after U1, add a discovery step to `dependency-updates` (through `skill-authoring`): install the targets in a throwaway copy of the checkout, run `npx tsc --noEmit`, `npm run lint` and `npm run build`, and record the fallout in the plan's repository facts; and state the type-only edit rule (U1 G7) there, so a later plan does not need it.

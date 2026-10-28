@@ -79,7 +79,16 @@ export default function UsersManagerPage() {
   };
 
   const handleDelete = async (id: string) => {
-    const result = await deleteUserAccount(id);
+    // ConfirmDialog swallows a rejection, so a failure in transit is reported here.
+    let result;
+    try {
+      result = await deleteUserAccount(id);
+    } catch {
+      toast.error(
+        "Không nhận được kết quả từ máy chủ. Hãy tải lại trang để kiểm tra người dùng."
+      );
+      return;
+    }
 
     if (result.error) {
       toast.error("Xóa người dùng thất bại: " + result.error);

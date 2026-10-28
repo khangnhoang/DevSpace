@@ -49,6 +49,28 @@ test.describe("admin pages", () => {
     }
   });
 
+  test("[A3] a delete that fails in transit shows an error and keeps the user listed", async ({ page }) => {
+    await page.goto("/admin/users");
+    const row = page.getByRole("row").filter({ hasText: ACCOUNTS.learner.email });
+    await expect(row).toBeVisible();
+
+    // The aborted request never reaches the server, so the row writes nothing.
+    let aborted = 0;
+    await page.route("**/admin/users", (route) => {
+      if (route.request().method() !== "POST" || aborted > 0) return route.fallback();
+      aborted++;
+      return route.abort();
+    });
+
+    await row.getByRole("button", { name: /Xóa người dùng/ }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Xóa người dùng", exact: true }).click();
+
+    await expect(page.getByText("Không nhận được kết quả từ máy chủ")).toBeVisible();
+    await expect(page.getByRole("alertdialog")).toBeHidden();
+    expect(aborted).toBe(1);
+    await expect(row).toBeVisible();
+  });
+
   test("[A2] reads a lesson without being enrolled", async ({ page }) => {
     await page.goto("/learn/javascript-can-ban/bien-va-kieu-du-lieu");
     await expect(page.getByText("Khai báo biến bằng let và const.")).toBeVisible();

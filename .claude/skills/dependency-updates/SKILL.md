@@ -11,7 +11,7 @@ Use when a task adds, removes or updates a package in `package.json` or `package
 
 Do not use it for a change that touches no dependency, for reviewing a dependency diff (`code-review`, [special-cases.md](../code-review/references/special-cases.md), Dependency), or for the Supabase migration workflow (`supabase-migration`).
 
-Whether an install, update or removal is allowed at all is owned by `.claude/rules.md` section 4 ([rules](../../rules.md)): it needs the Owner's request or an approved plan. This skill says how, not whether. It holds no list of current versions, outdated packages or open findings; those are state, recorded in the `dependency-maintenance` program docs (`program-docs`).
+Whether an install, update or removal is allowed at all is owned by `.claude/rules.md` section 4 ([rules](../../../.claude/rules.md)): it needs the Owner's request or an approved plan. This skill says how, not whether. It holds no list of current versions, outdated packages or open findings; those are state, recorded in the `dependency-maintenance` program docs (`program-docs`).
 
 ## Workflow
 

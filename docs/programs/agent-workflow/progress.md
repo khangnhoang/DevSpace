@@ -7,12 +7,12 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | U8 `implementation-plans/u8-shared-agent-rules/plan.md` r4, Owner-approved 2026-10-29; local implementation commits explicitly granted. |
-| Current unit / checkpoint | U8, CP3 audit corrections completed; full re-audit next. |
-| Status | in progress; CP3 first audit findings corrected. AW-008 remains outside U8. |
-| Completed evidence | CP1 shared ownership committed at 6d3605f; CP2 docs checks, fixtures, lint, typecheck and self-review passed; runtime compliance remains unverified. |
+| Current unit / checkpoint | U8, CP1–CP3 completed locally. |
+| Status | implementation and author audit complete locally; not pushed. AW-008 remains outside U8. |
+| Completed evidence | CP1 6d3605f, CP2 9c17f1c, corrections 6a50a3c; final full audit 47 files / 1074 instruction rows, 0 Critical/Required; two-way traceability and 10 written scenarios passed; docs fixtures 72/72, lint/typecheck passed. Runtime compliance is unverified. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | Repeat the full read-only instruction audit, final bidirectional comparison and scenarios. |
+| Next action | Owner reviews the local completion report and decides the next authorized action. |
 | Current authority | Owner grants local plan and implementation/checkpoint/correction commits, and implementation in the requested new chat. No push, PR, merge, hosted action or deployment granted. |
 
 ## Milestones
@@ -88,4 +88,6 @@ One line each, newest last. No review rounds or command logs.
 
 - 2026-10-29 U8 CP2: bounded import-contract validator, AGENTS link coverage and negative fixtures; checker commands integrated (`9c17f1c`).
 
-- 2026-10-29 U8 CP3 corrections: restore Claude-binding routing, include AGENTS in citation discovery and remove the duplicated browser restriction; docs and symlink checks passed (this commit).
+- 2026-10-29 U8 CP3 corrections: restore Claude-binding routing, include AGENTS in citation discovery and remove the duplicated browser restriction; docs and symlink checks passed (`6a50a3c`).
+
+- 2026-10-29 U8 CP3: full instruction audit and bidirectional baseline/scenario review passed; static and filesystem evidence complete, runtime compliance unverified; local implementation complete, nothing pushed (this commit).

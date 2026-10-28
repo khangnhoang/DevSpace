@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | none open. The last initiative, U7 (`implementation-plans/u7-entry-plans/plan.md` r1), and the small tasks AW-009 and AW-011 are merged. |
-| Current unit / checkpoint | none. |
-| Status | idle; AW-008 open. |
-| Completed evidence | U7, AW-009 and AW-011 are in their milestones. |
+| Spec revision | U8 `implementation-plans/u8-shared-agent-rules/plan.md` r3, Owner-approved 2026-10-29 after successful self-review. |
+| Current unit / checkpoint | U8, before CP1. |
+| Status | plan approved; implementation handoff pending. AW-008 remains outside U8. |
+| Completed evidence | U8 plan self-review and docs checks passed; no implementation checkpoint completed. Earlier delivery evidence remains in Milestones. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | none until the Owner names AW-008 or a new initiative. |
-| Current authority | none. |
+| Next action | Commit the approved U8 plan, then open the requested local `gpt-6.1-sol` / `medium` implementation chat for CP1–CP3. |
+| Current authority | Owner grants plan clarification, self-review, local plan commit and implementation in the requested new chat. No implementation commits, push, PR, merge, hosted action or deployment granted. |
 
 ## Milestones
 
@@ -81,3 +81,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-27 AW-011 rule: `docs/agent-loops.md` Sizing matches skills to the work after discovery; the Codex and Sonnet briefs and the `skill-authoring` related-rules list point to it (`4fbfdaa`).
 - 2026-10-27 AW-011 Codex diff review passed; State before the PR (`03790d3`).
 - 2026-10-27 AW-011 merged; AW-011 resolved (PR 28, `7ad7a92`).
+- 2026-10-29 U8 r3 approved after self-review: shared rules plan, bidirectional baseline traceability and full instruction audit; local plan commit and `gpt-6.1-sol` / `medium` implementation handoff authorized (this commit).

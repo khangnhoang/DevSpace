@@ -39,6 +39,7 @@ interface Props {
   title: string;
   description: ReactNode;
   confirmLabel: string;
+  cancelLabel?: string;
   destructive?: boolean;
   tone: keyof typeof TONES;
   // The caller's handler already reports its own success or error; a rejection is swallowed here
@@ -52,6 +53,7 @@ export default function ConfirmDialog({
   title,
   description,
   confirmLabel,
+  cancelLabel = "Hủy",
   destructive = false,
   tone,
   onConfirm,
@@ -109,7 +111,7 @@ export default function ConfirmDialog({
             disabled={pending}
             className={cn("cursor-pointer", styles.cancel)}
           >
-            Hủy
+            {cancelLabel}
           </AlertDialogCancel>
           <AlertDialogAction
             variant={destructive ? "destructive" : "default"}

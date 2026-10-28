@@ -74,7 +74,7 @@ export const modalAmount = (page: Page) => page.getByText("Số tiền:").locato
 export const money = (digits: string) => new RegExp(digits.replace(/(\d)(?=(\d{3})+$)/g, "$1[.,]") + "đ");
 
 // The confirm dialog of /admin/transactions: press its button by name, after the row button has opened it.
-// The name is exact because the cancel button ("Hủy") is a prefix of the reject confirm ("Hủy đơn hàng").
+// The name is exact so a short label ("Hủy") never matches a longer one by substring.
 export async function confirmDialog(page: Page, name: string): Promise<void> {
   await page.getByRole("alertdialog").getByRole("button", { name, exact: true }).click();
 }

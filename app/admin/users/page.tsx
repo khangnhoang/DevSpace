@@ -381,6 +381,7 @@ export default function UsersManagerPage() {
                           </button>
                           <button
                             onClick={() => setDeleteTarget(u)}
+                            aria-label={`Xóa người dùng ${u.full_name || u.email}`}
                             className="cursor-pointer hover:bg-red-500/20 hover:text-red-400 p-2 rounded-md text-[#979EAA] transition-colors"
                           >
                             <Trash size={20} />

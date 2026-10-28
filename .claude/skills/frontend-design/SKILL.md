@@ -17,7 +17,7 @@ Next.js App Router, React 19, Tailwind CSS 4 (`app/globals.css`), `lucide-react`
 
 Adding a primitive: `npx shadcn add <name>`, never `npx shadcn init` (it rewrites `app/globals.css` and `lib/utils.ts` and installs `cn`, `shadcn` and `tw-animate-css`). Then edit the generated file as `button.tsx` and `alert-dialog.tsx` were edited, and no further:
 
-- import `cn` from `@/lib/utils` (the generator writes `from "cn"`, a package the repo does not install);
+- import `cn` from `@/lib/utils` (the generator writes `from "cn"`); `shadcn add` also installs the `cn` package into `package.json` and the lockfile, so run `npm uninstall cn` and check the `package.json` and `package-lock.json` diff for anything beyond the packages the plan names;
 - delete every `dark:` class: the repo has no class-based dark mode, so a `dark:` class would follow the OS scheme;
 - animation classes stay those of `tailwindcss-animate` (`animate-in`, `fade-in-0`, `zoom-in-95`); a `tw-animate-css` class does not exist here;
 - overlay and content of a dialog sit at `z-80`, above `LessonComments` (`z-70`).

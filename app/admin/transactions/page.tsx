@@ -268,6 +268,7 @@ export default function TransactionsPage() {
             "Hủy bỏ giao dịch này? Học viên sẽ không được kích hoạt khóa học."
           )}
           confirmLabel="Hủy đơn hàng"
+          cancelLabel="Giữ đơn hàng"
           onConfirm={() => handleReject(rejectTarget.id)}
         />
       )}

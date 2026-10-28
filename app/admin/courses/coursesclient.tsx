@@ -215,11 +215,14 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
                   {course.lessonCount} bài học
                 </p>
                 <div className="flex items-center gap-3">
-                  <Trash
-                    size={20}
+                  <button
+                    type="button"
+                    aria-label={`Xoá khoá học ${course.name}`}
                     className="cursor-pointer text-gray-400 hover:text-red-500 transition-colors"
                     onClick={() => setDeleteTarget(course)}
-                  />
+                  >
+                    <Trash size={20} />
+                  </button>
                   <SquarePen
                     size={20}
                     className="cursor-pointer text-gray-400 hover:text-blue-500 transition-colors"

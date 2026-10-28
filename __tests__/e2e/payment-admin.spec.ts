@@ -104,7 +104,7 @@ test.describe("approving and rejecting through the transactions page", () => {
     await pendingRow(page).getByRole("button", { name: "Hủy đơn này" }).click();
     const dialog = page.getByRole("alertdialog");
     await expect(dialog).toBeVisible();
-    await dialog.getByRole("button", { name: "Hủy", exact: true }).click();
+    await dialog.getByRole("button", { name: "Giữ đơn hàng" }).click();
     await expect(dialog).toBeHidden();
 
     expect(await paymentById(orderId)).toMatchObject({ status: "pending" });

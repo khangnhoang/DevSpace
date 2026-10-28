@@ -244,6 +244,7 @@ export default function ChaptersManagerPage() {
                       </button>
                       <button
                         onClick={() => setDeleteTarget(chapter)}
+                        aria-label={`Xóa chương ${chapter.title}`}
                         className="p-2 rounded-lg text-red-500 hover:bg-red-300  transition-all duration-200 cursor-pointer"
                       >
                         <Trash size={20} />

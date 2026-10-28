@@ -518,6 +518,7 @@ export default function LessonsManagerPage() {
                         </button>
                         <button
                           onClick={() => setDeleteLessonTarget(lesson)}
+                          aria-label={`Xóa bài học ${lesson.title}`}
                           className="cursor-pointer p-2 hover:bg-red-600/20 text-red-400 rounded-lg transition-colors"
                         >
                           <Trash size={18} />
@@ -871,6 +872,7 @@ export default function LessonsManagerPage() {
                             </button>
                             <button
                               onClick={() => setDeleteExerciseTarget(e)}
+                              aria-label={`Xóa câu hỏi ${e.question}`}
                               className="text-red-500 cursor-pointer hover:bg-red-200 p-1 rounded-md"
                             >
                               <Trash size={17} />

@@ -20,4 +20,5 @@ Status lives in each program's `progress.md`, never in this table.
 | `programs/agent-workflow` | evergreen | Agent rules, skills, lifecycle loops and docs checks for working on DevSpace with Claude Code and Codex. |
 | `programs/infrastructure` | closed | Test infrastructure (Vitest, Playwright), an isolated Supabase local with seed data, and CI on GitHub Actions. |
 | `programs/dependency-maintenance` | evergreen | Keeping dependencies current and safe: the dependency check results, update initiatives and dependency findings ([ADR 0004](adr/0004-dependency-maintenance-program.md)). |
+| `programs/app-foundation` | active | shadcn, React Hook Form and Zod for every form and confirm dialog, and Zod validation in server actions ([ADR 0003](adr/0003-app-foundation-program.md)). |
 | `programs/security-hotfix` | active | Security fixes H1 and H2 (privilege escalation, data exposure, write integrity); H2-2 is deferred. |

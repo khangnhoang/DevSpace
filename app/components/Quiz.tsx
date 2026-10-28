@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveUserProgress, supabase } from "@/lib/supabase";
+import { isCorrectAnswer } from "@/lib/quiz-answer";
 import { Check, ArrowRight, X, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
@@ -80,11 +81,7 @@ export default function Quiz({
     }
 
     const currentCorrectAnswer = currentQuestion.correctAnswer;
-    // Rows not created by the admin form may store the answer in uppercase.
-    if (
-      selectedOption.trim().toLowerCase() ===
-      currentCorrectAnswer.trim().toLowerCase()
-    ) {
+    if (isCorrectAnswer(selectedOption, currentCorrectAnswer)) {
       setIsCorrect(true);
       toast.success("Chính xác!");
     } else {

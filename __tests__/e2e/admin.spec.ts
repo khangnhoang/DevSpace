@@ -14,6 +14,12 @@ test.describe("admin pages", () => {
     await page.goto("/admin/courses");
     await expect(page.getByText("Làm quen với HTML")).toBeVisible();
     await expect(page.getByText("JavaScript căn bản")).toBeVisible();
+
+    // BL-008: the seed sets no image_url, so the card shows the shared fallback and it loads.
+    const image = page.getByRole("img", { name: "Làm quen với HTML" });
+    await expect(image).toHaveAttribute("src", /no-course-image\.png/);
+    await image.scrollIntoViewIfNeeded();
+    await expect.poll(() => image.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
   });
 
   test("[A1] the chapter list shows the chapter of the selected course", async ({ page }) => {

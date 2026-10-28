@@ -22,7 +22,7 @@ Each initiative keeps these; the rule itself lives with its owner.
 - One owner per rule, with links elsewhere (`skill-authoring`, Choosing where an instruction goes) — prevents copies that drift apart.
 - A skill states only what DevSpace has today (`skill-authoring`, What a skill holds), and no skill widens a permission (`AGENTS.md` section 8) — prevents agents running tools that do not exist or reading a skill as a grant.
 - Every Codex brief starts with a "Read first" list (`code-review`, Codex) — prevents Codex reviewing against its own defaults.
-- `npm run docs:check` enforces only what `program-docs` and its templates state (`program-docs`, Verify) and what `skill-authoring` states as required (`skill-authoring`, Shape) — prevents the check and the skill disagreeing.
+- `npm run docs:check` enforces only what `program-docs` and its templates state (`program-docs`, Verify) and what `skill-authoring` states as required (`skill-authoring`, Shape and Choosing where an instruction goes, including the bounded import contract) — prevents the check and the skill disagreeing.
 
 ## 4. Initiatives
 

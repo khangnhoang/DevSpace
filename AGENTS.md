@@ -9,7 +9,7 @@ Roadmap, in this order: (1) agent-workflow (rules, skills, docs system), (2) inf
 - `npm run dev` runs `next dev` at `http://127.0.0.1:3000` on the local stack and needs it started (see the local database below); it fails with a message when the stack is down and never reaches hosted. The AI key comes from the Owner's environment file. `npm run build`, `npm start`.
 - `npm run lint`: it must report 0 problems, warnings included (`--max-warnings 0`).
 - `npx tsc --noEmit`: type check.
-- `npm run docs:check`: structure and link checks for `docs/`, `.claude/`, `CLAUDE.md`, `README.md`. `npm run docs:check:test` runs its tests.
+- `npm run docs:check`: structure and link checks for `docs/`, `.claude/`, `AGENTS.md`, `CLAUDE.md`, `README.md`, plus the bounded instruction-import contract (`skill-authoring`, Choosing where an instruction goes). `npm run docs:check:test` runs its tests.
 - CI runs on every pull request to `main` and every push to `main`, with no hosted secret. The jobs, which of them block and how to read a failure: [pr-and-ci.md](.claude/skills/git-pr-workflow/references/pr-and-ci.md).
 - Local database (Docker Desktop running): `npx supabase start`, `npx supabase db reset` (baseline, migrations, then the invented seed in `supabase/seed.sql`, which holds the users `learner@devspace.test`, `student@devspace.test` and `admin@devspace.test`), `npx supabase stop`. The checkout stays linked to hosted, so only these local commands are routine; hosted applies follow `supabase-migration` ("Hosted apply").
 - `npm test` runs the Vitest `unit` and `rls` projects; `rls` needs the local stack started and `db reset` done. See [test-quality-strategy](.claude/skills/test-quality-strategy/SKILL.md).

@@ -17,7 +17,8 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: '**', // (Tùy chọn) Chấp nhận tất cả ảnh nếu lười config từng cái
+        hostname: 'lkvxxrxojjlkchzzqidu.supabase.co', // hosted Supabase Storage
+        pathname: '/storage/v1/object/public/**',
       },
     ],
   },

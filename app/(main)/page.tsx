@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { getDashboardData, type HomeCourseData } from "@/lib/supabase";
+import { NO_COURSE_IMAGE } from "@/lib/constants";
 import HeroSlider from "../components/HeroSlider";
 import Image from "next/image";
 import { Search, Filter, X, Sparkles, ChevronRight } from "lucide-react";
@@ -52,7 +53,7 @@ const FeaturedBottom = ({ courses }: { courses: HomeCourseData[] }) => {
             className="w-full md:w-1/2 relative aspect-video rounded-xl overflow-hidden shadow-xl group cursor-pointer block"
           >
             <Image
-              src={course.image_url || "https://placehold.co/800x500"}
+              src={course.image_url || NO_COURSE_IMAGE}
               alt={course.name}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-700"
@@ -222,7 +223,7 @@ export default function Home() {
                   className="relative overflow-hidden w-full aspect-video cursor-pointer block"
                 >
                   <Image
-                    src={course.image_url || "https://placehold.co/600x400"}
+                    src={course.image_url || NO_COURSE_IMAGE}
                     alt={course.name}
                     fill
                     className="object-cover group-hover:scale-110 transition-transform duration-500"

@@ -1,5 +1,8 @@
 // lib/constants.ts
 
+// Fallback shown wherever a course has no image_url.
+export const NO_COURSE_IMAGE = "/no-course-image.png";
+
 // 1. Danh sách Giới tính (Map với Database)
 export const GENDER_OPTIONS = [
   { value: "male", label: "Nam" },

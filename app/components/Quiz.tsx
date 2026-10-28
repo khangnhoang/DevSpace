@@ -80,7 +80,11 @@ export default function Quiz({
     }
 
     const currentCorrectAnswer = currentQuestion.correctAnswer;
-    if (selectedOption === currentCorrectAnswer) {
+    // Rows not created by the admin form may store the answer in uppercase.
+    if (
+      selectedOption.trim().toLowerCase() ===
+      currentCorrectAnswer.trim().toLowerCase()
+    ) {
       setIsCorrect(true);
       toast.success("Chính xác!");
     } else {

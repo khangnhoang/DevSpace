@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { type HomeCourseData } from "@/lib/supabase";
+import { NO_COURSE_IMAGE } from "@/lib/constants";
 
 export default function HeroSlider({ slides }: { slides: HomeCourseData[] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -95,7 +96,7 @@ export default function HeroSlider({ slides }: { slides: HomeCourseData[] }) {
                        rounded-xl overflow-hidden" 
           >
             <Image
-              src={currentCourse.image_url || "https://placehold.co/600x400/png"}
+              src={currentCourse.image_url || NO_COURSE_IMAGE}
               alt={currentCourse.name}
               fill
               priority

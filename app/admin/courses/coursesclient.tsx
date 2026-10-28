@@ -11,6 +11,7 @@ import {
 } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { NO_COURSE_IMAGE } from "@/lib/constants";
 
 interface CoursesClientProps {
   courses: AdminCourseData[];
@@ -195,7 +196,7 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
             >
               <div className="relative w-full h-48 sm:h-56 lg:h-60">
                 <Image
-                  src={course.image_url || "/placeholder.jpg"} // Fallback image
+                  src={course.image_url || NO_COURSE_IMAGE}
                   alt={course.name}
                   fill
                   className="object-cover"

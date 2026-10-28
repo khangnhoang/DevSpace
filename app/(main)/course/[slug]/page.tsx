@@ -29,6 +29,7 @@ import { User } from "@supabase/supabase-js";
 import Image from "next/image";
 import VideoModal from "@/app/components/VideoModal";
 import CustomAvatar from "@/app/components/CustomAvatar";
+import { NO_COURSE_IMAGE } from "@/lib/constants";
 
 interface ReviewItem {
   id: number | string;
@@ -776,7 +777,7 @@ export default function DetailPage({
             onClick={() => setShowTrailer(true)}
           >
             <Image
-              src={course.image_url}
+              src={course.image_url || NO_COURSE_IMAGE}
               alt={course.name}
               fill
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"

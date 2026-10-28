@@ -1,6 +1,6 @@
 # U8 detail plan — Shared agent rules with Claude-specific bindings
 
-Revision: r3, 2026-10-29. Owner approval: 2026-10-29 after successful self-review. Charter: [agent-workflow](../../README.md).
+Revision: r4, 2026-10-29. Owner approval: 2026-10-29 after successful self-review; local implementation commits explicitly granted. Charter: [agent-workflow](../../README.md).
 
 ## 1. Binding Spec
 
@@ -47,8 +47,10 @@ for U8 unless the Owner requests it or the scope becomes Large/high-risk.
 - The Owner authorized the clarified plan after successful self-review, its local
   commit, and a new local `gpt-6.1-sol` / `medium` implementation chat. This is a
   task-specific execution assignment, not a change to standing Claude role/model
-  bindings. Implementation commits, push, PR, merge and production actions remain
-  ungranted. The new chat implements and verifies CP1–CP3 without committing.
+  bindings. The Owner also explicitly granted local implementation commits:
+  commit each completed, verified and self-reviewed checkpoint, and any reviewed
+  correction as a new commit. Push, PR, merge and production actions remain
+  ungranted.
 
 ### 1.3 Execution guardrails
 
@@ -84,8 +86,10 @@ for U8 unless the Owner requests it or the scope becomes Large/high-risk.
 7. (2026-10-29) After the clarification passes self-review, approve and locally
    commit the plan, then open a new local implementation chat using exactly
    `gpt-6.1-sol` with reasoning effort `medium`. This overrides the default
-   Sonnet dispatch for this task only. No implementation-commit or remote grant
-   is implied by the instruction to commit the plan.
+   Sonnet dispatch for this task only. A remote grant is not implied.
+8. (2026-10-29) The Owner explicitly grants local commits during implementation,
+   including checkpoint commits and subsequent correction commits after review.
+   This task-specific grant does not authorize push, PR, merge or hosted actions.
 
 ## 2. Repository facts
 
@@ -145,14 +149,15 @@ These are likely edits, not permission to widen the Spec.
 - Extend `check-links.mjs` and its tests to include root `AGENTS.md`. Do not add
   dependencies or change the parser's unrelated behavior.
 - At approval, update `progress.md` with U8 and its authority; checkpoints update
-  State under the existing single-writer and commit-grant rules. Implementation
-  and State edits stay uncommitted until the Owner grants implementation commits.
+  State under the existing single-writer rules. Commit State with the completed
+  checkpoint it describes, under the Owner's local implementation-commit grant.
 
 ## 4. Checkpoints
 
 Run sequentially in the Owner-requested implementation chat after approval. Each checkpoint
 must leave coherent policy ownership and pass its verification before proceeding.
-Local checkpoint commits occur only under an explicit implementation-commit grant.
+The Owner's explicit grant covers local checkpoint and correction commits after
+their required checks and self-review pass; never amend a reviewed commit.
 
 | CP | Outcome | Verification |
 | --- | --- | --- |
@@ -208,7 +213,7 @@ confirm the same boundary:
   steps. This branch contains the prerequisite local skill commits; integrate
   them coherently if the Owner later requests delivery. Push/PR/merge are not
   part of the current grant. The approved plan commit and explicitly requested
-  implementation chat are allowed; implementation commits are not yet allowed.
+  implementation chat and local implementation commits are allowed (decision 8).
 - Browser/data QA: not applicable; application behavior and data are unchanged.
   Actual agent instruction-loading or model-compliance experiments are not run
   by this plan and must not be claimed as verified.

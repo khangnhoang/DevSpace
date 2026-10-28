@@ -26,7 +26,7 @@ Do not use for manual browser validation (`frontend-workflow`), for writing the 
 
 ## End-to-end (`e2e`): smoke and payment rows
 
-- The smoke rows prove that the main learner and admin paths render and that the access redirects hold, in a real browser, against a production build. They do not repeat an rls guarantee. The payment rows are the server action tests (see Server action rows).
+- The smoke rows prove that the main learner and admin paths render and that the access redirects hold, in a real browser, against a production build. They do not repeat an rls guarantee. The payment rows are the server action tests (see Server action rows). When a fixed bug, or a changed message or state on a smoke or payment path, is best shown in the browser (Core rules, rule 2) and a saved session can show it within these rules, extend a row or add one; otherwise the plan and the report say why (Regression).
 - `npm run test:e2e` reads the API URL and keys from `npx supabase status` through the host check, builds the app with `buildE2eEnv` (`__tests__/helpers/e2e-env.ts`) and serves it on port 3100, and never reuses a server. A unit test fails when `app`, `lib` or `proxy.ts` read an environment variable that the map does not set, because the build would then take it from the local environment file, which points at hosted. When code reads a new variable, add it to the map. The run overwrites `.next`: run `npm run build` before `npm start` afterwards.
 - Specs are `__tests__/e2e/<role>.spec.ts` and import `test` from `fixtures.ts`. Names start with the matrix ID, for example `[L5]`. The `setup` project signs in each seed user through the login form once per run and saves the session under `__tests__/e2e/.auth/` (ignored by git).
 - The network guard in `fixtures.ts` aborts every request whose host is not `127.0.0.1` or `localhost` (a CDN, `placehold.co`) and every `/_next/image` request that asks the Next server to fetch such a URL. A request aimed at `*.supabase.co` or `devspace-lms.vercel.app`, a page error and a response with status 500 or more fail the test. Chromium also cannot resolve any host but a local one (`--host-resolver-rules`), because Playwright does not route redirect hops. The one exception: a row that sets `blockedMonacoLoader` (`[S5]` only) marks as handled, in the page, the unhandled rejection whose reason is the `error` Event of the Monaco `loader.js` script element from `cdn.jsdelivr.net`; every other page error still fails. Do not assert what a blocked CDN would load; the classifier is `__tests__/helpers/e2e-network.ts`.
@@ -83,7 +83,7 @@ Mock only boundaries outside the subject: email, Gemini, browser APIs. Never moc
 
 ## Regression
 
-Reproduce the bug first when practical, then write a focused test tied to the observable behavior that was wrong, in the layer where it lives. A bug that is known but not fixed in this change uses the known-bug pattern; never encode an unknown surprising behavior as expected, report it to Main so it is recorded as a problem.
+Reproduce the bug first when practical, then write a focused test tied to the observable behavior that was wrong, in the layer where it lives. A regression test is practical when the seed, the saved e2e sessions and the layer rules allow it: the smallest layer that shows the behavior, no guarantee repeated in two layers, and the e2e data rules. Signing in is never the obstacle, because e2e specs load the saved sessions. When no test is practical, the plan and the report say why. A bug that is known but not fixed in this change uses the known-bug pattern; never encode an unknown surprising behavior as expected, report it to Main so it is recorded as a problem.
 
 ## Which command for which change
 
@@ -95,7 +95,7 @@ Run the row for each kind of change, plus the static checks (`npx tsc --noEmit`,
 | Server action (`app/action`) | `npm run test:unit` for a helper it uses; `npm run test:e2e` for the payment actions (`payment-*.spec.ts`), the only ones with tests | Stack, Chromium |
 | RLS policy, grant or migration | `npx supabase db reset`, then `npm test` (twice after writing rls tests) | Stack |
 | Seed (`supabase/seed.sql`) | `npx supabase db reset`, `npm test`, `npm run test:e2e` | Stack, Chromium |
-| Page or UI flow | `npm run test:e2e` when it touches a smoke or payment path, then the manual pass (`frontend-workflow`) | Stack, Chromium |
+| Page or UI flow | add or extend the e2e row when the End-to-end section asks for one, `npm run test:e2e` when it touches a smoke or payment path, then the manual pass (`frontend-workflow`) | Stack, Chromium |
 | E2E helper, fixture or env map (`__tests__/e2e`, `__tests__/helpers/e2e-env.ts`, `scripts/e2e`) | `npm run test:unit`, `npm run test:e2e` | Stack, Chromium |
 | Dependency (`package.json`, `package-lock.json`); procedure per update type: [dependency-updates](../dependency-updates/SKILL.md) | static checks, `npm run build`, `npm test`, `npm run test:e2e` | Stack, Chromium |
 | Docs only (`docs/`, `.claude/`, `CLAUDE.md`, `README.md`) | `npm run docs:check`; `npm run docs:check:test` when the checker changed | nothing |

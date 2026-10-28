@@ -104,7 +104,7 @@ Issues found while working or during Owner QA:
 
 Memory is not where rules live. Test every candidate memory in this order:
 
-1. A working rule goes to this file, the lifecycle owner or the owning skill. Example: "Codex runs read-only".
+1. A shared working rule goes to this file, the lifecycle owner or the owning skill; a Claude-specific binding goes to `.claude/rules.md`. Example: "Codex runs read-only".
 2. Program state goes to that program's own `progress.md`, `problems.md` or `future-features.md`. Example: the status of H2-2.
 3. A decision that spans programs goes to an ADR. Example: the order of the three roadmap steps.
 4. Work no open program owns goes to `docs/backlog/`. Example: a UI bug such as BL-004 (the quiz completion screen).

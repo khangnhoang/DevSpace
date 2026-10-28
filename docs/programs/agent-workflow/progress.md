@@ -7,12 +7,12 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | U8 `implementation-plans/u8-shared-agent-rules/plan.md` r4, Owner-approved 2026-10-29; local implementation commits explicitly granted. |
-| Current unit / checkpoint | U8, CP2 completed; CP3 next. |
-| Status | in progress; CP2 bounded validator and fixtures implemented. AW-008 remains outside U8. |
+| Current unit / checkpoint | U8, CP3 audit corrections completed; full re-audit next. |
+| Status | in progress; CP3 first audit findings corrected. AW-008 remains outside U8. |
 | Completed evidence | CP1 shared ownership committed at 6d3605f; CP2 docs checks, fixtures, lint, typecheck and self-review passed; runtime compliance remains unverified. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | Perform CP3 full read-only instruction audit, final bidirectional comparison and scenarios. |
+| Next action | Repeat the full read-only instruction audit, final bidirectional comparison and scenarios. |
 | Current authority | Owner grants local plan and implementation/checkpoint/correction commits, and implementation in the requested new chat. No push, PR, merge, hosted action or deployment granted. |
 
 ## Milestones
@@ -86,4 +86,6 @@ One line each, newest last. No review rounds or command logs.
 
 - 2026-10-29 U8 CP1: shared AGENTS contract, Claude-only bindings, lifecycle handoff and active policy pointers; bidirectional traceability and symlink verification (`6d3605f`).
 
-- 2026-10-29 U8 CP2: bounded import-contract validator, AGENTS link coverage and negative fixtures; checker commands integrated (this commit).
+- 2026-10-29 U8 CP2: bounded import-contract validator, AGENTS link coverage and negative fixtures; checker commands integrated (`9c17f1c`).
+
+- 2026-10-29 U8 CP3 corrections: restore Claude-binding routing, include AGENTS in citation discovery and remove the duplicated browser restriction; docs and symlink checks passed (this commit).

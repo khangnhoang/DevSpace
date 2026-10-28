@@ -6,7 +6,7 @@ Read this when writing or materially revising a master plan for a multi-unit pro
 
 1. Read the Owner's request and the roadmap ADR. Separate confirmed facts, Owner decisions, assumptions, conflicts and open questions; for each material assumption, record the evidence and what would invalidate it.
 2. Put the goal first, as an observable outcome and boundary. Mechanisms (tables, modules, APIs) belong in unit plans, not in the goal.
-3. List Owner decisions, numbered and dated, one line each. Ask the Owner (`AskUserQuestion`) before writing anything the repo cannot answer.
+3. List Owner decisions, numbered and dated, one line each. Ask the Owner (through the supported native question interface; `AGENTS.md` section 6) before writing anything the repo cannot answer.
 4. Split into units by dependency and verification boundary. For each unit: outcome, hard or soft dependencies, and the gate to start or enable it (Owner approval, merge of another unit, a hosted rollout step).
 5. Write the rollout order, including hosted steps and what must be true before each. Respect compatibility between old code, new code and the database (see `supabase-migration`).
 6. Write shared invariants with the failure each prevents, program risks and explicit exclusions.
@@ -24,4 +24,4 @@ Read this when writing or materially revising a master plan for a multi-unit pro
 - Every dependency and gate has evidence, or is marked unknown rather than assumed.
 - Acceptance is observable and sits close to the unit that introduces the behavior.
 - No material decision is deferred to the implementor.
-- The plan ends at planning: it grants no permission (`.claude/rules.md` section 4).
+- The plan ends at planning: it grants no permission (`AGENTS.md` section 4).

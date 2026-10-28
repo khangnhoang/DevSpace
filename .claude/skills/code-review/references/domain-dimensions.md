@@ -20,7 +20,7 @@ Skill: `test-quality-strategy`. What each layer covers and what has no test: [te
 
 ## Security, performance and comments
 
-A security finding names the actor, entry point, missing boundary, impact and mitigation. Performance: only realistic risks (N+1 queries, unbounded work, missing pagination, duplicate requests, request waterfalls, large payloads, lock duration); no speculative optimization. Comments: stale, redundant or missing ones where a hidden constraint exists ([CLAUDE.md](../../../../CLAUDE.md), Core engineering rules, rule 13).
+A security finding names the actor, entry point, missing boundary, impact and mitigation. Performance: only realistic risks (N+1 queries, unbounded work, missing pagination, duplicate requests, request waterfalls, large payloads, lock duration); no speculative optimization. Comments: stale, redundant or missing ones where a hidden constraint exists ([AGENTS.md](../../../../AGENTS.md), Core engineering rules, rule 13).
 
 ## Git state
 

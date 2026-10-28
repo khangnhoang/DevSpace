@@ -7,12 +7,12 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | U8 `implementation-plans/u8-shared-agent-rules/plan.md` r4, Owner-approved 2026-10-29; local implementation commits explicitly granted. |
-| Current unit / checkpoint | U8, before CP1. |
-| Status | plan approved; implementation handoff pending. AW-008 remains outside U8. |
-| Completed evidence | U8 plan self-review and docs checks passed; no implementation checkpoint completed. Earlier delivery evidence remains in Milestones. |
+| Current unit / checkpoint | U8, CP1 completed; CP2 next. |
+| Status | in progress; CP1 shared ownership migrated. AW-008 remains outside U8. |
+| Completed evidence | CP1 docs check and self-review passed; bidirectional traceability and 12 symlink checks recorded in the U8 traceability report. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | Commit the r4 authority update, then open the requested local `gpt-6.1-sol` / `medium` implementation chat for CP1–CP3. |
+| Next action | Implement CP2 bounded instruction/import validation and fixtures. |
 | Current authority | Owner grants local plan and implementation/checkpoint/correction commits, and implementation in the requested new chat. No push, PR, merge, hosted action or deployment granted. |
 
 ## Milestones
@@ -82,4 +82,6 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-27 AW-011 Codex diff review passed; State before the PR (`03790d3`).
 - 2026-10-27 AW-011 merged; AW-011 resolved (PR 28, `7ad7a92`).
 - 2026-10-29 U8 r3 approved after self-review: shared rules plan, bidirectional baseline traceability and full instruction audit; local plan commit and `gpt-6.1-sol` / `medium` implementation handoff authorized (`f04f546`).
-- 2026-10-29 U8 r4 records the Owner's explicit local implementation/checkpoint/correction commit grant; no remote or hosted grant (this commit).
+- 2026-10-29 U8 r4 records the Owner's explicit local implementation/checkpoint/correction commit grant; no remote or hosted grant (`ef74df6`).
+
+- 2026-10-29 U8 CP1: shared AGENTS contract, Claude-only bindings, lifecycle handoff and active policy pointers; bidirectional traceability and symlink verification (this commit).

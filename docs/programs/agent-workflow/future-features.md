@@ -4,7 +4,7 @@ Direction the Owner has set that is outside the scope of the current initiative.
 
 ## FEAT-007: Token budget rule
 
-- Status: Deferred; the rule was cut down to "read deliberately" (`CLAUDE.md` rule 6).
+- Status: Deferred; the rule was cut down to "read deliberately" (`AGENTS.md` rule 6).
 - Direction: revisit a fuller token-budget rule (VocaSpace Core Engineering Rule 6) only if the Owner sets budgets.
 - Target program: none yet.
 

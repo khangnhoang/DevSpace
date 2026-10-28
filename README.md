@@ -107,7 +107,7 @@ npm install
 
 ### 2. Môi trường
 
-File môi trường là của Owner, không nằm trong repo và không cần mở hay sửa. Lệnh chạy Supabase local (Docker Desktop phải đang chạy) nằm ở mục Commands của [CLAUDE.md](CLAUDE.md).
+File môi trường là của Owner, không nằm trong repo và không cần mở hay sửa. Lệnh chạy Supabase local (Docker Desktop phải đang chạy) nằm ở mục Commands của [AGENTS.md](AGENTS.md).
 
 ### 3. Chạy ứng dụng
 

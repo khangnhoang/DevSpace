@@ -1,6 +1,6 @@
 # Branch start, commit and history
 
-Read this when starting or switching a branch, staging, committing, or deciding about a correction, a conflict or history. Permissions are owned by [`.claude/rules.md`](../../../../.claude/rules.md) section 4; nothing here grants an action.
+Read this when starting or switching a branch, staging, committing, or deciding about a correction, a conflict or history. Permissions are owned by [`AGENTS.md`](../../../../AGENTS.md) section 4; nothing here grants an action.
 
 ## Starting a task branch
 
@@ -28,12 +28,12 @@ A commit is not final approval. Manual QA may stay pending if reported; it still
 
 ## Message
 
-`<type>(<scope>): <imperative summary>`, with types `feat fix refactor test docs chore perf build ci revert`. Language: [`.claude/rules.md`](../../../../.claude/rules.md) section 1. Add a body only when the reason, a compatibility point, a risk or a known limit is not obvious. Good: `fix(profile): send null for an empty date of birth`. Bad: `fix issue`, `update files`, `done`.
+`<type>(<scope>): <imperative summary>`, with types `feat fix refactor test docs chore perf build ci revert`. Language: [`AGENTS.md`](../../../../AGENTS.md) section 1. Add a body only when the reason, a compatibility point, a risk or a known limit is not obvious. Good: `fix(profile): send null for an empty date of birth`. Bad: `fix issue`, `update files`, `done`.
 
 ## Failures
 
 - Verification fails because of the change: fix in scope and rerun; stop if the fix needs a scope or product decision. Do not commit broken work unless the Owner asked for a labeled WIP commit.
-- A failure that existed before you: confirm it and record the evidence; do not fix it silently (triage in `.claude/rules.md` section 5).
+- A failure that existed before you: confirm it and record the evidence; do not fix it silently (triage in `AGENTS.md` section 5).
 - Commit or hook fails: report the exact reason, keep the tree, fix only in-scope causes, then rerun the focused checks and re-audit the staged diff before trying again.
 
 ## Corrections and history

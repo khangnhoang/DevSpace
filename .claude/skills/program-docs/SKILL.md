@@ -11,7 +11,7 @@ Use when a task creates, updates, reshapes, closes or migrates program documenta
 
 Do not use it for product code, for the planning method (the `planning` skill), or merely to read a plan.
 
-This skill owns document shape only: file roles, where State lives, taxonomy, lifecycle and the migration procedure. A docs edit grants nothing (`docs/agent-loops.md`, Precedence and safety; `.claude/rules.md` section 4). Build new docs from the templates below, never by copying an old program's structure.
+This skill owns document shape only: file roles, where State lives, taxonomy, lifecycle and the migration procedure. A docs edit grants nothing (`docs/agent-loops.md`, Precedence and safety; `AGENTS.md` section 4). Build new docs from the templates below, never by copying an old program's structure.
 
 ## File roles
 
@@ -58,7 +58,7 @@ Every entry is open with its fields, or closed as exactly one line that keeps it
 - `<ID> — Moved to [<program>](<link>)`.
 - `<ID> — Dropped: <reason>`.
 
-Closing an entry grants nothing (`.claude/rules.md` section 4). Closing a program includes a backlog review with the Owner.
+Closing an entry grants nothing (`AGENTS.md` section 4). Closing a program includes a backlog review with the Owner.
 
 ## Lifecycle, index and ADRs
 
@@ -69,7 +69,7 @@ Closing an entry grants nothing (`.claude/rules.md` section 4). Closing a progra
 - An ADR in `docs/adr/` records a decision that outlives one program or spans programs. A decision that matters to one program stays in its master plan or charter. Every `docs/adr/*.md` except `README.md` is listed in `docs/adr/README.md` with date, status and a one-line summary.
 - Folder purposes are indexed in `docs/README.md`; update it when a folder's purpose changes.
 
-Docs language: `.claude/rules.md` section 1. Size targets, soft: master plan 150-250 lines, detail plan 150-300, problems entry about 8 lines open and 1 resolved. Exceeding one means removing duplication, not dropping a decision or gate.
+Docs language: `AGENTS.md` section 1. Size targets, soft: master plan 150-250 lines, detail plan 150-300, problems entry about 8 lines open and 1 resolved. Exceeding one means removing duplication, not dropping a decision or gate.
 
 ## Verify
 
@@ -86,7 +86,7 @@ After editing program docs, `docs/README.md`, `docs/adr/` or `docs/backlog/`, ru
 | [problems.md](references/templates/problems.md) | creating or reshaping a `problems.md`, or shrinking a resolved entry | not touching problems |
 | [future-features.md](references/templates/future-features.md) | creating a `future-features.md` or adding an entry | not touching future features |
 | [adr.md](references/templates/adr.md) | creating an ADR | not creating an ADR |
-| [handoff.md](references/templates/handoff.md) | writing or editing a handoff (`.claude/rules.md` section 7) | not writing a handoff |
+| [handoff.md](references/templates/handoff.md) | writing or editing a handoff (`docs/agent-loops.md`, Handoff) | not writing a handoff |
 | [migration.md](references/migration.md) | migrating a live program to this shape, reshaping a single-unit program into a multi-unit one, making a delivery program evergreen, or replacing its State, plan, progress or problems files | not migrating or reshaping |
 
 ## Stop when

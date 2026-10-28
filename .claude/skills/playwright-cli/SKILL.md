@@ -12,8 +12,8 @@ allowed-tools: Bash(playwright-cli:*) Bash(npx playwright:*) Bash(npx --no-insta
 - Run it as `npx --no-install playwright cli ...` from the pinned `@playwright/test` devDependency. Never install it globally (`npm install -g`); downloading a browser needs the Owner's grant.
 - Open only `127.0.0.1` or `localhost`, against the local Supabase stack that the e2e run uses. Never open production, the Supabase dashboard or any hosted page, and run none of the upstream examples against an external site.
 - Never `attach` to a running browser (`--cdp`, `--extension`) without asking the Owner first. The `ask` rules in `.claude/settings.json` back this up.
-- Sign in by loading a session that the e2e setup saved (`__tests__/e2e/.auth/`, created by `npm run test:e2e`). Passwords are never typed (`.claude/rules.md` section 4).
-- Screenshots, videos and traces go to ignored paths. Attaching one to a PR is a PR update and needs the Owner's grant for that PR. Creating, editing or commenting on an issue needs its own Owner grant for that exact action and target (`.claude/rules.md` section 4).
+- Sign in by loading a session that the e2e setup saved (`__tests__/e2e/.auth/`, created by `npm run test:e2e`). Passwords are never typed (`AGENTS.md` section 4).
+- Screenshots, videos and traces go to ignored paths. Attaching one to a PR is a PR update and needs the Owner's grant for that PR. Creating, editing or commenting on an issue needs its own Owner grant for that exact action and target (`AGENTS.md` section 4).
 - The e2e spec is the contract: when a test fails, never edit it to match the app without the Owner's decision; report a defect instead. This overrides the references that update the spec to match the app.
 - A confirmed bug uses `knownBugE2e` (`test-quality-strategy`), never `test.fixme`, `test.fail` or a skip.
 - e2e specs import `test` and `expect` from the DevSpace fixtures (`__tests__/e2e/fixtures.ts`), never from `@playwright/test`.

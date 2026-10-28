@@ -23,7 +23,7 @@ Found on 2026-10-21 while reading the code and the hosted DB metadata. Items mar
 | P18 | Opening the signup confirmation link in a browser/tab without the code verifier → the `/auth/error` page, even though the email is confirmed and sign-in works. The root cause is P14 | Low | with P14 |
 | P19 | Several `localhost` tabs open: `supabase-js` shares `navigator.locks`, auth operations wait on the lock forever → one stuck tab makes the other tabs spin on sign-in. Closing all tabs fixes it. Library behavior, not caused by H1 | Low | monitor |
 | P20 | Quiz results are not stored (no table), the UI does not mark a quiz as completed like a lesson; re-entering means starting over | Medium | future-features |
-| P21 | Delete confirmation uses `window.confirm` (comments, admin CRUD of courses/chapters/lessons) — ugly, inconsistent with the UI | Low | when shadcn (Dialog) is applied |
+| ~~P21~~ | Delete confirmation uses `window.confirm` (comments, admin CRUD of courses/chapters/lessons) — ugly, inconsistent with the UI — fixed in app-foundation U1: all 9 calls use `ConfirmDialog` (FEAT-006) | Low | app-foundation U1 |
 | P22 | The avatar in the course review section has a strange extra gradient background | Low | later |
 | P23 | Notifications: there is no mark-as-read button per notification (you must click the notification itself), only a button for all | Low | later |
 | P24 | AI quiz creation does not run: `GEMINI_API_KEY` has expired. The Owner's job (issue a new key); includes the audit item of merging the 2 Gemini SDKs | Low | Owner |

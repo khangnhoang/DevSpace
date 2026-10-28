@@ -27,3 +27,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-22 H2-1 migration B file renamed to its recorded version (PR 4, `5ae5943`).
 - 2026-10-22 H2-1 production matrix recorded and the Owner deferred H2-2, split into H2-2a (P3, P4) and H2-2b (P5/P6, P25) (`6e8e1b7`).
 - 2026-10-24 `infrastructure` U5 merged: the payment-flow tests H2-2b waited for, with P5, P6 and P25 as known bugs (PR 18, `b8e3e0f`).
+- 2026-10-29 P21 resolved: the nine `window.confirm` calls became `ConfirmDialog` in app-foundation U1 (this commit).

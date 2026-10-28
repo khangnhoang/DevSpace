@@ -13,7 +13,16 @@ Do not use for logic with no visible change, or for data and state mechanics (`f
 
 ## Current stack (only what exists)
 
-Next.js App Router, React 19, Tailwind CSS 4 (`app/globals.css`), `lucide-react` icons, `sonner` toasts (`<Toaster richColors position="top-right" />` in `app/layout.tsx`), and feature components in `app/components/`. There is **no UI library, no shadcn, no form library and no Zod**. Packages, fonts and an animation library are outside a design task unless the Owner asked for them (`.claude/rules.md` section 4). A move to shadcn, Zod and React Hook Form belongs to the app-foundation program ([ADR 0003](../../../docs/adr/0003-app-foundation-program.md)), which will update this skill.
+Next.js App Router, React 19, Tailwind CSS 4 (`app/globals.css`), `lucide-react` icons, `sonner` toasts (`<Toaster richColors position="top-right" />` in `app/layout.tsx`), and feature components in `app/components/`. shadcn primitives sit in `components/ui/` (`button`, `alert-dialog`; `components.json`) on `radix-ui` and `class-variance-authority`. There is **no form library and no Zod yet**: they arrive with the later units of the app-foundation program ([ADR 0003](../../../docs/adr/0003-app-foundation-program.md)), which updates this skill. Packages, fonts and an animation library are outside a design task unless the Owner asked for them (`.claude/rules.md` section 4).
+
+Adding a primitive: `npx shadcn add <name>`, never `npx shadcn init` (it rewrites `app/globals.css` and `lib/utils.ts` and installs `cn`, `shadcn` and `tw-animate-css`). Then edit the generated file as `button.tsx` and `alert-dialog.tsx` were edited, and no further:
+
+- import `cn` from `@/lib/utils` (the generator writes `from "cn"`, a package the repo does not install);
+- delete every `dark:` class: the repo has no class-based dark mode, so a `dark:` class would follow the OS scheme;
+- animation classes stay those of `tailwindcss-animate` (`animate-in`, `fade-in-0`, `zoom-in-95`); a `tw-animate-css` class does not exist here;
+- overlay and content of a dialog sit at `z-80`, above `LessonComments` (`z-70`).
+
+`app/globals.css` holds an add-only block of shadcn colour tokens (`--primary` to `--ring`) mapped to the palette the pages use, and no radius tokens, base layer or `.dark` block: the pages rely on bare `border` and `rounded-*` classes. `--background` and `--foreground` flip with the OS colour scheme while the admin pages are always dark and the learner pages light, so a shadcn component on those screens sets its own surface and text colours (see `ConfirmDialog`) instead of using them.
 
 ## Classify the screen first
 
@@ -40,7 +49,10 @@ Scale the process to the change:
 ## Hierarchy, dialogs and feedback
 
 - One obvious primary action; secondary actions subordinate (outline or ghost); destructive actions separated and styled as destructive.
-- **Confirm dialogs.** Destructive actions confirm in a named dialog that shows the object, the action and its consequence, with cancel and confirm and a pending state. The current code uses `window.confirm` (P21); do not add more of them. Until the app-foundation program brings a Dialog, build a small local confirm component for new destructive flows, or keep `window.confirm` only where the task forbids new UI and report it.
+- **Confirm dialogs.** Destructive and payment actions confirm in `ConfirmDialog` (`app/components/ConfirmDialog.tsx`, on `components/ui/alert-dialog.tsx`); no `window.confirm` remains in `app`, so do not add one. It is a controlled component: `open`, `onOpenChange`, `title`, `description`, `confirmLabel`, `destructive`, `tone` (`admin` or `learner`, which picks the surface) and `onConfirm`, which returns a promise. The description names the object, the action and its consequence (read the foreign keys before claiming what a delete removes). While `onConfirm` runs both buttons are disabled and Escape is ignored; a rejection is swallowed, so the handler reports its own error with a toast, and the dialog closes when it settles.
+  - The site keeps the target object in state and mounts the dialog only while a target exists (`{target && <ConfirmDialog open onOpenChange={() => setTarget(null)} … />}`): focus returns to the element focused at mount, which is the control that opened it.
+  - The handler that opened the old `window.confirm` keeps its guards before the dialog opens; `onConfirm` calls the existing action, toast and refresh. `app/admin/transactions/page.tsx` passes `toast.promise(...).unwrap()` so the dialog stays pending until the payment action ends.
+  - The hand-written modals (`fixed inset-0` in admin pages, `CoursePaymentModal`) are not part of it.
 - Follow the existing toast convention (`sonner`). Feedback says what succeeded or failed, what stays editable and what to do next. No route-specific toast theming.
 - Do not fake success for behavior that is not integrated.
 
@@ -75,7 +87,7 @@ Prefer existing components and usage-site customization. Do not invent paths or 
 ## Final check
 
 - [ ] screen type, latitude and direction are right; substantial work has grounding, a plan and a critique
-- [ ] primary, secondary and destructive actions are clear; destructive flows confirm with context
+- [ ] primary, secondary and destructive actions are clear; destructive flows confirm in `ConfirmDialog` with context
 - [ ] states, long and missing data, mobile and overflow are handled
 - [ ] semantic controls, focus and contrast checked or marked not verified
 - [ ] shared components untouched unless the change is global and inspected; no new library added

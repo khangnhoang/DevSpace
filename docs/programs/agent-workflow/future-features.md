@@ -25,7 +25,7 @@ Direction the Owner has set that is outside the scope of the current initiative.
 - FEAT-002 — Moved to [infrastructure](../infrastructure/future-features.md)
 - FEAT-003 — Moved to [infrastructure](../infrastructure/future-features.md)
 - FEAT-004 — Moved to [infrastructure](../infrastructure/future-features.md)
-- FEAT-005 — Moved to [backlog](../../backlog/future-features.md)
-- FEAT-006 — Moved to [backlog](../../backlog/future-features.md)
+- FEAT-005 — Moved to [app-foundation](../app-foundation/future-features.md)
+- FEAT-006 — Moved to [app-foundation](../app-foundation/future-features.md)
 - FEAT-008 — Dropped: the `frontend-ui-review` skill; the Owner declined it (D4).
 - FEAT-009 — Dropped: the Codex multi-agent skill (`native-multi-agent-workflow`) and the skill governance skill (`maintain-repo-skills`); they exist for Codex-only governance, which DevSpace does not use (D4). A DevSpace skill-authoring skill is U5 (charter decision 3).

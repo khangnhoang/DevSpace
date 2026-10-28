@@ -20,14 +20,6 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Direction: small UI task: set the completion state after the last question and check the screen by hand; decide with P20 whether completion should also be stored.
 - Exit condition: answering the last question of a quiz shows the completion screen.
 
-### BL-005: saving a profile without a date of birth fails
-
-- Status: Open (2026-10-25).
-- Problem: the profile edit dialog defaults an empty `dob` to `""` (`app/(main)/profile/page.tsx:89`) and `handleUpdateProfile` sends it unchanged (`page.tsx:327`), so a user who has never set a date of birth cannot save any other field: the toast reads `Lỗi cập nhật: invalid input syntax for type date: ""`.
-- Evidence: infrastructure U6 manual pass row M6, 2026-10-25, as `student@devspace.test` on the local stack (seed `dob` is null); the same lines exist at `b8e3e0f`, before U6, which changed only types in this file. Saving with a date set succeeds.
-- Direction: small fix in the dialog or `updateProfile`: send `null` for an empty date (and check the other optional fields), with a manual pass or an e2e row for a profile without a date.
-- Exit condition: a profile with no date of birth saves another field successfully, and the date stays empty.
-
 ### BL-006: the avatar menu is already open after signing back in
 
 - Status: Open (2026-10-25).
@@ -46,4 +38,5 @@ One line each: ID, status, one-line outcome. Details stay in Git.
 - BL-009 — Moved to [dependency-maintenance](../programs/dependency-maintenance/problems.md)
 - BL-002 — Done: `remotePatterns` dropped `hostname: '**'` and names only the three course image hosts and the hosted Supabase Storage public path (PR #33)
 - BL-008 — Done: a course without an image shows the shared `/no-course-image.png` on the home page, hero slider, course page and admin list (PR #33)
+- BL-005 — Moved to [app-foundation](../programs/app-foundation/problems.md)
 - BL-010 — Done: the quiz compares the selected option and the correct answer case-insensitively; hosted held no row outside `a` to `d` (PR #33)

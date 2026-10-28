@@ -1,0 +1,25 @@
+# Problems, risks and follow-ups — app-foundation
+
+Plan: [plan.md](plan.md). Progress: [progress.md](progress.md).
+
+## Open
+
+### BL-005: saving a profile without a date of birth fails
+
+- Status: Open (2026-10-25); moved from `docs/backlog/` on 2026-10-28, owned by U3. The same bug is security-hotfix P16.
+- Problem: the profile edit dialog defaults an empty `dob` to `""` (`app/(main)/profile/page.tsx:89`) and `handleUpdateProfile` sends it unchanged (`page.tsx:327`), so a user who has never set a date of birth cannot save any other field: the toast reads `Lỗi cập nhật: invalid input syntax for type date: ""`.
+- Evidence: infrastructure U6 manual pass row M6, 2026-10-25, as `student@devspace.test` on the local stack (seed `dob` is null); saving with a date set succeeds.
+- Direction: U3's profile schema turns blank optional fields into `null`; an e2e row saves a profile with no date of birth.
+- Exit condition: a profile with no date of birth saves another field successfully, and the date stays empty.
+
+### AF-001: server actions return raw error text
+
+- Status: Open (2026-10-28, found while planning; outside the program's scope).
+- Problem: some server actions return Supabase error text to the browser instead of a generic Vietnamese message, against the `server-actions` return contract: `createNewUser` returns `error.message` from `auth.admin.createUser` (`app/action/user.ts:50`), `deleteUserAccount` from `auth.admin.deleteUser` (`user.ts:79`), and `enrollCourse` from the `enrollments` insert (`app/action/enroll.ts:82`).
+- Evidence: read at `cf8c60b`; not yet checked across the payment actions, which H2-2b rewrites.
+- Direction: a small task after U2 merges (U2 keeps the messages it does not own); log the detail on the server and return a fixed message, keeping each action's result shape.
+- Exit condition: no non-payment server action returns database or Auth error text.
+
+## Resolved
+
+One line each: ID, status, one-line outcome. Details stay in Git.

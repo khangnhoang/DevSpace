@@ -8,6 +8,7 @@ import {
 import { toast } from "sonner";
 import { Check, X, DollarSign, Loader2 } from "lucide-react";
 import CustomAvatar from "@/app/components/CustomAvatar"; // Nhớ check đường dẫn component này
+import ConfirmDialog from "@/app/components/ConfirmDialog";
 
 interface PaymentRow {
   id: number;
@@ -22,10 +23,16 @@ interface PaymentRow {
   courses?: { name?: string } | null;
 }
 
+// The learner label is the one the table row shows (P15 keeps it "Ẩn danh" until the page reads the right relation).
+const orderSummary = (p: PaymentRow, consequence: string) =>
+  `Học viên: ${p.profiles?.full_name || "Ẩn danh"}. Khóa học: ${p.courses?.name || "Khóa học đã xóa"}. Số tiền: ${p.amount?.toLocaleString("vi-VN")} đ. ${consequence}`;
+
 export default function TransactionsPage() {
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all, pending, success, failed
+  const [approveTarget, setApproveTarget] = useState<PaymentRow | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<PaymentRow | null>(null);
 
   // Fetch dữ liệu
   const fetchPayments = async () => {
@@ -46,27 +53,22 @@ export default function TransactionsPage() {
 
   // Xử lý Duyệt
   const handleApprove = async (id: number) => {
-    if (
-      !confirm(
-        "Xác nhận đã nhận tiền? Hành động này sẽ kích hoạt khóa học cho user."
-      )
-    )
-      return;
-
-    toast.promise(approvePayment(id), {
-      loading: "Đang xử lý...",
-      success: (res) => {
-        if (res.error) throw new Error(res.error);
-        fetchPayments(); // Reload lại bảng
-        return "Duyệt đơn thành công!";
-      },
-      error: (err) => err.message || "Có lỗi xảy ra",
-    });
+    // unwrap() hands the dialog the settled promise, so it stays pending until the action ends.
+    await toast
+      .promise(approvePayment(id), {
+        loading: "Đang xử lý...",
+        success: (res) => {
+          if (res.error) throw new Error(res.error);
+          fetchPayments(); // Reload lại bảng
+          return "Duyệt đơn thành công!";
+        },
+        error: (err) => err.message || "Có lỗi xảy ra",
+      })
+      .unwrap();
   };
 
   // Xử lý Hủy
   const handleReject = async (id: number) => {
-    if (!confirm("Hủy bỏ giao dịch này?")) return;
     const res = await rejectPayment(id);
     if (res.error) toast.error(res.error);
     else {
@@ -212,14 +214,14 @@ export default function TransactionsPage() {
                         {p.status === "pending" ? (
                           <div className="flex justify-end gap-2 opacity-100 group-hover:opacity-100 transition-opacity">
                             <button
-                              onClick={() => handleApprove(p.id)}
+                              onClick={() => setApproveTarget(p)}
                               className="px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded-md text-white flex items-center gap-1.5 text-xs font-medium transition-colors shadow-sm"
                               title="Xác nhận tiền về & Kích hoạt khóa học"
                             >
                               <Check size={14} /> Duyệt
                             </button>
                             <button
-                              onClick={() => handleReject(p.id)}
+                              onClick={() => setRejectTarget(p)}
                               className="px-2 py-1.5 bg-gray-700 hover:bg-red-500/20 hover:text-red-500 text-gray-300 rounded-md flex items-center justify-center transition-colors border border-gray-600 hover:border-red-500/30"
                               title="Hủy đơn này"
                             >
@@ -240,6 +242,35 @@ export default function TransactionsPage() {
           </div>
         </div>
       </div>
+      {approveTarget && (
+        <ConfirmDialog
+          open
+          onOpenChange={() => setApproveTarget(null)}
+          tone="admin"
+          title="Duyệt đơn thanh toán"
+          description={orderSummary(
+            approveTarget,
+            "Xác nhận đã nhận tiền? Hành động này sẽ kích hoạt khóa học cho học viên."
+          )}
+          confirmLabel="Duyệt đơn"
+          onConfirm={() => handleApprove(approveTarget.id)}
+        />
+      )}
+      {rejectTarget && (
+        <ConfirmDialog
+          open
+          onOpenChange={() => setRejectTarget(null)}
+          tone="admin"
+          destructive
+          title="Hủy đơn hàng"
+          description={orderSummary(
+            rejectTarget,
+            "Hủy bỏ giao dịch này? Học viên sẽ không được kích hoạt khóa học."
+          )}
+          confirmLabel="Hủy đơn hàng"
+          onConfirm={() => handleReject(rejectTarget.id)}
+        />
+      )}
     </div>
   );
 }

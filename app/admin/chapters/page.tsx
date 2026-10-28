@@ -9,6 +9,7 @@ import {
   deleteChapter,
 } from "@/lib/supabase";
 import { toast } from "sonner";
+import ConfirmDialog from "@/app/components/ConfirmDialog";
 
 interface Course {
   id: number;
@@ -28,6 +29,7 @@ export default function ChaptersManagerPage() {
   const [isOpenForm, setIsOpenForm] = useState(false);
   const [editingChapterId, setEditingChapterId] = useState<number | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<Chapter | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
   const [selectedEditCourseId, setSelectedEditCourseId] = useState<
@@ -95,11 +97,6 @@ export default function ChaptersManagerPage() {
   };
 
   const handleDelete = async (chapter: Chapter) => {
-    const confirmDelete = confirm(
-      `Bạn có chắc chắn muốn xóa chương "${chapter.title}" không?`
-    );
-    if (!confirmDelete) return;
-
     const result = await deleteChapter(chapter.id);
 
     if (result.error) {
@@ -246,7 +243,7 @@ export default function ChaptersManagerPage() {
                         <SquarePen size={20} />
                       </button>
                       <button
-                        onClick={() => handleDelete(chapter)}
+                        onClick={() => setDeleteTarget(chapter)}
                         className="p-2 rounded-lg text-red-500 hover:bg-red-300  transition-all duration-200 cursor-pointer"
                       >
                         <Trash size={20} />
@@ -348,6 +345,18 @@ export default function ChaptersManagerPage() {
             </div>
           </div>
         </div>
+      )}
+      {deleteTarget && (
+        <ConfirmDialog
+          open
+          onOpenChange={() => setDeleteTarget(null)}
+          tone="admin"
+          destructive
+          title="Xóa chương"
+          description={`Bạn có chắc chắn muốn xóa chương "${deleteTarget.title}" không? Các bài học trong chương sẽ không còn thuộc chương nào. Hành động này không thể hoàn tác.`}
+          confirmLabel="Xóa chương"
+          onConfirm={() => handleDelete(deleteTarget)}
+        />
       )}
     </div>
   );

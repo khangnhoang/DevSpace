@@ -60,6 +60,11 @@ export default function ConfirmDialog({
   // A ref, not only state: two clicks can land before the disabled attribute renders.
   const running = useRef(false);
   const styles = TONES[tone];
+  // Radix returns focus only to its own Trigger, and this dialog is controlled without one. Callers mount it
+  // when it opens, so the element focused at mount is the control that opened it.
+  const [opener] = useState(() =>
+    typeof document === "undefined" ? null : document.activeElement
+  );
 
   const handleConfirm = async (e: React.MouseEvent) => {
     // Radix closes the dialog on action click; hold it open until the action settles.
@@ -86,7 +91,13 @@ export default function ConfirmDialog({
         onOpenChange(next);
       }}
     >
-      <AlertDialogContent className={styles.content}>
+      <AlertDialogContent
+        className={styles.content}
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          if (opener instanceof HTMLElement) opener.focus();
+        }}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle className={styles.title}>{title}</AlertDialogTitle>
           <AlertDialogDescription className={styles.description}>

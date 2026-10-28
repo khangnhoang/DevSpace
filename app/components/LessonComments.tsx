@@ -13,6 +13,7 @@ import {
   XCircle,
 } from "lucide-react";
 import CustomAvatar from "./CustomAvatar";
+import ConfirmDialog from "./ConfirmDialog";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import {
@@ -60,6 +61,7 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
 
   // State Menu dropdown (ID của comment đang mở menu)
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CommentItem | null>(null);
 
   // 1. Lấy User hiện tại
   useEffect(() => {
@@ -127,8 +129,6 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
   // 4. Xử lý Xóa Comment
   const handleDelete = async (commentId: number) => {
     if (!currentUserId) return;
-    const confirm = window.confirm("Bạn có chắc muốn xóa bình luận này?");
-    if (!confirm) return;
 
     const error = await deleteComment(commentId, currentUserId);
     if (error) {
@@ -290,7 +290,9 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
                                     <Edit2 size={12} /> Sửa
                                   </button>
                                   <button
-                                    onClick={() => handleDelete(cmt.id)}
+                                    onClick={() => {
+                                      if (currentUserId) setDeleteTarget(cmt);
+                                    }}
                                     className="w-full text-left px-3 py-1.5 text-xs hover:bg-red-50 text-red-600 flex items-center gap-2"
                                   >
                                     <Trash2 size={12} /> Xóa
@@ -388,6 +390,23 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
           </div>
         </div>
       </div>
+
+      {deleteTarget && (
+        <ConfirmDialog
+          open
+          onOpenChange={() => setDeleteTarget(null)}
+          tone="learner"
+          destructive
+          title="Xóa bình luận"
+          description={`Bạn có chắc muốn xóa bình luận "${
+            deleteTarget.content.length > 80
+              ? deleteTarget.content.slice(0, 80) + "…"
+              : deleteTarget.content
+          }" không? Hành động này không thể hoàn tác.`}
+          confirmLabel="Xóa bình luận"
+          onConfirm={() => handleDelete(deleteTarget.id)}
+        />
+      )}
     </>
   );
 }

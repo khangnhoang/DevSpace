@@ -28,6 +28,7 @@ import { generateQuizFromContent } from "@/app/action/gemini";
 import type { DBExercise, ExerciseData } from "@/lib/types";
 import { getLessonsForAdmin } from "@/app/action/lessons";
 import { toast } from "sonner";
+import ConfirmDialog from "@/app/components/ConfirmDialog";
 import { useRouter } from "next/navigation";
 
 const ITEMS_PER_PAGE = 10;
@@ -50,6 +51,11 @@ interface LessonAdminRow {
 export default function LessonsManagerPage() {
   const router = useRouter();
   const [isOpenForm, setIsOpenForm] = useState(false);
+  const [deleteLessonTarget, setDeleteLessonTarget] =
+    useState<LessonAdminRow | null>(null);
+  const [deleteExerciseTarget, setDeleteExerciseTarget] =
+    useState<DBExercise | null>(null);
+  const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [editLessonId, setEditLessonId] = useState<number | null>(null);
   const [title, setTitle] = useState("");
@@ -167,9 +173,7 @@ export default function LessonsManagerPage() {
     }
   };
 
-  const handleDelete = async (id: number, lessonTitle: string) => {
-    if (!confirm(`Bạn có chắc muốn xóa bài ${lessonTitle} không?`)) return;
-
+  const handleDelete = async (id: number) => {
     const { error } = await deleteLesson(id);
 
     if (error) {
@@ -221,11 +225,6 @@ export default function LessonsManagerPage() {
   };
 
   const handleDeleteExercise = async (exercise: DBExercise) => {
-    const confirmDelete = confirm(
-      `Bạn có chắc chắn muốn xóa câu hỏi "${exercise.question}" không?`
-    );
-    if (!confirmDelete) return;
-
     const result = await deleteExercise(exercise.id);
 
     if (result.error) {
@@ -268,8 +267,11 @@ export default function LessonsManagerPage() {
     if (!editLessonId) return toast.error("Chưa lưu bài học");
     if (!content) return toast.error("Nội dung trống");
 
-    const confirmBulk = confirm("AI sẽ tự động lưu 3 câu hỏi vào bài này");
-    if (!confirmBulk) return;
+    setIsBulkConfirmOpen(true);
+  };
+
+  const runAiBulkCreate = async () => {
+    if (!editLessonId) return;
 
     setIsGenerating(true);
     setShowAiMenu(false);
@@ -515,7 +517,7 @@ export default function LessonsManagerPage() {
                           <SquarePen size={18} />
                         </button>
                         <button
-                          onClick={() => handleDelete(lesson.id, lesson.title)}
+                          onClick={() => setDeleteLessonTarget(lesson)}
                           className="cursor-pointer p-2 hover:bg-red-600/20 text-red-400 rounded-lg transition-colors"
                         >
                           <Trash size={18} />
@@ -868,7 +870,7 @@ export default function LessonsManagerPage() {
                               <SquarePen size={17}></SquarePen>
                             </button>
                             <button
-                              onClick={() => handleDeleteExercise(e)}
+                              onClick={() => setDeleteExerciseTarget(e)}
                               className="text-red-500 cursor-pointer hover:bg-red-200 p-1 rounded-md"
                             >
                               <Trash size={17} />
@@ -975,6 +977,41 @@ export default function LessonsManagerPage() {
             )}
           </div>
         </div>
+      )}
+      {deleteLessonTarget && (
+        <ConfirmDialog
+          open
+          onOpenChange={() => setDeleteLessonTarget(null)}
+          tone="admin"
+          destructive
+          title="Xóa bài học"
+          description={`Bạn có chắc muốn xóa bài "${deleteLessonTarget.title}" không? Câu hỏi, bình luận, ghi chú và tiến độ học của bài này cũng sẽ bị xóa vĩnh viễn.`}
+          confirmLabel="Xóa bài học"
+          onConfirm={() => handleDelete(deleteLessonTarget.id)}
+        />
+      )}
+      {deleteExerciseTarget && (
+        <ConfirmDialog
+          open
+          onOpenChange={() => setDeleteExerciseTarget(null)}
+          tone="admin"
+          destructive
+          title="Xóa câu hỏi"
+          description={`Bạn có chắc chắn muốn xóa câu hỏi "${deleteExerciseTarget.question}" không? Hành động này không thể hoàn tác.`}
+          confirmLabel="Xóa câu hỏi"
+          onConfirm={() => handleDeleteExercise(deleteExerciseTarget)}
+        />
+      )}
+      {isBulkConfirmOpen && (
+        <ConfirmDialog
+          open
+          onOpenChange={() => setIsBulkConfirmOpen(false)}
+          tone="admin"
+          title="Tạo câu hỏi bằng AI"
+          description="AI sẽ tự động lưu 3 câu hỏi vào bài này."
+          confirmLabel="Tạo 3 câu hỏi"
+          onConfirm={runAiBulkCreate}
+        />
       )}
     </div>
   );

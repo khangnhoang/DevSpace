@@ -1,6 +1,6 @@
 ---
 name: dependency-updates
-description: "How DevSpace adds, removes and updates dependencies: one procedure per update type (patch, minor, major, security fix), the checks each needs, the dependency check run at program boundaries, and a table of rows for special cases (Node, the Supabase CLI, Playwright, Next with eslint-config-next, the Supabase auth helper, Monaco from the CDN). Use when adding, removing or updating a package in package.json or package-lock.json, acting on npm outdated or npm audit, changing the Node version, or updating the Supabase CLI, Playwright or the Monaco version loaded from the CDN."
+description: "How DevSpace adds, removes and updates dependencies: one procedure per update type (patch, minor, major, security fix), the checks each needs, the trial install a plan is written from, the type-only edit rule for type fallout, the dependency check run at program boundaries, and a table of rows for special cases (Node, the Supabase CLI, Playwright, Next with eslint-config-next, the Supabase auth helper, Monaco from the CDN). Use when adding, removing or updating a package in package.json or package-lock.json, acting on npm outdated or npm audit, changing the Node version, or updating the Supabase CLI, Playwright or the Monaco version loaded from the CDN."
 ---
 
 # Dependency updates
@@ -16,13 +16,36 @@ Whether an install, update or removal is allowed at all is owned by `.claude/rul
 ## Workflow
 
 1. Classify the change: add, remove, or update as patch, minor, major or security fix. Read the matching row of the table below for every package the change touches.
-2. Follow the procedure for that type.
-3. Run the Dependency row of [test-quality-strategy](../test-quality-strategy/SKILL.md#which-command-for-which-change) after the last edit, and report the commands and counts as that skill says. A failed check is not waved through as "unrelated to the update".
-4. Stage `package.json` and `package-lock.json` together; commits follow `git-pr-workflow`.
+2. When the change gets a plan (a major, or an initiative of `dependency-maintenance`), run the trial install below during discovery, before the plan goes to the Owner.
+3. Follow the procedure for that type. Type fallout of an updated package follows Type-only edits below.
+4. Run the Dependency row of [test-quality-strategy](../test-quality-strategy/SKILL.md#which-command-for-which-change) after the last edit, and report the commands and counts as that skill says. A failed check is not waved through as "unrelated to the update".
+5. Stage `package.json` and `package-lock.json` together; commits follow `git-pr-workflow`.
+
+### Trial install
+
+Changelogs do not show what newer type definitions break in this repo; found only during implementation, that fallout stops the work for a plan revision. A plan for an update is therefore written from a trial install:
+
+1. Make a throwaway copy of the checkout at the plan's baseline commit, outside the checkout so the checkout's lint and type check never see it: `git worktree add --detach <dir> <baseline>`, then `npm ci` in it. Its `node_modules` is its own install, never a link to the checkout's (`git-pr-workflow`, The rule).
+2. Install the plan's target versions there, as the implementation will.
+3. Run `npx tsc --noEmit`, `npm run lint` and `npm run build` there. The copy has no env file and none is copied into it: give `npm run build` the placeholder `env` of the CI `build` job (`.github/workflows/ci.yml`).
+4. Record each failure in the plan's repository facts with the package, file, error and baseline commit, and classify it: a type-only edit (below), or a change the plan must specify or a package it must leave out.
+5. Remove the copy with `rm -rf <dir>` in Git Bash, then `git worktree prune`, and check `git worktree list`. On Windows `git worktree remove` stops with "Filename too long" inside `node_modules` and leaves the folder behind.
+
+The trial changes no file of the checkout and nothing of it is committed. It is an install, so it runs only once the Owner has asked for the update (see the opening of this skill). Fallout the trial did not show still follows Type-only edits or stops the work.
+
+### Type-only edits
+
+When an updated package's own types make `npx tsc --noEmit` or `npm run build` fail, the failing lines that use that package, in app or test code, may be edited to compile again under all of these limits:
+
+- only type syntax changes (an annotation, a type argument, a type-only import), so the emitted JavaScript stays the same;
+- no `any`, `as` cast, non-null assertion or `@ts-` directive;
+- no change to runtime code, test names, rows, values, assertions or test count, and no other line.
+
+The edit goes in the commit of that package's update, and the report lists each edit with the error it fixes, so the diff review checks it. A fix that needs more is a code change: the update of that package stops, and the change is planned as Minor and Major say. A plan does not restate this rule; it lists the edits its trial install found.
 
 ### Patch
 
-Update, then run the checks of step 3. A patch of an exact pin (see the table) is a deliberate edit of the pin, not a drift.
+Update, then run the checks of step 4. A patch of an exact pin (see the table) is a deliberate edit of the pin, not a drift.
 
 ### Minor
 
@@ -78,6 +101,8 @@ A package that was already in `package.json` before this skill and has no specia
 ## Checklist
 
 - [ ] the change is classified and its procedure followed; each touched package's row was read
+- [ ] a plan for the change, when it has one, was written from a trial install, and the copy was removed
+- [ ] every type fallout edit stays type-only and is listed in the report with its error
 - [ ] the Dependency row of `test-quality-strategy` ran after the last edit, with counts reported
 - [ ] `package.json` and `package-lock.json` changed together, and nothing unrelated
 - [ ] every added package added its row, a removed one lost its row

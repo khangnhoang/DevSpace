@@ -15,3 +15,17 @@ test("[T2] sees the first question of the lesson quiz", async ({ page }) => {
   await expect(page.getByText("Câu 1 / 2")).toBeVisible();
   await expect(page.getByText("Từ khóa nào khai báo biến có thể gán lại?")).toBeVisible();
 });
+
+// Stops before the last question, so no progress is saved.
+test("[T3] is told a wrong quiz answer is wrong and the right one is right", async ({ page }) => {
+  await page.goto("/learn/javascript-can-ban/bien-va-kieu-du-lieu/quiz");
+
+  await page.getByText("fixed", { exact: true }).click();
+  await page.getByRole("button", { name: "Kiểm tra" }).click();
+  await expect(page.getByText("Sai rồi, thử lại nhé")).toBeVisible();
+
+  await page.getByRole("button", { name: "Làm lại" }).click();
+  await page.getByText("let", { exact: true }).click();
+  await page.getByRole("button", { name: "Kiểm tra" }).click();
+  await expect(page.getByText("Chính xác!")).toBeVisible();
+});

@@ -91,6 +91,8 @@ A package that was already in `package.json` before this skill and has no specia
 | `next` with `eslint-config-next` | both in `package.json` | They move together to the same version. Run `npm run build` and `npm run lint` besides the Dependency row; the server action tests read Next internals, so a Next update can fail them first (`test-quality-strategy`, Server action rows). |
 | `@supabase/ssr` | `package.json` | The Supabase auth helpers are replaced by the backend migration: do not modernize them ([ADR 0001](../../../docs/adr/0001-modernization-roadmap.md)). A security fix is the only reason to update. |
 | Monaco | the npm package through `@monaco-editor/react`, and the CDN copy: the default `paths.vs` URL of `@monaco-editor/loader` (`node_modules/@monaco-editor/loader/lib/es/config/index.js`), since the app sets no `loader.config` | `npm audit` cannot see the CDN version. The CDN version stays pinned to an exact version, never a range or `latest`. A change of it, or any `@monaco-editor/*` update that changes it, is reviewed against the Monaco advisories like a dependency update. |
+| `radix-ui` | `package.json`; imported by `components/ui/*` | The one package behind the shadcn primitives. An update runs `npm run build` and the payment e2e rows (the confirm dialog) besides the Dependency row, plus a manual pass of the confirm dialog (Escape, focus return, pending), because a Radix change shows first in portal and focus handling. |
+| `class-variance-authority` | `package.json`; imported by `components/ui/button.tsx` | No rule beyond the procedures above. |
 
 ## Stop when
 

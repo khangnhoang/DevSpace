@@ -152,6 +152,29 @@ test.describe("approving and rejecting through the transactions page", () => {
     expect(mails).toHaveLength(1);
     expect(mails[0].to).toBe(LEARNER_EMAIL);
   });
+
+  test("[AP6] a reject that fails in transit shows an error and leaves the order pending", async ({ page, callAction, serverRecords }) => {
+    const orderId = await createLearnerOrder(paymentActions(callAction));
+    await page.goto("/admin/transactions");
+    // The orders load by an action POST after hydration; abort only the reject that follows.
+    await expect(pendingRow(page)).toBeVisible();
+
+    let aborted = 0;
+    await page.route("**/admin/transactions", (route) => {
+      if (route.request().method() !== "POST" || aborted > 0) return route.fallback();
+      aborted++;
+      return route.abort();
+    });
+
+    await pendingRow(page).getByRole("button", { name: "Hủy đơn này" }).click();
+    await confirmDialog(page, "Hủy đơn hàng");
+
+    await expect(page.getByText("Không nhận được kết quả từ máy chủ")).toBeVisible();
+    await expect(page.getByRole("alertdialog")).toBeHidden();
+    expect(aborted).toBe(1);
+    expect(await paymentById(orderId)).toMatchObject({ status: "pending" });
+    expect(serverRecords.mailsSent()).toEqual([]);
+  });
 });
 
 test.describe("known bugs of approving and rejecting", () => {

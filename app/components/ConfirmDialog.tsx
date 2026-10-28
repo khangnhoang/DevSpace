@@ -119,7 +119,7 @@ export default function ConfirmDialog({
             onClick={handleConfirm}
             className="cursor-pointer"
           >
-            {pending && <Loader2 className="animate-spin" size={16} />}
+            {pending && <Loader2 className="animate-spin motion-reduce:animate-none" size={16} />}
             {pending ? "Đang xử lý..." : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>

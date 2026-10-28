@@ -59,3 +59,12 @@ body {
   --color-input: var(--input);
   --color-ring: var(--ring);
 }
+
+/* Reduced motion: the dialog's enter and exit animations come from tailwindcss-animate utilities, which do not
+   honour the preference. Unlayered, so it wins over the utilities layer. */
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="alert-dialog-overlay"],
+  [data-slot="alert-dialog-content"] {
+    animation: none;
+  }
+}

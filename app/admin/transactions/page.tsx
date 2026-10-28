@@ -69,7 +69,16 @@ export default function TransactionsPage() {
 
   // Xử lý Hủy
   const handleReject = async (id: number) => {
-    const res = await rejectPayment(id);
+    // ConfirmDialog swallows a rejection, so a failure in transit is reported here.
+    let res;
+    try {
+      res = await rejectPayment(id);
+    } catch {
+      toast.error(
+        "Không nhận được kết quả từ máy chủ. Hãy tải lại trang để kiểm tra trạng thái đơn."
+      );
+      return;
+    }
     if (res.error) toast.error(res.error);
     else {
       toast.success("Đã hủy đơn hàng");

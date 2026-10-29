@@ -193,8 +193,13 @@ export async function rowExists(table: "courses" | "chapters" | "lessons" | "exe
 }
 
 export async function userExists(id: string): Promise<boolean> {
-  const { data } = await serviceRole().auth.admin.getUserById(id);
-  return data.user !== null;
+  const { data, error } = await serviceRole().auth.admin.getUserById(id);
+  if (error) {
+    if (error.status === 404 && error.code === "user_not_found") return false;
+    throw new Error(`e2e service-role getUserById failed: ${error.message}`);
+  }
+  if (!data.user) throw new Error("e2e service-role getUserById returned no user and no error");
+  return true;
 }
 
 export async function commentDeletedAt(id: number): Promise<string | null> {
@@ -210,8 +215,13 @@ export async function removeE2eFixtures(): Promise<void> {
   must(await db.from("lessons").delete().like("slug", "e2e-%").select("id"));
   must(await db.from("chapters").delete().like("title", "E2E%").select("id"));
   must(await db.from("courses").delete().like("name", "E2E%").select("id"));
-  const { data } = await db.auth.admin.listUsers({ perPage: 200 });
+  const { data, error } = await db.auth.admin.listUsers({ perPage: 200 });
+  if (error) throw new Error(`e2e service-role listUsers failed: ${error.message}`);
   for (const user of data.users) {
-    if (user.email?.startsWith("e2e-") && user.email.endsWith("@devspace.test")) await db.auth.admin.deleteUser(user.id);
+    if (user.email?.startsWith("e2e-") && user.email.endsWith("@devspace.test")) {
+      const { error: deleteError } = await db.auth.admin.deleteUser(user.id);
+      if (deleteError) throw new Error(`e2e service-role deleteUser failed: ${deleteError.message}`);
+      if (await userExists(user.id)) throw new Error(`e2e cleanup left user ${user.id}`);
+    }
   }
 }

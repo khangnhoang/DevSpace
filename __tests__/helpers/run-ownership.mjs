@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync, renameSync, readdirSync, unlink
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 
 export const coordinationRoot = join(tmpdir(), 'devspace-fixture-ownership-v1');
 
@@ -152,7 +153,7 @@ export function inheritedRun(env = process.env) {
 
 export function runEnvironment(ref, inherited = process.env) {
   assertRun(ref);
-  const preload = new URL('./run-preload.mjs', import.meta.url).href;
+  const preload = pathToFileURL(join(inspectRun(ref).owner.checkout, '__tests__/helpers/run-preload.mjs')).href;
   return {
     ...inherited,
     DEVSPACE_OWNERSHIP: JSON.stringify(ref),

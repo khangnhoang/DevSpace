@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | U9 `implementation-plans/u9-test-policy/plan.md` r1, Owner-approved 2026-10-29; local plan/checkpoint/correction commits granted. |
-| Current unit / checkpoint | U9 complete after author/Main review and Owner acceptance; delivery is PR #39. No next initiative is active. |
-| Status | FEAT-021 closes in PR #39; policy and consumers are aligned. Static verification is complete; future runtime agent compliance remains unverified. |
+| Spec revision | U10 `implementation-plans/u10-task-naming/plan.md` r2, Owner-approved 2026-10-29 after self-review PASS. |
+| Current unit / checkpoint | U10 CP1 authorized, implementation not started at this commit; dispatch a new local session on this branch. U9 merged in PR #39 (`50c649f`). |
+| Status | U10 r2 approved: local per-owner/per-kind numbering, renumbered open entries, destination-local transfer allocation and blocking duplicate-ID validation; no gap checker per Owner decision. FEAT-021 was delivered in PR #39; future runtime agent compliance remains unverified. |
 | Completed evidence | U8 merged in PR #37 (`8599de8`); U1 merged in PR #38 (`572da83`). U9 CP1 `d97f5fc`, CP2 `8ac2b66`; author and Main reviews of `1dc3cc5..4aeca89` against baseline `572da83` account for intended selection changes, retained safeguards and corrected U1/helper facts. Main independently confirmed no Critical/Required findings, unchanged approved plan and safeguards. All 12 written decision cases pass static reasoning, not runtime evaluation. Seven changed skills retain their symlinks; 21 resources and 55 relative targets match through both paths. `npm run docs:check` passes with one unchanged vendored link baseline; `npm run docs:check:test` passes 72/72 outside the sandbox after temporary Git config writes were denied inside it; `git diff --check` passes. |
 | Accepted deviations | none; explicit Owner/manual acceptance, feature-specific minima, permissions and hosted boundaries retained. Runtime suites/browser/provider checks were not run for this docs-only task; future agent compliance remains unverified. |
-| Blockers / Owner decisions | No U9 decision pending. FEAT-022/023/024, FEAT-014, AF U2 Zod adoption and AW-008 remain separate. |
-| Next action | No next initiative is assigned. FEAT-025 remains a separately planned workflow change, and FEAT-022/023/024 retain their separate delivery boundaries. |
-| Current authority | Owner grants local U9 commits, push, PR #39 creation/update with CI evidence, waiting for CI and merge only when checks are green. No next-unit implementation, runtime, database, CI fixing or live-model action is granted. |
+| Blockers / Owner decisions | No pending Spec decision. The Owner chose exact security-hotfix legacy exceptions and a new owner code/next local number plus mapping when a task moves. FEAT-025 and AW-008 remain a later paired task; their migration here changes identifiers only. |
+| Next action | Main commits the approved plan and dispatches all of CP1 to a new local DevSpace session using `gpt-6.1-sol`, medium effort. The implementor reports for Main's diff review when done. |
+| Current authority | The Owner approved r2, granted this plan commit and implementation in a new `gpt-6.1-sol`/medium session, and explicitly granted that session local implementation/checkpoint/correction commits on `chore/task-naming`. No push, PR, merge, hosted/database mutation, product runtime or CI configuration change is granted. |
 
 ## Milestones
 
@@ -99,3 +99,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-29 U9 CP3: bidirectional baseline review, 12 static decision cases, skill resources/links and docs checks passed; FEAT-021 fixed locally, awaiting Main review and delivery (`4aeca89`).
 - 2026-10-29 Main review PASS on CP1–CP3: 72/72 checker tests and 7-skill resource/link verification confirmed; Owner accepted local completion, FEAT-021 awaits delivery and FEAT-025 records separate session/exploration guidance (`3f38986`).
 - 2026-10-29 U9 accepted complete and FEAT-021 closed for delivery; Owner grants push, PR/CI reporting and merge conditional on green CI; no next initiative started (PR 39).
+- 2026-10-29 U10 r2 approved after self-review PASS; plan commit and separate `gpt-6.1-sol`/medium implementation session with local checkpoint/correction commits authorized (this commit).

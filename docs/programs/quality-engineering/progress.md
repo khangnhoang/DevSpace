@@ -7,12 +7,12 @@ Charter: [README.md](README.md). Problems: [problems.md](problems.md). Git histo
 | Field | Value |
 | --- | --- |
 | Spec revision | QE-U1 plan r2, independent Codex plan gate PASS and Owner-approved on 2026-10-30. |
-| Current unit / checkpoint | QE-U1; implementor discovery complete, CP1–CP3 not implemented. |
-| Status | Blocked before implementation by local disposable-target/exclusive-use readiness. |
-| Completed evidence | Plan/program baseline `b93f8a8` verified on the assigned branch with a clean checkout. Historical: Main self-review and independent GPT-6.1 Sol/high plan review passed on r2. Current: unit baseline passed 143/143 outside sandbox; the earlier sandbox run failed one loopback test (142/143). Typecheck, lint and docs checks passed; docs tests passed 92/92 outside sandbox after fixture git init was denied inside it (91/92). Read-only Docker/process inspection confirmed the Docker Linux engine pipe is absent and found running Node/PostgreSQL processes whose ownership has not been established. No database write, reset, cleanup or suite using the database ran. |
+| Current unit / checkpoint | QE-U1 CP1 foundation implemented; CP2 and CP3 remain. |
+| Status | In progress; CP1 local checkpoint, not final implementation acceptance. |
+| Completed evidence | Docker made available by the Owner; local read-only readiness probe verified devspace-local container identity, API/DB ports, no managed-server listener and no unmanaged SQL client. Table counts match the invented seed; no reset needed. CP1 unit tests passed 154/154, including independent-process contention and writer/request retention; typecheck and lint passed. One initial subprocess run timed out before its Windows process-query timeout was adjusted, then the full unit suite passed. Historical baseline/sandbox evidence remains in commit 54dc9fa. No database fixture mutation or product suite has run yet. |
 | Accepted deviations | none. |
-| Blockers / Owner decisions | Docker Desktop Linux engine is unavailable (`dockerDesktopLinuxEngine` pipe missing). The intended disposable stack and absence of unmanaged dev/SQL/manual QA use cannot yet be established. r2 readiness/stop rules block database verification; no checkpoint is complete. |
-| Next action | Main/Owner makes Docker available and establishes disposable exclusive use of the intended local stack, then resumes this same implementor for CP1–CP3. |
+| Blockers / Owner decisions | none currently; readiness is rechecked on each acquisition. |
+| Next action | Same implementor migrates E2E fixtures/direct callers in CP2, then RLS/recovery/docs in CP3. |
 | Current authority | Owner granted r2 approval, a local plan/program/transfers/PR #41 docs commit, separate-session implementation and local implementation checkpoint/correction commits. No push, PR, merge or hosted authority; local writes/reset require the approved readiness checks. |
 
 ## Milestones
@@ -20,4 +20,5 @@ Charter: [README.md](README.md). Problems: [problems.md](problems.md). Git histo
 One line each, newest last. No review rounds or command logs.
 
 - 2026-10-30 Quality Engineering opened, BL-F6/7/8 transferred to QE-F1/2/3, PR #41 documentation caught up; QE-U1 r2 approved after independent Codex PASS with plan/docs commit, separate-session implementation and local checkpoint commit grants (`b93f8a8`).
-- 2026-10-30 QE-U1 implementor verified the clean assigned baseline and unit baseline; implementation paused at the approved readiness boundary because Docker is unavailable and exclusive disposable use is unproven (this commit).
+- 2026-10-30 QE-U1 implementor verified the clean assigned baseline and unit baseline; implementation paused at the approved readiness boundary because Docker is unavailable and exclusive disposable use is unproven (`54dc9fa`).
+- 2026-10-30 QE-U1 CP1 adds shared target ownership, local readiness and managed-launcher coordination with subprocess regression checks (this commit).

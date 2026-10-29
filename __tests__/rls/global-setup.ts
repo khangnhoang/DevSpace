@@ -1,8 +1,11 @@
 import type { TestProject } from "vitest/node";
 import { readLocalStack } from "../helpers/local-stack";
+import { startManagedRun } from "../helpers/managed-run.mjs";
+import { releaseRun, runEnvironment } from "../helpers/run-ownership.mjs";
 
 declare module "vitest" {
   export interface ProvidedContext {
+    ownership: Awaited<ReturnType<typeof startManagedRun>>;
     localStack: {
       apiUrl: string;
       dbUrl: string;
@@ -41,15 +44,26 @@ async function signIn(apiUrl: string, anonKey: string, actor: ActorName): Promis
 // Each actor signs in once per run (the local Auth limit is 30 sign-ins per 5 minutes) and the tokens are
 // handed to the test files. The host check inside readLocalStack runs before any request is sent.
 export default async function setup(project: TestProject) {
+  let ref: Awaited<ReturnType<typeof startManagedRun>> | undefined;
   try {
     const stack = readLocalStack(project.config.root);
+    ref = await startManagedRun(stack, "rls", project.config.root);
+    project.provide("ownership", ref);
     const tokens = {
       learner: await signIn(stack.apiUrl, stack.anonKey, "learner"),
       student: await signIn(stack.apiUrl, stack.anonKey, "student"),
       admin: await signIn(stack.apiUrl, stack.anonKey, "admin"),
     };
     project.provide("localStack", { ...stack, tokens });
+    const prior = process.env.DEVSPACE_OWNERSHIP;
+    process.env.DEVSPACE_OWNERSHIP = runEnvironment(ref).DEVSPACE_OWNERSHIP;
+    return () => {
+      if (prior === undefined) delete process.env.DEVSPACE_OWNERSHIP;
+      else process.env.DEVSPACE_OWNERSHIP = prior;
+      releaseRun(ref);
+    };
   } catch (error) {
+    if (ref) releaseRun(ref);
     // Vitest 5.0.5 crashes while source-mapping the stack of an error thrown from a global setup
     // ("code.charCodeAt is not a function") and then hides the message. A frame-less error prints it.
     const failure = new Error(error instanceof Error ? error.message : String(error));

@@ -1,6 +1,6 @@
 import { ACCOUNTS, authFile } from "./accounts";
 import { expect, test } from "./fixtures";
-import { learnerEnrollmentCount, removeLearnerEnrollment } from "./service-role";
+import { learnerEnrollmentCount, prepareLearnerEnrollment, removeLearnerEnrollment } from "./service-role";
 
 const PAID_LESSON = "/learn/javascript-can-ban/bien-va-kieu-du-lieu";
 const FREE_COURSE_ID = 1;
@@ -28,8 +28,9 @@ test("[L4] sees their name and email on the profile page", async ({ page }) => {
 
 // The only write path of the suite. The cleanup runs even when the test fails (G5).
 test.describe("enrolling in a free course", () => {
+  test.beforeEach(async () => { await prepareLearnerEnrollment(FREE_COURSE_ID); });
   test.afterEach(async () => {
-    await removeLearnerEnrollment(FREE_COURSE_ID);
+    await removeLearnerEnrollment();
   });
 
   test("[L5] enrolls in the free course and opens its lesson", async ({ page }) => {

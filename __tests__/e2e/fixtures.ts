@@ -3,6 +3,8 @@ import { join } from "node:path";
 import { classifyRequest } from "../helpers/e2e-network";
 import { recordSize, recordsSince, serverRecordPaths, type GuardRecord, type MailRecord } from "../helpers/e2e-server";
 import { openActionCaller, type ActionCaller } from "./server-action";
+import { beginFixtureScope } from "./service-role";
+import { withFixtureScope, type FixtureScope } from "../helpers/fixture-ownership";
 
 export { expect };
 
@@ -21,7 +23,11 @@ const MONACO_LOADER_SUFFIX = "/min/vs/loader.js";
 // recorded since this test began; a test during which the server tried to resolve or reach a non-local host fails.
 export type ServerRecords = { mailsSent: () => MailRecord[] };
 
-export const test = base.extend<{ blockedMonacoLoader: boolean; serverRecords: ServerRecords; callAction: ActionCaller }>({
+export const test = base.extend<{ owned: FixtureScope; blockedMonacoLoader: boolean; serverRecords: ServerRecords; callAction: ActionCaller }>({
+  owned: [async ({}, provide) => {
+    const scope = beginFixtureScope();
+    await withFixtureScope(scope, () => provide(scope));
+  }, { auto: true }],
   blockedMonacoLoader: [false, { option: true }],
 
   // Posts to a server action endpoint as an actor (server-action.ts). Its contexts are closed after the test.

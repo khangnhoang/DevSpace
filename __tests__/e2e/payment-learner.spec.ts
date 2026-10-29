@@ -24,6 +24,7 @@ import {
 } from "./payment-helpers";
 import {
   SEED_COUPON,
+  fixtureCode,
   assertPaymentFixturesClean,
   couponUsedCount,
   createCouponFixture,
@@ -89,9 +90,9 @@ test.describe("buying the paid course through the page", () => {
   });
 
   test("[PF5] an inactive code is refused with the same message and leaves the full price", async ({ page }) => {
-    await createCouponFixture({ code: "E2E-INACTIVE", discount_percent: 50, max_uses: 10, used_count: 0, is_active: false });
+    await createCouponFixture({ code: fixtureCode("E2E-INACTIVE"), discount_percent: 50, max_uses: 10, used_count: 0, is_active: false });
     await openPaymentModal(page);
-    await page.getByPlaceholder("Nhập mã (VD: SV2025)").fill("E2E-INACTIVE");
+    await page.getByPlaceholder("Nhập mã (VD: SV2025)").fill(fixtureCode("E2E-INACTIVE"));
     await page.getByRole("button", { name: "Áp dụng" }).click();
 
     await expect(page.getByText("Mã giảm giá không tồn tại hoặc đã hết hạn")).toBeVisible();
@@ -99,9 +100,9 @@ test.describe("buying the paid course through the page", () => {
   });
 
   test("[PF6] an exhausted code is refused and leaves the full price", async ({ page }) => {
-    await createCouponFixture({ code: "E2E-EXHAUSTED", discount_percent: 50, max_uses: 1, used_count: 1, is_active: true });
+    await createCouponFixture({ code: fixtureCode("E2E-EXHAUSTED"), discount_percent: 50, max_uses: 1, used_count: 1, is_active: true });
     await openPaymentModal(page);
-    await page.getByPlaceholder("Nhập mã (VD: SV2025)").fill("E2E-EXHAUSTED");
+    await page.getByPlaceholder("Nhập mã (VD: SV2025)").fill(fixtureCode("E2E-EXHAUSTED"));
     await page.getByRole("button", { name: "Áp dụng" }).click();
 
     await expect(page.getByText("Mã này đã hết lượt sử dụng")).toBeVisible();
@@ -109,9 +110,9 @@ test.describe("buying the paid course through the page", () => {
   });
 
   test("[PF7] a code without a use limit is applied", async ({ page }) => {
-    await createCouponFixture({ code: "E2E-UNLIMITED", discount_percent: 50, max_uses: null, used_count: 0, is_active: true });
+    await createCouponFixture({ code: fixtureCode("E2E-UNLIMITED"), discount_percent: 50, max_uses: null, used_count: 0, is_active: true });
     await openPaymentModal(page);
-    await page.getByPlaceholder("Nhập mã (VD: SV2025)").fill("E2E-UNLIMITED");
+    await page.getByPlaceholder("Nhập mã (VD: SV2025)").fill(fixtureCode("E2E-UNLIMITED"));
     await page.getByRole("button", { name: "Áp dụng" }).click();
 
     await expect(page.getByText("Đã áp dụng mã!")).toBeVisible();

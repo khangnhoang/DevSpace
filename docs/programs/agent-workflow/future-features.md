@@ -22,8 +22,8 @@ Direction the Owner has set that is outside the scope of the current initiative.
 
 ## AW-F4: Shared execution boundaries for exploration and independent roles
 
-- Status: Recorded (Owner clarification, 2026-10-29); a separate workflow follow-up, outside U9/FEAT-021.
-- Direction: put the tool-neutral lifecycle choice in `docs/agent-loops.md`: codebase exploration may use subagents; an independent implementor or reviewer should use a separate session/thread so the Owner can inspect its transcript and behavior. Preserve role/permission and single-writer ownership in `AGENTS.md`, and retain Claude model/API/session bindings in `.claude/rules.md` rather than making the general choice Claude-only. Do not infer a model override, new worktree, parallel writers or any additional permission; an unavailable session mechanism stays an explicit blocker. This is an Owner operating preference, not an unverified claim that subagents perform worse. Plan the instruction change separately before activation.
+- Status: Fixed locally, awaiting delivery; paired with AW-P2 on `chore/agent-sessions-doc-links`, with separate commits and verification (Owner-approved 2026-10-29).
+- Direction: put the tool-neutral lifecycle choice in `docs/agent-loops.md`: codebase exploration may use subagents; an independent implementor or reviewer should use a separate session/thread so the Owner can inspect its transcript and behavior. Preserve role/permission and single-writer ownership in `AGENTS.md`, and retain Claude model/API/session bindings in `.claude/rules.md` rather than making the general choice Claude-only. Do not infer a model override, new worktree, parallel writers or any additional permission; an unavailable session mechanism stays an explicit blocker. This is an Owner operating preference, not an unverified claim that subagents perform worse.
 - Target program: agent-workflow.
 
 ## Closed

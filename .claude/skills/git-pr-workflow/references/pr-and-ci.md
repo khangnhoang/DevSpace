@@ -1,6 +1,6 @@
 # Push, PR, CI and merge
 
-Read this before any push, PR creation or update, check watching, CI failure or merge. Grants are owned by `.claude/rules.md` section 4; the narrowest mode the Owner stated applies (`docs/agent-loops.md` Loop 3).
+Read this before any push, PR creation or update, check watching, CI failure or merge. Grants are owned by `AGENTS.md` section 4; the narrowest mode the Owner stated applies (`docs/agent-loops.md` Loop 3).
 
 ## Preconditions
 
@@ -15,18 +15,18 @@ Do not install or authenticate `gh`, switch to the raw REST API, or copy a token
 
 ## Push
 
-Needs a push grant (`.claude/rules.md` section 4). Before a normal push confirm: clean worktree and index; the exact branch and commit range; the configured upstream; refreshed remote state with ahead/behind counts; and that a normal push is enough (force-push is never implied). After it, check that the remote head equals the local head and divergence is `0 behind / 0 ahead`. For multi-checkpoint work, push once after the final self-review passes and later push only correction commits, each after its own self-review.
+Needs a push grant (`AGENTS.md` section 4). Before a normal push confirm: clean worktree and index; the exact branch and commit range; the configured upstream; refreshed remote state with ahead/behind counts; and that a normal push is enough (force-push is never implied). After it, check that the remote head equals the local head and divergence is `0 behind / 0 ahead`. For multi-checkpoint work, push once after the final self-review passes and later push only correction commits, each after its own self-review.
 
 ## Create or update a PR
 
 1. Build the content from evidence: `git log --oneline main..HEAD`, `git diff --stat main...HEAD`, the plan, progress and the checks that really ran. Do not invent tests, QA, decisions or risks; mark unknown what you cannot confirm.
 2. Check that the head branch is already on the remote. If not, stop and ask for push permission. Never accept an interactive `gh` offer to push or fork.
 3. Check for an existing PR (`gh pr view <branch>`); never create a duplicate. Update title, body, labels or draft state only as asked.
-4. Create with `gh pr create --base main --head <branch> --title "<title>" --body-file <file>`; update with `gh pr edit`. Use an exact title or body when the Owner gives one. Otherwise title and body follow the language rule in `.claude/rules.md` section 1. Keep the body file out of the commit.
+4. Create with `gh pr create --base main --head <branch> --title "<title>" --body-file <file>`; update with `gh pr edit`. Use an exact title or body when the Owner gives one. Otherwise title and body follow the language rule in `AGENTS.md` section 1. Keep the body file out of the commit.
 5. The body follows `.github/pull_request_template.md`: Summary, Changes, Checks run, CI result, Production impact and pending hosted steps, Risks and limits, Follow-ups. `gh pr create --body-file` does not apply the template, so build the body file from it; leave `CI result` as the placeholder table until CI ends (see "Record the CI result"). Link the plan or problem IDs.
 6. After a PR exists, the desktop app's PR tools handle status and auto-fix; do not poll with scheduled tasks. When the Owner says to wait for CI, watch in the foreground instead (Watch CI).
 
-Creating, updating, pushing and merging are separate grants (`.claude/rules.md` section 4).
+Creating, updating, pushing and merging are separate grants (`AGENTS.md` section 4).
 
 ## Watch CI
 
@@ -42,7 +42,7 @@ Fail-open: `db` and `e2e` are skipped only on a `pull_request` run whose `change
 
 ## Record the CI result
 
-When CI on a PR reaches a terminal state, red or green, Main writes the result into the body's `CI result` section with `gh pr edit <n> --body-file <file>`, then stops. What this write may cover, and who may merge or fix a red result, is owned by `.claude/rules.md` section 4.
+When CI on a PR reaches a terminal state, red or green, Main writes the result into the body's `CI result` section with `gh pr edit <n> --body-file <file>`, then stops. What this write may cover, and who may merge or fix a red result, is owned by `AGENTS.md` section 4.
 
 - Report the latest run for the PR's current head, not an older or cancelled one: the run link, the event, the head commit, and the table Check | Result | Duration | Notes with the Actions jobs (the six required ones; `changes` is optional) and Vercel.
 - The `lint` row says pass or fail; on a failure, Notes names the first problems from the step's log.
@@ -52,7 +52,7 @@ When CI on a PR reaches a terminal state, red or green, Main writes the result i
 
 ## CI failure
 
-Read the failed logs first (`gh run view <id> --log-failed` for an Actions job, or the Vercel build log). Classify as one of: `branch-caused-small-safe`, `branch-caused-large-risky`, `unrelated-main`, `infra-flaky`, `secret-env-config`, `db-risk`, `unclear`. Only `branch-caused-small-safe` may be fixed, under the CI-fix limits in `docs/agent-loops.md` Loop 3 and `.claude/rules.md` section 4. A fix attempt is one cycle: read logs, edit, validate locally, commit, push, re-watch. It never widens the PR, touches schema, RLS, migrations, secrets or repo settings, weakens a check, forces a push or deletes a branch. Any other class: stop and report the job, the log evidence, the class, why it was not self-fixed and the smallest decision needed.
+Read the failed logs first (`gh run view <id> --log-failed` for an Actions job, or the Vercel build log). Classify as one of: `branch-caused-small-safe`, `branch-caused-large-risky`, `unrelated-main`, `infra-flaky`, `secret-env-config`, `db-risk`, `unclear`. Only `branch-caused-small-safe` may be fixed, under the CI-fix limits in `docs/agent-loops.md` Loop 3 and `AGENTS.md` section 4. A fix attempt is one cycle: read logs, edit, validate locally, commit, push, re-watch. It never widens the PR, touches schema, RLS, migrations, secrets or repo settings, weakens a check, forces a push or deletes a branch. Any other class: stop and report the job, the log evidence, the class, why it was not self-fixed and the smallest decision needed.
 
 ## Merge
 

@@ -1,4 +1,4 @@
-<!-- Template: handoff. Copy to the Claude memory folder as one file per task, fill every <placeholder>, delete this comment, and link it from MEMORY.md. A handoff carries exactly one task (.claude/rules.md section 7) and holds only the facts no doc reflects yet, plus the next task's approved scope; link to the owning docs instead of copying them. -->
+<!-- Template: handoff. Record using the authorized storage binding of the agent environment, one file per task, fill every <placeholder>, and delete this comment. Claude: copy to its memory folder and link from MEMORY.md (.claude/rules.md section 7). A handoff carries exactly one task (docs/agent-loops.md, Handoff) and holds only the facts no doc reflects yet, plus the next task's approved scope; link to the owning docs instead of copying them. -->
 
 ---
 name: <task-id>-handoff
@@ -7,7 +7,7 @@ metadata:
   type: project
 ---
 
-Written <YYYY-MM-DD> at the Owner's request. Task: <program> <task>. Delete this file (and its `MEMORY.md` line) when <the task's PR n is merged and the owning docs record every durable fact below | the catch-up item has moved to a new task's handoff>.
+Written <YYYY-MM-DD> at the Owner's request. Task: <program> <task>. Delete this file (and, in Claude storage, its `MEMORY.md` line) when <the task's PR n is merged and the owning docs record every durable fact below | the catch-up item has moved to a new task's handoff>.
 
 **Session facts (expire with the task)**
 - Hosted state: <what was applied or checked on hosted, or "none">.

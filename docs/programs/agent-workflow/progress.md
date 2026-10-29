@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | none open. The last initiative, U7 (`implementation-plans/u7-entry-plans/plan.md` r1), and the small tasks AW-009 and AW-011 are merged. |
-| Current unit / checkpoint | none. |
-| Status | idle; AW-008 open. |
-| Completed evidence | U7, AW-009 and AW-011 are in their milestones. |
+| Spec revision | U8 `implementation-plans/u8-shared-agent-rules/plan.md` r4, Owner-approved 2026-10-29; local implementation commits explicitly granted. |
+| Current unit / checkpoint | U8, CP1–CP3 completed locally. |
+| Status | U8 implementation and author audit complete locally; preparing authorized PR delivery with testing follow-ups recorded. AW-008 remains outside U8. |
+| Completed evidence | CP1 6d3605f, CP2 9c17f1c, corrections 6a50a3c; final full audit 47 files / 1074 instruction rows, 0 Critical/Required; two-way traceability and 10 written scenarios passed; docs fixtures 72/72, lint/typecheck passed. Runtime compliance is unverified. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | none until the Owner names AW-008 or a new initiative. |
-| Current authority | none. |
+| Next action | Commit the four testing follow-up records, push this branch, create the PR, wait for CI and merge only if green; then return to `feat/af-confirm-dialog` and merge updated `origin/main` into it. |
+| Current authority | Owner grants these docs edits, commit, push, PR creation/update with CI results, merge if CI is green, and the local merge of remote main into AF U1. No follow-up implementation, hosted/database mutation or separate deployment granted. |
 
 ## Milestones
 
@@ -81,3 +81,14 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-27 AW-011 rule: `docs/agent-loops.md` Sizing matches skills to the work after discovery; the Codex and Sonnet briefs and the `skill-authoring` related-rules list point to it (`4fbfdaa`).
 - 2026-10-27 AW-011 Codex diff review passed; State before the PR (`03790d3`).
 - 2026-10-27 AW-011 merged; AW-011 resolved (PR 28, `7ad7a92`).
+- 2026-10-29 U8 r3 approved after self-review: shared rules plan, bidirectional baseline traceability and full instruction audit; local plan commit and `gpt-6.1-sol` / `medium` implementation handoff authorized (`f04f546`).
+- 2026-10-29 U8 r4 records the Owner's explicit local implementation/checkpoint/correction commit grant; no remote or hosted grant (`ef74df6`).
+
+- 2026-10-29 U8 CP1: shared AGENTS contract, Claude-only bindings, lifecycle handoff and active policy pointers; bidirectional traceability and symlink verification (`6d3605f`).
+
+- 2026-10-29 U8 CP2: bounded import-contract validator, AGENTS link coverage and negative fixtures; checker commands integrated (`9c17f1c`).
+
+- 2026-10-29 U8 CP3 corrections: restore Claude-binding routing, include AGENTS in citation discovery and remove the duplicated browser restriction; docs and symlink checks passed (`6a50a3c`).
+
+- 2026-10-29 U8 CP3: full instruction audit and bidirectional baseline/scenario review passed; static and filesystem evidence complete, runtime compliance unverified; local implementation complete, nothing pushed (`12d24b8`).
+- 2026-10-29 Recorded FEAT-021 to FEAT-024 as four testing follow-up PRs; instruction policy belongs to agent-workflow and helper, coverage and CI work stays in backlog because infrastructure is closed. Owner authorized branch delivery conditional on green CI and a subsequent local merge into AF U1 (this commit).

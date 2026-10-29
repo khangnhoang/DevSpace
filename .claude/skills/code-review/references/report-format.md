@@ -18,7 +18,7 @@ For a `Suggestion`, write "Suggested improvement" instead of "Required change". 
 
 ## Report
 
-Report language: `.claude/rules.md` section 1. Keep identifiers, paths, commands and exact errors.
+Report language: `AGENTS.md` section 1. Keep identifiers, paths, commands and exact errors.
 
 ```text
 ## Scope reviewed

@@ -13,7 +13,7 @@ Do not use for logic with no visible change, or for data and state mechanics (`f
 
 ## Current stack (only what exists)
 
-Next.js App Router, React 19, Tailwind CSS 4 (`app/globals.css`), `lucide-react` icons, `sonner` toasts (`<Toaster richColors position="top-right" />` in `app/layout.tsx`), and feature components in `app/components/`. shadcn primitives sit in `components/ui/` (`button`, `alert-dialog`; `components.json`) on `radix-ui` and `class-variance-authority`. There is **no form library and no Zod yet**: they arrive with the later units of the app-foundation program ([ADR 0003](../../../docs/adr/0003-app-foundation-program.md)), which updates this skill. Packages, fonts and an animation library are outside a design task unless the Owner asked for them (`.claude/rules.md` section 4).
+Next.js App Router, React 19, Tailwind CSS 4 (`app/globals.css`), `lucide-react` icons, `sonner` toasts (`<Toaster richColors position="top-right" />` in `app/layout.tsx`), and feature components in `app/components/`. shadcn primitives sit in `components/ui/` (`button`, `alert-dialog`; `components.json`) on `radix-ui` and `class-variance-authority`. There is **no form library and no Zod yet**: they arrive with the later units of the app-foundation program ([ADR 0003](../../../docs/adr/0003-app-foundation-program.md)), which updates this skill. Packages, fonts and an animation library are outside a design task unless the Owner asked for them (`AGENTS.md` section 4).
 
 Adding a primitive: `npx shadcn add <name>`, never `npx shadcn init` (it rewrites `app/globals.css` and `lib/utils.ts` and installs `cn`, `shadcn` and `tw-animate-css`). Then edit the generated file as `button.tsx` and `alert-dialog.tsx` were edited, and no further:
 

@@ -107,7 +107,7 @@ npm install
 
 ### 2. Môi trường
 
-File môi trường là của Owner, không nằm trong repo và không cần mở hay sửa. Lệnh chạy Supabase local (Docker Desktop phải đang chạy) nằm ở mục Commands của [CLAUDE.md](CLAUDE.md).
+File môi trường là của Owner, không nằm trong repo và không cần mở hay sửa. Lệnh chạy Supabase local (Docker Desktop phải đang chạy) nằm ở mục Commands của [AGENTS.md](AGENTS.md).
 
 ### 3. Chạy ứng dụng
 
@@ -133,6 +133,36 @@ Ba tài khoản seed của Supabase local (mật khẩu nằm trong `supabase/se
 
 * Hệ thống xử lý race condition ở tầng database
 * Mỗi học viên chỉ được đánh giá mỗi khóa học **1 lần duy nhất**
+
+## Shared agent skills
+
+`.claude/skills/` is the source of truth. Each entry in `.agents/skills/` is a
+relative directory symlink to `../../.claude/skills/<name>`, so Claude Code and
+Codex read the same instructions, references and scripts. Edit the source only;
+when adding a skill, add its corresponding symlink too. Preserve and inspect any
+existing destination before replacing it.
+
+On Windows, enable Developer Mode and clone with symlink support:
+
+```bash
+git clone -c core.symlinks=true https://github.com/khangnhoang/DevSpace.git
+```
+
+The repository-local Git setting does not transfer to another clone. With
+`core.symlinks=false`, Git checks out links as text files, which agents cannot
+use as skill directories. For an existing checkout, enable
+`git config --local core.symlinks true` and recreate only the affected link
+entries after preserving any local changes. Git must record each link with mode
+`120000`, not as a copied directory or a Windows junction.
+
+Run `npm run docs:check` to validate the canonical skills. In a session opened
+at the repository root, check `/skills` in Claude Code and the skill selector in
+Codex; restart the session if newly added skills do not appear. Sharing these
+files does not make agent-specific tools available in another agent.
+
+References: [Codex skill discovery](https://learn.chatgpt.com/docs/build-skills),
+[Claude Code skills](https://code.claude.com/docs/en/skills),
+[Git symlink configuration](https://git-scm.com/docs/git-config#Documentation/git-config.txt-coresymlinks).
 
 © 2026 DevSpace LMS Project
 

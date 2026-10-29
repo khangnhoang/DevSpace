@@ -13,8 +13,9 @@
     "docs:check-structure": "node scripts/docs/check-structure.mjs",
     "docs:check-skills": "node scripts/docs/check-skills.mjs",
     "docs:check-links": "node scripts/docs/check-links.mjs",
-    "docs:check": "npm run docs:check-structure && npm run docs:check-skills && npm run docs:check-links",
-    "docs:check:test": "node --test scripts/docs/check-structure.test.mjs scripts/docs/check-skills.test.mjs scripts/docs/check-links.test.mjs"
+    "docs:check-instructions": "node scripts/docs/check-instructions.mjs",
+    "docs:check": "npm run docs:check-structure && npm run docs:check-skills && npm run docs:check-links && npm run docs:check-instructions",
+    "docs:check:test": "node --test scripts/docs/check-structure.test.mjs scripts/docs/check-skills.test.mjs scripts/docs/check-links.test.mjs scripts/docs/check-instructions.test.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.52.0",

@@ -6,7 +6,7 @@ Read this only when migrating a live program's docs to the current shape, reshap
 
 1. Record the baseline: the commit that holds the old files, and the paths you will change. Confirm no other session or branch is editing them; stop if one is.
 2. List what must survive. From the old files, extract every Owner decision, invariant, gate, hard rule, rollout step and open problem, with its number or ID. This is the meaning checklist.
-3. Find citations that constrain paths: search `supabase/migrations/*.sql`, `CLAUDE.md`, `.claude/` and other docs for each path you might move. A path cited by a published migration never moves, renames or renumbers; it stays resolvable and goes on the docs-check allowlist with a reason (`security-hotfix` is the existing case). Never edit a published migration. Prefer moving nothing.
+3. Find citations that constrain paths: search `supabase/migrations/*.sql`, `AGENTS.md`, `CLAUDE.md`, `.claude/` and other docs for each path you might move. A path cited by a published migration never moves, renames or renumbers; it stays resolvable and goes on the docs-check allowlist with a reason (`security-hotfix` is the existing case). Never edit a published migration. Prefer moving nothing.
 4. Write the new version from the old one, one file at a time, in the template shape:
    - master plan: keep decisions numbered and dated, invariants, units, gates and rollout order; remove State and history;
    - progress: one in-place State block with the current truth (read Git and the old State for it), then one-line milestones;

@@ -83,6 +83,13 @@ test("a new broken link exits 1 and is named", () => {
   });
 });
 
+test("a broken relative link from root AGENTS.md exits 1", () => {
+  withFixture({ "AGENTS.md": "[missing shared contract](docs/missing.md)\n" }, [], (result) => {
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /NEW broken link: AGENTS\.md -> docs\/missing\.md/);
+  });
+});
+
 test("a baseline entry that is no longer broken is reported", () => {
   withFixture({ "docs/old.md": "[ok](other.md)\n", "docs/other.md": "# O\n" }, ["docs/old.md -> missing.md"], (result) => {
     assert.equal(result.status, 0, result.stderr);
@@ -113,7 +120,7 @@ test("reference definitions and nested parentheses are checked", () => {
   );
 });
 
-test("files outside docs, .claude, CLAUDE.md and README.md are not scanned", () => {
+test("files outside docs, .claude, AGENTS.md, CLAUDE.md and README.md are not scanned", () => {
   withFixture({ "other/readme.md": "[gone](missing.md)\n", "docs/ok.md": "# Ok\n" }, [], (result) => {
     assert.equal(result.status, 0, result.stderr);
   });

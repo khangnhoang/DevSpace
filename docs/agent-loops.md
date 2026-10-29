@@ -34,7 +34,7 @@ If any condition fails, use the planned flow. Steps: size, implement, verify, se
 
 - Codebase exploration may use subagents within the authorized scope. Main remains responsible for checking their evidence against the repository.
 - An independent implementor or reviewer uses a separate session/thread whose transcript and behavior the Owner can inspect. A subagent does not replace that independent session. Self-review remains with the author under Self-review below.
-- Role assignment, permissions and single-writer ownership stay in `AGENTS.md` sections 2–4; Claude model/API/session bindings stay in `.claude/rules.md` section 2. This execution choice grants no model override, worktree, parallel writer or additional action.
+- Role assignment, permissions and single-writer ownership stay in `AGENTS.md` sections 2–4; model and effort selection is owned by [agent-models.md](agent-models.md), and Claude API/session bindings stay in `.claude/rules.md` section 2. This execution choice grants no model override, worktree, parallel writer or additional action.
 - If the required separate-session mechanism is unavailable, report the blocked role and the missing mechanism; do not silently substitute a subagent or another execution method.
 
 ## Loop 0: planning

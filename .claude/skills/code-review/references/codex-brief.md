@@ -4,10 +4,10 @@ Read this before running, resuming or briefing a Codex review. Which work Codex 
 
 ## Running Codex
 
-In the existing Claude-run CLI review mode, run it from the Bash tool. In PowerShell `codex` resolves to a blocked `codex.ps1`:
+In the existing Claude-run CLI review mode, run it from the Bash tool. Select the reviewer model and effort from [agent-models.md](../../../../docs/agent-models.md), then substitute them for the placeholders below. In PowerShell `codex` resolves to a blocked `codex.ps1`:
 
 ```bash
-codex exec - -m gpt-6.1-sol -c model_reasoning_effort='"high"' -c sandbox_mode='"read-only"' -o <out> < <prompt>
+codex exec - -m <reviewer-model> -c model_reasoning_effort='"<reviewer-effort>"' -c sandbox_mode='"read-only"' -o <out> < <prompt>
 ```
 
 Later rounds of the same review: `codex exec resume <id> -` with the same flags, `-o` and stdin. Resume does not keep the first round's flags, so repeat them and check the log header. A new target gets a fresh session. If resume fails on a thread-store conflict (another Codex thread holds the writer), do not start a competing session: give the Owner the round prompt to paste into the thread that holds it.

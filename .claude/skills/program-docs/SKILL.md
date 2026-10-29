@@ -7,7 +7,7 @@ description: "Contract for the shape of program documentation in DevSpace: the t
 
 ## Use when / do not use when
 
-Use when a task creates, updates, reshapes, closes or migrates program documentation (`plan.md`, a charter `README.md`, `implementation-plans/u<n>-<slug>/plan.md` or an entry plan at `implementation-plans/<id>-<slug>/plan.md`, `progress.md`, `problems.md`, `future-features.md`), an ADR, `docs/backlog/`, or the `docs/` index.
+Use when a task creates, updates, reshapes, closes or migrates program documentation (`plan.md`, a charter `README.md`, `implementation-plans/<code>-u<n>-<slug>/plan.md` or an entry plan at `implementation-plans/<id>-<slug>/plan.md`, `progress.md`, `problems.md`, `future-features.md`), an ADR, `docs/backlog/`, or the `docs/` index.
 
 Do not use it for product code, for the planning method (the `planning` skill), or merely to read a plan.
 
@@ -22,7 +22,7 @@ This skill owns document shape only: file roles, where State lives, taxonomy, li
 | Detail `plan.md` | Binding Spec (outcome, acceptance, scope, guardrails, Owner decisions); repository facts only where they justify a Spec item, with a baseline commit; bounded hypotheses; checkpoint table; risks, rollout, rollback; a link to `progress.md` | State, review journal, detailed code map |
 | `progress.md` | Exactly two sections: `## State` (one block, edited in place) and `## Milestones` (one line each) | Any other section, review rounds, command logs, a copy of the Spec |
 | `problems.md` | Open entries with ID, status, problem, evidence, direction, exit condition; resolved entries as one line | Planning decisions, State |
-| `future-features.md` | Entries `## FEAT-NNN: <title>` with Status, Direction, Target program | Work that is in scope |
+| `future-features.md` | Entries `## <CODE>-F<n>: <title>` with Status, Direction, Target program | Work that is in scope |
 
 There are two program kinds ([ADR 0002](../../../docs/adr/0002-program-kinds.md)). A delivery program has a goal and a completion condition. An evergreen program owns a long-lived capability that must be maintained, and runs initiatives that open and close independently.
 
@@ -31,9 +31,9 @@ A new delivery program starts single-unit, and a single-unit delivery program us
 Plan shape, checked by `npm run docs:check` (rule `plan-shape`):
 
 - Delivery: a root `plan.md` titled `# Master plan — <program>` is a master plan, with or without `implementation-plans/`. Once `implementation-plans/` exists, the root plan must be a master plan. Evergreen: the charter is titled `# Charter — <program>` and the program has no root `plan.md` (`file-role`).
-- Units (delivery) and initiatives (evergreen) are numbered `U1`, `U2`, ...: each row of the master plan's Units table, or of the charter's Initiatives table, starts with its unique `U<n>`.
-- A unit's or initiative's detail plan sits at `implementation-plans/u<n>-<slug>/plan.md`, is titled `# U<n> detail plan — <title>` with the same `n`, and its `U<n>` is a row of that table. A single-unit root detail plan carries no unit ID.
-- An entry plan (delivery programs only) plans follow-up work recorded in the program's own `problems.md` or `future-features.md` without a Units row and without revising the master plan. It sits at `implementation-plans/<id>-<slug>/plan.md` with the ID in lowercase (`feat-017-ci-docs-skip`), is titled `# <ID> detail plan — <title>` with the same ID (`# FEAT-017 detail plan — <title>`), and its ID is an open entry (`### <ID>:` in `problems.md`, `## FEAT-NNN:` in `future-features.md`), a resolved line of `problems.md`, or a `Done` or `Dropped` line under `## Closed` of that program's own files. Another program's entry and a `Moved to` line do not count, so a plan moves with its entry. An evergreen program has no entry plans: its initiatives stay `u<n>-<slug>` charter rows. Any folder in `implementation-plans/`, entry plans included, makes the root `plan.md` a master plan.
+- Units (delivery) and initiatives (evergreen) use `<CODE>-U<n>`; every Units/Initiatives row starts with the full ID and a nonempty title or title link. The code is the owning program's registry code.
+- A nested detail plan sits at `implementation-plans/<code>-u<n>-<slug>/plan.md` and is titled `# <CODE>-U<n> detail plan — <title>`, matching its folder and table row. The slug is nonempty lowercase kebab-case. A new single-unit delivery root stays at `plan.md`, is titled `# <CODE>-U1 detail plan — <title>`, and needs no Units table.
+- An entry plan (delivery only) plans an owned F/P entry from the program's own `problems.md` or `future-features.md`, without a Units row or master-plan revision. It uses `implementation-plans/<id>-<slug>/plan.md` with the lowercase ID (`inf-f1-ci-docs-skip`) and `# <ID> detail plan — <title>`. Open, resolved, Done and Dropped entries count; foreign entries, aliases and Moved pointers do not. Evergreen programs have only U initiatives. Any nested plan makes a delivery root a master plan.
 - Each plan and each charter has its template's numbered `##` sections, with the same titles and in the same order; extra sections such as appendices may follow.
 
 ## State has one owner
@@ -45,8 +45,17 @@ Plan shape, checked by `npm run docs:check` (rule `plan-shape`):
 
 ## Problems and future features
 
-- An open problem keeps its ID. When resolved, first move any live follow-up into an open entry, then shrink it to one line (ID, status, outcome, PR or commit).
-- Each `FEAT-NNN` ID is unique across every `future-features.md` in the repo (backlog included) and its entry has `Status`, `Direction` and `Target program`. Closed entries go as one line each under a `## Closed` heading, in the backlog forms below.
+- Open problem headings are `### <CODE>-P<n>: <title>`; feature headings are `## <CODE>-F<n>: <title>`. Keep the existing fields. A title is nonempty and short, in English; no machine word limit applies.
+- An entry keeps its ID within its owner. Before resolving it, move any live follow-up into an open entry, then shrink it to one line with outcome and PR/commit. Closed canonical entries still reserve their numbers.
+- Canonical ownership is unique by the full (code, kind, number) across open and closed records. Different kinds and owners have independent namespaces; pointers and plan identity claims do not create another owned entry. Kind must match the file (F features, P problems, U units/initiatives).
+
+## Identifier allocation and transfers
+
+- The Programs table in `docs/README.md` is the code registry: unique 2–4 uppercase ASCII letters. `BL` is reserved for backlog and cannot be a program code. IDs use `<CODE>-<KIND><n>`, with F/P/U and a positive decimal number without leading zeroes.
+- Allocate one greater than the highest number already issued in the same owner/kind, including closed canonical declarations, Moved pointers and mapping sources. Never reuse a number or fill a gap. F/P/U sequences and owners are independent. There is no sequence-gap checker, warning or allocation ledger.
+- On transfer, always allocate the destination's next local number for the same kind: BL-F20 becomes DM-F3 after DM-F1/F2 even if DM-F20 is free. Keep a Moved pointer in the old home and add a file/ID-qualified from/to entry to `scripts/docs/work-id-mappings.json`. Chained mappings must resolve to one owned destination; missing targets, duplicate/ambiguous sources, cycles and kind changes fail. A mapping does not authorize declaring an old identifier again. Pointer links name the immediate destination file.
+- Activation migration: open F/P records were allocated from 1 by ascending old numeric value within each owner/kind (AW-U10 plan r2 section 1.6). Legacy F/P numbers reserve no new values. U numbering includes completed and already-planned units: AW U1–U10, AF U1–U6 and DM U1 reserve those numbers; next new units are AW-U11, AF-U7 and DM-U2, while AF-U2 is already planned.
+- Completed plans, closed records, milestones, existing ADRs and published SQL retain historical identifiers and paths. Exact naming-only exceptions are in `scripts/docs/legacy-work-identifiers.json` (file, ID, role, retained form, reason). They do not waive fields, shape, ownership or links. New legacy declarations, copies to other roles/files, reopened legacy work and additional legacy security-table rows fail. Security-hotfix's original shape allowlist remains separate. Current instructions/State use canonical IDs; historical citations can be traced through the mappings. See [ADR 0005](../../../docs/adr/0005-program-scoped-work-identifiers.md).
 
 ## Backlog
 
@@ -62,7 +71,7 @@ Closing an entry grants nothing (`AGENTS.md` section 4). Closing a program inclu
 
 ## Lifecycle, index and ADRs
 
-- A program is a folder under `docs/programs/` with a `progress.md`. Each has one row in the Programs table of `docs/README.md` (`Path`, `Lifecycle`). The kind is the Lifecycle value: `active` or `closed` for a delivery program, `evergreen` for an evergreen one. Status is read from `progress.md`, never copied into the table.
+- A program is a folder under `docs/programs/` with a `progress.md`. Each has one row in the Programs table of `docs/README.md` (`Path`, `Code`, `Lifecycle`). The kind is the Lifecycle value: `active` or `closed` for a delivery program, `evergreen` for an evergreen one. Status is read from `progress.md`, never copied into the table.
 - Opening and closing a delivery program each include the dependency check ([dependency-updates](../dependency-updates/SKILL.md), Dependency check).
 - Only a delivery program closes: say in State that it is completed, resolve or move its open problems, review the backlog, and set the row to `closed`. An evergreen program never closes. A delivery program that builds a capability may hand it to an evergreen program when it closes.
 - An initiative belongs to exactly one program. One PR may carry work of several programs; a small part in another program is one milestone there citing the PR. An evergreen program has at most one open initiative with a plan at a time; several items may share one initiative, or be one small task with no plan.

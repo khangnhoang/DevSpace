@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | U9 `implementation-plans/u9-test-policy/plan.md` r1, Owner-approved 2026-10-29; local plan/checkpoint/correction commits granted. |
-| Current unit / checkpoint | U9 complete after author/Main review and Owner acceptance; delivery is PR #39. No next initiative is active. |
-| Status | FEAT-021 closes in PR #39; policy and consumers are aligned. Static verification is complete; future runtime agent compliance remains unverified. |
-| Completed evidence | U8 merged in PR #37 (`8599de8`); U1 merged in PR #38 (`572da83`). U9 CP1 `d97f5fc`, CP2 `8ac2b66`; author and Main reviews of `1dc3cc5..4aeca89` against baseline `572da83` account for intended selection changes, retained safeguards and corrected U1/helper facts. Main independently confirmed no Critical/Required findings, unchanged approved plan and safeguards. All 12 written decision cases pass static reasoning, not runtime evaluation. Seven changed skills retain their symlinks; 21 resources and 55 relative targets match through both paths. `npm run docs:check` passes with one unchanged vendored link baseline; `npm run docs:check:test` passes 72/72 outside the sandbox after temporary Git config writes were denied inside it; `git diff --check` passes. |
-| Accepted deviations | none; explicit Owner/manual acceptance, feature-specific minima, permissions and hosted boundaries retained. Runtime suites/browser/provider checks were not run for this docs-only task; future agent compliance remains unverified. |
-| Blockers / Owner decisions | No U9 decision pending. FEAT-022/023/024, FEAT-014, AF U2 Zod adoption and AW-008 remain separate. |
-| Next action | No next initiative is assigned. FEAT-025 remains a separately planned workflow change, and FEAT-022/023/024 retain their separate delivery boundaries. |
-| Current authority | Owner grants local U9 commits, push, PR #39 creation/update with CI evidence, waiting for CI and merge only when checks are green. No next-unit implementation, runtime, database, CI fixing or live-model action is granted. |
+| Spec revision | AW-U10 `implementation-plans/aw-u10-task-naming/plan.md` r2, Owner-approved 2026-10-29; activation changes its identity/path only. |
+| Current unit / checkpoint | AW-U10 CP1 correction implemented and verified; awaiting Main re-review. U9 merged in PR #39 (`50c649f`). |
+| Status | Canonical naming, registry, mappings, exact historical exceptions, templates and the 25 open F/P migrations are activated together. No later initiative has started. |
+| Completed evidence | U9 delivered in PR #39 (`50c649f`); DM-001/002 catch-up records PR #32 (`1c99b77`). Current deterministic comparison against `50c649f`: 19 historical detail-plan blobs and 8 other frozen blobs equal; all 25 migrated entry blocks retain meaning after the specified ID/current-reference substitutions; 9 closed sections, 5 milestone sections and 18 historical unit rows preserved subject only to the two catch-ups. The approved AW-U10 plan differs from `d63ce93` only in its H1 and path. Four changed skills preserve 17 resources and 38 relative targets through their existing symlinks. `npm run docs:check` passes (0 structure/skill/import violations, one unchanged vendored broken-link baseline, 0 new); `npm run docs:check:test` passes 84/84 on the authorized outside-sandbox rerun after fixture `.git/config` writes were denied inside the sandbox; typecheck, lint (0 problems) and `git diff --check` pass. The finite naming inventory has 114 exact exceptions; 47 mappings cover entries, retained historical pointers and the migrated units/initiative. |
+| Accepted deviations | none. Historical citations keep their identifiers, including infrastructure U6 in AF-P4 evidence; current references use canonical IDs. Product/browser/database suites do not apply. Future runtime agent compliance remains unverified. |
+| Blockers / Owner decisions | No pending Spec decision. AW-F4 and AW-P2 remain the later paired task; this checkpoint changes their identifiers only. |
+| Next action | Main re-reviews the correction diff for all heading levels and historical U ownership reservations, with the complete CP1 evidence. |
+| Current authority | The Owner granted AW-U10 r2 CP1 implementation and local implementation/checkpoint/correction commits on `chore/task-naming`. No push, PR, merge, hosted/database mutation, product runtime or CI configuration change is granted. |
 
 ## Milestones
 
@@ -99,3 +99,10 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-29 U9 CP3: bidirectional baseline review, 12 static decision cases, skill resources/links and docs checks passed; FEAT-021 fixed locally, awaiting Main review and delivery (`4aeca89`).
 - 2026-10-29 Main review PASS on CP1–CP3: 72/72 checker tests and 7-skill resource/link verification confirmed; Owner accepted local completion, FEAT-021 awaits delivery and FEAT-025 records separate session/exploration guidance (`3f38986`).
 - 2026-10-29 U9 accepted complete and FEAT-021 closed for delivery; Owner grants push, PR/CI reporting and merge conditional on green CI; no next initiative started (PR 39).
+- 2026-10-29 U10 r2 approved after self-review PASS; plan commit and separate `gpt-6.1-sol`/medium implementation session with local checkpoint/correction commits authorized (`d63ce93`).
+
+- 2026-10-29 U9 merge catch-up: automated-first testing policy delivered, future runtime agent compliance remains unverified (PR 39, `50c649f`).
+
+- 2026-10-29 AW-U10 CP1: program-scoped naming activated with strict validation, mapped open records, bounded historical exceptions and preserved completed plans; automated checks and meaning/symlink comparisons passed, awaiting Main review (`8e7a5a5`).
+
+- 2026-10-29 AW-U10 CP1 correction: H4–H6 declarations cannot evade naming/ownership checks, and retained legacy U rows reserve canonical U ownership while legacy F/P numbers stay independent; 84 docs tests and static/history checks passed (this commit).

@@ -1,6 +1,6 @@
 # Charter — dependency-maintenance
 
-Progress: [progress.md](progress.md). Problems: [problems.md](problems.md). Future features: [future-features.md](future-features.md). Each initiative has a detail plan at `implementation-plans/u<n>-<slug>/plan.md`. Decision: [ADR 0004](../../adr/0004-dependency-maintenance-program.md). Procedure: the `dependency-updates` skill (`.claude/skills/dependency-updates/SKILL.md`).
+Progress: [progress.md](progress.md). Problems: [problems.md](problems.md). Future features: [future-features.md](future-features.md). Each initiative has a detail plan at `implementation-plans/dm-u<n>-<slug>/plan.md`. Decision: [ADR 0004](../../adr/0004-dependency-maintenance-program.md). Procedure: the `dependency-updates` skill (`.claude/skills/dependency-updates/SKILL.md`).
 
 ## 1. Capability and boundary
 
@@ -12,7 +12,7 @@ Progress: [progress.md](progress.md). Problems: [problems.md](problems.md). Futu
 One line each: number, date, decision. The decisions of each initiative stay in its plan.
 
 1. (2026-10-27) `dependency-maintenance` is an evergreen program that takes over dependency upkeep from infrastructure when infrastructure closes (ADR 0004).
-2. (2026-10-27) Dependency check results and dependency findings are recorded in this program's `problems.md` and `future-features.md`; backlog entries FEAT-019, FEAT-020 and BL-009 move here.
+2. (2026-10-27) Dependency check results and dependency findings are recorded in this program's `problems.md` and `future-features.md`; backlog entries FEAT-019, FEAT-020 and BL-009 move here (now DM-F1, DM-F2 and DM-P1).
 3. (2026-10-27) An initiative that updates several packages at once, or a runtime library on an auth, payment or data path, gets a detail plan and the Codex gate on its plan and on its diff.
 
 ## 3. Invariants
@@ -36,5 +36,5 @@ At most one initiative has an open plan at a time. A closed initiative keeps its
 
 1. A dependency check (`dependency-updates`, Dependency check) or the Owner names the work; the result is an entry in `problems.md` or `future-features.md` of this program.
 2. Main confirms no initiative of this program has an open plan (ADR 0002) and sizes the work (`docs/agent-loops.md`, Sizing). A single patch or minor of one package that meets the small-task conditions needs no plan and no row; it is one milestone in `progress.md`.
-3. Otherwise Main writes the detail plan at `implementation-plans/u<n>-<slug>/plan.md` with the next free `U<n>`, adds its row above, and self-reviews it; decision 3 and `.claude/rules.md` sections 2 and 3 decide the Codex gate.
+3. Otherwise Main writes the detail plan at `implementation-plans/dm-u<n>-<slug>/plan.md` with the next `DM-U<n>` under the allocation rule in `program-docs`, adds its row above, and self-reviews it; decision 3 and `.claude/rules.md` sections 2 and 3 decide the Codex gate.
 4. The Owner approves the plan; State in `progress.md` then names the initiative and its revision.

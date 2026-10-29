@@ -1,4 +1,4 @@
-<!-- Template: problems. Copy to docs/programs/<program>/problems.md (or docs/backlog/problems.md), fill every <placeholder>, delete this comment. Keep IDs stable. When resolved, move any still-live follow-up into an open entry, then shrink the entry to one line. In docs/backlog/, closed entries use the forms in the program-docs skill (Done, Moved to, Dropped). -->
+<!-- Template: problems. Copy to docs/programs/<program>/problems.md (or docs/backlog/problems.md), fill every <placeholder>, delete this comment. Keep IDs stable within the owner; transfers allocate the destination’s next local number and retain a mapped pointer (program-docs, Identifier allocation and transfers). When resolved, move any still-live follow-up into an open entry, then shrink the entry to one line. In docs/backlog/, closed entries use the forms in the program-docs skill (Done, Moved to, Dropped). -->
 
 # Problems, risks and follow-ups — <program name>
 
@@ -6,7 +6,7 @@ Plan: `plan.md`. Progress: `progress.md`.
 
 ## Open
 
-### <PREFIX>-<nnn>: <short title>
+### <CODE>-P<n>: <short title>
 
 - Status: <Open, Deferred, Accepted, Blocked> (<date, Owner decision if any>).
 - Problem: <what is wrong or risky>.
@@ -18,4 +18,4 @@ Plan: `plan.md`. Progress: `progress.md`.
 
 One line each: ID, status, one-line outcome. Details stay in Git.
 
-- <PREFIX>-<nnn> — Resolved <YYYY-MM-DD>: <one-line outcome> (`<commit>` or PR <n>).
+- <CODE>-P<n> — Resolved <YYYY-MM-DD>: <one-line outcome> (`<commit>` or PR <n>).

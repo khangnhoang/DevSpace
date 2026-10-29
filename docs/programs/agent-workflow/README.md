@@ -1,6 +1,6 @@
 # Charter — agent-workflow
 
-Progress: [progress.md](progress.md). Problems: [problems.md](problems.md). Future features: [future-features.md](future-features.md). Each initiative has a detail plan at `implementation-plans/u<n>-<slug>/plan.md`. Roadmap: [ADR 0001](../../adr/0001-modernization-roadmap.md), step 1. Program kinds: [ADR 0002](../../adr/0002-program-kinds.md).
+Progress: [progress.md](progress.md). Problems: [problems.md](problems.md). Future features: [future-features.md](future-features.md). Each initiative has a detail plan at `implementation-plans/aw-u<n>-<slug>/plan.md`. Roadmap: [ADR 0001](../../adr/0001-modernization-roadmap.md), step 1. Program kinds: [ADR 0002](../../adr/0002-program-kinds.md).
 
 ## 1. Capability and boundary
 
@@ -12,7 +12,7 @@ Progress: [progress.md](progress.md). Problems: [problems.md](problems.md). Futu
 One line each: number, date, decision. The decisions of each initiative stay in its plan.
 
 1. (2026-10-23) `agent-workflow` is an evergreen program: its first plan is U1, PR 13's chat plan r3 is U2, and the program-kinds plan is U3 (U3 D6, ADR 0002).
-2. (2026-10-23) The evergreen candidates are recorded in FEAT-010 with their opening conditions and are not opened; performance skills are a deferred future feature of this program, FEAT-011 (U3 D9).
+2. (2026-10-23) The evergreen candidates are recorded in AW-F2 with their opening conditions and are not opened; performance skills are a deferred future feature of this program, AW-F3 (U3 D9).
 3. (2026-10-25) A `skill-authoring` skill owns how skills and references are written and maintained, the procedural rules of `.claude/rules.md` section 8 move into it, and `npm run docs:check` checks skill shape; this replaces the D4 reason for dropping FEAT-009 (U5 D1 to D3).
 
 ## 3. Invariants
@@ -39,10 +39,11 @@ At most one initiative has an open plan at a time. A closed initiative keeps its
 | U7 [Entry plans for follow-up work of a delivery program](implementation-plans/u7-entry-plans/plan.md) | `chore/entry-detail-plans` | AW-010 fixed: a delivery program plans a `problems.md` or `future-features.md` entry without revising its master plan, checked by `docs:check`; the PR 23 docs catch-up. | none (U6 merged) | Owner approval of the plan (no Codex gate, U7 D4) |
 | U8 [Shared agent rules with Claude-specific bindings](implementation-plans/u8-shared-agent-rules/plan.md) | `chore/share-claude-skills` | Shared rules and Claude bindings preserve behavior, verified by bidirectional baseline traceability, bounded checks and a full instruction audit. | existing local shared-skill commits `2765f37`, `94f5f26` | Owner approval 2026-10-29; r4 records local implementation-commit grant; Medium, no automatic Codex gate |
 | U9 [Automated-first testing policy](implementation-plans/u9-test-policy/plan.md) | `chore/test-policy` | FEAT-021: contract-based automated test selection, safe data prerequisites, justified residual manual QA and consistent current instructions. | U8 merged (PR #37); U1 coverage baseline (PR #38) | Owner approved r1 on 2026-10-29 after rediscovery/self-review; plan-first and local checkpoint commits granted; Medium, no automatic Codex gate |
+| AW-U10 [Program-scoped work identifiers](implementation-plans/aw-u10-task-naming/plan.md) | `chore/task-naming` | Program/kind/number identifiers, migrated open records and strict validation with bounded historical exceptions. | U9 merged (PR #39) | Owner approved r2 on 2026-10-29 after self-review PASS; plan commit and separate-session implementation with local checkpoint/correction commits granted; Medium, no automatic Codex gate |
 
 ## 5. Opening an initiative
 
 1. The Owner names the work. Main confirms it is inside the boundary above (an initiative belongs to exactly one program) and that no initiative of this program has an open plan (ADR 0002).
 2. A small task that meets the small-task conditions (`docs/agent-loops.md`, Sizing) needs no plan and no row; it is recorded as one milestone in `progress.md`.
-3. Otherwise Main writes the detail plan at `implementation-plans/u<n>-<slug>/plan.md` from the detail-plan template, with the next free `U<n>`, adds its row above, and self-reviews it. The plan gets the Codex gate whenever `AGENTS.md` sections 2 and 3 require it for its size and risk.
+3. Otherwise Main writes the detail plan at `implementation-plans/aw-u<n>-<slug>/plan.md` from the detail-plan template, with the next `AW-U<n>` under the allocation rule in `program-docs`, adds its row above, and self-reviews it. The plan gets the Codex gate whenever `AGENTS.md` sections 2 and 3 require it for its size and risk.
 4. The Owner approves the plan; State in `progress.md` then names the initiative and its revision.

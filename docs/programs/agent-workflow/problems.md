@@ -4,7 +4,7 @@ Charter: `README.md`. Progress: `progress.md`.
 
 ## Open
 
-### AW-002: The detail-plan template's progress link resolves by accident
+### AW-P1: The detail-plan template's progress link resolves by accident
 
 - Status: Accepted (2026-10-22, moved from `agent-workflow` when it closed).
 - Problem: `.claude/skills/program-docs/references/templates/detail-plan.md` links `[progress.md](progress.md)`, which passes the link check only because the sibling template `progress.md` exists in the same folder. Renaming or moving the progress template breaks the link check on the detail template.
@@ -12,7 +12,7 @@ Charter: `README.md`. Progress: `progress.md`.
 - Direction: keep the link, because a copied template must keep a working `progress.md` link; move the progress template and the detail template together.
 - Exit condition: none needed while both templates stay in the same folder; reopen if one of them moves.
 
-### AW-008: The docs link parsers count some links inside code and accept a bare `](`
+### AW-P2: The docs link parsers count some links inside code and accept a bare `](`
 
 - Status: Open (2026-10-26, Codex U5 diff review round 1).
 - Problem: `scripts/docs/check-links.mjs` (`stripCode`, `extractTargets`), which `check-skills.mjs` reuses after U5, strips inline code one line at a time (a code span across lines still yields its links), accepts a closing fence with trailing text, and reads `](target)` without an opening `[label]` as a link. A link shown only as an example can count, and a stray `](` can satisfy `skill-reference-link`.

@@ -4,7 +4,7 @@ Problems that no open program owns. This is not a program: it has no plan and no
 
 ## Open
 
-### BL-003: lint rules suppressed line by line where the real fix changes behavior
+### BL-P1: lint rules suppressed line by line where the real fix changes behavior
 
 - Status: Open (2026-10-25, Owner decision D28 of infrastructure U6).
 - Problem: U6 made lint blocking with 0 problems while keeping behavior identical, so five lines carry an `eslint-disable-next-line` with a reason instead of the real fix: `react-hooks/set-state-in-effect` at `app/(main)/course/[slug]/page.tsx:125` (the review list resets `page` and `hasMore` before the refetch), and `@next/next/no-img-element` at `app/(main)/course/[slug]/page.tsx:298` (review avatar), `app/admin/users/page.tsx:502` (`blob:` avatar preview), `app/components/CoursePaymentModal.tsx:167` (payment QR from an external URL) and `app/components/Header.tsx:232` (search result image with an `onError` fallback).
@@ -12,7 +12,7 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Direction: one small UI task with a manual browser pass: move the images to `next/image` with explicit sizes (`unoptimized` for `blob:`, a fallback for the Header image, the QR host listed), the host list is settled by BL-002 (`remotePatterns` now names only explicit hosts, so list any new host there); restructure the review reset so it no longer sets state synchronously in the effect, checking paging and the `hasEnrolled` change by hand.
 - Exit condition: `grep -rn "eslint-disable" app lib` finds nothing, lint stays at 0, and the review list, avatars, QR and search images behave as before.
 
-### BL-004: the quiz completion screen never renders
+### BL-P2: the quiz completion screen never renders
 
 - Status: Open (2026-10-25).
 - Problem: `app/components/Quiz.tsx` declares `isCompleted` but never sets it (U6 removed the unused setter without changing behavior), so the completion branch at `Quiz.tsx:92` is unreachable and a finished quiz never shows its completion screen.
@@ -20,7 +20,7 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Direction: small UI task: set the completion state after the last question and check the screen by hand; decide with P20 whether completion should also be stored.
 - Exit condition: answering the last question of a quiz shows the completion screen.
 
-### BL-006: the avatar menu is already open after signing back in
+### BL-P3: the avatar menu is already open after signing back in
 
 - Status: Open (2026-10-25).
 - Problem: `handleLogout` in `app/components/Header.tsx:161` signs out and routes to `/login` without closing the user menu, and the header stays mounted across that route, so `showUserMenu` is still `true` and the menu shows open right after the next sign-in.

@@ -1,0 +1,800 @@
+[
+  {
+    "file": "docs/backlog/future-features.md",
+    "id": "FEAT-001",
+    "role": "closed",
+    "form": "- FEAT-001 — Moved to [infrastructure](../programs/infrastructure/future-features.md)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/backlog/future-features.md",
+    "id": "FEAT-007",
+    "role": "closed",
+    "form": "- FEAT-007 — Moved to [agent-workflow](../programs/agent-workflow/future-features.md)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/backlog/future-features.md",
+    "id": "FEAT-019",
+    "role": "closed",
+    "form": "- FEAT-019 — Moved to [dependency-maintenance](../programs/dependency-maintenance/future-features.md)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/backlog/future-features.md",
+    "id": "FEAT-020",
+    "role": "closed",
+    "form": "- FEAT-020 — Moved to [dependency-maintenance](../programs/dependency-maintenance/future-features.md)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/backlog/problems.md",
+    "id": "AW-002",
+    "role": "closed",
+    "form": "- AW-002 — Moved to [agent-workflow](../programs/agent-workflow/problems.md)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/backlog/problems.md",
+    "id": "BL-001",
+    "role": "closed",
+    "form": "- BL-001 — Done: the docs checker treats a `Moved to` line as a pointer and the moved FEAT entries use the template lines again (PR #8)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/backlog/problems.md",
+    "id": "BL-007",
+    "role": "closed",
+    "form": "- BL-007 — Done: README demo accounts removed and their hosted passwords rotated by the Owner (PR #21)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/backlog/problems.md",
+    "id": "BL-009",
+    "role": "closed",
+    "form": "- BL-009 — Moved to [dependency-maintenance](../programs/dependency-maintenance/problems.md)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/backlog/problems.md",
+    "id": "BL-002",
+    "role": "closed",
+    "form": "- BL-002 — Done: `remotePatterns` dropped `hostname: '**'` and names only the three course image hosts and the hosted Supabase Storage public path (PR #33)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/backlog/problems.md",
+    "id": "BL-008",
+    "role": "closed",
+    "form": "- BL-008 — Done: a course without an image shows the shared `/no-course-image.png` on the home page, hero slider, course page and admin list (PR #33)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/backlog/problems.md",
+    "id": "BL-005",
+    "role": "closed",
+    "form": "- BL-005 — Moved to [app-foundation](../programs/app-foundation/problems.md)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/backlog/problems.md",
+    "id": "BL-010",
+    "role": "closed",
+    "form": "- BL-010 — Done: the quiz compares the selected option and the correct answer case-insensitively; hosted held no row outside `a` to `d` (PR #33)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/README.md",
+    "id": "U1",
+    "role": "unit-row",
+    "form": "| U1 [Working rules, skills and docs system](implementation-plans/u1-working-rules/plan.md) | `chore/agent-workflow` | A fresh session finds and follows the working rules, loops and skills; program docs have a machine-checked shape. | none | Owner approval of the plan (2026-10-22) |",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/README.md",
+    "id": "U2",
+    "role": "unit-row",
+    "form": "| U2 [CI result in the PR body and hosted apply with db push](implementation-plans/u2-ci-result-db-push/plan.md) | `docs/ci-result-and-db-push` | The CI result goes into the PR body; hosted migrations are applied with `db push` behind two grants; migration and handoff rules. | soft on infrastructure U2 (merged) | Owner approval of chat plan r3 after the Codex plan gate |",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/README.md",
+    "id": "U3",
+    "role": "unit-row",
+    "form": "| U3 [Program kinds: delivery and evergreen](implementation-plans/u3-program-kinds/plan.md) | `docs/program-kinds` | Delivery and evergreen programs; `agent-workflow` becomes evergreen; migration citation, CI wait and checkpoint commit rules. | hard on U2 (merged) | Owner approval of the plan after the Codex plan gate |",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/README.md",
+    "id": "U4",
+    "role": "unit-row",
+    "form": "| U4 [Agent instructions match the infrastructure](implementation-plans/u4-instructions-sync/plan.md) | `chore/agent-instructions-sync` | AW-006 fixed: handoff template, `npm run dev` and manual QA on the local stack, a seed rule for QA, one suite mapping, one owner for CI facts and permissions, current `README.md` and pointers. | none (U3 merged) | Owner approval of the plan after the Codex plan gate |",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/README.md",
+    "id": "U5",
+    "role": "unit-row",
+    "form": "| U5 [Skill authoring skill and the skill-shape check](implementation-plans/u5-skill-authoring/plan.md) | `chore/skill-authoring` | `skill-authoring` owns the skill procedure, section 8 keeps only the permission rules, `docs:check` checks skill shape; the PR 21 docs catch-up. | none (U4 merged) | Owner approval of the plan after the Codex plan gate |",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/README.md",
+    "id": "U6",
+    "role": "unit-row",
+    "form": "| U6 [Instruction audit and the AW-007 rewording](implementation-plans/u6-instruction-audit/plan.md) | `chore/instruction-audit` | Every audit item is moved, linked, reworded, removed or confirmed as the Owner decided; section 2 states when Main edits state records; the PR 22 docs catch-up. | none (U5 merged) | Owner approval of the plan after the Codex plan gate |",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/README.md",
+    "id": "U7",
+    "role": "unit-row",
+    "form": "| U7 [Entry plans for follow-up work of a delivery program](implementation-plans/u7-entry-plans/plan.md) | `chore/entry-detail-plans` | AW-010 fixed: a delivery program plans a `problems.md` or `future-features.md` entry without revising its master plan, checked by `docs:check`; the PR 23 docs catch-up. | none (U6 merged) | Owner approval of the plan (no Codex gate, U7 D4) |",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/README.md",
+    "id": "U8",
+    "role": "unit-row",
+    "form": "| U8 [Shared agent rules with Claude-specific bindings](implementation-plans/u8-shared-agent-rules/plan.md) | `chore/share-claude-skills` | Shared rules and Claude bindings preserve behavior, verified by bidirectional baseline traceability, bounded checks and a full instruction audit. | existing local shared-skill commits `2765f37`, `94f5f26` | Owner approval 2026-10-29; r4 records local implementation-commit grant; Medium, no automatic Codex gate |",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/README.md",
+    "id": "U9",
+    "role": "unit-row",
+    "form": "| U9 [Automated-first testing policy](implementation-plans/u9-test-policy/plan.md) | `chore/test-policy` | FEAT-021: contract-based automated test selection, safe data prerequisites, justified residual manual QA and consistent current instructions. | U8 merged (PR #37); U1 coverage baseline (PR #38) | Owner approved r1 on 2026-10-29 after rediscovery/self-review; plan-first and local checkpoint commits granted; Medium, no automatic Codex gate |",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/future-features.md",
+    "id": "FEAT-021",
+    "role": "closed",
+    "form": "- FEAT-021 — Done: U9 establishes contract-based automated verification, safe fixture prerequisites and justified residual manual QA across instruction consumers (PR #39)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/future-features.md",
+    "id": "FEAT-002",
+    "role": "closed",
+    "form": "- FEAT-002 — Moved to [infrastructure](../infrastructure/future-features.md)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/future-features.md",
+    "id": "FEAT-003",
+    "role": "closed",
+    "form": "- FEAT-003 — Moved to [infrastructure](../infrastructure/future-features.md)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/future-features.md",
+    "id": "FEAT-004",
+    "role": "closed",
+    "form": "- FEAT-004 — Moved to [infrastructure](../infrastructure/future-features.md)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/future-features.md",
+    "id": "FEAT-005",
+    "role": "closed",
+    "form": "- FEAT-005 — Moved to [app-foundation](../app-foundation/future-features.md)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/future-features.md",
+    "id": "FEAT-006",
+    "role": "closed",
+    "form": "- FEAT-006 — Moved to [app-foundation](../app-foundation/future-features.md)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/future-features.md",
+    "id": "FEAT-008",
+    "role": "closed",
+    "form": "- FEAT-008 — Dropped: the `frontend-ui-review` skill; the Owner declined it (D4).",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/future-features.md",
+    "id": "FEAT-009",
+    "role": "closed",
+    "form": "- FEAT-009 — Dropped: the Codex multi-agent skill (`native-multi-agent-workflow`) and the skill governance skill (`maintain-repo-skills`); they exist for Codex-only governance, which DevSpace does not use (D4). A DevSpace skill-authoring skill is U5 (charter decision 3).",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/implementation-plans/u1-working-rules/plan.md",
+    "id": "U1",
+    "role": "plan-title",
+    "form": "# U1 detail plan — working rules, skills and docs system",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/implementation-plans/u2-ci-result-db-push/plan.md",
+    "id": "U2",
+    "role": "plan-title",
+    "form": "# U2 detail plan — CI result in the PR body and hosted apply with db push",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/implementation-plans/u3-program-kinds/plan.md",
+    "id": "U3",
+    "role": "plan-title",
+    "form": "# U3 detail plan — program kinds: delivery and evergreen",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/implementation-plans/u4-instructions-sync/plan.md",
+    "id": "U4",
+    "role": "plan-title",
+    "form": "# U4 detail plan — agent instructions match the infrastructure",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/implementation-plans/u5-skill-authoring/plan.md",
+    "id": "U5",
+    "role": "plan-title",
+    "form": "# U5 detail plan — Skill authoring skill and the skill-shape check",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/implementation-plans/u6-instruction-audit/plan.md",
+    "id": "U6",
+    "role": "plan-title",
+    "form": "# U6 detail plan — Instruction audit and the AW-007 rewording",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/implementation-plans/u7-entry-plans/plan.md",
+    "id": "U7",
+    "role": "plan-title",
+    "form": "# U7 detail plan — Entry plans for follow-up work of a delivery program",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/implementation-plans/u8-shared-agent-rules/plan.md",
+    "id": "U8",
+    "role": "plan-title",
+    "form": "# U8 detail plan — Shared agent rules with Claude-specific bindings",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/implementation-plans/u9-test-policy/plan.md",
+    "id": "U9",
+    "role": "plan-title",
+    "form": "# U9 detail plan — automated-first testing policy",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/problems.md",
+    "id": "AW-004",
+    "role": "closed",
+    "form": "- AW-004 — Resolved 2026-10-22: CP5 and the CP6 planner reran on a base branch without plan sections 4.1 and 4.2, with valid results (`1b8d8e5`).",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/problems.md",
+    "id": "AW-005",
+    "role": "closed",
+    "form": "- AW-005 — Resolved 2026-10-22: the CP6 implementor rerun loaded `git-pr-workflow` before committing and `code-review` before its self-review (`b99315e`).",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/problems.md",
+    "id": "AW-001",
+    "role": "closed",
+    "form": "- AW-001 — Moved 2026-10-22 to [infrastructure](../infrastructure/problems.md), unit U1.",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/problems.md",
+    "id": "AW-003",
+    "role": "closed",
+    "form": "- AW-003 — Moved 2026-10-22 to [security-hotfix](../security-hotfix/problems.md); it waits for H2-2.",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/problems.md",
+    "id": "AW-006",
+    "role": "closed",
+    "form": "- AW-006 — Resolved 2026-10-25: U4 fixed every item and the fresh read-only audit passed (PR 21, `4fa5731`).",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/problems.md",
+    "id": "AW-007",
+    "role": "closed",
+    "form": "- AW-007 — Resolved 2026-10-26: U6 audited every instruction, the Owner decided each item, and section 2 states when Main edits state records (PR 23, `bd19c18`).",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/problems.md",
+    "id": "AW-010",
+    "role": "closed",
+    "form": "- AW-010 — Resolved 2026-10-26: U7 added entry plans, so a delivery program plans a `problems.md` or `future-features.md` entry without revising its master plan (PR 24, `85248b2`).",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/problems.md",
+    "id": "AW-009",
+    "role": "closed",
+    "form": "- AW-009 — Resolved 2026-10-27: `planning` allows a batch of small independent items in one PR and states the plan approval questions, and `.claude/rules.md` section 2 defines an active implementor (PR 26, `723b985`).",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/agent-workflow/problems.md",
+    "id": "AW-011",
+    "role": "closed",
+    "form": "- AW-011 — Resolved 2026-10-27: `docs/agent-loops.md` Sizing matches skills to the work after discovery, and the Codex and Sonnet briefs take their skill list from it (PR 28, `7ad7a92`).",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/app-foundation/future-features.md",
+    "id": "FEAT-006",
+    "role": "closed",
+    "form": "- FEAT-006 — Done: U1 replaces all nine native confirmations with the shared ConfirmDialog; the Owner accepts closure with real Gemini execution unverified due to an expired key (PR #38)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/app-foundation/implementation-plans/u1-confirm-dialog/plan.md",
+    "id": "U1",
+    "role": "plan-title",
+    "form": "# U1 detail plan — shadcn base and confirm dialog",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/app-foundation/plan.md",
+    "id": "U1",
+    "role": "unit-row",
+    "form": "| U1 shadcn base and confirm dialog | `feat/af-confirm-dialog` | 1, 5 (`frontend-design`) | none | Owner approves this plan and the U1 detail plan; Codex gate on plan and diff (new runtime packages, the payment admin page). |",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/dependency-maintenance/README.md",
+    "id": "U1",
+    "role": "unit-row",
+    "form": "| U1 [In-range patch and minor updates](implementation-plans/u1-in-range-updates/plan.md) | `chore/deps-in-range-updates` | Every package behind within its major on 2026-10-27 is updated, except the Supabase CLI, with the full suite and a manual pass green. | none | Owner approval of the plan after the Codex plan gate |",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/dependency-maintenance/implementation-plans/u1-in-range-updates/plan.md",
+    "id": "U1",
+    "role": "plan-title",
+    "form": "# U1 detail plan — In-range patch and minor updates",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/dependency-maintenance/problems.md",
+    "id": "DM-003",
+    "role": "closed",
+    "form": "- DM-003 — Resolved 2026-10-27: each sidebar realtime effect run cancels before it creates a channel and subscribes on its own topic, so no channel leaks and no `/learn` page logs the sidebar error (PR 31, `c7c8da4`, `e753175`).",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/future-features.md",
+    "id": "FEAT-002",
+    "role": "closed",
+    "form": "- FEAT-002 — Done: `test-quality-strategy` ported in U3 (PR 15) and `playwright-cli` vendored in U4 (PR #17)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/future-features.md",
+    "id": "FEAT-003",
+    "role": "closed",
+    "form": "- FEAT-003 — Done: `db reset` and the local-stack rule in U2 (PR 12), the RLS tests in `supabase-migration` in U3 (PR #15)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/future-features.md",
+    "id": "FEAT-004",
+    "role": "closed",
+    "form": "- FEAT-004 — Done: the CI jobs and their commands in `git-pr-workflow` and `CLAUDE.md`, added by U1 to U3 in PR 11, PR 12 and PR 15, and by U4 (PR #17)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/future-features.md",
+    "id": "FEAT-017",
+    "role": "closed",
+    "form": "- FEAT-017 — Done: `db` and `e2e` are skipped on docs-only pull requests, delivered in PR 25 and AC1 observed on the first docs-only PR (PR #26)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/future-features.md",
+    "id": "FEAT-018",
+    "role": "closed",
+    "form": "- FEAT-018 — Done: the `e2e` job installs only the headless shell without apt; the push run on `main` after PR 28 (run 40383406684) passed all six jobs and 46 tests with the install step at 5 seconds and no `Installing dependencies` (PR #27)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/future-features.md",
+    "id": "FEAT-014",
+    "role": "closed",
+    "form": "- FEAT-014 — Moved to [backlog](../../backlog/future-features.md)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/future-features.md",
+    "id": "FEAT-001",
+    "role": "closed",
+    "form": "- FEAT-001 — Done: the dependency policy is the `dependency-updates` skill (PR #29)",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/implementation-plans/feat-017-ci-docs-skip/plan.md",
+    "id": "FEAT-017",
+    "role": "plan-title",
+    "form": "# FEAT-017 detail plan — Skip the database and e2e jobs on documentation-only pull requests",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/implementation-plans/u1-ci/plan.md",
+    "id": "U1",
+    "role": "plan-title",
+    "form": "# U1 detail plan — CI skeleton",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/implementation-plans/u2-local-db/plan.md",
+    "id": "U2",
+    "role": "plan-title",
+    "form": "# U2 detail plan — Local database and seed",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/implementation-plans/u3-vitest-rls/plan.md",
+    "id": "U3",
+    "role": "plan-title",
+    "form": "# U3 detail plan — Vitest and RLS tests",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/implementation-plans/u4-playwright-smoke/plan.md",
+    "id": "U4",
+    "role": "plan-title",
+    "form": "# U4 detail plan — Playwright smoke",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/implementation-plans/u5-payment-flow/plan.md",
+    "id": "U5",
+    "role": "plan-title",
+    "form": "# U5 detail plan — Payment-flow tests",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/implementation-plans/u6-lint-cleanup/plan.md",
+    "id": "U6",
+    "role": "plan-title",
+    "form": "# U6 detail plan — Lint cleanup",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/implementation-plans/u7-dependency-policy/plan.md",
+    "id": "U7",
+    "role": "plan-title",
+    "form": "# U7 detail plan — Dependency policy",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/plan.md",
+    "id": "U1",
+    "role": "unit-row",
+    "form": "| U1 CI skeleton | `chore/infra-ci` | 1, 8 (FEAT-004, AW-001) | none | Owner approves this plan and the U1 detail plan. Enabling required checks in GitHub branch protection is an Owner step after merge. |",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/plan.md",
+    "id": "U2",
+    "role": "unit-row",
+    "form": "| U2 Local database and seed | `chore/infra-local-db` | 2, 8 (FEAT-003 reset part) | hard on U1 (the CI job extends its workflow) | The Owner provides the schema dump; Codex also reviews the baseline file. `migration repair` on hosted is a separate grant after merge. |",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/plan.md",
+    "id": "U3",
+    "role": "unit-row",
+    "form": "| U3 Vitest and RLS tests | `test/infra-vitest` | 3, 8 (FEAT-003 RLS part, FEAT-002 test-quality-strategy) | hard on U2 | U2 merged and `db reset` passes in CI. |",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/plan.md",
+    "id": "U4",
+    "role": "unit-row",
+    "form": "| U4 Playwright smoke | `test/infra-playwright` | 4, 8 (FEAT-002 playwright-cli) | hard on U2; soft on U3 (shared test helpers) | U3 merged (D5 order). |",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/plan.md",
+    "id": "U5",
+    "role": "unit-row",
+    "form": "| U5 Payment-flow tests | `test/infra-payment-flow` | 5 | hard on U4 (server actions run through the app); hard on U3 for DB assertions | U4 merged. |",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/plan.md",
+    "id": "U6",
+    "role": "unit-row",
+    "form": "| U6 Lint cleanup | `chore/infra-lint-cleanup` | 6 | hard on U3, U4 and U5 (regression cover) | U5 merged and the suite is green on `main`. |",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/plan.md",
+    "id": "U7",
+    "role": "unit-row",
+    "form": "| U7 Dependency policy | `docs/infra-dependency-policy` | 7 (FEAT-001) | hard on U3 to U5 (the policy names the suite) | U6 merged or the Owner allows it after U5. |",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/problems.md",
+    "id": "AW-001",
+    "role": "closed",
+    "form": "- AW-001 — Resolved 2026-10-23: the CI job `docs` runs `npm run docs:check` and `npm run docs:check:test` on every pull request and push to `main` (PR 11, run 39821844267).",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/problems.md",
+    "id": "INF-001",
+    "role": "closed",
+    "form": "- INF-001 — Resolved 2026-10-23: `next` and `eslint-config-next` 16.4.3 plus `npm audit fix` took `npm audit --omit=dev` from 17 findings to 5, none critical or high with an in-range fix; the 5 left are in FEAT-001 (PR 16, `1a13906`).",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/infrastructure/problems.md",
+    "id": "INF-002",
+    "role": "closed",
+    "form": "- INF-002 — Resolved 2026-10-27: the seed stores lowercase answers `a`, `b`, `c` for exercises 1 to 3, so the seeded quizzes accept their correct answers; whether hosted rows mix cases is backlog BL-010 (`8e58883`).",
+    "reason": "Completed declaration retained from 50c649f; naming only, no shape waiver."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P1",
+    "role": "problem-row",
+    "form": "| P1 | `profiles` SELECT `true` for `public`: anon can read the email, phone, dob, gender, province of everyone | High | **H2** |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P2",
+    "role": "problem-row",
+    "form": "| P2 | `coupons` SELECT `true` for `public`: every code can be listed; `CoursePaymentModal` checks the coupon on the client | Medium | **H2** |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P3",
+    "role": "problem-row",
+    "form": "| P3 | The `reviews` INSERT policy only checks enrollment and does not constrain `user_id = auth.uid()` → a review impersonating someone else | Medium | **H2** |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P4",
+    "role": "problem-row",
+    "form": "| P4 | The `comments` UPDATE policy has no `with_check` → the comment owner can move their comment to another lesson (`lesson_id`); handing it to another `user_id` is blocked, since the check reuses `USING` (infrastructure U3 known-bug test K2) | Low | **H2** |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P5",
+    "role": "problem-row",
+    "form": "| P5 | The code calls the RPC `increment_coupon_usage` but the function does not exist in the DB → coupon usage never increases | Medium | H2 or later |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P6",
+    "role": "problem-row",
+    "form": "| P6 | A coupon is counted when the pending order is created, while `updatePaymentWithCoupon` does not count → inconsistent usage logic | Low | later |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P7",
+    "role": "problem-row",
+    "form": "| P7 | Server components read data with the anon client, not per user | Low | techstack-migration (out of scope for `infrastructure`, its plan section 7) |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P8",
+    "role": "problem-row",
+    "form": "| P8 | Auth uses the implicit flow; should move to PKCE | Low | migration |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P9",
+    "role": "problem-row",
+    "form": "| P9 | Leaked password protection is off (Auth settings) | Low | Owner turns it on in the dashboard |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P10",
+    "role": "problem-row",
+    "form": "| P10 | Bucket `avatars`: any signed-in user can upload to any path | Low | later |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P11",
+    "role": "problem-row",
+    "form": "| P11 | pg_graphql exposes every table to anon/authenticated (advisor 0026/0027) | Low | later |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P12",
+    "role": "problem-row",
+    "form": "| ~~P12~~ | Fixed password `123123` when an admin creates a user — moved into H1 per Codex review round 1 | High | H1 |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P13",
+    "role": "problem-row",
+    "form": "| P13 | Paid lesson/quiz content readable without enrolling: RLS `lessons`/`exercises` SELECT `true`; the learn page queries every lesson on the server and checks enrollment on the client (`LearnClient.tsx`) after the data is already in the RSC payload | High | **H2** (Owner: split into H2-1/H2-2 if large) |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P14",
+    "role": "problem-row",
+    "form": "| P14 | Email links open only in the browser that requested them (PKCE); should move to `token_hash` + `verifyOtp` through a server route | Low | later |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P16",
+    "role": "problem-row",
+    "form": "| P16 | Updating a profile with an empty date of birth → `invalid input syntax for type date: \"\"` (the form sends an empty string instead of `null`). The bug predates H1 | Low | later |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P17",
+    "role": "problem-row",
+    "form": "| ~~P17~~ | Inconsistent password rules: admin-created users ≥ 8 characters, sign-up/reset only 6; resetting to the same password currently shows the English error `same_password`. Related to the rule H1 just set (A11) → fixed in H1 | Low | H1 |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P18",
+    "role": "problem-row",
+    "form": "| P18 | Opening the signup confirmation link in a browser/tab without the code verifier → the `/auth/error` page, even though the email is confirmed and sign-in works. The root cause is P14 | Low | with P14 |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P19",
+    "role": "problem-row",
+    "form": "| P19 | Several `localhost` tabs open: `supabase-js` shares `navigator.locks`, auth operations wait on the lock forever → one stuck tab makes the other tabs spin on sign-in. Closing all tabs fixes it. Library behavior, not caused by H1 | Low | monitor |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P20",
+    "role": "problem-row",
+    "form": "| P20 | Quiz results are not stored (no table), the UI does not mark a quiz as completed like a lesson; re-entering means starting over | Medium | future-features |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P21",
+    "role": "problem-row",
+    "form": "| ~~P21~~ | Delete confirmation uses `window.confirm` (comments, admin CRUD of courses/chapters/lessons) — ugly, inconsistent with the UI — fixed in app-foundation U1: all 9 calls use `ConfirmDialog` (FEAT-006) | Low | app-foundation U1 |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P22",
+    "role": "problem-row",
+    "form": "| P22 | The avatar in the course review section has a strange extra gradient background | Low | later |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P23",
+    "role": "problem-row",
+    "form": "| P23 | Notifications: there is no mark-as-read button per notification (you must click the notification itself), only a button for all | Low | later |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P24",
+    "role": "problem-row",
+    "form": "| P24 | AI quiz creation does not run: `GEMINI_API_KEY` has expired. The Owner's job (issue a new key); includes the audit item of merging the 2 Gemini SDKs | Low | Owner |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P15",
+    "role": "problem-row",
+    "form": "| P15 | `/admin/transactions` shows every learner as \"Ẩn danh\": the page reads `p.profiles?.full_name` (`app/admin/transactions/page.tsx:148`) but `getAllPayments` returns `users`. The bug predates H1 (found during H1 QA) | Low | later |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P25",
+    "role": "problem-row",
+    "form": "| P25 | `approvePayment`/`rejectPayment` UPDATE only by `id`, not filtering `status = 'pending'` → approving again an order that was already processed, sending the email again; the enrollment is created by a separate request and its error is ignored | Low | **H2-2** |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P26",
+    "role": "problem-row",
+    "form": "| P26 | The quiz is graded on the client, an enrolled user receives `correct_answer` in the payload | Low | with P20 (grade on the server) |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P27",
+    "role": "problem-row",
+    "form": "| P27 | The content of a soft-deleted comment is still readable through REST; a user who has not enrolled can still read/write comments on a paid lesson | Low | later |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P28",
+    "role": "problem-row",
+    "form": "| P28 | A user can edit the `email` column in `profiles` themselves (system email is sent to this column) | Low | later |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P29",
+    "role": "problem-row",
+    "form": "| P29 | \"Khóa học của tôi\" at `/profile` shows only courses with ≥ 1 completed lesson (`getUserDashboardData` filters `isStarted`) → a user who bought a course but has not finished any lesson sees \"Bạn chưa tham gia khóa học nào\". The bug predates H2 (found during H2-1 QA) | Low | later |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P30",
+    "role": "problem-row",
+    "form": "| P30 | `createPendingPayment` (`app/action/payment.ts:72`) never checks for an existing enrollment, so a direct call by an enrolled user creates a pending order for a course they already own; the UI hides the buy button, but the action is a public POST endpoint. Found while planning infrastructure U5 (2026-10-24); U5 does not encode it | Low | with H2-2b |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "P31",
+    "role": "problem-row",
+    "form": "| P31 | `createPendingPayment` applies a coupon only when `coupon.used_count < coupon.max_uses` (`app/action/payment.ts:122`), so a code without a use limit (`max_uses` null) gives no discount there, while `updatePaymentWithCoupon` treats null as unlimited and applies it (infrastructure U5 row PF7). The UI never sends a code to `createPendingPayment` (P5), so only a direct call sees it. Found while implementing infrastructure U5 (2026-10-24); U5 does not encode it | Low | with H2-2b |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/problems.md",
+    "id": "AW-003",
+    "role": "problem-row",
+    "form": "| AW-003 | This file keeps the P1-P31 table, so `scripts/docs/check-structure.mjs` allowlists it for `problems-shape`; it is the only program problems file not in the open-entry shape. When H2-2a or H2-2b reopens, reshape it into open entries and one-line resolved entries keeping every ID, and remove the allowlist entry (`plan-h2.md` stays allowlisted). Moved from `agent-workflow` on 2026-10-22 | Low | with H2-2 |",
+    "reason": "Owner D4: preserve exact security-hotfix historical table at 50c649f."
+  },
+  {
+    "file": "docs/programs/dependency-maintenance/problems.md",
+    "id": "DM-001",
+    "role": "closed",
+    "form": "- DM-001 — Resolved 2026-10-28: six unused runtime packages removed at PR #32; later feature work may add packages again (PR 32, `1c99b77`).",
+    "reason": "AC10 merge catch-up: PR #32 (1c99b77), before naming inventory activation."
+  },
+  {
+    "file": "docs/programs/dependency-maintenance/problems.md",
+    "id": "DM-002",
+    "role": "closed",
+    "form": "- DM-002 — Resolved 2026-10-28: dependency-updates requires a trial install and bounds type-only fallout edits (PR 32, `1c99b77`).",
+    "reason": "AC10 merge catch-up: PR #32 (1c99b77), before naming inventory activation."
+  },
+  {
+    "file": "docs/programs/security-hotfix/plan.md",
+    "id": "Security hotfix — H1: block privilege escalation and guard server actions",
+    "role": "legacy-plan",
+    "form": "# Security hotfix — H1: block privilege escalation and guard server actions",
+    "reason": "Owner D4: published migration citations preserve both legacy plan paths and identities at 50c649f."
+  },
+  {
+    "file": "docs/programs/security-hotfix/plan-h2.md",
+    "id": "Security hotfix — H2: block data exposure and impersonated writes",
+    "role": "legacy-plan",
+    "form": "# Security hotfix — H2: block data exposure and impersonated writes",
+    "reason": "Owner D4: published migration citations preserve both legacy plan paths and identities at 50c649f."
+  }
+]

@@ -2,9 +2,9 @@
 
 Direction the Owner has set that this program delivers in a later unit. Each entry closes as `Done` in the PR that ships its last part (plan: [plan.md](plan.md), Outcomes 1 and 5).
 
-## FEAT-005: Zod, React Hook Form and shadcn in the skills
+## AF-F1: Zod, React Hook Form and shadcn in the skills
 
-- Status: Planned (moved here on 2026-10-28 from `docs/backlog/`, where agent-workflow had moved it): `server-actions` in U2 and `frontend-workflow` in U3, each with its `dependency-updates` and `test-quality-strategy` rows. The U1 part is delivered by PR #38: `frontend-design` describes the shadcn primitives and the confirm dialog, and `dependency-updates` has the rows for `radix-ui` and `class-variance-authority`.
+- Status: Planned (moved here on 2026-10-28 from `docs/backlog/`, where agent-workflow had moved it): `server-actions` in AF-U2 and `frontend-workflow` in AF-U3, each with its `dependency-updates` and `test-quality-strategy` rows. The U1 part is delivered by PR #38: `frontend-design` describes the shadcn primitives and the confirm dialog, and `dependency-updates` has the rows for `radix-ui` and `class-variance-authority`.
 - Direction: extend `server-actions` with Zod schemas, parsing and the shared client and server contract instead of creating a second skill (agent-workflow D15); extend `frontend-workflow` with React Hook Form, shadcn controls, async state and forms (D16); update `frontend-design`, which said there was no shadcn and no UI library (done in U1). The text is written from this repository, not from VocaSpace (off limits).
 - Target program: app-foundation.
 

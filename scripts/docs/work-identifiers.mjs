@@ -11,7 +11,7 @@ export function declarations(doc) {
   const name = posix.basename(doc.rel);
   let section = "";
   for (const line of doc.content) {
-    const heading = /^(#{1,3})\s+(.+)$/.exec(line.text);
+    const heading = /^(#{1,6})\s+(.+)$/.exec(line.text);
     if (heading?.[1] === "##") section = heading[2];
     let id, role;
     if (["problems.md", "future-features.md"].includes(name)) {
@@ -78,7 +78,7 @@ export function checkIdentifiers(docs, rows, mappings, report) {
     if (match) {
       const kind = entry.role === "unit-row" ? "U" : posix.basename(entry.file) === "problems.md" ? "P" : posix.basename(entry.file) === "future-features.md" ? "F" : match[2];
       if (!home || match[1] !== home || match[2] !== kind) error(entry, "work-id", `${entry.id} has the wrong owner or kind for ${entry.file}`);
-      if (["open", "loose"].includes(entry.role) && !new RegExp(`^#{2,3} ${entry.id}: \\S`).test(entry.form)) error(entry, "work-id", `${entry.id} needs a colon and nonempty title`);
+      if (["open", "loose"].includes(entry.role) && !new RegExp(`^#{${posix.basename(entry.file) === "problems.md" ? 3 : 2}} ${entry.id}: \\S`).test(entry.form)) error(entry, "work-id", `${entry.id} needs the correct heading level, a colon and nonempty title`);
       if (entry.role === "unit-row" && !new RegExp(`^${entry.id}\\s+\\S`).test(entry.form.split("|")[1]?.trim() ?? "")) error(entry, "work-id", `${entry.id} needs a title after its table ID`);
     }
     const key = nodeKey(entry.file, entry.id);
@@ -87,9 +87,11 @@ export function checkIdentifiers(docs, rows, mappings, report) {
     nodes.set(key, entry);
     if (entry.role === "plan-title") continue; // The table owns nested U; the plan is its identity claim.
     if (entry.moved) continue;
-    if (match) {
-      if (owned.has(entry.id)) error(entry, "work-ownership", `${entry.id} has duplicate canonical ownership (first at ${owned.get(entry.id).file})`);
-      else owned.set(entry.id, entry);
+    // Retained U rows reserve the same program-local U key; legacy F/P numbers stay independent.
+    const ownershipId = match ? entry.id : legacy && entry.role === "unit-row" && /^U[1-9][0-9]*$/.test(entry.id) ? `${home}-${entry.id}` : null;
+    if (ownershipId) {
+      if (owned.has(ownershipId)) error(entry, "work-ownership", `${ownershipId} has duplicate canonical ownership (first at ${owned.get(ownershipId).file})`);
+      else owned.set(ownershipId, entry);
     }
     if (!match && entry.role === "unit-row") entry.code = codes.get(dir);
   }

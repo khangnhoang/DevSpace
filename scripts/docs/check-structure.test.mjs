@@ -768,3 +768,44 @@ test("activation inventory: fixed local numbering, planned U reservations and fi
   assert.equal(legacyDeclarations.filter(e => e.role === "problem-row").length, 32);
   assert.equal(legacyDeclarations.filter(e => e.role === "plan-title").length, 19);
 });
+
+test("H4–H6 cannot hide legacy, new canonical or duplicate entry declarations", () => {
+  for (const level of [4, 5, 6]) {
+    const prefix = "#".repeat(level);
+    for (const [file, entry, legacy, fresh, duplicate, header] of [
+      [ALPHA_PROBLEMS, OPEN_ENTRY, "ALPHA-999", "AL-P2", "AL-P1", "###"],
+      [ALPHA_FEATURES, FEATURE, "FEAT-999", "AL-F2", "AL-F10", "##"],
+    ]) {
+      const current = baseTree()[file];
+      const append = (body) => file === ALPHA_PROBLEMS
+        ? current.replace("\n## Resolved", "\n" + body + "\n## Resolved")
+        : current + "\n" + body;
+      for (const id of [legacy, fresh]) {
+        assertViolation(run({ [file]: append(entry(id).replace(header, prefix)) }), file, "work-id");
+      }
+      const result = run({ [file]: append(entry(duplicate).replace(header, prefix)) });
+      assertViolation(result, file, "work-id");
+      assertViolation(result, file, "work-ownership");
+    }
+  }
+});
+
+test("historical unit rows reserve canonical ownership without reserving legacy F/P numbers", () => {
+  const dir = "docs/programs/agent-workflow", file = `${dir}/README.md`;
+  const row = legacyDeclarations.find(e => e.file === file && e.role === "unit-row" && e.id === "U1").form;
+  const charter = CHARTER.replace("| GA-U1 First | `b1` |", row);
+  const fixture = {
+    "docs/README.md": baseTree()["docs/README.md"] + "| `programs/agent-workflow` | AW | evergreen |\n",
+    [`${dir}/progress.md`]: progress(), [file]: charter,
+  };
+  assertClean(run(fixture));
+  for (const rows of [row + "\n| AW-U1 Duplicate | `b2` |", "| AW-U1 Duplicate | `b2` |\n" + row]) {
+    assertViolation(run({ ...fixture, [file]: charter.replace(row, rows) }), file, "work-ownership");
+  }
+  const problem = legacyDeclarations.find(e => e.file === `${dir}/problems.md` && e.id === "AW-004").form;
+  const feature = legacyDeclarations.find(e => e.file === `${dir}/future-features.md` && e.id === "FEAT-021").form;
+  assertClean(run({ ...fixture, [file]: charter.replace(row, row + "\n| AW-U11 New work | `b2` |"),
+    [`${dir}/problems.md`]: problems(OPEN_ENTRY("AW-P4"), problem),
+    [`${dir}/future-features.md`]: FEATURE("AW-F21") + "\n## Closed\n\n" + feature + "\n",
+  }));
+});

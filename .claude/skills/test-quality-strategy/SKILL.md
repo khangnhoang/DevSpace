@@ -1,15 +1,25 @@
 ---
 name: test-quality-strategy
-description: "Test quality for DevSpace automated tests: what the unit, rls and e2e layers cover, how to name, place and plan a test, test data and cleanup, mocking limits, the known-bug pattern, regression tests, and how to run and report test evidence. Use before writing, changing, reviewing or planning a Vitest or Playwright test, when a policy, grant or security change needs denied-path tests, when a bug fix needs a regression test, and when reporting test results."
+description: "Test selection and quality for DevSpace: map behavior and invariants to unit, local integration and browser E2E, plan safe test data and residual manual QA, handle known bugs and report evidence. Use when planning or verifying behavior changes, writing or reviewing Vitest or Playwright tests, choosing automated versus manual checks, or reporting test results."
 ---
 
 # Test quality strategy
 
 ## Use when / do not use when
 
-Use when you write, change, review or plan a test under `__tests__/`, when a policy, grant or security change needs denied-path tests, when a bug fix needs a regression test, or when you report test results.
+Use when planning or verifying a behavior change, choosing automated versus manual checks, writing, changing or reviewing a test under `__tests__/`, or reporting test results. This skill owns test selection and test-data requirements; consumers own their execution procedures.
 
-Do not use for manual browser validation (`frontend-workflow`), for writing the migration itself (`supabase-migration`), or for plan structure (`planning`). Only the payment actions have server action tests (the `payment-*.spec.ts` rows): do not claim coverage for another action. Verify the others by commands and a manual browser pass, and report what was not verified.
+Manual browser mechanics belong to `frontend-workflow`, migration writing to `supabase-migration`, and plan structure to `planning`. Coverage is only what the actual assertions prove; a missing existing row is not a reason to default to manual-only verification.
+
+## Select checks from the contract
+
+Before choosing commands, identify the observable behavior, persisted invariants, relevant edges and failures, actors/permissions and competing operations. For each applicable guarantee, record the layer, assertion, existing or new test file/row and prerequisites. Omit irrelevant dimensions rather than manufacture boilerplate cases.
+
+Choose the smallest sufficient layer: pure transformations and validation use unit tests; real policies, constraints and persistence use local database/API integration; browser wiring, interaction and state use E2E where needed. Local integration uses the existing Vitest `rls` project or Playwright API/action fixtures, not a new `test:integration` command. Endpoint authorization and RLS can protect different entry points: test both applicable boundaries without repeating every assertion in every layer.
+
+Reuse or extend relevant rows. A non-payment action, new flow or missing fixture is not a coverage ceiling: plan the bounded helper/worker/data extension needed within the feature's approved scope, with tests shipping alongside the behavior. If that cannot be done safely or within scope, record the concrete blocker, missing guarantee and resolution before proceeding; do not claim an untested action is covered or silently postpone its tests. General validation changes need tests with the change; Zod-specific procedures arrive with the schemas and package in app-foundation U2.
+
+Allocate manual QA per remaining scenario, with a reason: perceptual/design judgment, exploration or genuinely live external-provider verification. Reuse automated assertions instead of mechanically repeating them by hand. A missing/expired Gemini key does not prevent automating applicable application behavior at controlled external boundaries, but real provider quality remains unverified. Explicit Owner QA and approved program-specific minima remain binding, including app-foundation's shared-schema unit tests and successful/rejected E2E per form or an approved plan exception. Automated-first selection never waives an acceptance check or its permission gate.
 
 ## What exists
 
@@ -24,29 +34,30 @@ Do not use for manual browser validation (`frontend-workflow`), for writing the 
 - The seed users (`supabase/seed.sql`, invented): `learner` (enrolled nowhere), `student` (enrolled and paid in course 2), `admin`.
 - Under an agent environment Vitest uses its `minimal` reporter and hides the `known bug <id>` lines; run `npm test -- --reporter=default` to see them. The CI jobs, their reporter and failure reading: [pr-and-ci.md](../git-pr-workflow/references/pr-and-ci.md).
 
-## End-to-end (`e2e`): smoke and payment rows
+## End-to-end (`e2e`)
 
-- The smoke rows prove that the main learner and admin paths render and that the access redirects hold, in a real browser, against a production build. They do not repeat an rls guarantee. The payment rows are the server action tests (see Server action rows). When a fixed bug, or a changed message or state on a smoke or payment path, is best shown in the browser (Core rules, rule 2) and a saved session can show it within these rules, extend a row or add one; otherwise the plan and the report say why (Regression).
+- The suite covers main learner/admin rendering and access redirects against a production build, payment UI/direct action calls, and U1 fixture deletes, non-payment transit failure handling and dialog interaction (`admin.spec.ts` A3-A10, `student.spec.ts` T4/T5, `payment-admin.spec.ts` AP4-AP6). This inventory describes current assertions, not a limit on new rows. Select additions by the contract above; do not repeat an RLS guarantee just to drive it through a browser.
 - `npm run test:e2e` reads the API URL and keys from `npx supabase status` through the host check, builds the app with `buildE2eEnv` (`__tests__/helpers/e2e-env.ts`) and serves it on port 3100, and never reuses a server. A unit test fails when `app`, `lib` or `proxy.ts` read an environment variable that the map does not set, because the build would then take it from the local environment file, which points at hosted. When code reads a new variable, add it to the map. The run overwrites `.next`: run `npm run build` before `npm start` afterwards.
 - Specs are `__tests__/e2e/<role>.spec.ts` and import `test` from `fixtures.ts`. Names start with the matrix ID, for example `[L5]`. The `setup` project signs in each seed user through the login form once per run and saves the session under `__tests__/e2e/.auth/` (ignored by git).
 - The network guard in `fixtures.ts` aborts every request whose host is not `127.0.0.1` or `localhost` (a CDN, `placehold.co`) and every `/_next/image` request that asks the Next server to fetch such a URL. A request aimed at `*.supabase.co` or `devspace-lms.vercel.app`, a page error and a response with status 500 or more fail the test. Chromium also cannot resolve any host but a local one (`--host-resolver-rules`), because Playwright does not route redirect hops. The one exception: a row that sets `blockedMonacoLoader` (`[S5]` only) marks as handled, in the page, the unhandled rejection whose reason is the `error` Event of the Monaco `loader.js` script element from `cdn.jsdelivr.net`; every other page error still fails. Do not assert what a blocked CDN would load; the classifier is `__tests__/helpers/e2e-network.ts`.
 - Assert seed values (course names, lesson text, URLs), not CSS classes. Wait with Playwright's auto-waiting, never a fixed sleep.
-- Data: a smoke row writes nothing, except the one enrollment path (`[L5]`) and the fixture rows it creates itself. Such a row creates its fixture through the service role (`__tests__/e2e/service-role.ts`), clearly marked (an `E2E-` title or name, a `.test` address for a user), and may delete it through the UI under test; it never deletes or edits a seed row. The payment rows write and follow Server action rows. A row that writes restores its rows in `afterEach`, even when it failed, so whatever it created is gone; the service role is used only for preconditions, reading state back and cleanup, never for the request under test.
-- Run `npx supabase db reset`, then `npm run test:e2e` twice and `npm test` once after changing a row that writes.
+- Data: rendering rows write nothing; `[L5]` enrolls and U1 rows create/delete fixtures. UI deletes must target fixtures, never seed rows. The service role in `__tests__/e2e/service-role.ts` prepares, reads back and cleans up; it never sends the request under test. Payment setup has additional rules below. Current markers and cleanup hooks are legacy mechanisms, not ownership/isolation guarantees (Test data).
+- After changing a row that writes, meet Test data prerequisites, run `npx supabase db reset`, then `npm run test:e2e` twice and `npm test` once. A second run detects residue; it does not prove safety across processes.
 
 ## Server action rows (`payment-learner.spec.ts`, `payment-admin.spec.ts`)
 
 - The UI drives the normal paths. A hostile path, or anything the UI cannot reach, posts straight to the action endpoint with the `callAction` fixture (`__tests__/e2e/server-action.ts`). It reads the action ID from `.next/server/server-reference-manifest.json` by source file and export name (never written down) and sends the actor's saved session (none for `anon`) and the e2e server's origin. A missing pair, a redirect or an unreadable response throws an error that names the pair; there is no fallback. The lookup and the flight reader are pure (`__tests__/helpers/server-action-core.ts`, unit-tested from a captured response) and rely on Next internals, so a Next update shows up in `npm run test:unit` and in the rows.
+- `ActionCaller(caller, filename, exportedName, args)` has a generic signature, but `WORKER_URLS` currently maps only the course and transactions page workers. Other endpoints can need a bounded worker/fixture extension; do not promise they run unchanged. The current caller rejects HTTP errors and the browser fixture fails unexpected page errors/5xx. An expected-error probe those guards cannot express is a named harness gap (FEAT-023); plan scoped support without weakening network/error guards or treating a weaker check as equivalent.
 - The e2e server starts through `scripts/e2e/serve.mjs`: `next build` unguarded, `next start` with `__tests__/e2e/server-guard.cjs`. The guard refuses and records every name resolution and connection to a host but `127.0.0.1`, `localhost` and `::1`, and the auto fixture `serverRecords` fails a test during which it recorded one. Records live in the ignored `__tests__/e2e/.server/`.
 - The mail record stops `sendMail` of the bundled nodemailer (Turbopack bundles it, so `server-mail.cjs` rewrites the chunk as it is required) and records recipient and subject. `serverRecords.mailsSent()` lists the mails since the test began: a row that approves asserts exactly its mails, every other row asserts none. Nothing reaches Gmail.
 - A known bug uses `knownBugE2e` (`__tests__/e2e/known-bug.ts`): the same contract as `knownBug`, and the run prints `known bug <id>`. Playwright's `expect` throws a plain `Error` with a `matcherResult`, not an `AssertionError`; `runKnownBug` knows both.
-- Write and cleanup: a payment in any state but a new pending order is created through the actions as the right actor, never by a service-role insert or update (a later guard on `payments` would refuse it). The service role creates coupon fixtures (`E2E-` codes), reads state back and cleans up. `beforeEach` runs `assertPaymentFixturesClean` and `afterEach` runs `restorePaymentFixtures` (payments before coupons), even when the row failed, so a second run, `[E5]`, `[E7]` and `[L2]` still hold. After a killed run, `npx supabase db reset`.
+- Write and cleanup: a payment in any state but a new pending order is created through the actions as the right actor, never by a service-role insert or update (a later guard on `payments` would refuse it). The service role creates coupon fixtures (`E2E-` codes), reads state back and cleans up. `beforeEach` runs `assertPaymentFixturesClean` and `afterEach` runs `restorePaymentFixtures` (payments before coupons), including failure paths. These broad legacy hooks require the exclusive disposable target described in Test data; a failed preflight is not permission to clean unrelated rows. Interrupted-run reset follows that section too.
 - Use the saved sessions; never sign in per row.
 
 ## Core rules
 
 1. Test user intent and system guarantees, not implementation. Assert inputs, outputs, permissions and persisted state.
-2. Pick the smallest layer that gives confidence. A pure function is a unit test; a policy, grant, trigger or constraint is an rls test. Do not repeat one guarantee in two layers.
+2. Select the smallest sufficient layer by Select checks from the contract; distinguish separate trust boundaries from duplicate assertions.
 3. Never mock the behavior under test. A database guarantee needs the real database; a mocked client proves nothing about RLS.
 4. A security or permission change adds denied-path tests: the wrong actor is refused and nothing is written.
 5. A bug fix gets a regression test when practical (Regression).
@@ -64,6 +75,7 @@ For each subject, ask which of these apply and cover them:
 - boundaries and transitions: the first and last allowed state, a state change that must be refused;
 - resilience: no mutation after a failed check, a retry that changes nothing;
 - permission: unauthenticated, wrong role, wrong owner, rows the policy hides.
+- relevant races: name the shared resource, contenders and final persisted invariant; distinguish sequential retry, stale-tab interaction and genuinely competing requests. Use independent requests/connections and controlled synchronization where needed; `Promise.all` alone does not prove overlap.
 
 ## Naming and placement
 
@@ -73,9 +85,12 @@ For each subject, ask which of these apply and cover them:
 
 ## Test data
 
-- Minimal, deterministic, isolated and clearly named. Rows a test creates carry a marker such as `rls-test` and are removed by the test.
-- A test restores what it changes and removes what it adds, even when it fails (`afterEach` for a shared seed row). A test never depends on another file's writes or on file order, and does not rely on a seed row by accident: assert the seed fact it needs first.
-- New seed rows are invented, use `.test` addresses and explicit ids, and never copy hosted data. `supabase/seed.sql` holds what the tests and manual QA need. When a QA pass needs data the seed lacks, the task adds invented rows the same way, and `npx supabase db reset`, `npm test` and `npm run test:e2e` stay green.
+- Before any write, cleanup or reset, verify the intended disposable local target and exclusive use: no other suite, dev/manual QA or process owns it, and no unrelated data needs preserving. Loopback host checks, one worker or serialized files do not establish cross-process exclusivity. If target/use is uncertain, block mutation and report the missing prerequisite; never fall back to hosted. Separate stacks remain FEAT-014, not an available guarantee.
+- Distinguish stable invented baseline data (`supabase/seed.sql`) from temporary scenario fixtures. Seed additions use `.test` addresses and explicit ids, never hosted data; assert baseline facts a test needs. Choose seed only when it belongs in that shared stable baseline, not automatically for every missing scenario. Temporary data must be minimal, deterministic and owned by the run; a shared `E2E-` or `rls-test` marker alone proves no ownership.
+- New/changed tests plan creation tracking (owned IDs or run-scoped resources), setup failure and test failure cleanup, dependency order, error checks and read-back proving owned residue is gone and unrelated rows survive. A preflight failure must not trigger destructive cleanup of unowned data. Restore only owned changes, never depend on another file's writes/order, and reuse or extend shared helpers within approved feature scope rather than duplicate unsafe cleanup.
+- Plan interrupted-run recovery separately from routine cleanup: identify leftovers and their owner, then recover only with safe target/use prerequisites. A reset destroys the whole local stack's data and is allowed only on a verified exclusive disposable target; it is not a shared-data recovery shortcut. Otherwise remain blocked.
+- Current `service-role.ts` deletes payments except seed ID 1, coupons except LOCAL10, actor-wide notifications and shared `E2E%`/`e2e-%` fixtures/accounts. These legacy hooks can remove another run's or manual QA's data; use them only on a verified exclusive disposable local stack. `afterEach` and a second green run do not make them safe on shared data. Enforcement and caller migration remain FEAT-022; this policy does not claim they exist. When safe prerequisites or a needed helper extension cannot be met, report a blocker rather than run anyway.
+- Seed changes keep `npx supabase db reset`, `npm test` and `npm run test:e2e` green under those prerequisites. Service role remains setup/read-back/cleanup only; requests under test use the actor (Mocking).
 
 ## Mocking
 
@@ -83,7 +98,7 @@ Mock only boundaries outside the subject: email, Gemini, browser APIs. Never moc
 
 ## Regression
 
-Reproduce the bug first when practical, then write a focused test tied to the observable behavior that was wrong, in the layer where it lives. A regression test is practical when the seed, the saved e2e sessions and the layer rules allow it: the smallest layer that shows the behavior, no guarantee repeated in two layers, and the e2e data rules. Signing in is never the obstacle, because e2e specs load the saved sessions. When no test is practical, the plan and the report say why. A bug that is known but not fixed in this change uses the known-bug pattern; never encode an unknown surprising behavior as expected, report it to Main so it is recorded as a problem.
+Reproduce the bug first when practical, then write a focused test tied to the observable behavior that was wrong, in the smallest sufficient layer. Plan bounded missing fixture/helper support with the fix under Select checks from the contract and Test data; existing seed/session/catalog limits are not automatic grounds for manual-only QA. Existing seed actors have saved E2E sessions; other actor needs must be planned. When no test is practical, the plan and report name the concrete blocker and resolution. A bug known but not fixed in this change uses the known-bug pattern; never encode unknown surprising behavior as expected, report it to Main so it is recorded as a problem.
 
 ## Which command for which change
 
@@ -92,10 +107,10 @@ Run the row for each kind of change, plus the static checks (`npx tsc --noEmit`,
 | Change | Run | Needs |
 | --- | --- | --- |
 | Pure helper (`lib`, `__tests__/helpers`) | `npm run test:unit` | nothing |
-| Server action (`app/action`) | `npm run test:unit` for a helper it uses; `npm run test:e2e` for the payment actions (`payment-*.spec.ts`), the only ones with tests | Stack, Chromium |
+| Server action (`app/action`) | unit tests for pure logic; add/extend actor endpoint tests for applicable validation, permission and persistence guarantees, using the existing Playwright action/API fixture with scoped extensions as needed; `npm run test:e2e`; add `npm test` for distinct database boundaries | Stack, Chromium for E2E |
 | RLS policy, grant or migration | `npx supabase db reset`, then `npm test` (twice after writing rls tests) | Stack |
 | Seed (`supabase/seed.sql`) | `npx supabase db reset`, `npm test`, `npm run test:e2e` | Stack, Chromium |
-| Page or UI flow | add or extend the e2e row when the End-to-end section asks for one, `npm run test:e2e` when it touches a smoke or payment path, then the manual pass (`frontend-workflow`) | Stack, Chromium |
+| Page or UI flow | select unit/integration/E2E assertions by the contract; add/extend browser rows for wiring/state that needs them and run `npm run test:e2e`; justify residual manual checks (`frontend-workflow`) and preserve approved minima | Stack, Chromium for E2E |
 | E2E helper, fixture or env map (`__tests__/e2e`, `__tests__/helpers/e2e-env.ts`, `scripts/e2e`) | `npm run test:unit`, `npm run test:e2e` | Stack, Chromium |
 | Dependency (`package.json`, `package-lock.json`); procedure per update type: [dependency-updates](../dependency-updates/SKILL.md) | static checks, `npm run build`, `npm test`, `npm run test:e2e` | Stack, Chromium |
 | Docs only (`docs/`, `.claude/`, `AGENTS.md`, `CLAUDE.md`, `README.md`) | `npm run docs:check`; `npm run docs:check:test` when the checker changed | nothing |
@@ -103,7 +118,7 @@ Run the row for each kind of change, plus the static checks (`npx tsc --noEmit`,
 ## Running and reporting
 
 - Run the narrowest command that can detect the change, and say why when you run wider. A targeted run is never called a full-suite run.
-- Before an rls run: `npx supabase db reset` after a seed or schema change, and again when a run was killed half way. Run `npm test` twice in a row once after writing rls tests: the second run proves the cleanup.
+- Before an rls run: meet Test data prerequisites; reset after a seed/schema change or an interrupted run only on that verified exclusive disposable target. Run `npm test` twice in a row after writing rls tests: the second run checks repeatability/residue, not cross-process safety.
 - The report separates automated results (command, files, test counts), static checks (`npx tsc --noEmit`, `npm run lint`, `npm run docs:check`), manual QA, and what is pending or limited by the environment. Never claim a check that did not run, and never report a skipped test as passed.
 - Test files are type-checked by `next build` and `tsc`: run `npx tsc --noEmit`. New files add no lint problems. A session file or report under `__tests__/e2e/.auth/`, `test-results/` or `playwright-report/` is never committed.
 
@@ -116,8 +131,9 @@ Run the row for each kind of change, plus the static checks (`npx tsc --noEmit`,
 
 ## Checklist
 
-- [ ] smallest layer chosen; no guarantee duplicated across layers
+- [ ] applicable guarantees map to assertions, layers, files and prerequisites; distinct boundaries covered without duplicate matrices
 - [ ] allowed and denied paths covered; hidden rows proven to exist before an empty result
 - [ ] names state actor, condition and outcome; matrix IDs and known-bug IDs follow the naming rule
-- [ ] data cleaned up by the test; nothing depends on file order
+- [ ] safe target/exclusive use, owned data, failure cleanup and interrupted-run recovery planned; legacy gaps not claimed fixed
+- [ ] residual manual checks have reasons; Owner acceptance and approved feature minima retained
 - [ ] the report states exactly which commands ran and which checks did not

@@ -22,14 +22,14 @@ Read this when you write or review an rls test, change the seed for one, or debu
 
 ## Data and cleanup
 
-- Restore every seed row a test changes and delete every row it adds in `afterEach`, through `fixtures`, even when the test failed. Restore a changed seed row before deleting by marker, so the marker delete cannot remove it.
-- Rows a test creates carry the marker `rls-test`. Never delete or reuse an id from the seed except to restore it.
+- Apply [Test data](../SKILL.md#test-data) before writes, cleanup or reset: verify the exclusive disposable local target and plan ownership, setup/test failure cleanup, checked read-back and interrupted-run recovery. Existing marker/actor-wide cleanup is a legacy gap, not a shared-stack guarantee.
+- Restore changed seed rows and remove owned additions even on failure; restore a changed seed row before removing additions so cleanup cannot delete it. New/changed tests track owned IDs or run-scoped resources and verify unrelated rows survive; never delete solely by the shared `rls-test` marker. Never delete or reuse a seed id except to restore it.
 - `GENERATED ALWAYS` identity tables (`comments`, `coupons`, `enrollments`, `notes`, `notifications`, `payments`, `reviews`) take explicit seed ids only with `overriding system value`; move the sequence past the seed ids. `reviews` and `enrollments` are unique on user and course, so a seeded review would turn a policy test into a `23505`.
-- After a seed or schema change, or a killed run, `npx supabase db reset` restores the baseline; a leftover row is the usual cause of a second-run failure.
+- After a seed/schema change or killed run, reset restores the baseline only after Test data's target/exclusive-use checks; uncertain ownership blocks mutation. A second-run failure can expose residue, but a green run does not prove isolation.
 
 ## Adding a test for a policy or grant change
 
 1. Name the actor, the command (select, insert, update, delete) and the USING and WITH CHECK predicate you expect.
 2. Add one allowed test and one denied test per changed command, including owner, enrolled, other-user, anon and admin where they differ.
-3. Add the seed rows the case needs (invented, `.test` addresses), then run `npx supabase db reset` and `npm test` twice.
+3. Choose stable invented seed data or temporary owned fixtures under Test data, then run `npx supabase db reset` when needed and `npm test` twice under its safety prerequisites.
 4. Check the test fails when the policy is broken, for example by revoking or loosening it on the local stack with `psql` and resetting afterwards.

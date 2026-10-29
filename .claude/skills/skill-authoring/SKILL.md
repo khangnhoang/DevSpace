@@ -7,34 +7,34 @@ description: "How a DevSpace skill or reference under .claude/skills/ is created
 
 ## Use when / do not use when
 
-Use when a task creates, changes, splits, reviews or maintains a `SKILL.md` or a file under `.claude/skills/<name>/references/`, decides where a new instruction belongs, fixes a `docs:check` skill-shape failure, or audits the agent instructions.
+Use when a task creates, changes, splits, reviews or maintains a skill or any file under `.claude/skills/<name>/` (including references, scripts and assets), decides where a new instruction belongs, fixes a `docs:check` skill-shape failure, or audits the agent instructions.
 
-Do not use it to follow a skill, to edit program docs (`program-docs`), or to change `CLAUDE.md`, `.claude/rules.md` or `docs/agent-loops.md` for a reason that is not a skill move. When a new skill or a permission change is involved, `.claude/rules.md` section 8 and section 4 decide; this skill adds no permission of its own.
+Do not use it to follow a skill, to edit program docs (`program-docs`), or to change `AGENTS.md`, `CLAUDE.md`, `.claude/rules.md` or `docs/agent-loops.md` for a reason that is not a skill move. When a new skill or a permission change is involved, `AGENTS.md` section 8 and section 4 decide; this skill adds no permission of its own.
 
 ## Related rules owned elsewhere
 
 These rules about skills have an owner that is not this skill. Read the owner, do not copy it here.
 
-- The ownership split: the header of `.claude/rules.md` and the opening paragraph of `docs/agent-loops.md`.
+- The ownership split: `AGENTS.md`, Working contract and the opening paragraph of `docs/agent-loops.md`.
 - Precedence of a skill over the loops: `docs/agent-loops.md`, Precedence and safety.
-- Language of skills, rules and docs: `.claude/rules.md` section 1 (Owner and language).
-- Skills an implementor loads: `.claude/rules.md` section 2 (Roles).
-- Moving a durable rule out of memory: `.claude/rules.md` section 7 (Memory).
-- Reading matching skills: `CLAUDE.md`, Core engineering rules, rule 6; when and against what work they are matched: `docs/agent-loops.md`, Sizing.
+- Language of skills, rules and docs: `AGENTS.md` section 1 (Owner and language).
+- Skills an implementor loads: `AGENTS.md` section 2 (Roles).
+- Moving a durable rule out of memory: `AGENTS.md` section 7 (Information ownership).
+- Reading matching skills: `AGENTS.md`, Core engineering rules, rule 6; when and against what work they are matched: `docs/agent-loops.md`, Sizing.
 - Skills and the tooling they describe: infrastructure master plan, Owner decisions, decision 9 (`docs/programs/infrastructure/plan.md`).
 
 ## Choosing where an instruction goes
 
-Each rule has one owner: `.claude/rules.md` owns roles and permissions, `docs/agent-loops.md` owns timing and stop rules, skills own procedures. Do not restate another owner's rule; link to it by file and section name (not by line number, which moves).
+Each rule has one owner: `AGENTS.md` owns shared roles and permissions, `.claude/rules.md` owns Claude bindings, `docs/agent-loops.md` owns timing and stop rules, skills own procedures. Do not restate another owner's rule; link to it by file and section name (not by line number, which moves).
 
-Placement is decided by load time. `CLAUDE.md` and the files it imports load in every session, so they hold only what applies to nearly every task: `CLAUDE.md` the project facts (stack, commands, code map, roadmap) and the core engineering rules, `.claude/rules.md` roles, permissions, language and memory, `docs/agent-loops.md` the shared lifecycle (sizing, planning, checkpoint, review, PR and CI, stop rules). A procedure for one kind of task goes to the skill or reference that owns that task. Then choose:
+Placement is decided by load time. `AGENTS.md` holds shared project facts (stack, commands, code map, roadmap), core engineering rules, language, roles, permissions and information ownership. `CLAUDE.md` is the flat Claude entrypoint importing `AGENTS.md`, `docs/agent-loops.md` and `.claude/rules.md` directly once each; the latter holds only Claude model, API, UI and memory-storage bindings. The shared lifecycle (sizing, planning, checkpoint, review, PR and CI, handoff, stop rules) belongs to `docs/agent-loops.md`. Source references are not automatic imports in another agent. A procedure for one kind of task goes to the skill or reference that owns that task. `npm run docs:check` validates this four-file flat import contract and relative links originating in `AGENTS.md`. It rejects missing files or required imports, unexpected or repeated imports, imports from the other three owners, and cycles; inline/fenced code examples are ignored. This is a bounded repository check, not a validator of every Claude import syntax or proof of runtime compliance. Then choose:
 
 | The instruction is | Put it in |
 | --- | --- |
 | a procedure for one kind of task that an existing skill already covers | that skill: extend it, or add a reference when the detail is situational |
 | situational detail for part of a skill (only some uses need it) | a reference of that skill, linked with a read condition |
-| a new kind of task that no skill covers and that recurs | a new skill (gated by `.claude/rules.md` section 8) |
-| who may do what, or a permission | `.claude/rules.md` section 4 (never a skill) |
+| a new kind of task that no skill covers and that recurs | a new skill (gated by `AGENTS.md` section 8) |
+| who may do what, or a permission | `AGENTS.md` section 4 (never a skill) |
 | when to plan, review, stop or wait, shared by every task | `docs/agent-loops.md` |
 | a decision that outlives one program or spans programs | an ADR (`program-docs`) |
 | state, plans or open problems of a program | the program's docs (`program-docs`) |
@@ -66,13 +66,27 @@ Recommended, not checked and not a reason to reshape an existing skill: a `## Re
 
 Length is a review judgment, not a check. `SKILL.md` holds only what every use of the skill needs; situational detail goes to a reference with a read condition. About 200 lines is a signal to look for content to move into references, a chosen number and not a technical limit.
 
+## Shared skill ownership
+
+`.claude/skills/` is the source of truth for all shared project skills. Create and
+edit every skill file in `.claude/skills/<skill-name>/`, including `SKILL.md`,
+`references/`, `scripts/` and other resources. Do not maintain a second copy or
+edit through the `.agents/skills/` path.
+
+Each shared skill has a directory symlink at `.agents/skills/<skill-name>` whose
+relative target is `../../.claude/skills/<skill-name>`. Link the whole skill
+directory so new resources are shared automatically. Inspect any existing
+destination and preserve its content before resolving a conflict; never replace
+it blindly with a link.
+
 ## Writing
 
-1. Read the owning docs and the nearby skills for the convention before writing; match their structure and names.
+1. Read the owning docs and the nearby skills for the convention before writing; match their structure and names. Create files only at the canonical path above.
 2. Write the `description` for triggering: the verbs and objects a request would contain, and the folder path or tool when there is one.
 3. Put what every use needs in `SKILL.md`; link situational detail from a reference with a read condition in the linking sentence or table row.
 4. Link to another owner's rule instead of restating it; name the file and section.
-5. Run the verification below.
+5. For a new skill, create its corresponding directory symlink in `.agents/skills/` in the same change. Use a symlink, not a copy or a Windows junction; on Windows, enable Developer Mode and repository-local `core.symlinks=true` if needed.
+6. Run the verification below.
 
 ## Vendored skills
 
@@ -82,8 +96,8 @@ A vendored third-party skill (`playwright-cli`) keeps its upstream body byte for
 
 When a fact a skill states changes (a command, a path, a tool, a rule):
 
-1. Edit the owner of the fact, not a copy.
-2. Find every pointer to it with `rg` (the old name, path, command or section number) across `CLAUDE.md`, `.claude/`, `docs/` and `README.md`, and fix each one that is now false. Earlier detail plans are historical and stay as they are.
+1. Edit the owner of the fact at `.claude/skills/<skill-name>/`, not a copy or the `.agents/skills/` path. Keep the existing skill symlink unchanged.
+2. Find every pointer to it with `rg` (the old name, path, command or section number) across `AGENTS.md`, `CLAUDE.md`, `.claude/`, `docs/` and `README.md`, and fix each one that is now false. Earlier detail plans are historical and stay as they are.
 3. Remove steps for tooling that no longer exists.
 4. Run the verification below.
 
@@ -101,6 +115,11 @@ A read-only audit classifies every instruction by owner and shape and proposes m
 
 Run `npm run docs:check` after every skill or reference edit, and `npm run docs:check:test` when the checker (`scripts/docs/check-skills.mjs`) changes. Report the results. The check enforces only the required rules above; whether a skill says the right thing is your judgment.
 
+After creating or editing a skill:
+
+1. Verify the symlink exists at `.agents/skills/<skill-name>`, points to the canonical directory `.claude/skills/<skill-name>`, and the resources inside are accessible through the symlink path. Verify Git records a new link as mode `120000` when staging is authorized; otherwise report that index verification is pending.
+2. Read `SKILL.md` and all supporting files through both paths and compare their contents. Check relative references within and outside the skill from both locations; paths that leave the skill must resolve to the same intended repository file. Preserve documented vendored exceptions and report them explicitly.
+
 ## Resources
 
 | Resource | Read when | Skip when |
@@ -112,8 +131,10 @@ Run `npm run docs:check` after every skill or reference edit, and `npm run docs:
 ## Checklist
 
 - [ ] the instruction is in its owner; others link to it by file and section name
+- [ ] all skill files were created or edited at `.claude/skills/<skill-name>/`; a new skill has its directory symlink and an existing skill kept its link unchanged
+- [ ] the symlink exists, points to the canonical skill directory, and its resources are accessible through the symlink path; relative references work through both paths
 - [ ] required shape rules pass (`npm run docs:check`); recommended conventions were not forced on an existing skill
 - [ ] every reference is linked with a read condition
 - [ ] pointers to anything that moved were found with `rg` and fixed
 - [ ] the description was checked against overlapping skills
-- [ ] `.claude/rules.md` section 8 was followed; no permission text was copied into a skill
+- [ ] `AGENTS.md` section 8 was followed; no permission text was copied into a skill

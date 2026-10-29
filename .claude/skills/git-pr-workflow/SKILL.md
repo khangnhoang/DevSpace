@@ -13,7 +13,7 @@ Do not use it to justify committing unfinished, conflicting, unrelated or knowin
 
 ## The rule: no git action beyond what was granted
 
-- Which git and remote actions need a grant, and what an implementor may do, is owned by `.claude/rules.md` section 4. Run only the action the Owner requested or a handoff to you granted (for example "local commits per checkpoint").
+- Which git and remote actions need a grant, and what an implementor may do, is owned by `AGENTS.md` section 4. Run only the action the Owner requested or a handoff to you granted (for example "local commits per checkpoint").
 - Natural phrasing counts ("commit đi", "create the commit"). Anything vaguer is not a grant: ask, or take the narrower action.
 - Committing a plan: `planning`, Git and approval.
 - Never force-push, `git reset --hard`, `git clean`, `git checkout -- .`, `git restore .`, amend, squash or rebase without the Owner's explicit request.
@@ -31,17 +31,17 @@ Read [branch-and-commit.md](references/branch-and-commit.md) when you are about 
 
 - permission exists; the checkpoint's scope and acceptance are complete and its self-review passed (`docs/agent-loops.md`, Self-review); relevant checks ran after the last edit (`npx tsc --noEmit`, `npm run lint` with 0 problems, `npm run docs:check`); no conflict marker, debug code or secret; no unresolved decision;
 - stage explicit paths (`git add path/a path/b`), not `git add .`, unless the tree began clean and everything is in scope; inspect `git diff --cached` and `git diff --check`;
-- one commit per checkpoint (a small task without checkpoints: as `docs/agent-loops.md` Sizing allows); split a checkpoint only for a reason you state in the report (for example a part that must revert alone). Commit in its own message after every edit succeeded, never in parallel with an edit. Message `<type>(<scope>): <imperative summary>`, language per `.claude/rules.md` section 1, no trailing period, no vague words ("update files", "final fix").
+- one commit per checkpoint (a small task without checkpoints: as `docs/agent-loops.md` Sizing allows); split a checkpoint only for a reason you state in the report (for example a part that must revert alone). Commit in its own message after every edit succeeded, never in parallel with an edit. Message `<type>(<scope>): <imperative summary>`, language per `AGENTS.md` section 1, no trailing period, no vague words ("update files", "final fix").
 
 Fixes for findings of a review after the commit are new correction commits; never amend a reviewed commit by default.
 
 ## After a checkpoint (report)
 
-When the work is done, report as `docs/agent-loops.md` Loop 1 (Report) says, with the remote state stated ("nothing was pushed"). With a commit grant, report the hash, message, scope, checks and remote state instead of a proposed message. Language: `.claude/rules.md` section 1.
+When the work is done, report as `docs/agent-loops.md` Loop 1 (Report) says, with the remote state stated ("nothing was pushed"). With a commit grant, report the hash, message, scope, checks and remote state instead of a proposed message. Language: `AGENTS.md` section 1.
 
 ## Push, PR, CI and merge
 
-Read [pr-and-ci.md](references/pr-and-ci.md) before any push, PR, CI or merge request. Short form (the grants are owned by `.claude/rules.md` section 4): a normal push needs a clean tree and the exact branch and range; a PR needs the head already on the remote; the PR title and body follow `.github/pull_request_template.md` and state only what really ran; when CI on the PR ends, red or green, Main writes the result into the body's `CI result` section and stops; the CI jobs, which block and how to read a failure are in `pr-and-ci.md` (`gh pr checks --watch`); merge and auto-merge follow "Merge" in `pr-and-ci.md`. Who may fix CI, and how many rounds, is owned by `docs/agent-loops.md` Loop 3 and `.claude/rules.md` section 4.
+Read [pr-and-ci.md](references/pr-and-ci.md) before any push, PR, CI or merge request. Short form (the grants are owned by `AGENTS.md` section 4): a normal push needs a clean tree and the exact branch and range; a PR needs the head already on the remote; the PR title and body follow `.github/pull_request_template.md` and state only what really ran; when CI on the PR ends, red or green, Main writes the result into the body's `CI result` section and stops; the CI jobs, which block and how to read a failure are in `pr-and-ci.md` (`gh pr checks --watch`); merge and auto-merge follow "Merge" in `pr-and-ci.md`. Who may fix CI, and how many rounds, is owned by `docs/agent-loops.md` Loop 3 and `AGENTS.md` section 4.
 
 ## Stop when
 

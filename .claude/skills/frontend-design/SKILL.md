@@ -13,7 +13,7 @@ Do not use for logic with no visible change, or for data and state mechanics (`f
 
 ## Current stack (only what exists)
 
-Next.js App Router, React 19, Tailwind CSS 4 (`app/globals.css`), `lucide-react` icons, `sonner` toasts (`<Toaster richColors position="top-right" />` in `app/layout.tsx`), and feature components in `app/components/`. There is **no UI library, no shadcn, no form library and no Zod**. Packages, fonts and an animation library are outside a design task unless the Owner asked for them (`.claude/rules.md` section 4). A move to shadcn, Zod and React Hook Form belongs to the app-foundation program ([ADR 0003](../../../docs/adr/0003-app-foundation-program.md)), which will update this skill.
+Next.js App Router, React 19, Tailwind CSS 4 (`app/globals.css`), `lucide-react` icons, `sonner` toasts (`<Toaster richColors position="top-right" />` in `app/layout.tsx`), and feature components in `app/components/`. There is **no UI library, no shadcn, no form library and no Zod**. Packages, fonts and an animation library are outside a design task unless the Owner asked for them (`AGENTS.md` section 4). A move to shadcn, Zod and React Hook Form belongs to the app-foundation program ([ADR 0003](../../../docs/adr/0003-app-foundation-program.md)), which will update this skill.
 
 ## Classify the screen first
 

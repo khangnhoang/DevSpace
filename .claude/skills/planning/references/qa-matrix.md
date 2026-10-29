@@ -2,7 +2,7 @@
 
 Read this when a plan has manual QA that depends on data, user roles or hosted state. Skip it otherwise.
 
-DevSpace has a local Supabase stack with a minimal invented seed (three users: a learner, a student enrolled in the paid course and an admin; two courses), RLS tests for the database boundaries, and a Playwright suite (`npm run test:e2e`) that covers the smoke paths of the main learner and admin flows and the payment rows; nothing else automated drives a browser. Rows that only prove a policy or grant belong in `__tests__/rls`, and a check that [test-quality-strategy](../../test-quality-strategy/SKILL.md#regression) places in an automated row (Regression; End-to-end) is planned as that test, not as a matrix row; the manual matrix keeps the rest. The Owner signs in (`.claude/rules.md` section 4). So QA is a table the plan writes before implementation reaches its last checkpoint.
+DevSpace has a local Supabase stack with a minimal invented seed (three users: a learner, a student enrolled in the paid course and an admin; two courses), RLS tests for the database boundaries, and a Playwright suite (`npm run test:e2e`) that covers the smoke paths of the main learner and admin flows and the payment rows; nothing else automated drives a browser. Rows that only prove a policy or grant belong in `__tests__/rls`, and a check that [test-quality-strategy](../../test-quality-strategy/SKILL.md#regression) places in an automated row (Regression; End-to-end) is planned as that test, not as a matrix row; the manual matrix keeps the rest. The Owner signs in (`AGENTS.md` section 4). So QA is a table the plan writes before implementation reaches its last checkpoint.
 
 ## Matrix
 
@@ -19,7 +19,7 @@ Cover, where they apply: each role; the allowed path and the denied path; empty,
 Decide before the final checkpoint, and record exactly one outcome per matrix:
 
 - the seeded local data is enough;
-- specific accounts or rows must be prepared (list them and who creates them): local data is a seed row under the seed rule in [test-quality-strategy](../../test-quality-strategy/SKILL.md) (Test data); a hosted row follows `.claude/rules.md` section 4;
+- specific accounts or rows must be prepared (list them and who creates them): local data is a seed row under the seed rule in [test-quality-strategy](../../test-quality-strategy/SKILL.md) (Test data); a hosted row follows `AGENTS.md` section 4;
 - no data is needed;
 - blocked until the Owner provides an account or data.
 

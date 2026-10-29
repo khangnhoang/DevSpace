@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Checks relative markdown links in docs/, .claude/, CLAUDE.md and README.md. It only checks that the target
+// Checks relative markdown links in docs/, .claude/, AGENTS.md, CLAUDE.md and README.md. It only checks that the target
 // file or folder exists (not anchors). A broken link listed in the baseline is accepted; a new broken link
 // makes the command exit 1. Do not add entries for new links, fix the link (the one entry is in a vendored skill).
 //
@@ -13,7 +13,7 @@ import { repoFileIndex } from "./repo-files.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const SCAN_DIRS = ["docs", ".claude"];
-const SCAN_FILES = ["CLAUDE.md", "README.md"];
+const SCAN_FILES = ["AGENTS.md", "CLAUDE.md", "README.md"];
 const SKIP_DIRS = new Set(["node_modules", ".git"]);
 const BASELINE_SEPARATOR = " -> ";
 

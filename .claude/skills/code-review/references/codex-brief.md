@@ -1,10 +1,10 @@
 # Codex brief
 
-Read this before running, resuming or briefing a Codex review. Which work Codex reviews, and that Main runs it and decides on its findings, is owned by `.claude/rules.md` section 3.
+Read this before running, resuming or briefing a Codex review. Which work Codex reviews, and that Main runs it and decides on its findings, is owned by `AGENTS.md` section 3.
 
 ## Running Codex
 
-Run it from the Bash tool. In PowerShell `codex` resolves to a blocked `codex.ps1`:
+In the existing Claude-run CLI review mode, run it from the Bash tool. In PowerShell `codex` resolves to a blocked `codex.ps1`:
 
 ```bash
 codex exec - -m gpt-6.1-sol -c model_reasoning_effort='"high"' -c sandbox_mode='"read-only"' -o <out> < <prompt>
@@ -16,8 +16,8 @@ Later rounds of the same review: `codex exec resume <id> -` with the same flags,
 
 ```text
 Read first (in this order, completely):
-1. CLAUDE.md
-2. .claude/rules.md
+1. AGENTS.md
+2. .claude/rules.md (Claude review bindings only)
 3. docs/agent-loops.md
 4. .claude/skills/<skill>/SKILL.md for each skill whose Use when covers the target's work (`docs/agent-loops.md`, Sizing): <list>
 5. The plan: <path and revision>
@@ -35,7 +35,7 @@ Report findings with severity (Critical, Required, Suggestion, Nit, FYI), file:l
 
 ## Rules
 
-- Codex loads neither `.claude/rules.md` nor the skills, so every brief starts with a "Read first" list of the rules and skills that apply (the Template section). For a later round (Running Codex), the prompt lists what changed since the last round.
+- Skill metadata may be discoverable through `.agents/skills/`; that is not the full skill content. Every brief starts with a "Read first" list of the shared rules, applicable environment bindings and full canonical skills/references its reviewer must read (the Template section). For a later round (Running Codex), the prompt lists what changed since the last round.
 - Give it the real files or diff, not a summary. A plan under review that is not committed is given as the working-tree file and a diff.
 - Main checks each finding against the repo; Codex output is advisory until verified. Loop until PASS, and ask the Owner only when a finding needs a new decision.
-- A migration review (when it is required: `.claude/rules.md` section 3) covers the SQL, the rollback, RLS and grants, and the rollout order.
+- A migration review (when it is required: `AGENTS.md` section 3) covers the SQL, the rollback, RLS and grants, and the rollout order.

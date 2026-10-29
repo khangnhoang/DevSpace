@@ -6,7 +6,7 @@ Documentation for DevSpace. Docs are in English; text the app shows to users sta
 
 | Path | Purpose |
 | --- | --- |
-| [agent-loops.md](agent-loops.md) | Sizing of work, the lifecycle loops (planning, checkpoint, review, PR and CI) and the self-review method. Imported by `CLAUDE.md`. |
+| [agent-loops.md](agent-loops.md) | Sizing of work, the lifecycle loops (planning, checkpoint, review, PR and CI) and the self-review method. Shared lifecycle read alongside `AGENTS.md`; imported directly by `CLAUDE.md`. |
 | [programs/](programs/) | One folder per program of work, each with `plan.md` (an evergreen program: a charter `README.md` instead), `progress.md` and `problems.md`, and optionally `future-features.md` and `implementation-plans/`. |
 | [adr/](adr/README.md) | Architecture decision records: decisions that outlive one program or span programs. |
 | [backlog/](backlog/) | Future features and problems that no open program owns. It is not a program. |

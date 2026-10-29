@@ -4,7 +4,7 @@ Progress: [progress.md](progress.md). Problems: [problems.md](problems.md). Futu
 
 ## 1. Capability and boundary
 
-- Capability: the working rules for agents on DevSpace (`CLAUDE.md`, `.claude/rules.md`), the lifecycle loops (`docs/agent-loops.md`), the project skills in `.claude/skills/`, the docs structure and its checks (`docs/README.md`, `docs/adr/`, `docs/backlog/`, `scripts/docs/`), the PR and CI conventions (`.github/pull_request_template.md`, `git-pr-workflow`), and the Codex review process.
+- Capability: the working rules for agents on DevSpace (`AGENTS.md`, with `CLAUDE.md` and `.claude/rules.md` as Claude entrypoint/bindings), the lifecycle loops (`docs/agent-loops.md`), the project skills in `.claude/skills/`, the docs structure and its checks (`docs/README.md`, `docs/adr/`, `docs/backlog/`, `scripts/docs/`), the PR and CI conventions (`.github/pull_request_template.md`, `git-pr-workflow`), and the Codex review process.
 - Boundary: product code, the CI workflow jobs (`.github/workflows/`), and the tooling-specific content of a skill that another program's unit adds together with its tooling (infrastructure master plan D9) stay with that program. Program state belongs to each program's own records.
 
 ## 2. Owner decisions
@@ -20,9 +20,9 @@ One line each: number, date, decision. The decisions of each initiative stay in 
 Each initiative keeps these; the rule itself lives with its owner.
 
 - One owner per rule, with links elsewhere (`skill-authoring`, Choosing where an instruction goes) — prevents copies that drift apart.
-- A skill states only what DevSpace has today (`skill-authoring`, What a skill holds), and no skill widens a permission (`.claude/rules.md` section 8) — prevents agents running tools that do not exist or reading a skill as a grant.
+- A skill states only what DevSpace has today (`skill-authoring`, What a skill holds), and no skill widens a permission (`AGENTS.md` section 8) — prevents agents running tools that do not exist or reading a skill as a grant.
 - Every Codex brief starts with a "Read first" list (`code-review`, Codex) — prevents Codex reviewing against its own defaults.
-- `npm run docs:check` enforces only what `program-docs` and its templates state (`program-docs`, Verify) and what `skill-authoring` states as required (`skill-authoring`, Shape) — prevents the check and the skill disagreeing.
+- `npm run docs:check` enforces only what `program-docs` and its templates state (`program-docs`, Verify) and what `skill-authoring` states as required (`skill-authoring`, Shape and Choosing where an instruction goes, including the bounded import contract) — prevents the check and the skill disagreeing.
 
 ## 4. Initiatives
 
@@ -37,10 +37,11 @@ At most one initiative has an open plan at a time. A closed initiative keeps its
 | U5 [Skill authoring skill and the skill-shape check](implementation-plans/u5-skill-authoring/plan.md) | `chore/skill-authoring` | `skill-authoring` owns the skill procedure, section 8 keeps only the permission rules, `docs:check` checks skill shape; the PR 21 docs catch-up. | none (U4 merged) | Owner approval of the plan after the Codex plan gate |
 | U6 [Instruction audit and the AW-007 rewording](implementation-plans/u6-instruction-audit/plan.md) | `chore/instruction-audit` | Every audit item is moved, linked, reworded, removed or confirmed as the Owner decided; section 2 states when Main edits state records; the PR 22 docs catch-up. | none (U5 merged) | Owner approval of the plan after the Codex plan gate |
 | U7 [Entry plans for follow-up work of a delivery program](implementation-plans/u7-entry-plans/plan.md) | `chore/entry-detail-plans` | AW-010 fixed: a delivery program plans a `problems.md` or `future-features.md` entry without revising its master plan, checked by `docs:check`; the PR 23 docs catch-up. | none (U6 merged) | Owner approval of the plan (no Codex gate, U7 D4) |
+| U8 [Shared agent rules with Claude-specific bindings](implementation-plans/u8-shared-agent-rules/plan.md) | `chore/share-claude-skills` | Shared rules and Claude bindings preserve behavior, verified by bidirectional baseline traceability, bounded checks and a full instruction audit. | existing local shared-skill commits `2765f37`, `94f5f26` | Owner approval 2026-10-29; r4 records local implementation-commit grant; Medium, no automatic Codex gate |
 
 ## 5. Opening an initiative
 
 1. The Owner names the work. Main confirms it is inside the boundary above (an initiative belongs to exactly one program) and that no initiative of this program has an open plan (ADR 0002).
 2. A small task that meets the small-task conditions (`docs/agent-loops.md`, Sizing) needs no plan and no row; it is recorded as one milestone in `progress.md`.
-3. Otherwise Main writes the detail plan at `implementation-plans/u<n>-<slug>/plan.md` from the detail-plan template, with the next free `U<n>`, adds its row above, and self-reviews it. The plan gets the Codex gate whenever `.claude/rules.md` sections 2 and 3 require it for its size and risk.
+3. Otherwise Main writes the detail plan at `implementation-plans/u<n>-<slug>/plan.md` from the detail-plan template, with the next free `U<n>`, adds its row above, and self-reviews it. The plan gets the Codex gate whenever `AGENTS.md` sections 2 and 3 require it for its size and risk.
 4. The Owner approves the plan; State in `progress.md` then names the initiative and its revision.

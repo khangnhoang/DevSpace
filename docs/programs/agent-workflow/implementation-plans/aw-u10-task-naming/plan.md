@@ -1,4 +1,4 @@
-# U10 detail plan — Program-scoped work identifiers
+# AW-U10 detail plan — Program-scoped work identifiers
 
 Revision: r2, 2026-10-29 (Owner correction: allocate numbers locally by owner and kind; renumber migrated open features/problems and always allocate a destination-local number on transfer). Owner approval: r2 approved 2026-10-29 after plan self-review PASS. Charter: [agent-workflow](../../README.md).
 

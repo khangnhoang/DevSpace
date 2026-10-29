@@ -1,0 +1,472 @@
+[
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "FEAT-012"
+    },
+    "to": {
+      "file": "docs/backlog/future-features.md",
+      "id": "BL-F1"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "FEAT-013"
+    },
+    "to": {
+      "file": "docs/backlog/future-features.md",
+      "id": "BL-F2"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "FEAT-014"
+    },
+    "to": {
+      "file": "docs/backlog/future-features.md",
+      "id": "BL-F3"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "FEAT-015"
+    },
+    "to": {
+      "file": "docs/backlog/future-features.md",
+      "id": "BL-F4"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "FEAT-016"
+    },
+    "to": {
+      "file": "docs/backlog/future-features.md",
+      "id": "BL-F5"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "FEAT-022"
+    },
+    "to": {
+      "file": "docs/backlog/future-features.md",
+      "id": "BL-F6"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "FEAT-023"
+    },
+    "to": {
+      "file": "docs/backlog/future-features.md",
+      "id": "BL-F7"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "FEAT-024"
+    },
+    "to": {
+      "file": "docs/backlog/future-features.md",
+      "id": "BL-F8"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/problems.md",
+      "id": "BL-003"
+    },
+    "to": {
+      "file": "docs/backlog/problems.md",
+      "id": "BL-P1"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/problems.md",
+      "id": "BL-004"
+    },
+    "to": {
+      "file": "docs/backlog/problems.md",
+      "id": "BL-P2"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/problems.md",
+      "id": "BL-006"
+    },
+    "to": {
+      "file": "docs/backlog/problems.md",
+      "id": "BL-P3"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/agent-workflow/future-features.md",
+      "id": "FEAT-007"
+    },
+    "to": {
+      "file": "docs/programs/agent-workflow/future-features.md",
+      "id": "AW-F1"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/agent-workflow/future-features.md",
+      "id": "FEAT-010"
+    },
+    "to": {
+      "file": "docs/programs/agent-workflow/future-features.md",
+      "id": "AW-F2"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/agent-workflow/future-features.md",
+      "id": "FEAT-011"
+    },
+    "to": {
+      "file": "docs/programs/agent-workflow/future-features.md",
+      "id": "AW-F3"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/agent-workflow/future-features.md",
+      "id": "FEAT-025"
+    },
+    "to": {
+      "file": "docs/programs/agent-workflow/future-features.md",
+      "id": "AW-F4"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/agent-workflow/problems.md",
+      "id": "AW-002"
+    },
+    "to": {
+      "file": "docs/programs/agent-workflow/problems.md",
+      "id": "AW-P1"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/agent-workflow/problems.md",
+      "id": "AW-008"
+    },
+    "to": {
+      "file": "docs/programs/agent-workflow/problems.md",
+      "id": "AW-P2"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/app-foundation/future-features.md",
+      "id": "FEAT-005"
+    },
+    "to": {
+      "file": "docs/programs/app-foundation/future-features.md",
+      "id": "AF-F1"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/app-foundation/problems.md",
+      "id": "AF-001"
+    },
+    "to": {
+      "file": "docs/programs/app-foundation/problems.md",
+      "id": "AF-P1"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/app-foundation/problems.md",
+      "id": "AF-002"
+    },
+    "to": {
+      "file": "docs/programs/app-foundation/problems.md",
+      "id": "AF-P2"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/app-foundation/problems.md",
+      "id": "AF-003"
+    },
+    "to": {
+      "file": "docs/programs/app-foundation/problems.md",
+      "id": "AF-P3"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/app-foundation/problems.md",
+      "id": "BL-005"
+    },
+    "to": {
+      "file": "docs/programs/app-foundation/problems.md",
+      "id": "AF-P4"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/dependency-maintenance/future-features.md",
+      "id": "FEAT-019"
+    },
+    "to": {
+      "file": "docs/programs/dependency-maintenance/future-features.md",
+      "id": "DM-F1"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/dependency-maintenance/future-features.md",
+      "id": "FEAT-020"
+    },
+    "to": {
+      "file": "docs/programs/dependency-maintenance/future-features.md",
+      "id": "DM-F2"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/dependency-maintenance/problems.md",
+      "id": "BL-009"
+    },
+    "to": {
+      "file": "docs/programs/dependency-maintenance/problems.md",
+      "id": "DM-P1"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "FEAT-001"
+    },
+    "to": {
+      "file": "docs/programs/infrastructure/future-features.md",
+      "id": "FEAT-001"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "FEAT-007"
+    },
+    "to": {
+      "file": "docs/programs/agent-workflow/future-features.md",
+      "id": "FEAT-007"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "FEAT-019"
+    },
+    "to": {
+      "file": "docs/programs/dependency-maintenance/future-features.md",
+      "id": "FEAT-019"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "FEAT-020"
+    },
+    "to": {
+      "file": "docs/programs/dependency-maintenance/future-features.md",
+      "id": "FEAT-020"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/problems.md",
+      "id": "AW-002"
+    },
+    "to": {
+      "file": "docs/programs/agent-workflow/problems.md",
+      "id": "AW-002"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/problems.md",
+      "id": "BL-009"
+    },
+    "to": {
+      "file": "docs/programs/dependency-maintenance/problems.md",
+      "id": "BL-009"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/problems.md",
+      "id": "BL-005"
+    },
+    "to": {
+      "file": "docs/programs/app-foundation/problems.md",
+      "id": "BL-005"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/agent-workflow/future-features.md",
+      "id": "FEAT-002"
+    },
+    "to": {
+      "file": "docs/programs/infrastructure/future-features.md",
+      "id": "FEAT-002"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/agent-workflow/future-features.md",
+      "id": "FEAT-003"
+    },
+    "to": {
+      "file": "docs/programs/infrastructure/future-features.md",
+      "id": "FEAT-003"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/agent-workflow/future-features.md",
+      "id": "FEAT-004"
+    },
+    "to": {
+      "file": "docs/programs/infrastructure/future-features.md",
+      "id": "FEAT-004"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/agent-workflow/future-features.md",
+      "id": "FEAT-005"
+    },
+    "to": {
+      "file": "docs/programs/app-foundation/future-features.md",
+      "id": "FEAT-005"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/agent-workflow/future-features.md",
+      "id": "FEAT-006"
+    },
+    "to": {
+      "file": "docs/programs/app-foundation/future-features.md",
+      "id": "FEAT-006"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/agent-workflow/problems.md",
+      "id": "AW-001"
+    },
+    "to": {
+      "file": "docs/programs/infrastructure/problems.md",
+      "id": "AW-001"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/agent-workflow/problems.md",
+      "id": "AW-003"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "AW-003"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/infrastructure/future-features.md",
+      "id": "FEAT-014"
+    },
+    "to": {
+      "file": "docs/backlog/future-features.md",
+      "id": "FEAT-014"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/app-foundation/plan.md",
+      "id": "U2"
+    },
+    "to": {
+      "file": "docs/programs/app-foundation/plan.md",
+      "id": "AF-U2"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/app-foundation/plan.md",
+      "id": "U3"
+    },
+    "to": {
+      "file": "docs/programs/app-foundation/plan.md",
+      "id": "AF-U3"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/app-foundation/plan.md",
+      "id": "U4"
+    },
+    "to": {
+      "file": "docs/programs/app-foundation/plan.md",
+      "id": "AF-U4"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/app-foundation/plan.md",
+      "id": "U5"
+    },
+    "to": {
+      "file": "docs/programs/app-foundation/plan.md",
+      "id": "AF-U5"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/app-foundation/plan.md",
+      "id": "U6"
+    },
+    "to": {
+      "file": "docs/programs/app-foundation/plan.md",
+      "id": "AF-U6"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/agent-workflow/README.md",
+      "id": "U10"
+    },
+    "to": {
+      "file": "docs/programs/agent-workflow/README.md",
+      "id": "AW-U10"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/agent-workflow/implementation-plans/u10-task-naming/plan.md",
+      "id": "U10"
+    },
+    "to": {
+      "file": "docs/programs/agent-workflow/implementation-plans/aw-u10-task-naming/plan.md",
+      "id": "AW-U10"
+    }
+  }
+]

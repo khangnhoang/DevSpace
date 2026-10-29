@@ -2,7 +2,7 @@
 
 # Charter — <program name>
 
-Progress: `progress.md`. Problems: `problems.md`. Each initiative has a detail plan at `implementation-plans/u<n>-<slug>/plan.md`.
+Progress: `progress.md`. Problems: `problems.md`. Each initiative has a detail plan at `implementation-plans/<code>-u<n>-<slug>/plan.md`.
 
 ## 1. Capability and boundary
 
@@ -27,7 +27,7 @@ At most one initiative has an open plan at a time. A closed initiative keeps its
 
 | Initiative | Branch | Outcome | Dependencies | Gate to open |
 | --- | --- | --- | --- | --- |
-| U1 <title> | `<branch>` | <observable result> | <none, or hard/soft on U<n>> | <Owner approval, merge of U<n>> |
+| <CODE>-U1 <title> | `<branch>` | <observable result> | <none, or hard/soft on <CODE>-U<n>> | <Owner approval, merge of <CODE>-U<n>> |
 
 ## 5. Opening an initiative
 

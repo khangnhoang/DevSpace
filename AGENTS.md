@@ -108,7 +108,7 @@ Memory is not where rules live. Test every candidate memory in this order:
 1. A shared working rule goes to this file, the lifecycle owner or the owning skill; a Claude-specific binding goes to `.claude/rules.md`. Example: "Codex runs read-only".
 2. Program state goes to that program's own `progress.md`, `problems.md` or `future-features.md`. Example: the status of H2-2.
 3. A decision that spans programs goes to an ADR. Example: the order of the three roadmap steps.
-4. Work no open program owns goes to `docs/backlog/`. Example: a UI bug such as BL-004 (the quiz completion screen).
+4. Work no open program owns goes to `docs/backlog/`. Example: a UI bug such as BL-P2 (the quiz completion screen).
 5. Memory keeps only facts about the Owner and state that no doc reflects yet. Example: a step outside the repo, or a doc that lags reality.
 
 A memory fact expires once the owning doc has caught up; storage operations follow the agent environment's authorized bindings. A new durable rule goes to its owner as a separate `chore(agent-rules): ...` commit; until then it sits in memory marked "pending move".

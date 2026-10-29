@@ -2,7 +2,7 @@
 
 # Master plan — <program name>
 
-Progress: `progress.md`. Problems: `problems.md`. Each unit has a detail plan at `implementation-plans/u<n>-<slug>/plan.md`; follow-up work from `problems.md` or `future-features.md` may have an entry plan at `implementation-plans/<id>-<slug>/plan.md` with no Units row.
+Progress: `progress.md`. Problems: `problems.md`. Each unit has a detail plan at `implementation-plans/<code>-u<n>-<slug>/plan.md`; follow-up work from `problems.md` or `future-features.md` may have an entry plan at `implementation-plans/<id>-<slug>/plan.md` with no Units row.
 
 ## 1. Goal and outcome
 
@@ -26,7 +26,7 @@ Rules every unit must keep. One line each, with the failure it prevents.
 
 | Unit | Branch | Outcome | Dependencies | Gate to start or enable |
 | --- | --- | --- | --- | --- |
-| U1 <title> | `<branch>` | Outcome <n> | <none, or hard/soft on U<n>> | <Owner approval, rollout step, merge of U<n>> |
+| <CODE>-U1 <title> | `<branch>` | Outcome <n> | <none, or hard/soft on <CODE>-U<n>> | <Owner approval, rollout step, merge of <CODE>-U<n>> |
 
 ## 5. Order and rollout gates
 

@@ -8,12 +8,12 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | --- | --- |
 | Spec revision | U1 `implementation-plans/u1-in-range-updates/plan.md` r3 (2026-10-27), closed; no initiative has an open plan. |
 | Current unit / checkpoint | none active. |
-| Status | U1 merged (PR 31, 2026-10-27). |
+| Status | U1 delivered in PR #31; DM-001/002 delivered in PR #32 (`1c99b77`), 2026-10-28. |
 | Completed evidence | U1: CI on PR 31 green at `60edc82` (typecheck, build, docs, lint, db 192 passed, e2e 46 passed; run 40503679316). Historical, first dependency check (2026-10-27, on `3ea4a09`): `npm outdated` lists the majors of FEAT-020 and BL-009, `@types/node` (FEAT-019) and `@supabase/ssr` (ADR 0001); the Monaco CDN is 0.55.1 against 0.57.0 (BL-009); `npm audit` unchanged (BL-009); six runtime packages with no import (DM-001). |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | Main: the Codex gate on the implementation of this batch; push and PR need their own Owner grants. |
-| Current authority | The Owner granted local commits for DM-002, DM-001 and this catch-up on `chore/dm-001-002` (2026-10-28). Push, PR and merge are not granted; the Codex gate on the implementation comes before any push. |
+| Next action | The Owner selects the next dependency task; none is active. |
+| Current authority | PR #32 delivery is complete. No dependency implementation or remote action is currently granted. |
 
 ## Milestones
 
@@ -32,4 +32,6 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-27 U1 DM-003 re-checked by Main on the dev server: no sidebar console error at desktop and 375x812 width (mobile menu opened, closed and reopened), and a local `user_progress` insert refreshed every mounted sidebar; Codex diff gate PASS on 4a1202d..c251710 (60edc82).
 - 2026-10-27 U1 merged: in-range patch and minor updates with CI green; DM-003 resolved (PR 31, `0e8ed24`).
 - 2026-10-28 DM-002 fixed, closes when this PR merges: the `dependency-updates` skill gains the trial install and the type-only edit rule; the trial steps were run once on the baseline (`tsc`, lint and build pass) (3c29a26).
-- 2026-10-28 DM-001 fixed, closes when this PR merges: six runtime packages with no import removed; tsc, lint and build pass, `npm test` 192 passed, `npm run test:e2e` 46 passed, `npm audit` unchanged at 5 findings (this commit).
+- 2026-10-28 DM-001 fixed, closes when this PR merges: six runtime packages with no import removed; tsc, lint and build pass, `npm test` 192 passed, `npm run test:e2e` 46 passed, `npm audit` unchanged at 5 findings (`115739e`).
+
+- 2026-10-28 DM-001/002 merged: historical removal of six unused packages and the trial-install/type-only policy delivered; later features may reintroduce packages (PR 32, `1c99b77`).

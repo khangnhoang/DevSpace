@@ -7,13 +7,13 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | U9 `implementation-plans/u9-test-policy/plan.md` r1, Owner-approved 2026-10-29; local plan/checkpoint/correction commits granted. |
-| Current unit / checkpoint | U8 closed by its merge (PR #37). U9 r1 CP1–CP3 complete locally; Main review pending. |
+| Current unit / checkpoint | U9 r1 CP1–CP3 complete locally; Main review PASS and Owner accepted local completion on 2026-10-29. No implementation is active; remote delivery remains pending. |
 | Status | Fixed locally, awaiting delivery: FEAT-021 policy and consumers aligned; no PR exists yet. |
-| Completed evidence | U8 merged in PR #37 (`8599de8`); U1 merged in PR #38 (`572da83`). U9 CP1 `d97f5fc`, CP2 `8ac2b66`; final author review against baseline `572da83` accounts for intended selection changes, retained safeguards and corrected U1/helper facts. All 12 written decision cases pass static reasoning, not runtime evaluation. Seven changed skills retain their symlinks; 21 resources and 55 relative targets match through both paths. `npm run docs:check` passes with one unchanged vendored link baseline; `npm run docs:check:test` passes 72/72 outside the sandbox after temporary Git config writes were denied inside it; `git diff --check` passes. |
+| Completed evidence | U8 merged in PR #37 (`8599de8`); U1 merged in PR #38 (`572da83`). U9 CP1 `d97f5fc`, CP2 `8ac2b66`; author and Main reviews of `1dc3cc5..4aeca89` against baseline `572da83` account for intended selection changes, retained safeguards and corrected U1/helper facts. Main independently confirmed no Critical/Required findings, unchanged approved plan and safeguards. All 12 written decision cases pass static reasoning, not runtime evaluation. Seven changed skills retain their symlinks; 21 resources and 55 relative targets match through both paths. `npm run docs:check` passes with one unchanged vendored link baseline; `npm run docs:check:test` passes 72/72 outside the sandbox after temporary Git config writes were denied inside it; `git diff --check` passes. |
 | Accepted deviations | none; explicit Owner/manual acceptance, feature-specific minima, permissions and hosted boundaries retained. Runtime suites/browser/provider checks were not run for this docs-only task; future agent compliance remains unverified. |
 | Blockers / Owner decisions | No U9 decision pending. FEAT-022/023/024, FEAT-014, AF U2 Zod adoption and AW-008 remain separate. |
-| Next action | Main reviews the actual checkpoint commits and full diff; route corrections to the same implementor before requesting delivery grants. |
-| Current authority | Owner approved U9 r1 and implementation, explicitly grants committing the plan before implementation and local commits throughout checkpoints/corrections. No push, PR, merge, runtime, database, CI or live-model action is granted. |
+| Next action | Owner decides remote delivery separately. FEAT-025 records the future session/subagent workflow; it is not implemented as part of U9. |
+| Current authority | Owner accepted local U9 completion after Main review and grants documentation catch-up/local commit, including AF U1 merge State. No push, PR, merge, next-unit implementation, runtime, database, CI or live-model action is granted. |
 
 ## Milestones
 
@@ -96,4 +96,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-29 FEAT-021 rediscovery at main after U1 delivery identifies manual-first routing and stale coverage/readiness guidance; U9 r1 self-reviewed and Owner-approved, with a plan-first/local-checkpoint commit grant (`1dc3cc5`).
 - 2026-10-29 U9 CP1: contract-based test selection, current helper limits and explicit safe-data prerequisites; legacy cleanup enforcement remains FEAT-022 (`d97f5fc`).
 - 2026-10-29 U9 CP2: direct consumers route selection to the policy, with residual manual QA and corrected U1 coverage/readiness facts (`8ac2b66`).
-- 2026-10-29 U9 CP3: bidirectional baseline review, 12 static decision cases, skill resources/links and docs checks passed; FEAT-021 fixed locally, awaiting Main review and delivery (this commit).
+- 2026-10-29 U9 CP3: bidirectional baseline review, 12 static decision cases, skill resources/links and docs checks passed; FEAT-021 fixed locally, awaiting Main review and delivery (`4aeca89`).
+- 2026-10-29 Main review PASS on CP1–CP3: 72/72 checker tests and 7-skill resource/link verification confirmed; Owner accepted local completion, FEAT-021 awaits delivery and FEAT-025 records separate session/exploration guidance (this commit).

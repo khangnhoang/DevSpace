@@ -22,9 +22,15 @@ Direction the Owner has set that is outside the scope of the current initiative.
 
 ## FEAT-021: Automated-first test planning and test-data safety policy
 
-- Status: Fixed locally, awaiting delivery ([U9 r1](implementation-plans/u9-test-policy/plan.md), 2026-10-29); CP1–CP3 implemented and author-reviewed, Main review pending. First of four follow-up PRs; no PR exists and remote delivery is not granted.
+- Status: Fixed locally, awaiting delivery ([U9 r1](implementation-plans/u9-test-policy/plan.md), 2026-10-29); CP1–CP3 implemented; author and Main reviews passed on `4aeca89`, Owner accepted local completion on 2026-10-29. First of four follow-up PRs; no PR exists and remote delivery is not granted.
 - Direction: make `test-quality-strategy` the single owner of automated-first selection and the shared test-data safety contract; align `frontend-workflow`, `planning`, QA matrix, server-action verification and review guidance with it. Derive observable behavior, invariants, edge cases, failure paths, permissions and concurrency where relevant from the task, then map each to unit, real-database/API integration or browser E2E at the smallest sufficient layer. Existing smoke/payment coverage and a missing pre-existing fixture must not become a ceiling on new tests. Require a concrete reason for manual-only checks; keep exploratory/design judgment and actual external-provider verification distinct from automatable application behavior. Avoid duplicate assertions while retaining tests for different boundaries, such as RLS versus endpoint authorization. Define fixture ownership, target/exclusive-use checks before writes or reset, scoped cleanup, failed-setup behavior, interrupted-run recovery and required use/extension of shared helpers. Document currently available mechanisms and known gaps honestly; do not prescribe a helper before the PR that adds it. The next PR implements this contract in helpers, the third adds bounded failure/concurrency coverage, and CI remains a separate fourth PR; see [backlog follow-ups](../../backlog/future-features.md) FEAT-022 to FEAT-024. This entry changes instructions only when implemented, not test code, CI, product behavior or hosted data.
 - Target program: agent-workflow
+
+## FEAT-025: Shared execution boundaries for exploration and independent roles
+
+- Status: Recorded (Owner clarification, 2026-10-29); a separate workflow follow-up, outside U9/FEAT-021.
+- Direction: put the tool-neutral lifecycle choice in `docs/agent-loops.md`: codebase exploration may use subagents; an independent implementor or reviewer should use a separate session/thread so the Owner can inspect its transcript and behavior. Preserve role/permission and single-writer ownership in `AGENTS.md`, and retain Claude model/API/session bindings in `.claude/rules.md` rather than making the general choice Claude-only. Do not infer a model override, new worktree, parallel writers or any additional permission; an unavailable session mechanism stays an explicit blocker. This is an Owner operating preference, not an unverified claim that subagents perform worse. Plan the instruction change separately before activation.
+- Target program: agent-workflow.
 
 ## Closed
 

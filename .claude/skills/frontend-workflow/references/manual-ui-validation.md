@@ -1,24 +1,26 @@
 # Manual UI validation
 
-Read this before planning, running or reporting manual UI validation. The Playwright smoke (`npm run test:e2e`) covers only the paths in `__tests__/e2e`, so validation is still one deliberate pass in the browser pane, in coordination with the Owner. The matrix itself comes from the plan (`planning`, QA matrix).
+Read this before planning, running or reporting the residual manual scenarios selected by [test-quality-strategy](../../test-quality-strategy/SKILL.md#select-checks-from-the-contract), in coordination with the Owner. This reference owns browser mechanics, not test selection. The plan's QA matrix names each manual scenario and its reason; reuse automated evidence and preserve explicit Owner checks.
 
 ## Setup
 
-1. Manual QA runs on the seeded local stack: `npx supabase start` if it is down, and `npx supabase db reset` first when the data matters. Reset or stop the stack only after confirming no test run or other pass is using it (it is shared with `npm test` and `npm run test:e2e`; separate stacks are infrastructure FEAT-014).
+1. Manual QA runs on the local stack: `npx supabase start` if it is down. Data preparation, reset and cleanup follow [test-quality-strategy](../../test-quality-strategy/SKILL.md#test-data), including verified target and exclusive use before reset; do not erase another pass's data. Before stopping the stack, also confirm no test run or other pass uses it. Separate dev/test stacks remain backlog FEAT-014.
 2. Start the dev server with the environment's approved preview method (Claude binding: `.claude/rules.md` section 5) (`npm run dev` on the local stack, `http://127.0.0.1:3000`). Do not start servers from the shell. Reuse a healthy server and an open tab; do not restart them without a reason. Check that `location.origin` is `http://127.0.0.1:3000`.
-3. **The Owner signs in** as a `.test` seed user (the users are listed in `AGENTS.md`, Commands, Local database; the passwords are in `supabase/seed.sql`). Agents never type passwords or tokens: ask the Owner to sign in as the needed role in the pane and wait (`AGENTS.md` section 4). When the pass needs data the seed lacks, add it to the seed under the rule in [test-quality-strategy](../../test-quality-strategy/SKILL.md) (Test data).
+3. **The Owner signs in** as a `.test` seed user (the users are listed in `AGENTS.md`, Commands, Local database; the passwords are in `supabase/seed.sql`). Agents never type passwords or tokens: ask the Owner to sign in as the needed role in the pane and wait (`AGENTS.md` section 4). Missing data is planned as stable seed or temporary owned fixtures under [test-quality-strategy](../../test-quality-strategy/SKILL.md#test-data), not automatically added to the shared seed.
 4. Define the exact checks first: role and route, the action, the expected result, including what must be denied.
 
 ## What the local stack cannot show
 
-Mail (the dev server uses Gmail placeholders, so a send fails and is logged), real course images (the seed courses have none until FEAT-015, so the UI falls back) and AI features (until the Owner puts a key in the environment file). Check these on a Vercel deployment: the Owner signs in there, a change to hosted data follows `AGENTS.md` section 4, and until the check is done it is reported pending with the reason. Which database the preview deployments use is not verified, so a preview check counts as hosted.
+Local dev mail uses Gmail placeholders, so a send fails and is logged (FEAT-016); seed courses have no images until FEAT-015. The dev launcher already supports the Owner's AI key from the environment file; missing/expired credentials leave real-provider quality unverified. Agents do not inspect that file (`AGENTS.md` section 4). Guarded E2E uses a placeholder AI key and blocks external calls; it can assert application behavior at controlled boundaries and recorded mail intent, not real delivery/provider quality. Do not infer live access or permission from local configuration.
+
+When acceptance needs live provider/delivery or deployed image checks, name the exact remaining scenario and its authorized environment. For Vercel, the Owner signs in and hosted reads/writes follow `AGENTS.md` section 4; unrun checks remain pending. Which database previews use is unverified, so preview checks count as hosted.
 
 ## Run the pass
 
 - Use the supported browser structure/text inspection for structure and text, not screenshots, unless the question is visual.
 - Inspect console messages for errors and warnings; inspect network requests for the calls and their status (an unexpected 4xx or an unfiltered payload is a finding). A paid-content check includes looking at the page data and the network response, not only at what is rendered (P13).
 - Toasts (`sonner`) disappear in seconds. To capture one, trigger the action and read the page text or the toast element immediately after, or read the console; report what you saw, and mark it pending if it was missed.
-- Drive the interaction with the supported browser interaction controls. Test the primary flow, the destructive flow and its confirmation, loading and failure recovery, empty and long data, and each permission variant.
+- Drive the selected matrix scenarios with supported browser interaction controls. Inspect applicable primary/destructive flows, loading/failure recovery, empty/long data and permission variants without mechanically repeating automated assertions.
 - Responsive: use viewport resizing for 375px mobile, tablet and desktop (also 320px if no minimum is defined). Check no horizontal overflow (`document.documentElement.scrollWidth <= clientWidth`), wrapping text and buttons, table overflow, dialog fit, and tap targets. Reset the size with the desktop preset when finished.
 - Keyboard: tab order, visible focus, dialog focus trap and return, labels on icon buttons.
 

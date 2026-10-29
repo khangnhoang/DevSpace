@@ -25,10 +25,10 @@ For counters, reservations, payments, webhooks, enrollment and status changes:
 - name the shared row and the invariant;
 - prefer an atomic `update ... where ... returning`; use `select ... for update` only when serialization is needed, take locks in a fixed order (for example by id), and keep the scope short;
 - never call an external service inside the lock;
-- make retries safe, and test duplicate or simultaneous requests when a way to run them exists.
+- make retries safe and plan relevant duplicate/competing requests through [test-quality-strategy](../../test-quality-strategy/SKILL.md#coverage-model); identify contenders and assert the final persisted invariant. Sequential retry and stale-tab interaction do not prove concurrency; independent requests/connections and controlled synchronization may be needed.
 
 DevSpace cases: coupon use counts and reservation (P5, P6), approving or rejecting a payment together with its enrollment (P25), duplicate submit.
 
 ## Verification details
 
-RPC: success, invalid state, unauthorized caller, idempotent retry. Trigger: the effect, and unaffected rows. Race-sensitive change: duplicate, retry or concurrent request, and the final invariant. What the API can reach is covered by an RLS test (`test-quality-strategy`); a race or a function body the API cannot exercise is checked on the local stack where the minimal seed allows, otherwise written in the plan as Main's checks. Checks not yet run stay `pending`.
+RPC: success, invalid state, unauthorized caller, idempotent retry. Trigger: the effect and unaffected rows. Race-sensitive change: relevant duplicate, retry and genuinely concurrent requests, with the final invariant. Allocate assertions and safe fixtures through [test-quality-strategy](../../test-quality-strategy/SKILL.md#select-checks-from-the-contract). Use existing `rls` API tests where sufficient; when API reachability or minimal seed is insufficient, plan a bounded local integration mechanism/data extension within approved scope or name a concrete blocker and resolution. Do not turn absent harness support into unstructured manual fallback. Main-only SQL/hosted checks retain their actor and authority boundaries (`SKILL.md`, Verification plan; `AGENTS.md` section 4); unrun checks stay `pending`.

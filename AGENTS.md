@@ -14,7 +14,7 @@ Roadmap, in this order: (1) agent-workflow (rules, skills, docs system), (2) inf
 - Local database (Docker Desktop running): `npx supabase start`, `npx supabase db reset` (baseline, migrations, then the invented seed in `supabase/seed.sql`, which holds the users `learner@devspace.test`, `student@devspace.test` and `admin@devspace.test`), `npx supabase stop`. The checkout stays linked to hosted, so only these local commands are routine; hosted applies follow `supabase-migration` ("Hosted apply").
 - `npm test` runs the Vitest `unit` and `rls` projects; `rls` needs the local stack started and `db reset` done. See [test-quality-strategy](.claude/skills/test-quality-strategy/SKILL.md).
 - `npm run test:unit` runs the unit tests alone and needs no Docker.
-- `npm run test:e2e` runs the Playwright smoke in Chromium: it needs the local stack started, `db reset` done and Chromium installed (`npx playwright install chromium`), and it overwrites `.next`, so run `npm run build` before `npm start` afterwards. See [test-quality-strategy](.claude/skills/test-quality-strategy/SKILL.md).
+- `npm run test:e2e` runs Playwright in Chromium (learner/admin paths, payment UI/action calls, fixture deletes and dialog/failure handling): it needs the local stack started, `db reset` done and Chromium installed (`npx playwright install chromium`), and it overwrites `.next`, so run `npm run build` before `npm start` afterwards. See [test-quality-strategy](.claude/skills/test-quality-strategy/SKILL.md).
 
 ## Code map
 

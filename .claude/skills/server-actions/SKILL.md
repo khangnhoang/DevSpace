@@ -51,7 +51,7 @@ Read [uploads-and-payments.md](references/uploads-and-payments.md) when the work
 2. List the arguments and, for each, who controls it and what the server derives instead.
 3. Write the checks in the order above, reusing the helpers in `lib/auth.server.ts`. Do not add a second auth helper.
 4. Keep changes surgical. Do not rename actions or reshape results used by other components unless the task says so.
-5. Verify with the commands for a server action in [test-quality-strategy](../test-quality-strategy/SKILL.md#which-command-for-which-change), and with a hostile-call reasoning: what if I call this action directly, as another user, as anon, twice, with a wrong id? Say which of those you could actually run.
+5. Map validation, actor/ownership, state-transition and persistence guarantees to tests under [test-quality-strategy](../test-quality-strategy/SKILL.md#select-checks-from-the-contract), then run its server-action commands. Use hostile-call reasoning to find cases (direct call, another user, anon, twice, wrong id); reasoning is not execution evidence. Plan bounded missing worker/fixture support with the feature or report its concrete blocker/resolution. Assert the actor response and unchanged/persisted data where applicable; report each unrun probe honestly.
 
 ## Anti-patterns
 

@@ -7,12 +7,12 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | U9 `implementation-plans/u9-test-policy/plan.md` r1, Owner-approved 2026-10-29; local plan/checkpoint/correction commits granted. |
-| Current unit / checkpoint | U8 closed by its merge (PR #37). U9 r1 CP1 complete; CP2 consumer alignment next. |
-| Status | In progress: canonical contract-based selection and test-data safety instructions implemented locally; consumer alignment and final verification remain. |
+| Current unit / checkpoint | U8 closed by its merge (PR #37). U9 r1 CP1–CP2 complete; CP3 final verification next. |
+| Status | In progress: canonical policy and direct consumers aligned locally; stale U1/FEAT-013 facts corrected. Final baseline/scenario verification remains. |
 | Completed evidence | U8 merged in PR #37 (`8599de8`); U1 merged in PR #38 (`572da83`). U9 discovery cross-checks current instructions against U1 E2E coverage, the action caller and its bounded worker routing, test runners, dev/E2E environment maps and legacy fixture gaps. Plan self-review corrected the worker-routing capability claim; the final draft has no Critical/Required finding. `npm run docs:check` and `git diff --check` pass (one unchanged vendored link baseline). |
 | Accepted deviations | none proposed; preserve explicit Owner/manual acceptance, feature-specific test minima and all existing permission/hosted boundaries. |
 | Blockers / Owner decisions | No U9 decision pending. FEAT-022/023/024, FEAT-014, AF U2 Zod adoption and AW-008 remain separate. |
-| Next action | Assigned implementor aligns direct consumers in CP2, then completes CP3 verification and returns the actual commits to Main for review. |
+| Next action | Assigned implementor completes CP3 baseline/scenario and resource verification, then returns the actual commits to Main for review. |
 | Current authority | Owner approved U9 r1 and implementation, explicitly grants committing the plan before implementation and local commits throughout checkpoints/corrections. No push, PR, merge, runtime, database, CI or live-model action is granted. |
 
 ## Milestones
@@ -94,4 +94,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-29 Recorded FEAT-021 to FEAT-024 as four testing follow-up PRs; instruction policy belongs to agent-workflow and helper, coverage and CI work stays in backlog because infrastructure is closed. Owner authorized branch delivery conditional on green CI and a subsequent local merge into AF U1 (`a9dae2a`).
 - 2026-10-29 U8 delivered: shared skills/rules and the four testing follow-ups merged; static instruction evidence retained, runtime compliance remains unverified (PR 37, 8599de8).
 - 2026-10-29 FEAT-021 rediscovery at main after U1 delivery identifies manual-first routing and stale coverage/readiness guidance; U9 r1 self-reviewed and Owner-approved, with a plan-first/local-checkpoint commit grant (`1dc3cc5`).
-- 2026-10-29 U9 CP1: contract-based test selection, current helper limits and explicit safe-data prerequisites; legacy cleanup enforcement remains FEAT-022 (this commit).
+- 2026-10-29 U9 CP1: contract-based test selection, current helper limits and explicit safe-data prerequisites; legacy cleanup enforcement remains FEAT-022 (`d97f5fc`).
+- 2026-10-29 U9 CP2: direct consumers route selection to the policy, with residual manual QA and corrected U1 coverage/readiness facts (this commit).

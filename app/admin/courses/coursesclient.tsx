@@ -11,6 +11,7 @@ import {
 } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import ConfirmDialog from "@/app/components/ConfirmDialog";
 import { NO_COURSE_IMAGE } from "@/lib/constants";
 
 interface CoursesClientProps {
@@ -33,6 +34,9 @@ interface InstructorData {
 export default function CoursesClientPage({ courses }: CoursesClientProps) {
   const router = useRouter();
   const [isOpenForm, setIsOpenForm] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<AdminCourseData | null>(
+    null,
+  );
 
   // State Form
   const [editId, setEditId] = useState<number | null>(null);
@@ -122,18 +126,13 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
     }).format(amount);
   };
 
-  const handleDelete = async (id: number, courseName: string) => {
-    const confirmDelete = confirm(
-      `CẢNH BÁO: Bạn có chắc muốn xoá khoá học "${courseName}" không?\n (Tất cả bài học và chương sẽ bị xoá vĩnh viễn)`,
-    );
-    if (confirmDelete) {
-      const { error } = await deleteCourse(id);
-      if (error) {
-        toast.error("Lỗi khi xoá:" + error.message);
-      } else {
-        toast.success("Xoá thành công");
-        router.refresh();
-      }
+  const handleDelete = async (id: number) => {
+    const { error } = await deleteCourse(id);
+    if (error) {
+      toast.error("Lỗi khi xoá:" + error.message);
+    } else {
+      toast.success("Xoá thành công");
+      router.refresh();
     }
   };
 
@@ -216,11 +215,14 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
                   {course.lessonCount} bài học
                 </p>
                 <div className="flex items-center gap-3">
-                  <Trash
-                    size={20}
+                  <button
+                    type="button"
+                    aria-label={`Xoá khoá học ${course.name}`}
                     className="cursor-pointer text-gray-400 hover:text-red-500 transition-colors"
-                    onClick={() => handleDelete(course.id, course.name)}
-                  />
+                    onClick={() => setDeleteTarget(course)}
+                  >
+                    <Trash size={20} />
+                  </button>
                   <SquarePen
                     size={20}
                     className="cursor-pointer text-gray-400 hover:text-blue-500 transition-colors"
@@ -382,6 +384,18 @@ export default function CoursesClientPage({ courses }: CoursesClientProps) {
           )}
         </div>
       </div>
+      {deleteTarget && (
+        <ConfirmDialog
+          open
+          onOpenChange={() => setDeleteTarget(null)}
+          tone="admin"
+          destructive
+          title="Xoá khoá học"
+          description={`CẢNH BÁO: Bạn có chắc muốn xoá khoá học "${deleteTarget.name}" không? Toàn bộ chương, bài học, lượt đăng ký, đơn thanh toán và đánh giá của khoá học sẽ bị xoá vĩnh viễn.`}
+          confirmLabel="Xoá khoá học"
+          onConfirm={() => handleDelete(deleteTarget.id)}
+        />
+      )}
     </div>
   );
 }

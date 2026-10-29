@@ -1,5 +1,8 @@
+import type { Page } from "@playwright/test";
 import { authFile } from "./accounts";
+import { backgroundOf, confirmDialogOf, expectDismissKeepsObject, expectFitsPhone, expectKeyboardFlow, expectOnTop, recordMutations } from "./confirm-dialog";
 import { expect, test } from "./fixtures";
+import { commentDeletedAt, createCommentFixture, removeE2eFixtures } from "./service-role";
 
 // The student is enrolled in the paid course with an approved payment.
 test.use({ storageState: authFile("student") });
@@ -28,4 +31,71 @@ test("[T3] is told a wrong quiz answer is wrong and the right one is right", asy
   await page.getByText("let", { exact: true }).click();
   await page.getByRole("button", { name: "Kiểm tra" }).click();
   await expect(page.getByText("Chính xác!")).toBeVisible();
+});
+
+// The confirm dialog of the comment delete (app/components/ConfirmDialog.tsx, learner tone). The row deletes its own
+// E2E comment, never the seed one.
+test.describe("confirm dialog on the lesson comments", () => {
+  const LESSON_URL = "/learn/javascript-can-ban/bien-va-kieu-du-lieu";
+
+  test.beforeEach(async () => {
+    await removeE2eFixtures();
+  });
+
+  test.afterEach(async () => {
+    await removeE2eFixtures();
+  });
+
+  // The button has no text below the sm breakpoint, so it is found by its icon.
+  async function openMenuOf(page: Page, label: string) {
+    await page.goto(LESSON_URL);
+    await page.locator("button").filter({ has: page.locator("svg.lucide-message-square-text") }).click();
+    const row = page.locator("div.group").filter({ hasText: label });
+    await expect(row).toBeVisible();
+    await row.getByRole("button").first().click();
+    return row.getByRole("button", { name: "Xóa", exact: true });
+  }
+
+  test("[T4] deleting a comment shows it, is cancelled by Escape and cancel, and deletes it on confirm", async ({ page }) => {
+    const comment = await createCommentFixture();
+    const trigger = await openMenuOf(page, comment.label);
+    const mutations = recordMutations(page);
+    const dialog = confirmDialogOf(page);
+
+    await expectDismissKeepsObject(page, () => trigger.click(), "Hủy", () => expect(trigger).toBeVisible(), mutations);
+    expect(await commentDeletedAt(comment.id)).toBeNull();
+
+    await trigger.click();
+    await expect(dialog).toContainText(comment.label);
+    await expect(dialog).toContainText("không thể hoàn tác");
+    await dialog.getByRole("button", { name: "Xóa bình luận", exact: true }).click();
+
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText("Bình luận đã bị xóa").first()).toBeVisible();
+    expect(await commentDeletedAt(comment.id)).not.toBeNull();
+  });
+
+  test("[T5] the comment dialog is keyboard-usable, fits 375px, sits on top and stays white in a dark OS scheme", async ({ page }) => {
+    const comment = await createCommentFixture();
+    const trigger = await openMenuOf(page, comment.label);
+
+    await expectKeyboardFlow(page, trigger);
+    await trigger.click();
+    await expectOnTop(page);
+    await page.keyboard.press("Escape");
+
+    await page.emulateMedia({ colorScheme: "dark" });
+    await trigger.click();
+    expect(await backgroundOf(page)).toBe("rgb(255, 255, 255)");
+    await page.keyboard.press("Escape");
+    await page.emulateMedia({ colorScheme: "light" });
+
+    await page.setViewportSize({ width: 375, height: 812 });
+    const phoneTrigger = await openMenuOf(page, comment.label);
+    await phoneTrigger.click();
+    await expectFitsPhone(page);
+    await expectOnTop(page);
+    await page.keyboard.press("Escape");
+    expect(await commentDeletedAt(comment.id)).toBeNull();
+  });
 });

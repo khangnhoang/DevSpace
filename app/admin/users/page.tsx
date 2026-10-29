@@ -23,6 +23,7 @@ import {
 import { createNewUser, deleteUserAccount } from "@/app/action/user";
 import { toast } from "sonner";
 import CustomAvatar from "@/app/components/CustomAvatar";
+import ConfirmDialog from "@/app/components/ConfirmDialog";
 
 // 1. ĐỊNH NGHĨA SỐ DÒNG TRÊN 1 TRANG
 const ITEMS_PER_PAGE = 7;
@@ -35,6 +36,7 @@ export default function UsersManagerPage() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [isOpenForm, setIsOpenForm] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<UserProfile | null>(null);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
@@ -76,10 +78,17 @@ export default function UsersManagerPage() {
     }
   };
 
-  const handleDelete = async (id: string, name: string | null) => {
-    if (!confirm(`Bạn có chắc chắn muốn xóa người dùng ${name} không?`)) return;
-
-    const result = await deleteUserAccount(id);
+  const handleDelete = async (id: string) => {
+    // ConfirmDialog swallows a rejection, so a failure in transit is reported here.
+    let result;
+    try {
+      result = await deleteUserAccount(id);
+    } catch {
+      toast.error(
+        "Không nhận được kết quả từ máy chủ. Hãy tải lại trang để kiểm tra người dùng."
+      );
+      return;
+    }
 
     if (result.error) {
       toast.error("Xóa người dùng thất bại: " + result.error);
@@ -380,7 +389,8 @@ export default function UsersManagerPage() {
                             />
                           </button>
                           <button
-                            onClick={() => handleDelete(u.id, u.full_name)}
+                            onClick={() => setDeleteTarget(u)}
+                            aria-label={`Xóa người dùng ${u.full_name || u.email}`}
                             className="cursor-pointer hover:bg-red-500/20 hover:text-red-400 p-2 rounded-md text-[#979EAA] transition-colors"
                           >
                             <Trash size={20} />
@@ -572,6 +582,18 @@ export default function UsersManagerPage() {
           </div>
         )}
       </div>
+      {deleteTarget && (
+        <ConfirmDialog
+          open
+          onOpenChange={() => setDeleteTarget(null)}
+          tone="admin"
+          destructive
+          title="Xóa người dùng"
+          description={`Bạn có chắc chắn muốn xóa người dùng ${deleteTarget.full_name || deleteTarget.email} không? Tài khoản cùng đăng ký học, đơn thanh toán, bình luận, ghi chú và tiến độ học sẽ bị xóa vĩnh viễn.`}
+          confirmLabel="Xóa người dùng"
+          onConfirm={() => handleDelete(deleteTarget.id)}
+        />
+      )}
     </div>
   );
 }

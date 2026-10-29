@@ -13,7 +13,7 @@ import type { Page } from "@playwright/test";
 import { authFile } from "./accounts";
 import { expect, test } from "./fixtures";
 import { knownBugE2e } from "./known-bug";
-import { FIRST_PAID_LESSON_PATH, PAID_COURSE_NAME, acceptNextDialog, createLearnerOrder, paymentActions, signInAs } from "./payment-helpers";
+import { FIRST_PAID_LESSON_PATH, PAID_COURSE_NAME, confirmDialog, createLearnerOrder, paymentActions, signInAs } from "./payment-helpers";
 import {
   SEED_COUPON,
   assertPaymentFixturesClean,
@@ -44,8 +44,8 @@ test.describe("approving and rejecting through the transactions page", () => {
     const orderId = await createLearnerOrder(paymentActions(callAction));
     await page.goto("/admin/transactions");
 
-    acceptNextDialog(page);
     await pendingRow(page).getByRole("button", { name: "Duyệt" }).click();
+    await confirmDialog(page, "Duyệt đơn");
 
     await expect(page.getByText("Duyệt đơn thành công!")).toBeVisible();
     expect(await paymentById(orderId)).toMatchObject({ amount: 199000, status: "success" });
@@ -64,8 +64,8 @@ test.describe("approving and rejecting through the transactions page", () => {
     const orderId = await createLearnerOrder(paymentActions(callAction));
     await page.goto("/admin/transactions");
 
-    acceptNextDialog(page);
     await pendingRow(page).getByRole("button", { name: "Hủy đơn này" }).click();
+    await confirmDialog(page, "Hủy đơn hàng");
 
     await expect(page.getByText("Đã hủy đơn hàng")).toBeVisible();
     expect(await paymentById(orderId)).toMatchObject({ status: "failed" });
@@ -82,13 +82,98 @@ test.describe("approving and rejecting through the transactions page", () => {
     const usedBefore = await couponUsedCount(SEED_COUPON);
     await page.goto("/admin/transactions");
 
-    acceptNextDialog(page);
     await pendingRow(page).getByRole("button", { name: "Duyệt" }).click();
+    await confirmDialog(page, "Duyệt đơn");
 
     await expect(page.getByText("Duyệt đơn thành công!")).toBeVisible();
     expect(await paymentById(orderId)).toMatchObject({ amount: 179100, status: "success" });
     expect(await couponUsedCount(SEED_COUPON)).toBe(usedBefore);
     expect(serverRecords.mailsSent()).toHaveLength(1);
+  });
+
+  test("[AP4] cancelling the reject dialog leaves the order pending and sends nothing", async ({ page, callAction, serverRecords }) => {
+    const orderId = await createLearnerOrder(paymentActions(callAction));
+    await page.goto("/admin/transactions");
+    // The page loads its orders with an action POST after hydration; arm the recorder once the table is there.
+    await expect(pendingRow(page)).toBeVisible();
+
+    const posts: string[] = [];
+    page.on("request", (request) => {
+      if (request.method() === "POST") posts.push(request.url());
+    });
+    await pendingRow(page).getByRole("button", { name: "Hủy đơn này" }).click();
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Giữ đơn hàng" }).click();
+    await expect(dialog).toBeHidden();
+
+    expect(await paymentById(orderId)).toMatchObject({ status: "pending" });
+    await expect(pendingRow(page)).toBeVisible();
+    expect(posts).toEqual([]);
+    expect(serverRecords.mailsSent()).toEqual([]);
+  });
+
+  test("[AP5] the approve dialog stays open and disabled while the action runs", async ({ page, callAction, serverRecords }) => {
+    const orderId = await createLearnerOrder(paymentActions(callAction));
+    await page.goto("/admin/transactions");
+    // The orders load by an action POST after hydration; hold only the approve that follows.
+    await expect(pendingRow(page)).toBeVisible();
+
+    // Hold the action POST until the test releases it. fallback() (not continue()) passes every request on to the
+    // fixture's network guard, which still sees it.
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    let held = 0;
+    await page.route("**/admin/transactions", async (route) => {
+      if (route.request().method() !== "POST") return route.fallback();
+      held++;
+      await gate;
+      return route.fallback();
+    });
+
+    await pendingRow(page).getByRole("button", { name: "Duyệt" }).click();
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toBeVisible();
+    // The confirm label changes while pending, so the button is found by either label.
+    const confirm = dialog.getByRole("button", { name: /Duyệt đơn|Đang xử lý/ });
+    await confirm.dblclick();
+
+    await expect(confirm).toBeDisabled();
+    await expect(dialog.getByRole("button", { name: "Hủy", exact: true })).toBeDisabled();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeVisible();
+    expect(held, "a double click sent the action once").toBe(1);
+
+    release();
+    await expect(page.getByText("Duyệt đơn thành công!")).toBeVisible();
+    await expect(dialog).toBeHidden();
+    expect(await paymentById(orderId)).toMatchObject({ status: "success" });
+    const mails = serverRecords.mailsSent();
+    expect(mails).toHaveLength(1);
+    expect(mails[0].to).toBe(LEARNER_EMAIL);
+  });
+
+  test("[AP6] a reject that fails in transit shows an error and leaves the order pending", async ({ page, callAction, serverRecords }) => {
+    const orderId = await createLearnerOrder(paymentActions(callAction));
+    await page.goto("/admin/transactions");
+    // The orders load by an action POST after hydration; abort only the reject that follows.
+    await expect(pendingRow(page)).toBeVisible();
+
+    let aborted = 0;
+    await page.route("**/admin/transactions", (route) => {
+      if (route.request().method() !== "POST" || aborted > 0) return route.fallback();
+      aborted++;
+      return route.abort();
+    });
+
+    await pendingRow(page).getByRole("button", { name: "Hủy đơn này" }).click();
+    await confirmDialog(page, "Hủy đơn hàng");
+
+    await expect(page.getByText("Không nhận được kết quả từ máy chủ")).toBeVisible();
+    await expect(page.getByRole("alertdialog")).toBeHidden();
+    expect(aborted).toBe(1);
+    expect(await paymentById(orderId)).toMatchObject({ status: "pending" });
+    expect(serverRecords.mailsSent()).toEqual([]);
   });
 });
 
@@ -101,16 +186,16 @@ test.describe("known bugs of approving and rejecting", () => {
     await expect(pendingRow(page)).toBeVisible();
     await expect(pendingRow(secondTab)).toBeVisible();
 
-    acceptNextDialog(page);
     await pendingRow(page).getByRole("button", { name: "Duyệt" }).click();
+    await confirmDialog(page, "Duyệt đơn");
     await expect(page.getByText("Duyệt đơn thành công!")).toBeVisible();
     expect(await paymentById(orderId)).toMatchObject({ status: "success" });
     expect(serverRecords.mailsSent()).toHaveLength(1);
 
     // The second tab still shows the order as pending.
     const secondApprove = secondTab.waitForResponse((response) => response.request().method() === "POST");
-    acceptNextDialog(secondTab);
     await pendingRow(secondTab).getByRole("button", { name: "Duyệt" }).click();
+    await confirmDialog(secondTab, "Duyệt đơn");
     expect((await secondApprove).status()).toBe(200);
 
     await bug(() => expect(serverRecords.mailsSent().filter((mail) => mail.to === LEARNER_EMAIL)).toHaveLength(1));

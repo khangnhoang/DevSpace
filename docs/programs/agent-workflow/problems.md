@@ -14,7 +14,7 @@ Charter: `README.md`. Progress: `progress.md`.
 
 ### AW-P2: The docs link parsers count some links inside code and accept a bare `](`
 
-- Status: Open (2026-10-26, Codex U5 diff review round 1).
+- Status: Fixed locally, awaiting delivery; paired with AW-F4 on `chore/agent-sessions-doc-links`, with separate commits and verification (Owner-approved 2026-10-29).
 - Problem: `scripts/docs/check-links.mjs` (`stripCode`, `extractTargets`), which `check-skills.mjs` reuses after U5, strips inline code one line at a time (a code span across lines still yields its links), accepts a closing fence with trailing text, and reads `](target)` without an opening `[label]` as a link. A link shown only as an example can count, and a stray `](` can satisfy `skill-reference-link`.
 - Evidence: Codex U5 diff review round 1 (session `01a17436-2457-7e23-bf3c-25bf1f91ccea`), findings 1 and 2, checked by Main against the source on 2026-10-26; no real doc in the repo hits these cases today (`npm run docs:check` passes).
 - Direction: one parser change in `check-links.mjs` with fixtures (CommonMark closing fence, code spans across lines, an opening label required), so both checks keep one link reader.

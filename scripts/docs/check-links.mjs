@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Checks relative markdown links in docs/, .claude/, AGENTS.md, CLAUDE.md and README.md. It only checks that the target
 // file or folder exists (not anchors). A broken link listed in the baseline is accepted; a new broken link
-// makes the command exit 1. Do not add entries for new links, fix the link (the one entry is in a vendored skill).
+// makes the command exit 1. Do not add entries for new links; fix the link instead.
 //
 // Usage: node scripts/docs/check-links.mjs [--root <dir>] [--baseline <file>]
 // Exit: 0 no new broken link | 1 new broken link | 2 usage or read error.
@@ -66,11 +66,50 @@ function collectMarkdownFiles(root, index) {
   return files;
 }
 
-// Drops code fences and inline code so example links in documentation are not counted as real links.
+function stripInlineCode(block) {
+  const runs = [...block.matchAll(/`+/g)];
+  const next = new Map();
+  const closing = [];
+  for (let index = runs.length - 1; index >= 0; index -= 1) {
+    const length = runs[index][0].length;
+    closing[index] = next.get(length);
+    next.set(length, index);
+  }
+  const parts = [];
+  let start = 0;
+  for (let index = 0; index < runs.length; index += 1) {
+    const run = runs[index];
+    let escapes = 0;
+    for (let pos = run.index - 1; pos >= 0 && block[pos] === "\\"; pos -= 1) escapes += 1;
+    const close = closing[index];
+    if (escapes % 2 || close === undefined) continue;
+    const end = runs[close].index + runs[close][0].length;
+    // Mask instead of deleting: code must not join stray brackets into a new link.
+    parts.push(block.slice(start, run.index), block.slice(run.index, end).replace(/[^\n]/g, " "));
+    start = end;
+    index = close;
+  }
+  return parts.join("") + block.slice(start);
+}
+
+// A bounded link reader, not a full Markdown renderer: top-level fences and code spans are ignored.
+// CommonMark requires matching fence markers/lengths and only whitespace after a closing fence.
 function stripCode(text) {
-  return text
-    .replace(/^ {0,3}(```|~~~)[^\n]*\n[\s\S]*?(?:\n {0,3}\1[^\n]*(?=\n|$)|$)/gm, "")
-    .replace(/(`+)[^`\n]*?\1/g, "");
+  let fence = null;
+  const prose = text.split(/\r?\n/).map((line) => {
+    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    if (fence) {
+      if (marker && marker[1][0] === fence[0] && marker[1].length >= fence.length && /^[ \t]*$/.test(marker[2])) fence = null;
+      return "";
+    }
+    if (marker && (marker[1][0] !== "`" || !marker[2].includes("`"))) {
+      fence = marker[1];
+      return "";
+    }
+    return line;
+  }).join("\n");
+  // Inline spans may cross lines, but not blank paragraphs or the removed fenced blocks.
+  return prose.split(/(\n[ \t]*\n)/).map(stripInlineCode).join("");
 }
 
 // Reads the destination of an inline link starting right after "](": either <...> or a run without
@@ -103,8 +142,19 @@ function readInlineDestination(text, start) {
 export function extractTargets(text) {
   const targets = [];
   const stripped = stripCode(text);
-  for (const match of stripped.matchAll(/\]\(/g)) {
-    targets.push(readInlineDestination(stripped, match.index + match[0].length));
+  for (const paragraph of stripped.split(/\n[ \t]*\n/)) {
+    let brackets = 0;
+    for (let index = 0; index < paragraph.length; index += 1) {
+      const char = paragraph[index];
+      if (char === "\\") {
+        index += 1;
+      } else if (char === "[") {
+        brackets += 1;
+      } else if (char === "]" && brackets > 0) {
+        brackets -= 1;
+        if (paragraph[index + 1] === "(") targets.push(readInlineDestination(paragraph, index + 2));
+      }
+    }
   }
   const definition = /^ {0,3}\[(?!\^)[^\]\n]+\]:[ \t]*\n?[ \t]*(<[^>\n]*>|\S+)/gm;
   for (const match of stripped.matchAll(definition)) {

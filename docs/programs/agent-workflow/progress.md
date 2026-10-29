@@ -7,12 +7,12 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | Small-task batch AW-F4 + AW-P2, Owner-approved 2026-10-29; no initiative or detail plan required. |
-| Current unit / checkpoint | No initiative active; AW-F4 implemented locally, AW-P2 next. |
-| Status | AW-F4 execution boundaries are documented; awaiting delivery. AW-P2 implementation has not started. |
-| Completed evidence | AW-F4: lifecycle text checked against AGENTS roles/permissions and Claude bindings; docs:check and diff whitespace check pass. AW-U10 delivery evidence is in Milestones. |
-| Accepted deviations | none. AW-F4 static consistency is verified; future runtime agent compliance remains unverified. |
+| Current unit / checkpoint | No initiative active; AW-F4 and AW-P2 implemented locally. |
+| Status | Both small tasks verified and self-reviewed; awaiting delivery. |
+| Completed evidence | AW-F4: lifecycle text checked against AGENTS roles/permissions and Claude bindings. AW-P2: the three defects reproduced before the fix; docs tests 92/92 on the outside-sandbox rerun (the sandbox run failed only at fixture git init); docs:check passes with zero broken links and no exceptions, typecheck and lint (0 problems) pass. Comparing link targets against the reader at 18261cd across 107 Markdown files changes only the vendored snapshot example inside a code fence; its obsolete baseline entry is removed. |
+| Accepted deviations | none. The parser remains a bounded link reader, not a complete Markdown renderer. AW-F4 static consistency is verified; future runtime agent compliance remains unverified. |
 | Blockers / Owner decisions | none; the two small independent items retain separate commits and verification. |
-| Next action | Main implements AW-P2 with regression tests, then reviews the complete batch. |
+| Next action | Owner reviews the local batch before granting delivery. |
 | Current authority | The Owner granted implementation and local commits on chore/agent-sessions-doc-links. No push, PR or merge grant for this batch. |
 
 ## Milestones
@@ -107,4 +107,5 @@ One line each, newest last. No review rounds or command logs.
 
 - 2026-10-29 AW-U10 CP1 correction: H4–H6 declarations cannot evade naming/ownership checks, and retained legacy U rows reserve canonical U ownership while legacy F/P numbers stay independent; 84 docs tests and static/history checks passed (`6802012`).
 - 2026-10-29 AW-U10 delivered after Main re-review passed and all six required CI jobs plus Vercel passed on `6802012` (PR 40, `18261cd`).
-- 2026-10-29 AW-F4: shared execution boundaries distinguish exploration subagents from independent sessions and preserve role, permission and Claude bindings (this commit).
+- 2026-10-29 AW-F4: shared execution boundaries distinguish exploration subagents from independent sessions and preserve role, permission and Claude bindings (`3d70b9e`).
+- 2026-10-29 AW-P2: one shared link reader ignores multiline code and invalid fence closes and requires matched labels; regression tests and docs/static checks pass, and the obsolete snapshot baseline is removed (this commit).

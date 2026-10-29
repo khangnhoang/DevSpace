@@ -1,5 +1,4 @@
-# Known broken relative markdown links that stay on purpose. Fix a broken link instead of adding it here;
-# the only entry is a link inside the vendored upstream skill, whose text stays byte for byte.
+# Known broken relative markdown links that stay on purpose. Fix a broken link instead of adding it here.
+# No current exceptions: the former vendored snapshot link is inside a fenced example, not prose.
 # One entry per line: <source file> -> <link target as written>.
 # Lines starting with # are comments. The check prints entries that are no longer broken.
-.claude/skills/playwright-cli/SKILL.md -> .playwright-cli/page-2026-02-14T19-22-42-679Z.yml

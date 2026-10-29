@@ -141,6 +141,20 @@ test("skill-reference-link: every file under references/ must be linked from SKI
   assertClean(run({ [path("beta", "references/templates/skill.md")]: "x\n", [SKILL("beta")]: skill({ name: "beta", body: `${USE_WHEN}\n\n[a](references/one.md)\n[b]: references/deep/two.md\n[c]: <references/templates/skill.md>\n` }) }));
 });
 
+test("skill-reference-link rejects multiline code, invalid fence closes and bare delimiters", () => {
+  const ref = path("alpha", "references/a.md");
+  const examples = [
+    "Text `example\n[a](references/a.md)\n` end.",
+    "```md\nexample\n``` trailing text\n[a](references/a.md)\n```",
+    "](references/a.md)",
+  ];
+  for (const example of examples) {
+    const body = `${USE_WHEN}\n\n${example}\n`;
+    assertViolation(run({ [ref]: "# A\n", [SKILL("alpha")]: skill({ body }) }), ref, "skill-reference-link", 1);
+    assertClean(run({ [ref]: "# A\n", [SKILL("alpha")]: skill({ body: `${body}\n[a](references/a.md)\n` }) }));
+  }
+});
+
 test("playwright-cli allowlist: skill-use-when only, every other rule still applies", () => {
   const vendored = (extra = {}) => ({
     [SKILL("playwright-cli")]: skill({ name: "playwright-cli", body: "# Browser Automation\n\nUse when: in the DevSpace block.\n" }),

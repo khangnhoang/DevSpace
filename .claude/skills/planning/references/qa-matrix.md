@@ -1,26 +1,36 @@
-# Manual QA matrix
+# Verification allocation and manual QA matrix
 
-Read this when a plan has manual QA that depends on data, user roles or hosted state. Skip it otherwise.
+Read this when verification depends on data, user roles or hosted state. Skip it otherwise.
 
-DevSpace has a local Supabase stack with a minimal invented seed (three users: a learner, a student enrolled in the paid course and an admin; two courses), RLS tests for the database boundaries, and a Playwright suite (`npm run test:e2e`) that covers the smoke paths of the main learner and admin flows and the payment rows; nothing else automated drives a browser. Rows that only prove a policy or grant belong in `__tests__/rls`, and a check that [test-quality-strategy](../../test-quality-strategy/SKILL.md#regression) places in an automated row (Regression; End-to-end) is planned as that test, not as a matrix row; the manual matrix keeps the rest. The Owner signs in (`AGENTS.md` section 4). So QA is a table the plan writes before implementation reaches its last checkpoint.
+Selection belongs to [test-quality-strategy](../../test-quality-strategy/SKILL.md#select-checks-from-the-contract). The current local stack has a minimal invented seed (three users and two courses); Vitest `rls` and Playwright API/action fixtures exercise real boundaries, and browser E2E includes U1 deletes/failures as well as rendering and payments. Existing coverage is not a ceiling. Write the allocation before implementation's final checkpoint; do not send every uncovered assertion to manual QA.
 
-## Matrix
+## Verification allocation
+
+For each applicable guarantee, record:
+
+| Guarantee / actor / condition | Layer | Assertion | Existing or new file / row | Prerequisites / extension / blocker |
+| --- | --- | --- | --- | --- |
+| <observable outcome or invariant> | <unit, local integration, browser E2E, justified manual> | <what proves it> | <location, or manual scenario below> | <data, helper support, safe readiness or concrete blocker and resolution> |
+
+Use the policy's coverage model for relevant allowed/denied paths, boundaries, failures and competing operations. Distinct endpoint/RLS guarantees can need both layers; do not duplicate whole matrices. Planned tests and bounded fixture extensions ship with the feature within approved scope.
+
+## Residual manual matrix
 
 One row per scenario:
 
-| # | Who | Action | Expected | Needs |
-| --- | --- | --- | --- | --- |
-| 1 | <anon, learner, learner who has not enrolled, enrolled learner, admin> | <steps or request> | <observable result, including what must be denied> | <data or account that must exist> |
+| # | Who | Action | Expected | Needs | Reason for manual check |
+| --- | --- | --- | --- | --- | --- |
+| 1 | <actor> | <steps or request> | <observable result, including denial where applicable> | <data/account> | <perceptual judgment, exploration, live provider or explicit approved requirement> |
 
-Cover, where they apply: each role; the allowed path and the denied path; empty, loading and error states; a duplicate submit; the same action from two tabs; data owned by another user.
+Keep only justified/required manual scenarios, reusing automated assertions rather than repeating them. The Owner signs in for browser passes (`AGENTS.md` section 4). Preserve approved feature minima and explicit Owner QA; an empty residual matrix needs its reason, not a fabricated browser pass.
 
 ## Readiness
 
-Decide before the final checkpoint, and record exactly one outcome per matrix:
+Decide before the final checkpoint and record readiness for each scenario (one outcome for a matrix only when all its rows share it):
 
 - the seeded local data is enough;
-- specific accounts or rows must be prepared (list them and who creates them): local data is a seed row under the seed rule in [test-quality-strategy](../../test-quality-strategy/SKILL.md) (Test data); a hosted row follows `AGENTS.md` section 4;
+- specific accounts/rows must be prepared (list them and who creates them): choose stable seed or temporary owned fixtures under [test-quality-strategy](../../test-quality-strategy/SKILL.md#test-data), including safe target/use, cleanup and recovery; hosted data follows `AGENTS.md` section 4;
 - no data is needed;
 - blocked until the Owner provides an account or data.
 
-Say which checks the agent can do (commands, simulated-role SQL by Main, a browser pass with the Owner signed in) and which only the Owner can. Manual QA may stay pending for a local checkpoint, but the plan states when it blocks approval or merge.
+Say which checks the agent can do (commands, simulated-role SQL by Main, a browser pass with the Owner signed in) and which only the Owner can. Missing credentials/helper support or uncertain target/exclusive use stays a concrete blocker, not permission to use hosted or reset shared data. Required manual QA may stay pending locally, but the plan states when it blocks approval or merge.

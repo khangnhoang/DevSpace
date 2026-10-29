@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | U8 `implementation-plans/u8-shared-agent-rules/plan.md` r4, Owner-approved 2026-10-29; local implementation commits explicitly granted. |
-| Current unit / checkpoint | U8, CP1–CP3 completed locally. |
-| Status | U8 implementation and author audit complete locally; preparing authorized PR delivery with testing follow-ups recorded. AW-008 remains outside U8. |
-| Completed evidence | CP1 6d3605f, CP2 9c17f1c, corrections 6a50a3c; final full audit 47 files / 1074 instruction rows, 0 Critical/Required; two-way traceability and 10 written scenarios passed; docs fixtures 72/72, lint/typecheck passed. Runtime compliance is unverified. |
-| Accepted deviations | none. |
-| Blockers / Owner decisions | none. |
-| Next action | Commit the four testing follow-up records, push this branch, create the PR, wait for CI and merge only if green; then return to `feat/af-confirm-dialog` and merge updated `origin/main` into it. |
-| Current authority | Owner grants these docs edits, commit, push, PR creation/update with CI results, merge if CI is green, and the local merge of remote main into AF U1. No follow-up implementation, hosted/database mutation or separate deployment granted. |
+| Spec revision | U9 `implementation-plans/u9-test-policy/plan.md` r1, Owner-approved 2026-10-29; local plan/checkpoint/correction commits granted. |
+| Current unit / checkpoint | U8 closed by its merge (PR #37). U9 r1 approved; CP1–CP3 not started, approved plan committed before implementation. |
+| Status | FEAT-021 rediscovery complete at `572da83` (main after PR #38); the approved plan defines automated-first selection and bounded instruction alignment. Active skills/rules remain unchanged. |
+| Completed evidence | U8 merged in PR #37 (`8599de8`); U1 merged in PR #38 (`572da83`). U9 discovery cross-checks current instructions against U1 E2E coverage, the action caller and its bounded worker routing, test runners, dev/E2E environment maps and legacy fixture gaps. Plan self-review corrected the worker-routing capability claim; the final draft has no Critical/Required finding. `npm run docs:check` and `git diff --check` pass (one unchanged vendored link baseline). |
+| Accepted deviations | none proposed; preserve explicit Owner/manual acceptance, feature-specific test minima and all existing permission/hosted boundaries. |
+| Blockers / Owner decisions | No U9 decision pending. FEAT-022/023/024, FEAT-014, AF U2 Zod adoption and AW-008 remain separate. |
+| Next action | Assigned implementor executes CP1–CP3 from approved r1, self-reviews and commits each checkpoint locally; Main reviews the actual diffs and sends corrections to the same implementor. |
+| Current authority | Owner approved U9 r1 and implementation, explicitly grants committing the plan before implementation and local commits throughout checkpoints/corrections. No push, PR, merge, runtime, database, CI or live-model action is granted. |
 
 ## Milestones
 
@@ -91,4 +91,6 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-29 U8 CP3 corrections: restore Claude-binding routing, include AGENTS in citation discovery and remove the duplicated browser restriction; docs and symlink checks passed (`6a50a3c`).
 
 - 2026-10-29 U8 CP3: full instruction audit and bidirectional baseline/scenario review passed; static and filesystem evidence complete, runtime compliance unverified; local implementation complete, nothing pushed (`12d24b8`).
-- 2026-10-29 Recorded FEAT-021 to FEAT-024 as four testing follow-up PRs; instruction policy belongs to agent-workflow and helper, coverage and CI work stays in backlog because infrastructure is closed. Owner authorized branch delivery conditional on green CI and a subsequent local merge into AF U1 (this commit).
+- 2026-10-29 Recorded FEAT-021 to FEAT-024 as four testing follow-up PRs; instruction policy belongs to agent-workflow and helper, coverage and CI work stays in backlog because infrastructure is closed. Owner authorized branch delivery conditional on green CI and a subsequent local merge into AF U1 (`a9dae2a`).
+- 2026-10-29 U8 delivered: shared skills/rules and the four testing follow-ups merged; static instruction evidence retained, runtime compliance remains unverified (PR 37, 8599de8).
+- 2026-10-29 FEAT-021 rediscovery at main after U1 delivery identifies manual-first routing and stale coverage/readiness guidance; U9 r1 self-reviewed and Owner-approved, with a plan-first/local-checkpoint commit grant (this commit).

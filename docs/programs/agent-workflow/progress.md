@@ -8,12 +8,12 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | --- | --- |
 | Spec revision | U8 `implementation-plans/u8-shared-agent-rules/plan.md` r4, Owner-approved 2026-10-29; local implementation commits explicitly granted. |
 | Current unit / checkpoint | U8, CP1–CP3 completed locally. |
-| Status | implementation and author audit complete locally; not pushed. AW-008 remains outside U8. |
+| Status | U8 implementation and author audit complete locally; preparing authorized PR delivery with testing follow-ups recorded. AW-008 remains outside U8. |
 | Completed evidence | CP1 6d3605f, CP2 9c17f1c, corrections 6a50a3c; final full audit 47 files / 1074 instruction rows, 0 Critical/Required; two-way traceability and 10 written scenarios passed; docs fixtures 72/72, lint/typecheck passed. Runtime compliance is unverified. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | Owner reviews the local completion report and decides the next authorized action. |
-| Current authority | Owner grants local plan and implementation/checkpoint/correction commits, and implementation in the requested new chat. No push, PR, merge, hosted action or deployment granted. |
+| Next action | Commit the four testing follow-up records, push this branch, create the PR, wait for CI and merge only if green; then return to `feat/af-confirm-dialog` and merge updated `origin/main` into it. |
+| Current authority | Owner grants these docs edits, commit, push, PR creation/update with CI results, merge if CI is green, and the local merge of remote main into AF U1. No follow-up implementation, hosted/database mutation or separate deployment granted. |
 
 ## Milestones
 
@@ -90,4 +90,5 @@ One line each, newest last. No review rounds or command logs.
 
 - 2026-10-29 U8 CP3 corrections: restore Claude-binding routing, include AGENTS in citation discovery and remove the duplicated browser restriction; docs and symlink checks passed (`6a50a3c`).
 
-- 2026-10-29 U8 CP3: full instruction audit and bidirectional baseline/scenario review passed; static and filesystem evidence complete, runtime compliance unverified; local implementation complete, nothing pushed (this commit).
+- 2026-10-29 U8 CP3: full instruction audit and bidirectional baseline/scenario review passed; static and filesystem evidence complete, runtime compliance unverified; local implementation complete, nothing pushed (`12d24b8`).
+- 2026-10-29 Recorded FEAT-021 to FEAT-024 as four testing follow-up PRs; instruction policy belongs to agent-workflow and helper, coverage and CI work stays in backlog because infrastructure is closed. Owner authorized branch delivery conditional on green CI and a subsequent local merge into AF U1 (this commit).

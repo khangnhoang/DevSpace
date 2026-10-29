@@ -12,18 +12,11 @@ Charter: `README.md`. Progress: `progress.md`.
 - Direction: keep the link, because a copied template must keep a working `progress.md` link; move the progress template and the detail template together.
 - Exit condition: none needed while both templates stay in the same folder; reopen if one of them moves.
 
-### AW-P2: The docs link parsers count some links inside code and accept a bare `](`
-
-- Status: Fixed locally, awaiting delivery; paired with AW-F4 on `chore/agent-sessions-doc-links`, with separate commits and verification (Owner-approved 2026-10-29).
-- Problem: `scripts/docs/check-links.mjs` (`stripCode`, `extractTargets`), which `check-skills.mjs` reuses after U5, strips inline code one line at a time (a code span across lines still yields its links), accepts a closing fence with trailing text, and reads `](target)` without an opening `[label]` as a link. A link shown only as an example can count, and a stray `](` can satisfy `skill-reference-link`.
-- Evidence: Codex U5 diff review round 1 (session `01a17436-2457-7e23-bf3c-25bf1f91ccea`), findings 1 and 2, checked by Main against the source on 2026-10-26; no real doc in the repo hits these cases today (`npm run docs:check` passes).
-- Direction: one parser change in `check-links.mjs` with fixtures (CommonMark closing fence, code spans across lines, an opening label required), so both checks keep one link reader.
-- Exit condition: the three cases have failing fixtures that pass after the fix, and `npm run docs:check` still passes.
-
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.
 
+- AW-P2 — Resolved 2026-10-29: the shared link reader ignores multiline code, rejects invalid fence closes and requires matched labels, with regression coverage (PR 41, `b071d62`).
 - AW-004 — Resolved 2026-10-22: CP5 and the CP6 planner reran on a base branch without plan sections 4.1 and 4.2, with valid results (`1b8d8e5`).
 - AW-005 — Resolved 2026-10-22: the CP6 implementor rerun loaded `git-pr-workflow` before committing and `code-review` before its self-review (`b99315e`).
 - AW-001 — Moved 2026-10-22 to [infrastructure](../infrastructure/problems.md), unit U1.

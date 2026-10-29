@@ -10,8 +10,8 @@ Direction the Owner has set that is outside the scope of the current initiative.
 
 ## AW-F2: Evergreen program candidates
 
-- Status: Recorded 2026-10-23; none is opened (U3 D9).
-- Direction: each candidate becomes an evergreen program only when its condition holds and the Owner decides: Quality Engineering when `infrastructure` closes and hands over CI, the test suites and lint; Security Engineering when `security-hotfix` closes after H2-2, for RLS and grant review of new migrations and dependency audits; Design System when the `app-foundation` delivery program (ADR 0003) closes and hands over its shadcn components and form conventions; Reliability and Operations when there are real users or hosted backup and restore is needed; Performance Engineering when production data exists to monitor. Each charter states its boundary (an initiative belongs to exactly one program, ADR 0002) and does not invest in parts the techstack migration replaces (ADR 0001).
+- Status: Recorded 2026-10-23 (U3 D9); Quality Engineering opened on 2026-10-30, other candidates remain unopened.
+- Direction: Quality Engineering was opened by the Owner on 2026-10-30; its capability and boundary live in its [charter](../quality-engineering/README.md). The remaining candidates open only when their condition holds and the Owner decides: Security Engineering when `security-hotfix` closes after H2-2, for RLS and grant review of new migrations and dependency audits; Design System when the `app-foundation` delivery program (ADR 0003) closes and hands over its shadcn components and form conventions; Reliability and Operations when there are real users or hosted backup and restore is needed; Performance Engineering when production data exists to monitor. Each charter states its boundary (an initiative belongs to exactly one program, ADR 0002) and does not invest in parts the techstack migration replaces (ADR 0001).
 - Target program: agent-workflow
 
 ## AW-F3: Performance rules and verification in the skills
@@ -20,13 +20,9 @@ Direction the Owner has set that is outside the scope of the current initiative.
 - Direction: skill rules and a way to verify that code is correct and performant, for example N+1 queries, unbounded queries and RLS policy patterns. The scope is decided when it is planned.
 - Target program: agent-workflow
 
-## AW-F4: Shared execution boundaries for exploration and independent roles
-
-- Status: Fixed locally, awaiting delivery; paired with AW-P2 on `chore/agent-sessions-doc-links`, with separate commits and verification (Owner-approved 2026-10-29).
-- Direction: put the tool-neutral lifecycle choice in `docs/agent-loops.md`: codebase exploration may use subagents; an independent implementor or reviewer should use a separate session/thread so the Owner can inspect its transcript and behavior. Preserve role/permission and single-writer ownership in `AGENTS.md`. The Owner's 2026-10-29 follow-up puts role-to-model and effort choices in `docs/agent-models.md`; Claude API/session bindings remain in `.claude/rules.md`. Do not infer a model override, new worktree, parallel writers or any additional permission; an unavailable session mechanism stays an explicit blocker. This is an Owner operating preference, not an unverified claim that subagents perform worse.
-- Target program: agent-workflow.
-
 ## Closed
+
+- AW-F4 — Done: shared execution boundaries and role-to-model/effort selection delivered; runtime agent compliance remains unverified (PR #41)
 
 - FEAT-021 — Done: U9 establishes contract-based automated verification, safe fixture prerequisites and justified residual manual QA across instruction consumers (PR #39)
 

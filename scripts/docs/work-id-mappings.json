@@ -468,5 +468,35 @@
       "file": "docs/programs/agent-workflow/implementation-plans/aw-u10-task-naming/plan.md",
       "id": "AW-U10"
     }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "BL-F6"
+    },
+    "to": {
+      "file": "docs/programs/quality-engineering/future-features.md",
+      "id": "QE-F1"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "BL-F7"
+    },
+    "to": {
+      "file": "docs/programs/quality-engineering/future-features.md",
+      "id": "QE-F2"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "BL-F8"
+    },
+    "to": {
+      "file": "docs/programs/quality-engineering/future-features.md",
+      "id": "QE-F3"
+    }
   }
 ]

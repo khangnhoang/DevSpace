@@ -30,6 +30,13 @@ If any condition fails, use the planned flow. Steps: size, implement, verify, se
 
 **Large or high-risk work.** A plan file, the Codex gate on the plan and on the implementation (`AGENTS.md` section 3), and an Owner decision for anything the plan cannot settle.
 
+## Execution boundaries
+
+- Codebase exploration may use subagents within the authorized scope. Main remains responsible for checking their evidence against the repository.
+- An independent implementor or reviewer uses a separate session/thread whose transcript and behavior the Owner can inspect. A subagent does not replace that independent session. Self-review remains with the author under Self-review below.
+- Role assignment, permissions and single-writer ownership stay in `AGENTS.md` sections 2–4; model and effort selection is owned by [agent-models.md](agent-models.md), and Claude API/session bindings stay in `.claude/rules.md` section 2. This execution choice grants no model override, worktree, parallel writer or additional action.
+- If the required separate-session mechanism is unavailable, report the blocked role and the missing mechanism; do not silently substitute a subagent or another execution method.
+
 ## Loop 0: planning
 
 - **Trigger:** an explicit planning request, unclear scope, multi-step or cross-domain work, anything touching DB, RLS, auth, permissions, payment or deployment, PR breakdown, unclear acceptance.

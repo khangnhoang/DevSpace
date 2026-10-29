@@ -1,7 +1,7 @@
 // Test plan:
 // - Goal: check that the link checker blocks only new broken relative markdown links and accepts the ones
 //   recorded in the baseline.
-// - Type: Node CLI black-box tests on temporary fixture trees.
+// - Type: Node CLI black-box tests on temporary fixture trees, plus pure destination-reader assertions.
 // - Subject: `scripts/docs/check-links.mjs`.
 // - Passing cases: valid links (file, folder, fragment, external, anchor-only, links shown in code) exit 0; a
 //   broken link listed in the baseline exits 0.
@@ -9,6 +9,8 @@
 //   case is broken; broken reference definitions (with a title or `<>`) and inline links with nested
 //   parentheses are caught; bad usage exits 2; in a git work tree an ignored source is not scanned and an
 //   ignored target counts as missing; a root that is not a git work tree walks the filesystem.
+// - Parser regressions: multiline code spans, invalid closing fences and bare ]( cannot contribute links;
+//   valid surrounding links, reference definitions, escaped/nested labels and images remain visible.
 // - Invariant: the result depends only on the fixture tree and the baseline, never on the real repository.
 // - Last verified with: `npm run docs:check:test`.
 
@@ -19,6 +21,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { extractTargets } from "./check-links.mjs";
 
 const scriptPath = fileURLToPath(new URL("./check-links.mjs", import.meta.url));
 
@@ -118,6 +121,59 @@ test("reference definitions and nested parentheses are checked", () => {
       assert.match(result.stderr, /docs\/b\.md -> missing\(1\)\.md/);
     },
   );
+});
+
+test("multiline code spans do not create broken links or reference definitions", () => {
+  withFixture({ "docs/a.md": "Text `example\n[x](missing.md)\n[ref]: missing-ref.md\n` end.\n" }, [], (result) => {
+    assert.equal(result.status, 0, result.stderr);
+  });
+});
+
+test("a fence with trailing text does not expose example links", () => {
+  withFixture({ "docs/a.md": "```md\nexample\n``` trailing text\n[x](missing.md)\n```\n" }, [], (result) => {
+    assert.equal(result.status, 0, result.stderr);
+  });
+});
+
+test("bare closing delimiters are not links", () => {
+  withFixture({ "docs/a.md": "](missing.md)\n[label] stray ](also-missing.md)\n" }, [], (result) => {
+    assert.equal(result.status, 0, result.stderr);
+  });
+});
+
+test("fences close only with the same marker, enough characters and whitespace suffix", () => {
+  for (const marker of ["`", "~"]) {
+    const fence = marker.repeat(4);
+    const other = marker === "`" ? "~~~~" : "````";
+    const text = [
+      `${fence}md`, "[hidden](one.md)", `${fence} text`, "[hidden](two.md)",
+      marker.repeat(3), "[hidden](three.md)", other, "[hidden](four.md)",
+      `   ${marker.repeat(5)} \t`, "[visible](outside.md)",
+    ].join("\n");
+    assert.deepEqual(extractTargets(text), ["outside.md"]);
+    assert.deepEqual(extractTargets(text.replaceAll("\n", "\r\n")), ["outside.md"]);
+    assert.deepEqual(extractTargets(`${fence}\n[hidden](unclosed.md)`), []);
+  }
+});
+
+test("code spans require equal complete backtick runs and keep surrounding links", () => {
+  assert.deepEqual(extractTargets("Before ``code `\n[x](hidden.md)\n`` after [x](visible.md)"), ["visible.md"]);
+  assert.deepEqual(extractTargets("Text `` unmatched [x](visible.md) `"), ["visible.md"]);
+  assert.deepEqual(extractTargets("Text \\` [x](visible.md) `"), ["visible.md"]);
+  assert.deepEqual(extractTargets("Text ` code \\` [x](visible.md)"), ["visible.md"]);
+  assert.deepEqual(extractTargets("[`code`](visible.md)"), ["visible.md"]);
+});
+
+test("code spans cannot hide links across blank paragraphs or fenced blocks", () => {
+  assert.deepEqual(extractTargets("Text ` unmatched\n\n[x](visible.md) `"), ["visible.md"]);
+  assert.deepEqual(extractTargets("Text ` unmatched\n```md\nexample\n```\n[x](visible.md) `"), ["visible.md"]);
+});
+
+test("inline links require matched unescaped label brackets", () => {
+  assert.deepEqual(extractTargets("\\[literal](hidden.md) [escaped\\]](visible.md)"), ["visible.md"]);
+  assert.deepEqual(extractTargets("[nested [label]](one.md) ![image](two.png) [](three.md)"), ["one.md", "two.png", "three.md"]);
+  assert.deepEqual(extractTargets("[stale]\n](hidden.md) [unclosed\n\n](also-hidden.md) [real](visible.md)"), ["visible.md"]);
+  assert.deepEqual(extractTargets("[first](one.md) ](hidden.md) [second](two.md)"), ["one.md", "two.md"]);
 });
 
 test("files outside docs, .claude, AGENTS.md, CLAUDE.md and README.md are not scanned", () => {

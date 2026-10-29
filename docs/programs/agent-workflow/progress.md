@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | AW-U10 `implementation-plans/aw-u10-task-naming/plan.md` r2, Owner-approved 2026-10-29; activation changes its identity/path only. |
-| Current unit / checkpoint | AW-U10 CP1 correction implemented and verified; awaiting Main re-review. U9 merged in PR #39 (`50c649f`). |
-| Status | Canonical naming, registry, mappings, exact historical exceptions, templates and the 25 open F/P migrations are activated together. No later initiative has started. |
-| Completed evidence | U9 delivered in PR #39 (`50c649f`); DM-001/002 catch-up records PR #32 (`1c99b77`). Current deterministic comparison against `50c649f`: 19 historical detail-plan blobs and 8 other frozen blobs equal; all 25 migrated entry blocks retain meaning after the specified ID/current-reference substitutions; 9 closed sections, 5 milestone sections and 18 historical unit rows preserved subject only to the two catch-ups. The approved AW-U10 plan differs from `d63ce93` only in its H1 and path. Four changed skills preserve 17 resources and 38 relative targets through their existing symlinks. `npm run docs:check` passes (0 structure/skill/import violations, one unchanged vendored broken-link baseline, 0 new); `npm run docs:check:test` passes 84/84 on the authorized outside-sandbox rerun after fixture `.git/config` writes were denied inside the sandbox; typecheck, lint (0 problems) and `git diff --check` pass. The finite naming inventory has 114 exact exceptions; 47 mappings cover entries, retained historical pointers and the migrated units/initiative. |
-| Accepted deviations | none. Historical citations keep their identifiers, including infrastructure U6 in AF-P4 evidence; current references use canonical IDs. Product/browser/database suites do not apply. Future runtime agent compliance remains unverified. |
-| Blockers / Owner decisions | No pending Spec decision. AW-F4 and AW-P2 remain the later paired task; this checkpoint changes their identifiers only. |
-| Next action | Main re-reviews the correction diff for all heading levels and historical U ownership reservations, with the complete CP1 evidence. |
-| Current authority | The Owner granted AW-U10 r2 CP1 implementation and local implementation/checkpoint/correction commits on `chore/task-naming`. No push, PR, merge, hosted/database mutation, product runtime or CI configuration change is granted. |
+| Spec revision | Small-task batch AW-F4 + AW-P2, Owner-approved 2026-10-29; no initiative or detail plan required. |
+| Current unit / checkpoint | No initiative active; AW-F4 and AW-P2 implemented locally. |
+| Status | Both small tasks verified and self-reviewed; awaiting delivery. |
+| Completed evidence | AW-F4: lifecycle text and the Owner-selected model/effort table checked against AGENTS roles/permissions and Claude bindings; docs:check and shared-skill symlink/resource checks pass. AW-P2 historical verification at 53504b2: the three defects reproduced before the fix; docs tests 92/92 on the outside-sandbox rerun (the sandbox run failed only at fixture git init), typecheck and lint (0 problems) pass. The reader comparison against 18261cd across 107 Markdown files changes only the vendored snapshot example inside a code fence; its obsolete baseline entry is removed. The model-selection follow-up changes no parser or test code. |
+| Accepted deviations | none. The parser remains a bounded link reader, not a complete Markdown renderer. AW-F4 static consistency is verified; future runtime agent compliance remains unverified. |
+| Blockers / Owner decisions | none; the two small independent items retain separate commits and verification. |
+| Next action | Owner reviews the local batch before granting delivery. |
+| Current authority | The Owner granted implementation and local commits on chore/agent-sessions-doc-links. No push, PR or merge grant for this batch. |
 
 ## Milestones
 
@@ -105,4 +105,8 @@ One line each, newest last. No review rounds or command logs.
 
 - 2026-10-29 AW-U10 CP1: program-scoped naming activated with strict validation, mapped open records, bounded historical exceptions and preserved completed plans; automated checks and meaning/symlink comparisons passed, awaiting Main review (`8e7a5a5`).
 
-- 2026-10-29 AW-U10 CP1 correction: H4–H6 declarations cannot evade naming/ownership checks, and retained legacy U rows reserve canonical U ownership while legacy F/P numbers stay independent; 84 docs tests and static/history checks passed (this commit).
+- 2026-10-29 AW-U10 CP1 correction: H4–H6 declarations cannot evade naming/ownership checks, and retained legacy U rows reserve canonical U ownership while legacy F/P numbers stay independent; 84 docs tests and static/history checks passed (`6802012`).
+- 2026-10-29 AW-U10 delivered after Main re-review passed and all six required CI jobs plus Vercel passed on `6802012` (PR 40, `18261cd`).
+- 2026-10-29 AW-F4: shared execution boundaries distinguish exploration subagents from independent sessions and preserve role, permission and Claude bindings (`3d70b9e`).
+- 2026-10-29 AW-P2: one shared link reader ignores multiline code and invalid fence closes and requires matched labels; regression tests and docs/static checks pass, and the obsolete snapshot baseline is removed (`53504b2`).
+- 2026-10-29 AW-F4 Owner follow-up: one role-to-model/effort table for Codex and Claude; Main keeps the chat selection, consumers reference the table, and execution/permission boundaries remain unchanged (this commit).

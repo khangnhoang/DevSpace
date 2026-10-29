@@ -8,10 +8,10 @@ Use `AskUserQuestion` for the shared native question-box behavior (`AGENTS.md` s
 
 ## 2. Roles and sessions
 
-Main is the Opus session. The planned-flow implementor binding is:
+Model and effort choices, including Main's current chat selection, are owned by [agent-models.md](../docs/agent-models.md). The planned-flow implementor binding is:
 
-- Start one Sonnet session with `start_session`, model `claude-sonnet-5-5`, effort `high`, `use_worktree: false` unless the plan says otherwise.
-- `start_session` caps effort at Main's own, so check with `get_session` and fix with `set_session_effort(high)`, ideally before real work.
+- Start one implementor session with `start_session`, selecting the model and effort from the table, with `use_worktree: false` unless the plan says otherwise.
+- `start_session` caps effort at Main's own, so check with `get_session` and use `set_session_effort` to apply the selected effort before real work. If it cannot be applied, report the blocker.
 - Send corrections to that same session with `SendMessage`.
 
 Shared responsibilities, single-writer ownership and review applicability: `AGENTS.md` sections 2–3. These bindings do not assign roles to agents merely by product name.

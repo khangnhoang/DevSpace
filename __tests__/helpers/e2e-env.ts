@@ -1,7 +1,6 @@
 import type { LocalStack } from "./local-stack";
 
-// The e2e server has its own port: `.claude/launch.json` runs `npm run dev` on 3000 against the local stack, and
-// the two must be able to run side by side.
+// The E2E server uses a distinct port, but managed dev and tests contend for the same local database.
 export const E2E_PORT = 3100;
 export const E2E_ORIGIN = `http://127.0.0.1:${E2E_PORT}`;
 

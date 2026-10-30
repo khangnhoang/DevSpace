@@ -22,10 +22,11 @@ Read this when you write or review an rls test, change the seed for one, or debu
 
 ## Data and cleanup
 
-- Apply [Test data](../SKILL.md#test-data) before writes, cleanup or reset: verify the exclusive disposable local target and plan ownership, setup/test failure cleanup, checked read-back and interrupted-run recovery. Existing marker/actor-wide cleanup is a legacy gap, not a shared-stack guarantee.
+- Apply [Test data](../SKILL.md#test-data) before writes, cleanup or reset. Start/finish a fixture scope around each mutable test. `ownedInsert` reserves its exact selector before invoking the actor request and adopts IDs through service-role read-back, even without returning. Shared `rls-test` text is never a cleanup selector by itself.
 - Restore changed seed rows and remove owned additions even on failure; restore a changed seed row before removing additions so cleanup cannot delete it. New/changed tests track owned IDs or run-scoped resources and verify unrelated rows survive; never delete solely by the shared `rls-test` marker. Never delete or reuse a seed id except to restore it.
 - `GENERATED ALWAYS` identity tables (`comments`, `coupons`, `enrollments`, `notes`, `notifications`, `payments`, `reviews`) take explicit seed ids only with `overriding system value`; move the sequence past the seed ids. `reviews` and `enrollments` are unique on user and course, so a seeded review would turn a policy test into a `23505`.
-- After a seed/schema change or killed run, reset restores the baseline only after Test data's target/exclusive-use checks; uncertain ownership blocks mutation. A second-run failure can expose residue, but a green run does not prove isolation.
+- Before changing a seed field, acquire only the affected fields with its required baseline check; cleanup restores and verifies the captured values. N3 deletes an owned temporary progress row and checks that seed progress identity/timestamp stay unchanged. After a killed run use [explicit recovery](fixture-recovery.md); reset requires its separate disposable-target prerequisites. A second-run failure can expose residue, but a green run does not prove isolation.
+- Comment UPDATE always advances `updated_at`; mutable comment cases use owned temporary comments and assert the full seed comment stays unchanged. A field-restoration probe uses an owned comment with a stable creation selector, since restoring content cannot restore the trigger timestamp.
 
 ## Adding a test for a policy or grant change
 

@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { authFile } from "./accounts";
 import { backgroundOf, confirmDialogOf, expectDismissKeepsObject, expectFitsPhone, expectKeyboardFlow, expectOnTop, recordMutations } from "./confirm-dialog";
 import { expect, test } from "./fixtures";
-import { commentDeletedAt, createCommentFixture, removeE2eFixtures } from "./service-role";
+import { commentDeletedAt, createCommentFixture } from "./service-role";
 
 // The student is enrolled in the paid course with an approved payment.
 test.use({ storageState: authFile("student") });
@@ -37,14 +37,6 @@ test("[T3] is told a wrong quiz answer is wrong and the right one is right", asy
 // E2E comment, never the seed one.
 test.describe("confirm dialog on the lesson comments", () => {
   const LESSON_URL = "/learn/javascript-can-ban/bien-va-kieu-du-lieu";
-
-  test.beforeEach(async () => {
-    await removeE2eFixtures();
-  });
-
-  test.afterEach(async () => {
-    await removeE2eFixtures();
-  });
 
   // The button has no text below the sm breakpoint, so it is found by its icon.
   async function openMenuOf(page: Page, label: string) {

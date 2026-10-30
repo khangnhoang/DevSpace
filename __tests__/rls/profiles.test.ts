@@ -11,22 +11,19 @@
 // Known bugs: P28 (K3), a user can change their own profiles.email.
 // Invariants: every write is restored afterwards through the service role; the sign-up user is deleted.
 import { randomUUID } from "node:crypto";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { knownBug } from "../helpers/known-bug";
-import { admin, anon, expectDenied, fixtures, IDS, learner, must, newAnonClient, withPg } from "./helpers";
+import { admin, anon, expectDenied, fixtures, IDS, learner, must, newAnonClient, withPg, startFixtureScope, finishFixtureScope, fixtureScope, ownedInsert } from "./helpers";
 
 const SEED_EMAIL = "learner@devspace.test";
-const signUpEmail = `signup-${randomUUID().slice(0, 8)}@devspace.test`;
+const signUpEmail = () => `signup-${fixtureScope().tag}@devspace.test`;
 
 async function profile(id: string) {
   return must(await fixtures.from("profiles").select("id, email, full_name, role").eq("id", id).single());
 }
 
-// G3: put back what a test may have changed on the shared learner row, even when the test failed.
-afterEach(async () => {
-  must(await fixtures.from("profiles").update({ role: "user", email: SEED_EMAIL, full_name: "Nguyễn Văn Học" }).eq("id", IDS.learner));
-  must(await fixtures.from("profiles").update({ full_name: "Lê Minh Học Viên" }).eq("id", IDS.student));
-});
+beforeEach(() => { startFixtureScope(); });
+afterEach(finishFixtureScope);
 
 describe("profiles", () => {
   it("[P1] anon reads no profiles", async () => {
@@ -67,15 +64,16 @@ describe("profile_cards", () => {
   });
 
   it("[P6] a learner cannot update through profile_cards", async () => {
+    await fixtureScope().acquire("profiles", IDS.learner, ["full_name"], { full_name: "Nguyễn Văn Học" });
     const { error } = await learner.from("profile_cards").update({ full_name: "Hacked" }).eq("id", IDS.learner);
     expectDenied(error);
     expect((await profile(IDS.learner)).full_name).toBe("Nguyễn Văn Học");
   });
 
   it("[P6] a learner cannot insert through profile_cards", async () => {
-    const { error } = await learner
+    const { error } = await ownedInsert("profile_cards", { id: randomUUID(), full_name: "Ghost", role: "admin" }, ownedValues => learner
       .from("profile_cards")
-      .insert({ id: randomUUID(), full_name: "Ghost", role: "admin" });
+      .insert(ownedValues));
     expectDenied(error);
     expect(must(await fixtures.from("profiles").select("id"))).toHaveLength(3);
   });
@@ -83,12 +81,14 @@ describe("profile_cards", () => {
 
 describe("role changes", () => {
   it("[P7] a learner cannot change their own role to admin", async () => {
+    await fixtureScope().acquire("profiles", IDS.learner, ["role"], { role: "user" });
     const { error } = await learner.from("profiles").update({ role: "admin" }).eq("id", IDS.learner);
     expectDenied(error);
     expect((await profile(IDS.learner)).role).toBe("user");
   });
 
   it("[P8] a learner updates no rows of another user's profile", async () => {
+    await fixtureScope().acquire("profiles", IDS.student, ["full_name"], { full_name: "Lê Minh Học Viên" });
     const { data, error } = await learner.from("profiles").update({ full_name: "Hacked" }).eq("id", IDS.student).select("id");
     expect(error).toBeNull();
     expect(data).toEqual([]);
@@ -96,6 +96,7 @@ describe("role changes", () => {
   });
 
   it("[P9] an admin can make the learner an admin and back", async () => {
+    await fixtureScope().acquire("profiles", IDS.learner, ["role"], { role: "user" });
     const promote = await admin.from("profiles").update({ role: "admin" }).eq("id", IDS.learner).select("role");
     expect(promote.error).toBeNull();
     expect(promote.data).toEqual([{ role: "admin" }]);
@@ -109,17 +110,6 @@ describe("role changes", () => {
 });
 
 describe("functions", () => {
-  // The sign-up user is deleted even when the test fails, so no other test sees a fourth profile.
-  afterEach(async () => {
-    const { data, error } = await fixtures.auth.admin.listUsers({ perPage: 1000 });
-    if (error) throw new Error(`cleanup could not list users: ${error.message}`);
-    for (const user of data.users.filter((u) => u.email === signUpEmail)) {
-      const deleted = await fixtures.auth.admin.deleteUser(user.id);
-      if (deleted.error) throw new Error(`cleanup could not delete the sign-up user: ${deleted.error.message}`);
-    }
-    expect(must(await fixtures.from("profiles").select("id").eq("email", signUpEmail)), "the sign-up profile must be gone").toEqual([]);
-  });
-
   // handle_new_user returns trigger, so an API call fails before any privilege check; read the catalog instead.
   it("[P10] anon and authenticated cannot execute handle_new_user", async () => {
     const privileges = await withPg(async (client) => {
@@ -138,9 +128,10 @@ describe("functions", () => {
   });
 
   it("[P12] a sign-up that asks for role admin gets role user", async () => {
+    await fixtureScope().reserveAuth(signUpEmail());
     const client = newAnonClient();
     const { data, error } = await client.auth.signUp({
-      email: signUpEmail,
+      email: signUpEmail(),
       password: "signup-local-pass-1",
       options: { data: { role: "admin", full_name: "Sign Up Test" } },
     });
@@ -149,12 +140,13 @@ describe("functions", () => {
 
     const created = await profile(data.user!.id);
     expect(created.role).toBe("user");
-    expect(created.email).toBe(signUpEmail);
+    expect(created.email).toBe(signUpEmail());
   });
 });
 
 describe("known bugs", () => {
   knownBug("P28", "[K3] a learner can change their own profiles.email", async (bug) => {
+    await fixtureScope().acquire("profiles", IDS.learner, ["email"], { email: SEED_EMAIL });
     const before = await profile(IDS.learner);
     expect(before.email).toBe(SEED_EMAIL);
 

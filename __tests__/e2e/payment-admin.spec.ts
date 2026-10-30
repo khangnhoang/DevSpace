@@ -20,17 +20,12 @@ import {
   couponUsedCount,
   learnerEnrollmentCount,
   paymentById,
-  restorePaymentFixtures,
 } from "./service-role";
 
 test.use({ storageState: authFile("admin") });
 
 test.beforeEach(async () => {
   await assertPaymentFixturesClean();
-});
-
-test.afterEach(async () => {
-  await restorePaymentFixtures();
 });
 
 const LEARNER_EMAIL = "learner@devspace.test";

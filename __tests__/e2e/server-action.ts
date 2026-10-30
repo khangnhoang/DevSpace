@@ -4,6 +4,7 @@ import { request, type APIRequestContext } from "@playwright/test";
 import { E2E_ORIGIN } from "../helpers/e2e-env";
 import { findAction, readActionResponse, type ServerReferenceManifest } from "../helpers/server-action-core";
 import { authFile, type Actor } from "./accounts";
+import { fixtureScopeId } from "./service-role";
 
 export type Caller = Actor | "anon";
 
@@ -37,6 +38,7 @@ export async function openActionCaller(): Promise<{ call: ActionCaller; dispose:
       context = await request.newContext({
         baseURL: E2E_ORIGIN,
         storageState: caller === "anon" ? undefined : authFile(caller),
+        extraHTTPHeaders: { "X-DevSpace-Fixture-Scope": fixtureScopeId() },
       });
       contexts.set(caller, context);
     }

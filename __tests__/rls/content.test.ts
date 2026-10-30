@@ -8,20 +8,17 @@
 //   no exercises; a learner inserts, updates or deletes courses, chapters and lessons.
 // Known bugs: none.
 // Invariants: the seed rows (courses 1 and 2, chapters 1 and 2, lessons 1 to 4) are never write targets; rows a
-//   test inserts, including the [C7] update and delete targets, carry the rls-test marker and are deleted
-//   afterwards through the service role.
-import { afterEach, describe, expect, it } from "vitest";
-import { admin, anon, expectDenied, fixtures, learner, must, student } from "./helpers";
+//   test inserts, including the [C7] update and delete targets, have recorded intents/IDs and are deleted
+//   afterwards through the service role without sweeping other markers.
+import { randomUUID } from "node:crypto";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { admin, anon, expectDenied, fixtures, learner, must, student, startFixtureScope, finishFixtureScope, ownedInsert } from "./helpers";
 
-const MARKER = "rls-test";
+const MARKER = `rls-test-${randomUUID()}`;
 const LESSON_COLUMNS = "id, title, slug, course_id, chapter_id, order_index, created_at, has_video, word_count";
 
-// G3: remove anything a denied-write test managed to create, even when the test failed.
-afterEach(async () => {
-  must(await fixtures.from("lessons").delete().like("slug", `${MARKER}%`));
-  must(await fixtures.from("chapters").delete().like("title", `${MARKER}%`));
-  must(await fixtures.from("courses").delete().like("slug", `${MARKER}%`));
-});
+beforeEach(() => { startFixtureScope(); });
+afterEach(finishFixtureScope);
 
 const ids = (rows: { id: number }[] | null) => (rows ?? []).map((row) => row.id).sort((a, b) => a - b);
 
@@ -93,7 +90,7 @@ describe("a learner cannot write content", () => {
     chapters: { course_id: 1, title: `${MARKER} target chapter`, order_index: 9 },
     lessons: { course_id: 1, chapter_id: 1, title: `${MARKER} target lesson`, slug: `${MARKER}-target-lesson`, order_index: 9 },
   } as const;
-  // The changed values keep the marker: if an update policy regressed, the row still matches the cleanup.
+  // Cleanup has adopted the fixture ID before any update, including a regressed allowed update.
   const changes = {
     courses: { name: `${MARKER} changed by learner` },
     chapters: { title: `${MARKER} changed by learner` },
@@ -105,7 +102,7 @@ describe("a learner cannot write content", () => {
     it(`[C7] cannot insert a valid row into ${table}`, async () => {
       const before = must(await fixtures.from(table).select("id")).length;
 
-      const { data, error } = await learner.from(table).insert<(typeof newRows)[typeof table]>(newRows[table]).select("id");
+      const { data, error } = await ownedInsert(table, newRows[table], ownedValues => learner.from(table).insert<(typeof newRows)[typeof table]>(ownedValues).select("id"));
       expect(data).toBeNull();
       expectDenied(error);
       expect(must(await fixtures.from(table).select("id"))).toHaveLength(before);
@@ -115,7 +112,7 @@ describe("a learner cannot write content", () => {
     // rows that afterEach already removes are touched (a deleted seed course would cascade into its children).
     it(`[C7] updates no row of ${table}`, async () => {
       const column = unchangedColumn[table];
-      const { id } = must(await fixtures.from(table).insert<(typeof targetRows)[typeof table]>(targetRows[table]).select("id").single());
+      const { id } = must(await ownedInsert(table, targetRows[table], ownedValues => fixtures.from(table).insert<(typeof targetRows)[typeof table]>(ownedValues).select("id").single()));
       const before = must(await fixtures.from(table).select(`id, ${column}`).eq("id", id).single());
 
       const { data, error } = await learner.from(table).update(changes[table]).eq("id", id).select("id");
@@ -125,7 +122,7 @@ describe("a learner cannot write content", () => {
     });
 
     it(`[C7] deletes no row of ${table}`, async () => {
-      const { id } = must(await fixtures.from(table).insert<(typeof targetRows)[typeof table]>(targetRows[table]).select("id").single());
+      const { id } = must(await ownedInsert(table, targetRows[table], ownedValues => fixtures.from(table).insert<(typeof targetRows)[typeof table]>(ownedValues).select("id").single()));
 
       const { data, error } = await learner.from(table).delete().eq("id", id).select("id");
       expect(error).toBeNull();
@@ -137,7 +134,7 @@ describe("a learner cannot write content", () => {
 
 describe("admin content writes", () => {
   it("[C8] an admin inserts, updates and deletes a chapter", async () => {
-    const created = await admin.from("chapters").insert({ course_id: 1, title: `${MARKER} chapter`, order_index: 9 }).select("id, title");
+    const created = await ownedInsert("chapters", { course_id: 1, title: `${MARKER} chapter`, order_index: 9 }, ownedValues => admin.from("chapters").insert(ownedValues).select("id, title"));
     expect(created.error).toBeNull();
     expect(created.data).toHaveLength(1);
     const id = created.data![0].id;

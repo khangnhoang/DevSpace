@@ -7,13 +7,13 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | Small-task batch AW-F4 + AW-P2, Owner-approved 2026-10-29; no initiative or detail plan required. |
-| Current unit / checkpoint | No initiative active; AW-F4 and AW-P2 implemented locally. |
-| Status | Both small tasks verified and self-reviewed; awaiting delivery. |
+| Current unit / checkpoint | None active; AW-F4 and AW-P2 delivered in PR #41 (`b071d62`). |
+| Status | Small-task batch merged on 2026-10-29; documentation caught up during the Quality Engineering opening. |
 | Completed evidence | AW-F4: lifecycle text and the Owner-selected model/effort table checked against AGENTS roles/permissions and Claude bindings; docs:check and shared-skill symlink/resource checks pass. AW-P2 historical verification at 53504b2: the three defects reproduced before the fix; docs tests 92/92 on the outside-sandbox rerun (the sandbox run failed only at fixture git init), typecheck and lint (0 problems) pass. The reader comparison against 18261cd across 107 Markdown files changes only the vendored snapshot example inside a code fence; its obsolete baseline entry is removed. The model-selection follow-up changes no parser or test code. |
 | Accepted deviations | none. The parser remains a bounded link reader, not a complete Markdown renderer. AW-F4 static consistency is verified; future runtime agent compliance remains unverified. |
 | Blockers / Owner decisions | none; the two small independent items retain separate commits and verification. |
-| Next action | Owner reviews the local batch before granting delivery. |
-| Current authority | The Owner granted implementation and local commits on chore/agent-sessions-doc-links. No push, PR or merge grant for this batch. |
+| Next action | The Owner selects the next agent-workflow item; test-data safety moves to Quality Engineering. |
+| Current authority | PR #41 delivery is complete. Current work authorizes documentation catch-up only; no new agent-workflow implementation or remote delivery is granted. |
 
 ## Milestones
 
@@ -109,4 +109,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-29 AW-U10 delivered after Main re-review passed and all six required CI jobs plus Vercel passed on `6802012` (PR 40, `18261cd`).
 - 2026-10-29 AW-F4: shared execution boundaries distinguish exploration subagents from independent sessions and preserve role, permission and Claude bindings (`3d70b9e`).
 - 2026-10-29 AW-P2: one shared link reader ignores multiline code and invalid fence closes and requires matched labels; regression tests and docs/static checks pass, and the obsolete snapshot baseline is removed (`53504b2`).
-- 2026-10-29 AW-F4 Owner follow-up: one role-to-model/effort table for Codex and Claude; Main keeps the chat selection, consumers reference the table, and execution/permission boundaries remain unchanged (this commit).
+- 2026-10-29 AW-F4 Owner follow-up: one role-to-model/effort table for Codex and Claude; Main keeps the chat selection, consumers reference the table, and execution/permission boundaries remain unchanged (`f250157`).
+- 2026-10-29 AW-F4 and AW-P2 delivered together; shared execution/model guidance and corrected docs link parsing merged (PR 41, `b071d62`).

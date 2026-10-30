@@ -32,10 +32,13 @@ export async function learnerEnrollmentCount(courseId: number): Promise<number> 
 }
 export async function prepareLearnerEnrollment(courseId: number) {
   const db = serviceRole();
-  const course = must(await db.from("courses").select("name,price").eq("id", courseId).single());
+  // The UI resolves this slug and submits its ID; reservations must describe that same course.
+  const course = must(await db.from("courses").select("id,name,price").eq("slug", "lam-quen-voi-html").maybeSingle());
+  if (!course || course.id !== courseId) throw new Error("Free-enrollment course identity differs");
   const learner = must(await db.from("profiles").select("full_name").eq("id", IDS.learner).single());
   const admins = must(await db.from("profiles").select("id").eq("role", "admin"));
   if (course.price !== 0 || admins.length !== 1 || admins[0].id !== IDS.admin) throw new Error("Free-enrollment baseline differs");
+  if (!learner.full_name) throw new Error("Free-enrollment learner name is absent; no resources acquired");
   const notification = { receiver_id: IDS.admin, actor_id: IDS.learner, type: "enrollment", title: "Đăng ký khóa học mới", message: `${learner.full_name} đã đăng ký khóa học ${course.name}`, link: "/admin" };
   // Every prerequisite precedes acquisition; a failed preflight owns nothing to delete.
   if (await learnerEnrollmentCount(courseId) || must(await db.from("notifications").select("id").match(notification)).length) throw new Error("Free-enrollment fixture slot is occupied");
@@ -43,6 +46,7 @@ export async function prepareLearnerEnrollment(courseId: number) {
   await scope().reserve("notifications", notification);
 }
 export const PAID_COURSE_ID = 2;
+export const UNKNOWN_COURSE_ID = 9999;
 export const SEED_COUPON = "LOCAL10";
 export type PaymentRow = { id: number; user_id: string; course_id: number; amount: number; status: string };
 export async function paymentsOf(userId: string): Promise<PaymentRow[]> {
@@ -61,6 +65,9 @@ export async function createCouponFixture(fixture: CouponFixture) {
 }
 export async function assertPaymentFixturesClean() {
   const db = serviceRole();
+  const course = must(await db.from("courses").select("id").eq("slug", "javascript-can-ban").maybeSingle());
+  if (!course || course.id !== PAID_COURSE_ID) throw new Error("Payment course identity differs");
+  if (must(await db.from("courses").select("id").eq("id", UNKNOWN_COURSE_ID)).length) throw new Error("Unknown-course fixture ID is occupied; no resources acquired");
   for (const user of [IDS.learner, IDS.admin]) {
     if (must(await db.from("payments").select("id").match({ user_id: user, course_id: PAID_COURSE_ID })).length) throw new Error("Payment fixture slot is occupied");
     if (must(await db.from("enrollments").select("id").match({ user_id: user, course_id: PAID_COURSE_ID })).length) throw new Error("Enrollment fixture slot is occupied");

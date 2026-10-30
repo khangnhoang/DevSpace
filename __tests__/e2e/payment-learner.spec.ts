@@ -24,6 +24,7 @@ import {
 } from "./payment-helpers";
 import {
   SEED_COUPON,
+  UNKNOWN_COURSE_ID,
   fixtureCode,
   assertPaymentFixturesClean,
   couponUsedCount,
@@ -201,7 +202,7 @@ test.describe("calling the payment actions directly", () => {
   test("[H7] an unknown course creates no order", async ({ callAction }) => {
     const actions = paymentActions(callAction);
 
-    expect(await actions.createPendingPayment("learner", 9999)).toEqual({ error: "Khóa học không tồn tại" });
+    expect(await actions.createPendingPayment("learner", UNKNOWN_COURSE_ID)).toEqual({ error: "Khóa học không tồn tại" });
     expect(await learnerOrders()).toEqual([]);
   });
 });

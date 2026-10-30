@@ -7,7 +7,6 @@ import {
   createExerciseFixture,
   createLessonFixture,
   createUserFixture,
-  removeE2eFixtures,
   rowExists,
   userExists,
 } from "./service-role";
@@ -92,14 +91,6 @@ test.describe("admin pages", () => {
 // own E2E fixture through the service role, so no seed row is deleted; the dialog-only rows open a seed row's
 // dialog and never confirm it.
 test.describe("confirm dialogs on the admin pages", () => {
-  test.beforeEach(async () => {
-    await removeE2eFixtures();
-  });
-
-  test.afterEach(async () => {
-    await removeE2eFixtures();
-  });
-
   test("[A4] deleting a course names it, is cancelled by Escape and cancel, and deletes it on confirm", async ({ page }) => {
     const course = await createCourseFixture();
     await page.goto("/admin/courses");

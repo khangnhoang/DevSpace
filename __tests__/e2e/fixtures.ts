@@ -5,6 +5,8 @@ import { recordSize, recordsSince, serverRecordPaths, type GuardRecord, type Mai
 import { openActionCaller, type ActionCaller } from "./server-action";
 import { beginFixtureScope } from "./service-role";
 import { withFixtureScope, type FixtureScope } from "../helpers/fixture-ownership";
+import { admitBrowserRequest, forgetEntry } from "../helpers/run-ownership.mjs";
+import type { Request } from "@playwright/test";
 
 export { expect };
 
@@ -38,12 +40,13 @@ export const test = base.extend<{ owned: FixtureScope; blockedMonacoLoader: bool
   },
 
   serverRecords: [
-    async ({}, provide) => {
+    async ({ owned }, provide) => {
       const paths = serverRecordPaths(join(__dirname, "../.."));
       const guardStart = recordSize(paths.guard);
       const mailStart = recordSize(paths.mail);
 
       await provide({ mailsSent: () => recordsSince<MailRecord>(paths.mail, mailStart) });
+      await owned.cleanup();
 
       expect(
         recordsSince<GuardRecord>(paths.guard, guardStart),
@@ -54,14 +57,28 @@ export const test = base.extend<{ owned: FixtureScope; blockedMonacoLoader: bool
   ],
 
   // The callback is not named `use` (Playwright's usual name): the react-hooks lint rule reads that as a hook.
-  context: async ({ context, blockedMonacoLoader }, provide) => {
+  context: async ({ context, blockedMonacoLoader, owned }, provide) => {
+    await context.setExtraHTTPHeaders({ "X-DevSpace-Fixture-Scope": owned.id });
     // A set, because a hosted request is recorded by the route handler and by the request listener.
     const problems = new Set<string>();
+    const pending = new WeakMap<Request, string>();
+    context.on("requestfinished", request => {
+      const id = pending.get(request);
+      if (id) { forgetEntry(owned.ref, id); pending.delete(request); }
+    });
 
     await context.route("**/*", async (route) => {
       const url = route.request().url();
       const verdict = classifyRequest(url);
-      if (verdict === "allow") return route.continue();
+      if (verdict === "allow") {
+        const request = route.request();
+        const target = new URL(url);
+        if (!["GET", "HEAD", "OPTIONS"].includes(request.method()) && target.origin.replace("localhost", "127.0.0.1") === owned.ref.target.api) {
+          try { pending.set(request, admitBrowserRequest(owned.ref, owned.id, target.pathname)); }
+          catch { problems.add("mutation attempted after fixture scope closed"); return route.abort("failed"); }
+        }
+        return route.continue();
+      }
       if (verdict === "hosted") problems.add(`request to a hosted host: ${url}`);
       return route.abort("blockedbyclient");
     });
@@ -88,7 +105,8 @@ export const test = base.extend<{ owned: FixtureScope; blockedMonacoLoader: bool
       if (response.status() >= 500) problems.add(`HTTP ${response.status()} from ${response.url()}`);
     });
 
-    await provide(context);
+    try { await provide(context); }
+    finally { await context.close(); }
 
     expect([...problems], "the network guard recorded problems").toEqual([]);
   },

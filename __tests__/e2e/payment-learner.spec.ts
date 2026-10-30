@@ -31,7 +31,6 @@ import {
   learnerEnrollmentCount,
   paymentById,
   paymentsOf,
-  restorePaymentFixtures,
 } from "./service-role";
 
 test.use({ storageState: authFile("learner") });
@@ -40,13 +39,9 @@ test.beforeEach(async () => {
   await assertPaymentFixturesClean();
 });
 
-// G5: restore everything the row wrote, even when it failed, and prove no row of this file sent a mail.
+// The automatic scope owns failure cleanup; these rows must never send an approval mail.
 test.afterEach(async ({ serverRecords }) => {
-  try {
-    expect(serverRecords.mailsSent(), "no row of this file approves an order").toEqual([]);
-  } finally {
-    await restorePaymentFixtures();
-  }
+  expect(serverRecords.mailsSent(), "no row of this file approves an order").toEqual([]);
 });
 
 const learnerOrders = () => paymentsOf(IDS.learner);

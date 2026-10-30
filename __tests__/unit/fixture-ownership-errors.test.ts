@@ -1,18 +1,24 @@
 // Test plan
 // Goal: failed reconciliation never becomes an unverified delete or a released journal.
-// Layer: unit, controlled SDK errors only; actual persistence is tested locally in the rls project.
+// Layer: unit, controlled SDK/catalog results only; actual persistence is tested locally in the rls project.
 // Subject: cleanup result handling and retention of unresolved ownership.
 // Allowed paths: retry after verified absence.
 // Denied paths: read failure, delete failure, ambiguous/residual rows.
 // Known bugs: none.
 // Invariants: no database/network access; every temporary journal is probe-owned.
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FixtureScope, withFixtureScope } from "../helpers/fixture-ownership";
 import { acquireRun, inspectRun, releaseRun, forgetEntry } from "../helpers/run-ownership.mjs";
+
+vi.mock("pg", () => ({ default: { Client: class {
+  async connect() {}
+  async query() { return { rows: [] }; }
+  async end() {}
+} } }));
 
 it.each(["read", "delete", "residual", "ambiguous"])("retains ownership after %s failure and attempts independent cleanup", async failure => {
   const root = mkdtempSync(join(tmpdir(), "fixture-error-probe-"));
@@ -35,7 +41,7 @@ it.each(["read", "delete", "residual", "ambiguous"])("retains ownership after %s
     await scope.reserve("coupons", { code: "independent" });
     mode = "cleanup";
     await expect(scope.cleanup()).rejects.toThrow("unresolved entries retained");
-    expect(inspectRun(ref).entries).toHaveLength(1);
+    expect(inspectRun(ref).entries.filter(entry => entry.kind !== "scope")).toHaveLength(1);
     expect(deletes).toBe(["read", "ambiguous"].includes(failure) ? 0 : 1);
     mode = "retry";
     await scope.cleanup(); await scope.cleanup();

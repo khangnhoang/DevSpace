@@ -7,12 +7,12 @@ Charter: [README.md](README.md). Problems: [problems.md](problems.md). Git histo
 | Field | Value |
 | --- | --- |
 | Spec revision | QE-U1 plan r2, independent Codex plan gate PASS and Owner-approved on 2026-10-30. |
-| Current unit / checkpoint | QE-U1 CP2 implemented; CP3 RLS/recovery/docs remain. |
-| Status | In progress; CP2 local checkpoint, awaiting full implementation review after CP3. |
-| Completed evidence | Docker made available by the Owner; local read-only readiness probe verified devspace-local container identity, API/DB ports, no managed-server listener and no unmanaged SQL client. Table counts match the invented seed; no reset needed. CP1 unit tests passed 154/154, including independent-process contention and writer/request retention; typecheck and lint passed. One initial subprocess run timed out before its Windows process-query timeout was adjusted, then the full unit suite passed. Historical baseline/sandbox evidence remains in commit 54dc9fa. CP2: E2E passed 60/60 twice consecutively without reset; four real local ownership probes passed twice, including the final exception-preserving wrapper; unit tests pass 160/160. The final wrapper edit changes error aggregation only; successful E2E cleanup behavior is unchanged. An initial E2E attempt failed during collection on import.meta before running tests; the loader correction resolves it. |
-| Accepted deviations | none. |
+| Current unit / checkpoint | QE-U1 CP1-CP3 implemented locally. |
+| Status | Automated checks passed; awaiting Main review and the independent final implementation gate. QE-F1 is fixed locally, awaiting delivery. |
+| Completed evidence | Final unit 171/171; full unit/RLS 243/243 twice consecutively (72 real local cases per run); E2E 60/60 twice consecutively, without reset. Six ownership persistence probes include failed preflight, lost row/Auth responses, precise field restoration, foreign-dependent cascade preservation and real Auth lookup failure; the separate real lifecycle probe verifies killed-coordinator recovery. Journal regressions cover a deterministic writer barrier, 1,500 cross-process publication/removal cycles, interrupted artifacts and corrupt published JSON. Typecheck, zero-warning lint, docs checks and docs checker tests 92/92 pass. Earlier CP3 HTTP lifecycle failures and the snapshot-reader race were corrected; affected journals were recovered explicitly after writers stopped, with no reset. Historical baseline/sandbox evidence remains in 54dc9fa; CP1/CP2 evidence remains in their milestones. |
+| Accepted deviations | Comment UPDATE always advances updated_at, so mutable comment permission cases and the field-restoration probe use owned comments and verify the full seed comment stays unchanged. An earlier prototype advanced the local seed comment timestamp; original whole-session timestamp preservation is not claimed. No trigger/schema bypass was introduced. Dependency catalog checks block parent/account cleanup while foreign application dependents or unresolved acquired fields remain. These are bounded implementations of AC2, not product behavior changes. |
 | Blockers / Owner decisions | none currently; readiness is rechecked on each acquisition. |
-| Next action | Same implementor migrates RLS writes/snapshots and completes interrupted-run recovery and docs in CP3. |
+| Next action | Main reviews the final local candidate and routes any corrections to the same implementor, then runs the independent final diff gate before an Owner delivery decision. |
 | Current authority | Owner granted r2 approval, a local plan/program/transfers/PR #41 docs commit, separate-session implementation and local implementation checkpoint/correction commits. No push, PR, merge or hosted authority; local writes/reset require the approved readiness checks. |
 
 ## Milestones
@@ -24,4 +24,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-30 QE-U1 CP1 adds shared target ownership, local readiness and managed-launcher coordination with subprocess regression checks (`5665df6`).
 - 2026-10-30 QE-U1 CP1 loader correction resolves the preload path from the recorded checkout so Playwright's CommonJS transform does not encounter import.meta; full E2E passed 60/60 (`60020d1`).
 
-- 2026-10-30 QE-U1 CP2 replaces E2E broad cleanup with scoped intents, exact-ID reconciliation and acquired fields; persistence/error probes and two full E2E runs pass (this commit).
+- 2026-10-30 QE-U1 CP2 replaces E2E broad cleanup with scoped intents, exact-ID reconciliation and acquired fields; persistence/error probes and two full E2E runs pass (`14730fb`).
+- 2026-10-30 QE-U1 CP3 migrates RLS fixtures, completes explicit recovery and handler/writer settlement, synchronizes journal snapshots with mutations and aligns safety docs; final repeated local suites pass, pending Main and independent final review (this commit).

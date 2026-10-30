@@ -25,6 +25,7 @@ export function beginFixtureScope() {
 }
 function scope() { if (!active) throw new Error("No active fixture scope"); return active; }
 export const fixtureCode = (value: string) => scope().code(value);
+export const fixtureScopeId = () => scope().id;
 export const userExists = (id: string) => checkUserExists(serviceRole(), id);
 export async function learnerEnrollmentCount(courseId: number): Promise<number> {
   return must(await serviceRole().from("enrollments").select("id").eq("user_id", IDS.learner).eq("course_id", courseId)).length;
@@ -41,9 +42,7 @@ export async function prepareLearnerEnrollment(courseId: number) {
   await scope().reserve("enrollments", { user_id: IDS.learner, course_id: courseId });
   await scope().reserve("notifications", notification);
 }
-export async function removeLearnerEnrollment() { await scope().cleanup(); }
 export const PAID_COURSE_ID = 2;
-export const SEED_PAYMENT_ID = 1;
 export const SEED_COUPON = "LOCAL10";
 export type PaymentRow = { id: number; user_id: string; course_id: number; amount: number; status: string };
 export async function paymentsOf(userId: string): Promise<PaymentRow[]> {
@@ -75,7 +74,6 @@ export async function assertPaymentFixturesClean() {
   const seed = must(await db.from("coupons").select("id").eq("code", SEED_COUPON).single());
   await scope().acquire("coupons", seed.id, ["used_count"], { used_count: 0 });
 }
-export async function restorePaymentFixtures() { await scope().cleanup(); }
 export type Fixture = { id: number; label: string };
 async function createFixture(table: string, labelColumn: string, label: string, values: Record<string, unknown>): Promise<Fixture> {
   const actual = scope().label(label);
@@ -98,4 +96,3 @@ export async function createUserFixture() {
 }
 export async function rowExists(table: "courses" | "chapters" | "lessons" | "exercises", id: number) { return must(await serviceRole().from(table).select("id").eq("id", id)).length > 0; }
 export async function commentDeletedAt(id: number): Promise<string | null> { return must(await serviceRole().from("comments").select("deleted_at").eq("id", id).single()).deleted_at; }
-export async function removeE2eFixtures() { await scope().cleanup(); }

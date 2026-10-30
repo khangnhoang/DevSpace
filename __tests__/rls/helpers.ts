@@ -1,15 +1,20 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import pg from "pg";
 import { expect, inject } from "vitest";
+import { FixtureScope, trackedFetch } from "../helpers/fixture-ownership";
+import { joinRun, recordEntry, forgetEntry } from "../helpers/run-ownership.mjs";
 
 const stack = inject("localStack");
+const ownership = inject("ownership");
+joinRun(ownership);
+let currentScope: FixtureScope | undefined;
 
-const clientOptions = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } };
+const clientOptions = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: trackedFetch(ownership, () => currentScope?.id ?? "probe") } };
 
 function clientWith(token?: string): SupabaseClient {
   return createClient(stack.apiUrl, stack.anonKey, {
     ...clientOptions,
-    ...(token ? { global: { headers: { Authorization: `Bearer ${token}` } } } : {}),
+    global: { fetch: trackedFetch(ownership, () => fixtureScope().id, true), ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}) },
   });
 }
 
@@ -26,6 +31,30 @@ export const newAnonClient = () => clientWith();
 // Service role: bypasses RLS. Only for preparing fixtures, reading state back to verify a result, and cleanup;
 // never for the request under test.
 export const fixtures = createClient(stack.apiUrl, stack.serviceRoleKey, clientOptions);
+
+export function startFixtureScope() { currentScope = new FixtureScope(ownership, fixtures, stack.dbUrl); }
+export function fixtureScope() { if (!currentScope) throw new Error("No RLS fixture scope"); return currentScope; }
+export async function finishFixtureScope() { if (currentScope) await currentScope.cleanup(); currentScope = undefined; }
+
+export async function ownedInsert<V extends Record<string, unknown>, T>(table: string, values: V, run: (values: V) => PromiseLike<T>): Promise<T> {
+  const columns: Record<string, string[]> = { courses: ["slug"], chapters: ["title"], lessons: ["slug"], reviews: ["user_id", "course_id"], comments: ["content"], notes: ["content"], user_progress: ["user_id", "lesson_id"], enrollments: ["user_id", "course_id"], payments: ["user_id", "course_id"], notifications: ["title"], profile_cards: ["id"] };
+  if (!columns[table]) throw new Error(`No owned insert selector for ${table}`);
+  const actualTable = table === "profile_cards" ? "profiles" : table;
+  const where = Object.fromEntries(columns[table].map(key => [key, values[key]])) as Record<string, string | number>;
+  if (Object.values(where).some(value => value === undefined)) throw new Error("Incomplete ownership selector");
+  const scope = fixtureScope();
+  const intent = await scope.reserve(actualTable, where);
+  const result = await run(values);
+  // Resolve even a no-returning or unexpectedly successful denied write before assertions run. Adopt IDs
+  // before a caller can rename its fixture; the initial intent covers a lost response/read-back failure.
+  const rows = must(await fixtures.from(actualTable).select("id").match(where));
+  if (rows.length > 1) throw new Error("Ambiguous inserted fixture ownership");
+  if (rows.length && where.id !== rows[0].id) {
+    recordEntry(ownership, { kind: "rows", scope: scope.id, table: actualTable, where: { id: rows[0].id } });
+    forgetEntry(ownership, intent);
+  }
+  return result;
+}
 
 export const IDS = {
   learner: "11111111-1111-4111-8111-111111111111",

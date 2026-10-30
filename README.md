@@ -119,6 +119,8 @@ npm run dev
 
 `npm run dev` chạy trên Supabase local và báo lỗi nếu Supabase local chưa chạy.
 
+Managed dev, RLS and E2E share exclusive use of the local stack. Before the reset above, establish that the target is disposable and unused by other work. After an interrupted test, preserve its journal and follow [fixture recovery](.claude/skills/test-quality-strategy/references/fixture-recovery.md); normal setup never resets or sweeps old fixtures automatically.
+
 Truy cập: [http://127.0.0.1:3000](http://127.0.0.1:3000)
 
 ## 🔐 Tài khoản demo

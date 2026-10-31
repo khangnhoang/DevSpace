@@ -8,7 +8,7 @@ The original 2026-10-21 discovery table is preserved in Git at ddcefd0. Legacy I
 
 ### SH-P3: Review INSERT allows impersonation
 
-- Status: Open (H2-2a planned; product implementation not begun).
+- Status: Fixed locally, awaiting delivery; local regression/replay verification passed, independent implementation review and hosted rollout pending.
 - Problem: The `reviews` INSERT policy only checks enrollment and does not constrain `user_id = auth.uid()` → a review impersonating someone else.
 - Evidence: Legacy P3; severity Medium; discovery-era Planned: **H2**; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Implement H2-2a under the [SH-P3 entry plan](implementation-plans/sh-p3-community-write-integrity/plan.md), together with SH-P4 (historical H2 B10/B11).
@@ -16,7 +16,7 @@ The original 2026-10-21 discovery table is preserved in Git at ddcefd0. Legacy I
 
 ### SH-P4: Comment ownership and lesson identity can change
 
-- Status: Open (H2-2a planned; product implementation not begun).
+- Status: Fixed locally, awaiting delivery; local regression/replay verification passed, independent implementation review and hosted rollout pending.
 - Problem: The `comments` UPDATE policy has no `with_check` → the comment owner can move their comment to another lesson (`lesson_id`); handing it to another `user_id` is blocked, since the check reuses `USING` (infrastructure U3 known-bug test K2).
 - Evidence: Legacy P4; severity Low; discovery-era Planned: **H2**; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Implement H2-2a under the [SH-P3 entry plan](implementation-plans/sh-p3-community-write-integrity/plan.md): explicit WITH CHECK plus immutable user_id/lesson_id trigger, retaining admin soft-delete.

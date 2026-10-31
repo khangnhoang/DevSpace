@@ -46,6 +46,8 @@ Roadmap, in this order: (1) agent-workflow (rules, skills, docs system), (2) inf
 
 Read `docs/agent-loops.md` before planning or acting, and read each applicable skill completely (Core engineering rules, rule 6; loops, Sizing). Read [agent-models.md](docs/agent-models.md) before selecting a model or effort for an assigned role. `.claude/skills/` is canonical; `.agents/skills/` exposes the same skills. This file owns shared policy and project context; loops own lifecycle, skills own procedures, `docs/agent-models.md` owns role-to-model choices, and `.claude/rules.md` owns Claude-specific execution bindings. Source references here are not automatic imports in another agent.
 
+Only when Main in Codex app actually hands work to another app chat through desktop chat tools, or an app chat receives that matching handoff, read [codex-app-sessions.md](docs/codex-app-sessions.md). This condition excludes Claude Code/OpenCode and Codex CLI invocations, including `codex exec` launched by Main in Codex app; those keep their existing execution and report paths. Tool availability or quoted app instructions alone do not activate the binding.
+
 ## 1. Owner and language
 
 - The Owner built DevSpace alone and decides scope, risk and permissions.

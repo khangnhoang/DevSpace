@@ -6,22 +6,6 @@ The original 2026-10-21 discovery table is preserved in Git at ddcefd0. Legacy I
 
 ## Open
 
-### SH-P3: Review INSERT allows impersonation
-
-- Status: Fixed locally, awaiting delivery; local regression/replay verification and independent static implementation review passed, hosted rollout pending.
-- Problem: The `reviews` INSERT policy only checks enrollment and does not constrain `user_id = auth.uid()` → a review impersonating someone else.
-- Evidence: Legacy P3; severity Medium; discovery-era Planned: **H2**; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Implement H2-2a under the [SH-P3 entry plan](implementation-plans/sh-p3-community-write-integrity/plan.md), together with SH-P4 (historical H2 B10/B11).
-- Exit condition: Allowed own enrolled INSERT/UPDATE/upsert and denied anon, unenrolled and impersonated writes pass with persisted readbacks; reviewed migration is delivered and hosted postflight is complete.
-
-### SH-P4: Comment ownership and lesson identity can change
-
-- Status: Fixed locally, awaiting delivery; local regression/replay verification and independent static implementation review passed, hosted rollout pending.
-- Problem: The `comments` UPDATE policy has no `with_check` → the comment owner can move their comment to another lesson (`lesson_id`); handing it to another `user_id` is blocked, since the check reuses `USING` (infrastructure U3 known-bug test K2).
-- Evidence: Legacy P4; severity Low; discovery-era Planned: **H2**; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Implement H2-2a under the [SH-P3 entry plan](implementation-plans/sh-p3-community-write-integrity/plan.md): explicit WITH CHECK plus immutable user_id/lesson_id trigger, retaining admin soft-delete.
-- Exit condition: Owner content edits and admin soft-delete succeed; owner, admin JWT and local service_role cannot reassign either identity column; exact rollback is verified and delivery/hosted postflight complete.
-
 ### SH-P5: Coupon usage RPC is missing
 
 - Status: Deferred.
@@ -206,17 +190,13 @@ The original 2026-10-21 discovery table is preserved in Git at ddcefd0. Legacy I
 - Direction: Handle with H2-2b; retain the direct-call distinction and infrastructure U5 PF7 evidence (U5 did not encode this case).
 - Exit condition: An unlimited coupon is handled consistently in direct createPendingPayment and updatePaymentWithCoupon calls.
 
-### SH-P32: Legacy security problem records need canonical shape
-
-- Status: Fixed locally, awaiting delivery; canonical conversion committed in bed90f6, local checker verification and final independent static implementation review passed, remote delivery pending.
-- Problem: Historical AW-003 debt: this file kept the P1-P31 table and `scripts/docs/check-structure.mjs` allowlisted it for `problems-shape`; it was the only program problems file outside the open-entry shape. The original direction was to reshape it when H2-2a or H2-2b reopened, keeping every ID and removing the problems allowlist entry while `plan-h2.md` stayed allowlisted. Moved from `agent-workflow` on 2026-10-22; the Owner's 2026-10-31 canonical-ID decision supersedes retaining legacy declaration forms while preserving their provenance.
-- Evidence: Legacy AW-003; severity Low; discovery-era Planned: with H2-2; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above). Originally moved from agent-workflow on 2026-10-22; canonical conversion approved on 2026-10-31.
-- Direction: Complete the Owner-approved canonical conversion with H2-2a, remove only the obsolete problems-shape exception and exact legacy problem-row exceptions, and retain both historical plan exceptions. Preserve the agent-workflow AW-003 mapping chain; no program transfer or history rewrite.
-- Exit condition: All 32 entries have unique canonical destinations, scope/status/history and mapping provenance survive, checker regressions pass, and the delivering PR merges.
-
 ## Resolved
 
 One line each: ID, status, historical problem and delivered outcome. Details stay in Git.
+
+- SH-P3 — Resolved 2026-10-31: review INSERT authorship bound to the caller, delivered in PR #43 with local/CI behavior coverage and hosted metadata postflight; hosted mutation QA was not run at Owner direction. Legacy P3, Medium (PR 43, `dba66e5`).
+- SH-P4 — Resolved 2026-10-31: comment author/lesson immutability and explicit UPDATE checks delivered with owner/admin/service-role local coverage and hosted metadata postflight; hosted mutation QA was not run at Owner direction. Legacy P4, Low (PR 43, `dba66e5`).
+- SH-P32 — Resolved 2026-10-31: all 32 legacy security problem declarations converted with canonical ownership/mapping provenance, historical plans and published SQL preserved, and obsolete problems exceptions removed. Legacy AW-003, Low (PR 43, `dba66e5`).
 
 - SH-P1 — Resolved 2026-10-22: H2-1 restricted profile PII reads. Historical problem: `profiles` SELECT `true` for `public`: anon can read the email, phone, dob, gender, province of everyone. Legacy P1; severity High; discovery-era Planned: **H2** (PR 3, `36056ec`; PR 4, `5ae5943`; H2 production matrix).
 - SH-P2 — Resolved 2026-10-22: H2-1 restricted coupon reads and moved validation to the server. Historical problem: `coupons` SELECT `true` for `public`: every code can be listed; `CoursePaymentModal` checks the coupon on the client. Legacy P2; severity Medium; discovery-era Planned: **H2** (PR 3, `36056ec`; H2 production matrix).

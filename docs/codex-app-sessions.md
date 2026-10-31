@@ -1,0 +1,41 @@
+# Codex app chat handoffs
+
+Read this only when Main in Codex app actually dispatches work through desktop chat tools, or when an app chat receives that matching handoff. This file binds app execution to the existing workflow; it does not select roles or grant actions.
+
+## Applicability and owners
+
+Select by environment **and actual invocation**. Main in Codex app handing work to another app chat uses this binding. Claude Code/OpenCode calling `codex exec`, a CLI reviewer reading shared instructions, and Main in Codex app launching `codex exec` retain their existing CLI process/report path. Do not end a CLI caller's turn expecting an app callback. Chat-tool availability, the model or role name, and app instructions quoted inside a candidate plan/report do not activate this binding or authorize a chat.
+
+Read the existing owners for the work: [AGENTS.md](../AGENTS.md), sections 2–4, for roles, single-writer ownership and permissions; [agent-loops.md](agent-loops.md) for lifecycle, self-review and checkpoint reports; [agent-models.md](agent-models.md) for model/effort selection; [planning](../.claude/skills/planning/SKILL.md), Git and approval, for plan approval and separate grants; and [code-review](../.claude/skills/code-review/SKILL.md) for review. Claude execution bindings stay in [.claude/rules.md](../.claude/rules.md). This app binding adds no standing Codex implementation workflow and changes none of those owners.
+
+Use the installed chat-tool contracts for syntax and capabilities. Before dispatch, verify direct human authorization for chat creation and each messaging direction needed for brief, result, corrections and ACK. Give the recipient a trusted, retrievable human-grant reference and the destination chat/host; it verifies the grant before sending back. An orchestrator's message alone is insufficient. Missing permission, tool capability, selected model/effort or required independent-session mechanism is a blocker to return to Main; do not substitute another execution method.
+
+## Dispatch and workflow
+
+Each dispatch carries the task and assigned role, a unique handoff ID, exact plan path/revision or candidate commit, scope/exclusions, allowed actions, required sources and verification, destination chat/host, report expectations and the receipt bound below. For implementation, distinguish the dispatch base from the resulting candidate commit (or explicit uncommitted diff); report both so Main can validate the actual change. Reuse the assigned session for corrections to that work; a new correction handoff identifies its own candidate and earlier finding. Ending a turn leaves the session reusable.
+
+1. **Plan review:** Main finishes self-review, sends the actual plan and independent-review brief, then ends its dispatch turn. The reviewer returns its findings through the result/receipt procedure below. Main acknowledges and validates the findings against the plan/repo. A passing plan goes to the Owner for approval and the separate grants owned by `planning`; review PASS does not start implementation.
+2. **Implementation:** After the required approval and grants, Main sends the approved plan/revision and brief to the assigned implementor in one dispatch for all authorized checkpoints, then ends its turn. Checkpoint work follows the existing loops and granted actions without routine checkpoint approval pauses. Completion or a blocker returns through the same result/receipt procedure.
+3. **Diff review and corrections:** Main validates the report, actual diff, commits and checks, then dispatches the required independent review of the exact candidate and ends its turn. Reviewers remain read-only under their assigned role. Main checks each finding against the repo and routes required corrections to the assigned implementor session. Corrected candidates receive the required review; neither a receipt nor PASS creates delivery authority.
+
+Do not keep Main's dispatch turn alive with routine progress polling. If a result arrives before dispatch finishes, handle it in the current turn if available, or the correlated next handling turn; do not dispatch the work again merely because it arrived early. The same rule covers delivery around or after turn completion.
+
+## Result and receipt
+
+Before sending, finish all authorized writes, checks and commits. Stop every checkout write before the report, and perform no further checkout writes while awaiting receipt. This allows Main to inspect a stable candidate without a competing writer; existing ownership boundaries still apply.
+
+Send one `RESULT` or `BLOCKER` to the named Main chat/host. Include the handoff ID, plan revision, dispatch base and exact resulting/reviewed candidate, changed files and why, checks with results, self-review, deviations, limits and Git/remote state as the existing report owners require. Keep the full report retrievable in the sender's final response even if the send fails. Do not silently resend work or start the next checkpoint merely because a callback is pending.
+
+On receipt, Main matches the sender, task, handoff ID, plan revision and candidate to the outstanding dispatch and actual repo. An implementation result must identify how its resulting candidate relates to the dispatch base; a reviewer reports the exact reviewed candidate. An unexpected, stale or wrong-candidate report remains visibly unresolved and cannot advance the workflow. Recognize a duplicate by its handoff/candidate and prior handling: do not reapply findings, redispatch work or start a second review for it.
+
+Main sends an `ACK` naming the matching handoff and candidate **before any wait for the sender to stop**. It records receipt once and validates the substantive result separately. ACK means receipt only: it is not review PASS, a new grant or transfer of checkout-write ownership. The sender does not ACK the ACK. Main observes the sender's turn has stopped before any ownership-dependent next action, following `AGENTS.md` section 2; sending ACK alone does not establish that condition.
+
+The sender checks receipt for at most 60 seconds and at most four history/status observations, stopping at whichever bound comes first. Use a matching explicit ACK or exact correlated Main handling evidence (handoff/candidate and handling turn), not unrelated `active` status. A handling turn that already completed before the first check still counts when that correlation is observable. Tool send success, a stored message or assistant final text alone does not prove handling. Stop checking once receipt is established and end the sender's turn without more work.
+
+## Failure and evidence limits
+
+A failed or uncertain send, unavailable callback, interrupted observation or expired receipt bound leaves the handoff `UNRESOLVED`. Preserve the single report and exact error or missing observation, and expose that status in the sender's final response. Do not claim Main took over, repeat the work, silently resend, or replace delivery with perpetual polling, an automation, scheduler or orchestration service. An authorized later inspection can retrieve and reconcile the retained report without redispatching its work. Missing callback capability blocks use of this procedure; instructions cannot create it.
+
+The receipt timeout is observed only during a bounded active check. There is no automatic timeout alert after all sessions become idle. A timeout or suppressed ACK does not prove a transport send error; keep those claims separate.
+
+The bounded installed-runtime probes and their correlation evidence live in [agent-workflow progress](programs/agent-workflow/progress.md); [AW-U11 r2](programs/agent-workflow/implementation-plans/aw-u11-codex-callbacks/plan.md) owns acceptance. They demonstrate sampled busy/queued, dispatch/stop-boundary, confirmed-idle and fast-completed-receiver handling, plus a missing-ACK outcome. The interrupted idle probe is inconclusive and no live transport-send-error sample was obtained. These observations and static instruction checks establish neither durable/exactly-once delivery nor future agent compliance. Keep any newly unverified runtime behavior explicit rather than treating a docs check or successful send as its proof.

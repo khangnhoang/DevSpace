@@ -8,6 +8,7 @@ Documentation for DevSpace. Docs are in English; text the app shows to users sta
 | --- | --- |
 | [agent-loops.md](agent-loops.md) | Sizing of work, the lifecycle loops (planning, checkpoint, review, PR and CI) and the self-review method. Shared lifecycle read alongside `AGENTS.md`; imported directly by `CLAUDE.md`. |
 | [agent-models.md](agent-models.md) | Owner-selected models and effort for exploration, implementation and independent review in Codex and Claude; Main keeps the current chat selection. Read before assigning models. |
+| [codex-app-sessions.md](codex-app-sessions.md) | App-chat dispatch, result/receipt correlation and bounded failure handling. Read only for actual Codex app chat handoffs and their recipients; CLI invocations, including `codex exec` launched from the app, keep their existing paths. |
 | [programs/](programs/) | One folder per program of work, each with `plan.md` (an evergreen program: a charter `README.md` instead), `progress.md` and `problems.md`, and optionally `future-features.md` and `implementation-plans/`. |
 | [adr/](adr/README.md) | Architecture decision records: decisions that outlive one program or span programs. |
 | [backlog/](backlog/) | Future features and problems that no open program owns. It is not a program. |

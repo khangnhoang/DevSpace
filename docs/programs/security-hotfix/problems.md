@@ -208,7 +208,7 @@ The original 2026-10-21 discovery table is preserved in Git at ddcefd0. Legacy I
 
 ### SH-P32: Legacy security problem records need canonical shape
 
-- Status: Fixed locally, awaiting delivery (documentation preparation only; independent review and correction-plan commit pending).
+- Status: Fixed locally, awaiting delivery; canonical conversion committed in bed90f6 and local checker verification passed, final independent implementation review and remote delivery pending.
 - Problem: Historical AW-003 debt: this file kept the P1-P31 table and `scripts/docs/check-structure.mjs` allowlisted it for `problems-shape`; it was the only program problems file outside the open-entry shape. The original direction was to reshape it when H2-2a or H2-2b reopened, keeping every ID and removing the problems allowlist entry while `plan-h2.md` stayed allowlisted. Moved from `agent-workflow` on 2026-10-22; the Owner's 2026-10-31 canonical-ID decision supersedes retaining legacy declaration forms while preserving their provenance.
 - Evidence: Legacy AW-003; severity Low; discovery-era Planned: with H2-2; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above). Originally moved from agent-workflow on 2026-10-22; canonical conversion approved on 2026-10-31.
 - Direction: Complete the Owner-approved canonical conversion with H2-2a, remove only the obsolete problems-shape exception and exact legacy problem-row exceptions, and retain both historical plan exceptions. Preserve the agent-workflow AW-003 mapping chain; no program transfer or history rewrite.

@@ -498,5 +498,325 @@
       "file": "docs/programs/quality-engineering/future-features.md",
       "id": "QE-F3"
     }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P1"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P1"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P2"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P2"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P3"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P3"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P4"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P4"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P5"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P5"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P6"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P6"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P7"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P7"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P8"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P8"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P9"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P9"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P10"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P10"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P11"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P11"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P12"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P12"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P13"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P13"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P14"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P14"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P15"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P15"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P16"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P16"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P17"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P17"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P18"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P18"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P19"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P19"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P20"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P20"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P21"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P21"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P22"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P22"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P23"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P23"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P24"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P24"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P25"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P25"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P26"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P26"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P27"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P27"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P28"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P28"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P29"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P29"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P30"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P30"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "P31"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P31"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "AW-003"
+    },
+    "to": {
+      "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P32"
+    }
   }
 ]

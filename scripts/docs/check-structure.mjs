@@ -30,11 +30,6 @@ export const ALLOWLIST = [
     reason: "published migrations cite plan-h2.md section 4.1, so the second plan cannot move into implementation-plans/",
   },
   {
-    file: "docs/programs/security-hotfix/problems.md",
-    rule: "problems-shape",
-    reason: "the P1-P29 table keeps its IDs and rows; translating it must not add, merge or drop a row",
-  },
-  {
     file: "docs/programs/security-hotfix/plan.md",
     rule: "plan-shape",
     reason: "the H1 plan predates the templates and published migrations cite its sections, so its headings cannot change",
@@ -760,8 +755,7 @@ export function checkStructure(root) {
   }
 
   const allowed = (violation) =>
-    ALLOWLIST.some((entry) => entry.file === violation.file && entry.rule === violation.rule &&
-      (entry.rule !== "problems-shape" || (violation.line === 1 && /^problems.md is missing the /.test(violation.message))));
+    ALLOWLIST.some((entry) => entry.file === violation.file && entry.rule === violation.rule);
   return violations
     .filter((violation) => !allowed(violation))
     .sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line || a.rule.localeCompare(b.rule));

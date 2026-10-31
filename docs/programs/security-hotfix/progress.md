@@ -1,20 +1,20 @@
 # Progress — Security hotfix
 
-Plan: `plan.md` (H1) and `plan-h2.md` (H2). Problems: `problems.md`. Git history is the final evidence when documents disagree.
+Plans: [H1](plan.md), [H2](plan-h2.md), [SH-P3 community write integrity](implementation-plans/sh-p3-community-write-integrity/plan.md). Problems: [problems.md](problems.md). Git history is the final evidence when documents disagree.
 
 ## State
 
 | Field | Value |
 | --- | --- |
-| Spec revision | H1: `plan.md`, approved. H2: `plan-h2.md`, approved. Both passed Codex plan review in round 4 (`gpt-6.1-sol`, high, read-only). |
-| Current unit / checkpoint | none active. H2-2a and H2-2b are deferred. |
-| Status | H1 and H2-1 shipped. H2-2 deferred by the Owner on 2026-10-22. |
-| Completed evidence | H1: PR #2, merged 2026-10-21. H2-1: PR #3 and #4, merged and deployed, migration B `20261021185249` applied, matrix run on production with the results in `plan-h2.md` section 6 (historical, 2026-10-22). Open from that run: 17g fails on the old bug P16 and 17i was skipped. |
-| Accepted deviations | none |
-| Blockers / Owner decisions | H2-2a (P3 and P4: review policy, comment `with_check` and trigger) is small and low risk; do it when work returns to security. H2-2b (P5/P6 and P25: 3 RPCs, `payments_guard`, deploy order, rollback) now has its payment-flow tests: `infrastructure` U5 merged, with P5, P6 and P25 as known bugs in `__tests__/e2e/payment-*.spec.ts` (rows K4 to K8). The Owner put agent-workflow and infrastructure (an isolated environment and GitHub Actions) first because manual testing on production is too heavy. |
-| Next action | the Owner decides when to start H2-2a or H2-2b. |
-| Current authority | none: no unit is active, so nothing is permitted here beyond reading. H2-2 needs a new grant from the Owner, and applying any migration to the hosted database is a separate grant. |
-| Hosted state | H1 migration `20261021131351` and H2-1 migrations `20261021181051` (A) and `20261021185249` (B) are applied to `lkvxxrxojjlkchzzqidu`. The H2-2 migration is not written and not applied. |
+| Spec revision | H1/H2 historical plans remain approved. The Owner approved H2-2a and all 32 legacy problem conversions on 2026-10-31, then selected separate entry-plan placement: `implementation-plans/sh-p3-community-write-integrity/plan.md` r2. Independent review of the actual relocated plan/documentation diff passed with no Critical or Required findings. |
+| Current unit / checkpoint | H2-2a CP1/CP2 locally complete at fdb189b after Main review and fresh independent implementation PASS. CP1: 1aa583f; canonical conversion/entry-plan preparation: bed90f6. H2-2b remains deferred. |
+| Status | SH-P3/SH-P4/SH-P32 fixed locally awaiting delivery. Main and fresh independent static implementation review passed with no findings; the independent reviewer reused the supplied runtime evidence. H1/H2-1 delivery is historical; production H2-2a is not fixed. |
+| Completed evidence | CP1 (1aa583f): local migration 20261031073938 replayed; exact rollback/reapply catalog comparisons passed (including absent comment WITH CHECK, original policies/roles, trigger/helper removal, grants and RLS). Community regression: 20/20 passed, including owner/admin JWT/service_role denials and trigger ACL checks. Two consecutive default npm test commands passed 261/261 in 22 files each with exit 0, without an intervening reset/recovery; all 14 public tables were exactly unchanged after each and ownership released normally. Typecheck, zero-warning lint, safe placeholder-env build, docs checks and 94/94 checker tests passed. Earlier attempts: 83/261 assertions failed after a 5000 ms preflight timeout, then 261/261 passed but teardown exited 1 with live-writer ownership retained; exact-run recovery followed each failure. QE-P1 records those observations; passing retries do not establish a QE harness fix. HA6 preserves all 32 mappings and historical H1/H2/AW-U10/published SQL. |
+| Accepted deviations | The Owner selected a canonical problem entry with a separate detail plan after plan-only commit 284da8a. The correction restores the historical H2 plan by removing only the superseded Appendix B and prepares HA6 documentation before CP1; approved product behavior is unchanged. |
+| Blockers / Owner decisions | No remaining local acceptance blocker after two consecutive default runs passed. [QE-P1](../quality-engineering/problems.md#qe-p1-windows-full-suite-lifecycle-can-retain-ownership-after-completion) retains unrelated intermittent lifecycle/timing observations for Owner/Main follow-up; no root cause is confirmed, no harness change or weakened guard is included. Local disposable-data approval was used only after QE-U1 target/exclusive checks. H2-2b and a future Security Engineering evergreen program remain outside this task. |
+| Next action | Commit the Owner-requested follow-up records, push the task branch and open its PR. The Owner will report when CI is green; Main does not watch CI in this turn. Hosted drift/caller checks, separately granted prepare/apply and applicable postflight precede any separately authorized merge. |
+| Current authority | Owner grants (2026-10-31): approved entry plan committed first in bed90f6, implement all CP1/CP2 with local checkpoint/correction commits; independent chats authorized. The Owner now grants committing the follow-up records, pushing this task branch and creating its PR, including the workflow's CI-result reporting scope. No CI-fix push, merge, hosted prepare/apply or hosted application-data write grant. |
+| Hosted state | H1 migration `20261021131351` and H2-1 migrations `20261021181051` (A) and `20261021185249` (B) remain the supplied hosted state of `lkvxxrxojjlkchzzqidu`. H2-2a migration 20261031073938 exists and was applied only locally; no hosted step was run. |
 
 ## Milestones
 
@@ -28,3 +28,9 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-22 H2-1 production matrix recorded and the Owner deferred H2-2, split into H2-2a (P3, P4) and H2-2b (P5/P6, P25) (`6e8e1b7`).
 - 2026-10-24 `infrastructure` U5 merged: the payment-flow tests H2-2b waited for, with P5, P6 and P25 as known bugs (PR 18, `b8e3e0f`).
 - 2026-10-29 P21 resolved: the nine `window.confirm` calls became `ConfirmDialog` in app-foundation U1 (PR 38).
+- 2026-10-31 Owner approved H2-2a and the full traceable legacy-problem conversion, with a plan commit first and local implementation checkpoint commits; Appendix B records the approved execution scope (`284da8a`).
+- 2026-10-31 Owner selected separate SH-P3 entry-plan placement; the correction prepares 32 canonical problem records and mappings, with SH-P32 fixed locally awaiting delivery and SH-P3/SH-P4 still planned (`bed90f6`).
+- 2026-10-31 H2-2a community write integrity implemented locally with exact rollback/reapply, 20 actor/catalog regressions and two consecutive 261-test default runs; seed unchanged, intermittent test failures retained for QE follow-up, delivery/hosted verification pending (`1aa583f`).
+- 2026-10-31 H2-2a final documentation reconciled: 32 legacy mappings retained, SH-P3/SH-P4/SH-P32 fixed locally awaiting delivery, unrelated QE-P1 recorded; independent implementation review and hosted rollout pending (`fdb189b`).
+- 2026-10-31 Main review and fresh independent static implementation gate passed on ddcefd0..fdb189b with no findings; runtime evidence reused, local completion recorded, remote delivery and hosted rollout ungranted (`f9b2f53`).
+- 2026-10-31 Owner authorized committing the AW-P3/AW-P4 follow-up records and pushing/opening the H2-2a PR; the Owner monitors CI, while hosted rollout and merge remain separately gated (this commit).

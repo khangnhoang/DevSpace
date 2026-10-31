@@ -4,7 +4,7 @@
 // - Type: Node CLI black-box tests on temporary fixture trees built from the skill's templates.
 // - Subject: `scripts/docs/check-structure.mjs`.
 // - Passing cases: a tree that follows the templates exits 0; every rule ID has a passing fixture next to its
-//   failing one; the security-hotfix allowlist passes exactly the three stated path and rule pairs.
+//   failing one; the security-hotfix allowlist retains only the two historical plan path/rule pairs.
 // - Failing cases: loose IDs outside a valid entry, a closed future-features line with the wrong prefix, a
 //   duplicate FEAT ID in a file outside programs and backlog, a plan that links another program's progress.md,
 //   a progress.md outside docs/programs not treated as a program; every rule ID (file-role, progress-state, milestone-format, this-commit, problems-shape,
@@ -18,7 +18,8 @@
 //   resolved, Done or Dropped entry of that program's own problems.md or future-features.md; another program's
 //   entry, a `Moved` line, a title or folder mismatch, an uppercase or slugless folder, an evergreen program
 //   and a root detail plan each fail.
-// - Invariant: the result depends only on the fixture tree, never on the real docs/.
+// - Invariant: CLI behavior depends only on the fixture tree; the inventory regression also checks the
+//   repository's identifier registries and canonical security problem declarations.
 // - Last verified with: `npm run docs:check:test`.
 
 import assert from "node:assert/strict";
@@ -27,6 +28,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
+import { ALLOWLIST } from "./check-structure.mjs";
 import { legacyDeclarations, nextIdentifier } from "./work-identifiers.mjs";
 import { fileURLToPath } from "node:url";
 
@@ -576,14 +578,22 @@ test("adr-index: every ADR file is linked from docs/adr/README.md, the README it
   assertClean(run({ "docs/adr/two.md": "# Two\n", "docs/adr/README.md": "# ADRs\n\n- [one](one.md)\n- [two][t]\n\n[t]: two.md\n" }));
 });
 
-test("security-hotfix allowlist: three path and rule pairs, nothing else", () => {
-  const hotfix = {
+function hotfixTree() {
+  return {
     "docs/README.md": README(["| `programs/alpha` | active |", "| `programs/solo` | closed |", "| `programs/security-hotfix` | closed |"]),
     "docs/programs/security-hotfix/plan.md": LEGACY_PLAN,
     "docs/programs/security-hotfix/plan-h2.md": legacyDeclarations.find(e => e.role === "legacy-plan" && e.file.endsWith("plan-h2.md")).form + "\n",
     "docs/programs/security-hotfix/progress.md": progress(),
-    "docs/programs/security-hotfix/problems.md": "# Problems\n\n| # | Problem |\n| --- | --- |\n" + legacyDeclarations.find(e => e.role === "problem-row" && e.id === "P1").form + "\n",
+    "docs/programs/security-hotfix/problems.md": problems(OPEN_ENTRY("SH-P3"), "- SH-P1 — Resolved 2026-01-01: delivered (abc1234)."),
   };
+}
+
+test("security-hotfix allowlist: only two historical plan path and rule pairs remain", () => {
+  assert.deepEqual(ALLOWLIST.map(({ file, rule }) => [file, rule]), [
+    ["docs/programs/security-hotfix/plan-h2.md", "file-role"],
+    ["docs/programs/security-hotfix/plan.md", "plan-shape"],
+  ]);
+  const hotfix = hotfixTree();
   assertClean(run(hotfix));
   assertViolation(run({ ...hotfix, "docs/programs/security-hotfix/other.md": "# Other\n" }), "docs/programs/security-hotfix/other.md", "file-role", 1);
   assertViolation(
@@ -674,21 +684,67 @@ test("legacy boundary: exact closed form passes; copy, new closed legacy, role r
   assertViolation(run({ ...fixture, [old.file]: problems(OPEN_ENTRY("DM-999"), old.form), ...withMappings([transfer(old.file, "DM-999", old.file, "DM-003")]) }), old.file, "work-id");
 });
 
-test("security exceptions: exact rows pass, extra rows fail, new standard fields and legacy plan identity remain checked", () => {
+test("security problems: legacy tables fail, canonical entries require all fields and historical plan identities stay frozen", () => {
   const dir = "docs/programs/security-hotfix", file = `${dir}/problems.md`;
-  const row = legacyDeclarations.find(e => e.role === "problem-row" && e.id === "P1");
-  const fixture = {
-    "docs/README.md": baseTree()["docs/README.md"] + "| `programs/security-hotfix` | SH | active |\n",
-    [`${dir}/progress.md`]: progress(), [`${dir}/plan.md`]: LEGACY_PLAN,
-    [file]: `# Problems\n\n| # | Problem |\n| --- | --- |\n${row.form}\n`,
-  };
+  const fixture = hotfixTree();
   assertClean(run(fixture));
-  for (const extra of ["| P32 | new |", "| SH-P1 | new |", "| WRONG | new |", row.form.replace("P1 |", "P01 |")]) {
-    assertViolation(run({ ...fixture, [file]: fixture[file] + extra + "\n" }), file, "work-id");
+  // Formerly allowlisted exact forms no longer authorize any table declaration.
+  for (const row of ["| P1 | `profiles` SELECT `true` for `public`: anon can read the email, phone, dob, gender, province of everyone | High | **H2** |", "| ~~P12~~ | closed |", "| AW-003 | old |", "| P32 | new |", "| SH-P2 | new |", "| WRONG | new |", "| P01 | old |"]) {
+    const table = `# Problems\n\n| # | Problem |\n| --- | --- |\n${row}\n`;
+    const result = run({ ...fixture, [file]: table });
+    assertViolation(result, file, "work-id");
+    assertViolation(result, file, "problems-shape");
+    assertViolation(run({ ...fixture, [file]: table + "\n" + fixture[file] }), file, "work-id");
   }
-  assertClean(run({ ...fixture, [file]: fixture[file] + "\n" + problems(OPEN_ENTRY("SH-P1"), "") }));
-  assertViolation(run({ ...fixture, [file]: fixture[file] + "\n" + problems(OPEN_ENTRY("SH-P1").replace("- Evidence: e.\n", ""), "") }), file, "problems-shape");
-  assertViolation(run({ ...fixture, [`${dir}/plan.md`]: LEGACY_PLAN.replace(/^# .+/, "# Another identity") }), `${dir}/plan.md`, "work-id");
+  for (const field of ["Status", "Problem", "Evidence", "Direction", "Exit condition"]) {
+    const missing = fixture[file].replace(new RegExp(`^- ${field}:.*\\n?`, "m"), "");
+    assertViolation(run({ ...fixture, [file]: missing }), file, "problems-shape");
+  }
+  for (const name of ["plan.md", "plan-h2.md"]) {
+    const path = `${dir}/${name}`;
+    assertViolation(run({ ...fixture, [path]: fixture[path].replace(/^# .+/, "# Another identity") }), path, "work-id");
+  }
+});
+
+test("security entry plans: owned SH-P passes beside the legacy root; foreign, unknown and unit claims fail", () => {
+  const fixture = hotfixTree();
+  const file = entryPath("sh-p3-community-write-integrity", "security-hotfix");
+  assertClean(run({ ...fixture, [file]: entryPlan("SH-P3") }));
+  // The migration reserves its original IDs without capping later allocations or requiring continuity.
+  assertClean(run({ ...fixture, [file]: entryPlan("SH-P3"),
+    "docs/programs/security-hotfix/problems.md": problems(OPEN_ENTRY("SH-P3") + "\n\n" + OPEN_ENTRY("SH-P33") + "\n\n" + OPEN_ENTRY("SH-P40"), ""),
+  }));
+  const noOwner = { ...fixture, "docs/programs/security-hotfix/problems.md": problems("None yet.", "") };
+  assertViolation(run({ ...noOwner, [file]: entryPlan("SH-P3") }), file, "plan-shape");
+  for (const id of ["SH-P99", "SO-P1", "AL-P1"]) {
+    const path = entryPath(`${id.toLowerCase()}-unknown`, "security-hotfix");
+    assertViolation(run({ ...fixture, [path]: entryPlan(id) }), path, "plan-shape");
+  }
+  const unit = entryPath("sh-u1-no-units-row", "security-hotfix");
+  const result = run({ ...fixture, [unit]: UNIT_DETAIL.replaceAll("AL-U1", "SH-U1") });
+  assertViolation(result, unit, "plan-shape");
+  assert.match(result.stderr, /SH-U1 is not a row of the master plan's Units table/);
+  assertViolation(run({ ...fixture, [file]: entryPlan("SH-P3").replace("## 2. Repository facts", "## 2. Wrong") }), file, "plan-shape");
+  assertViolation(run({ ...fixture, [file]: entryPlan("SH-P3").replace("[progress.md](../../progress.md)", "no link") }), file, "plan-progress-link");
+});
+
+test("security AW-003 provenance: original moved pointer follows the appended chain to SH-P32", () => {
+  const source = "docs/programs/agent-workflow/problems.md", target = "docs/programs/security-hotfix/problems.md";
+  const old = legacyDeclarations.find(e => e.file === source && e.id === "AW-003");
+  const first = transfer(source, "AW-003", target, "AW-003");
+  const second = transfer(target, "AW-003", target, "SH-P32");
+  const fixture = { ...hotfixTree(),
+    "docs/README.md": hotfixTree()["docs/README.md"] + "| `programs/agent-workflow` | AW | active |\n",
+    "docs/programs/agent-workflow/plan.md": DETAIL.replaceAll("SO-U1", "AW-U1"),
+    "docs/programs/agent-workflow/progress.md": progress(),
+    [source]: problems("None yet.", old.form), [target]: problems(OPEN_ENTRY("SH-P32"), ""),
+  };
+  assertClean(run({ ...fixture, ...withMappings([first, second]) }));
+  assertViolation(run({ ...fixture, ...withMappings([first]) }), source, "work-mapping");
+  assertViolation(run({ ...fixture, [target]: problems("None yet.", ""), ...withMappings([first, second]) }), source, "work-mapping");
+  // A historical alias cannot own a new entry plan even though its trace resolves.
+  const alias = entryPath("aw-003-alias", "security-hotfix");
+  assertViolation(run({ ...fixture, [alias]: entryPlan("AW-003"), ...withMappings([first, second]) }), alias, "plan-shape");
 });
 
 test("mappings: direct/chained transfers resolve one owner and pointers do not own entries", () => {
@@ -735,6 +791,8 @@ test("allocation: destination-local independent sequences reserve closed/moved I
   assert.equal(nextIdentifier("DM", "F", [{id:"DM-F2"},{id:"DM-F4",role:"closed"}]), "DM-F5");
   assert.equal(nextIdentifier("DM", "F", [{id:"DM-F2"},{id:"DM-F4",moved:true}]), "DM-F5");
   assert.equal(nextIdentifier("DM", "F", [], [transfer(ALPHA_FEATURES,"DM-F4",ALPHA_FEATURES,"AW-F1")]), "DM-F5");
+  const migratedSecurityIds = Array.from({ length: 32 }, (_, i) => ({ id: `SH-P${i + 1}` }));
+  assert.equal(nextIdentifier("SH", "P", migratedSecurityIds), "SH-P33");
   for (const [code, count] of [["AW",10],["AF",6],["DM",1]]) {
     assert.equal(nextIdentifier(code,"U",Array.from({length:count},(_,i)=>({code,id:`U${i+1}`}))), `${code}-U${count+1}`);
   }
@@ -751,6 +809,7 @@ test("activation inventory: fixed local numbering, planned U reservations and fi
     ["programs/app-foundation", "P", ["AF-001","AF-002","AF-003","BL-005"], "AF"],
     ["programs/dependency-maintenance", "F", ["FEAT-019","FEAT-020"], "DM"],
     ["programs/dependency-maintenance", "P", ["BL-009"], "DM"],
+    ["programs/security-hotfix", "P", [...Array.from({ length: 31 }, (_, i) => `P${i + 1}`), "AW-003"], "SH"],
   ];
   let count = 0;
   for (const [home, kind, ids, code] of groups) {
@@ -760,13 +819,27 @@ test("activation inventory: fixed local numbering, planned U reservations and fi
       count++;
     });
   }
-  assert.equal(count, 25);
+  assert.equal(count, 57);
   for (let n = 2; n <= 6; n++) assert.ok(mappings.some(m => m.from.id === `U${n}` && m.to.id === `AF-U${n}`));
   assert.ok(mappings.some(m => m.from.file.endsWith("/u10-task-naming/plan.md") && m.to.file.endsWith("/aw-u10-task-naming/plan.md") && m.to.id === "AW-U10"));
   assert.equal(new Set(legacyDeclarations.map(e => `${e.file}#${e.id}#${e.role}`)).size, legacyDeclarations.length);
   assert.ok(legacyDeclarations.every(e => e.file && e.id && e.role && e.form && e.reason));
-  assert.equal(legacyDeclarations.filter(e => e.role === "problem-row").length, 32);
+  assert.deepEqual(legacyDeclarations.filter(e => e.role === "problem-row"), []);
   assert.equal(legacyDeclarations.filter(e => e.role === "plan-title").length, 19);
+  const sh = "docs/programs/security-hotfix/problems.md";
+  const canonical = readFileSync(new URL(`../../${sh}`, import.meta.url), "utf8");
+  const ids = [...canonical.matchAll(/^(?:### |[-*+] )(SH-P[1-9][0-9]*)(?::| —)/gm)].map(match => match[1]);
+  for (let n = 1; n <= 32; n++) {
+    const required = `SH-P${n}`;
+    assert.equal(ids.filter(id => id === required).length, 1, `${required} must retain exactly one declaration`);
+  }
+  const historical = legacyDeclarations.filter(e => e.file.startsWith("docs/programs/security-hotfix/"));
+  assert.deepEqual(historical.map(e => [e.file, e.role]), [
+    ["docs/programs/security-hotfix/plan.md", "legacy-plan"],
+    ["docs/programs/security-hotfix/plan-h2.md", "legacy-plan"],
+  ]);
+  const originalPointer = mappings.filter(m => m.from.file === "docs/programs/agent-workflow/problems.md" && m.from.id === "AW-003");
+  assert.deepEqual(originalPointer, [transfer("docs/programs/agent-workflow/problems.md", "AW-003", sh, "AW-003")]);
 });
 
 test("H4–H6 cannot hide legacy, new canonical or duplicate entry declarations", () => {

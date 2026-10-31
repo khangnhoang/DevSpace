@@ -23,4 +23,4 @@ Status lives in each program's `progress.md`, never in this table.
 | `programs/quality-engineering` | QE | evergreen | Test-data safety, shared test tooling, regression coverage and CI maintenance; product changes stay with their owning program. |
 | `programs/dependency-maintenance` | DM | evergreen | Keeping dependencies current and safe: the dependency check results, update initiatives and dependency findings ([ADR 0004](adr/0004-dependency-maintenance-program.md)). |
 | `programs/app-foundation` | AF | active | shadcn, React Hook Form and Zod for every form and confirm dialog, and Zod validation in server actions ([ADR 0003](adr/0003-app-foundation-program.md)). |
-| `programs/security-hotfix` | SH | active | Security fixes H1 and H2 (privilege escalation, data exposure, write integrity); H2-2 is deferred. |
+| `programs/security-hotfix` | SH | active | Security fixes H1 and H2 (privilege escalation, data exposure, write integrity); community write integrity is specified in the [SH-P3 entry plan](programs/security-hotfix/implementation-plans/sh-p3-community-write-integrity/plan.md). |

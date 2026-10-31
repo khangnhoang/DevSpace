@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | Small-task batch AW-F4 + AW-P2, Owner-approved 2026-10-29; no initiative or detail plan required. |
-| Current unit / checkpoint | None active; AW-F4 and AW-P2 delivered in PR #41 (`b071d62`). |
-| Status | Small-task batch merged on 2026-10-29; documentation caught up during the Quality Engineering opening. |
-| Completed evidence | AW-F4: lifecycle text and the Owner-selected model/effort table checked against AGENTS roles/permissions and Claude bindings; docs:check and shared-skill symlink/resource checks pass. AW-P2 historical verification at 53504b2: the three defects reproduced before the fix; docs tests 92/92 on the outside-sandbox rerun (the sandbox run failed only at fixture git init), typecheck and lint (0 problems) pass. The reader comparison against 18261cd across 107 Markdown files changes only the vendored snapshot example inside a code fence; its obsolete baseline entry is removed. The model-selection follow-up changes no parser or test code. |
-| Accepted deviations | none. The parser remains a bounded link reader, not a complete Markdown renderer. AW-F4 static consistency is verified; future runtime agent compliance remains unverified. |
-| Blockers / Owner decisions | none; the two small independent items retain separate commits and verification. |
-| Next action | The Owner selects the next agent-workflow item; test-data safety moves to Quality Engineering. |
-| Current authority | PR #41 delivery is complete. Current work authorizes documentation catch-up only; no new agent-workflow implementation or remote delivery is granted. |
+| Spec revision | AW-U11 r2, `implementation-plans/aw-u11-codex-callbacks/plan.md`; Owner approved plan commit and implementation 2026-11-01; app-chat invocation scope. |
+| Current unit / checkpoint | AW-U11 CP0: scope corrected; confirmed idle callback/receipt feasibility remains open. |
+| Status | Owner-approved and independently reviewed plan recorded; CP0 remains the active gate before operational callback rollout. |
+| Completed evidence | Baseline `dba66e5`; Main `01a19282-13c2-7590-bac5-cce0675071a8`, message-only probe `01a19284-99dc-78c1-ada7-e002e5aef659`, host local; human probe grant verified at Main message `01a19283-4c37-7cd0-8d4e-94c9f284f857`. P4-BUSY-01 sender `01a19285-33d6-7082-bca9-8e8bf67b0327` and later ACK-handling turn `01a19287-1ba1-7f30-adc7-b7931e6a88dc` demonstrate active-Main delivery and a completed sender accepting its ACK. P4-TIMEOUT-01 `01a19288-2ad9-7300-8292-3a565a7accff` retained its single payload and reported UNRESOLVED after 2 bounded receipt checks. P4-EDGE-01 `01a19289-dbd4-73c1-8ddd-a6d6a7ce043b` arrived around final but remained in original Main turn `01a19282-1d73-72b3-b1d8-d5efb1480f4f` inProgress. P4-IDLE-01 `01a1928b-613d-7aa2-9ff4-88c62448a1ef` was interrupted; idle wake-up and fast-Main completion remain unverified. Independent CLI plan reviewer `01a19331-f4de-7cc1-a1dd-01aacea949b1`, verified gpt-6.1-sol/high/read-only, returned PASS with 0 Critical/Required; its non-blocking rollout-order suggestion was aligned with Owner's commit-first instruction. This is design review, not runtime acceptance. |
+| Accepted deviations | Owner clarified app-only scope and requested the revised proposal; no shared lifecycle or CLI callback rule is proposed. The interrupted probe is inconclusive, not a capability failure or pass. |
+| Blockers / Owner decisions | Confirmed idle wake-up and fast receiver evidence pending. No operational instructions are activated. |
+| Next action | Main resumes bounded CP0 probes with fresh correlation; activate no operational instructions before the required runtime evidence. |
+| Current authority | Owner approved r2 and authorized committing the plan, then implementing under its CP0/review gates. The existing message-only probe chat creation/two-way messaging grant remains. No push, PR, merge, deployment or database grant exists. |
 
 ## Milestones
 

@@ -7,13 +7,13 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | DM-U3 `implementation-plans/dm-u3-audit-cleanup/plan.md` r1 (2026-11-01), written from a trial install; Codex plan gate PASS; Owner-approved 2026-11-01. DM-U2 r2 closed (PR 47). |
-| Current unit / checkpoint | DM-U3 planning on `chore/dm-u3-audit-cleanup`; no checkpoint started. |
+| Current unit / checkpoint | DM-U3 on `chore/dm-u3-audit-cleanup`; CP1 assigned to the implementor, CP1 and CP2 in one dispatch. |
 | Status | DM-U2 delivered in PR #47 (`f900b18`); DM-U3 plan approved for DM-P1 groups A and C. |
 | Completed evidence | DM-U2: PR 47 (`f900b18`), see milestones. DM-U3 trial (2026-11-01, plan section 2): `npm audit fix` plus the `postcss-selector-parser` override leave 2 production findings; `tsc`, lint, build and unit tests pass; the CSS of a clean build is unchanged. |
 | Accepted deviations | none. |
-| Blockers / Owner decisions | The implementation grant (the Owner is reading the plan first). |
-| Next action | The Owner decides the implementation grant for DM-U3. |
-| Current authority | 2026-11-01: new branch for DM-U3, its trial install and plan, the PR 47 docs catch-up and the backlog BL-P4 record. Plan approval and local commits of the records and plan. No implementation, push, PR or hosted access is granted yet. |
+| Blockers / Owner decisions | none. |
+| Next action | The implementor runs CP1 and CP2; Main reviews the report and the commits. |
+| Current authority | 2026-11-01: plan approval and local commits of the records and plan; implementation of DM-U3 r1 by a Sonnet implementor with one local commit per checkpoint and the local stack only. No push, PR, merge or hosted access is granted. |
 
 ## Milestones
 

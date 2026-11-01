@@ -16,7 +16,8 @@ import { pathToFileURL } from "node:url";
 import { createServer } from "node:net";
 import { createServer as createHttpServer } from "node:http";
 import { assertUnmanagedReadiness } from "../helpers/local-readiness.mjs";
-import { acquireRun, releaseRun, inspectRun, recordEntry, forgetEntry, runEnvironment, joinRun, claimRecovery, closeScope, admitHttp, admitBrowserRequest, coordinationRoot, targetKey } from "../helpers/run-ownership.mjs";
+import { awaitWritersExit } from "../helpers/managed-run.mjs";
+import { acquireRun, releaseRun, closeRun, inspectRun, recordEntry, forgetEntry, runEnvironment, joinRun, claimRecovery, closeScope, admitHttp, admitBrowserRequest, coordinationRoot, targetKey } from "../helpers/run-ownership.mjs";
 
 const moduleUrl = pathToFileURL(join(process.cwd(), "__tests__/helpers/run-ownership.mjs")).href;
 const roots: string[] = [];
@@ -235,6 +236,27 @@ describe("run ownership", { timeout: 20_000 }, () => {
     const { proc } = await child(`import {joinRun} from ${JSON.stringify(moduleUrl)}; joinRun(${JSON.stringify(ref)}); console.log('ready'); setInterval(()=>{},1000);`);
     expect(inspectRun(ref).members).toHaveLength(1);
     expect(() => releaseRun(ref)).toThrow("descendants");
+    const exited = once(proc, "exit"); proc.kill(); await exited;
+    releaseRun(ref);
+  });
+  it("releases after a closed run's registered writer exits within the deadline", async () => {
+    const ref = acquireRun(target, "probe", root());
+    const { proc } = await child(`import {joinRun} from ${JSON.stringify(moduleUrl)}; joinRun(${JSON.stringify(ref)}); console.log('ready'); setTimeout(()=>{},300);`);
+    expect(() => releaseRun(ref)).toThrow("descendants");
+    closeRun(ref);
+    await awaitWritersExit(ref, 5000);
+    expect(proc.exitCode ?? proc.signalCode).not.toBeNull();
+    releaseRun(ref);
+  });
+  it("keeps ownership and the member record when a registered writer outlives the deadline", async () => {
+    const ref = acquireRun(target, "probe", root());
+    const { proc } = await child(`import {joinRun} from ${JSON.stringify(moduleUrl)}; joinRun(${JSON.stringify(ref)}); console.log('ready'); setInterval(()=>{},1000);`);
+    closeRun(ref);
+    const started = Date.now();
+    await awaitWritersExit(ref, 200);
+    expect(Date.now() - started).toBeGreaterThanOrEqual(200);
+    expect(() => releaseRun(ref)).toThrow("Writer descendants are still alive; ownership retained");
+    expect(inspectRun(ref).members.map(member => member.pid)).toContain(proc.pid);
     const exited = once(proc, "exit"); proc.kill(); await exited;
     releaseRun(ref);
   });

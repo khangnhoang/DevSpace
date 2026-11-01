@@ -27,13 +27,20 @@ export async function runManagedChild(ref, args, env = process.env) {
     signals.forEach((signal, index) => process.off(signal, handlers[index]));
     // A child exit is not evidence that its descendants/requests settled. releaseRun checks their ledger.
     closeRun(ref);
-    const deadline = Date.now() + 10_000;
-    const writersRemain = () => inspectRun(ref).members.some(member => {
-      if (member.pid === process.pid) return false;
-      try { return alive(member.pid); }
-      catch { return true; } // A transient Windows exit/permission state is uncertainty, never absence.
-    });
-    while (writersRemain() && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 25));
+    await awaitWritersExit(ref);
     releaseRun(ref);
   }
+}
+
+// Waits, never longer than the deadline, for registered writers to exit. It only waits: releaseRun still
+// decides, so a writer alive at the deadline keeps ownership. The caller closes admission first so no writer
+// can join after the wait observed none.
+export async function awaitWritersExit(ref, deadlineMs = 10_000) {
+  const deadline = Date.now() + deadlineMs;
+  const writersRemain = () => inspectRun(ref).members.some(member => {
+    if (member.pid === process.pid) return false;
+    try { return alive(member.pid); }
+    catch { return true; } // A transient Windows exit/permission state is uncertainty, never absence.
+  });
+  while (writersRemain() && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 25));
 }

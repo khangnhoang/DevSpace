@@ -1,7 +1,7 @@
 import type { TestProject } from "vitest/node";
 import { readLocalStack } from "../helpers/local-stack";
-import { startManagedRun } from "../helpers/managed-run.mjs";
-import { releaseRun, runEnvironment } from "../helpers/run-ownership.mjs";
+import { startManagedRun, awaitWritersExit } from "../helpers/managed-run.mjs";
+import { releaseRun, closeRun, runEnvironment } from "../helpers/run-ownership.mjs";
 import { trackedFetch } from "../helpers/fixture-ownership";
 import { IDS } from "../e2e/accounts";
 
@@ -61,9 +61,14 @@ export default async function setup(project: TestProject) {
     project.provide("localStack", { ...stack, tokens });
     const prior = process.env.DEVSPACE_OWNERSHIP;
     process.env.DEVSPACE_OWNERSHIP = runEnvironment(ref).DEVSPACE_OWNERSHIP;
-    return () => {
+    return async () => {
       if (prior === undefined) delete process.env.DEVSPACE_OWNERSHIP;
       else process.env.DEVSPACE_OWNERSHIP = prior;
+      // Vitest 5.0.5 runs this teardown before it awaits exit of the last isolated worker, so that worker can
+      // still be registered and alive here. Fence admission, give it a bounded time to exit, then let
+      // releaseRun decide; a writer still alive at the deadline keeps ownership.
+      closeRun(ref);
+      await awaitWritersExit(ref);
       releaseRun(ref);
     };
   } catch (error) {

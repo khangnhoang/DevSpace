@@ -27,6 +27,10 @@ export default defineConfig({
           globalSetup: ["__tests__/rls/global-setup.ts"],
           // The files share one database and restore their own writes, so they never run side by side.
           fileParallelism: false,
+          // Windows full-suite runs (unit + rls in one process) put e2e-preflight.test.ts at 3.0-3.3 s against the
+          // 5 s default and once past it. The slowest RLS test without its own timeout is that file, so 15 s is
+          // about 4.5x its measured worst; a real hang still fails, and a timed-out scope still blocks later ones.
+          testTimeout: 15_000,
         },
       },
     ],

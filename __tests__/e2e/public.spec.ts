@@ -1,4 +1,12 @@
+import type { Page } from "@playwright/test";
+import type * as Monaco from "monaco-editor";
 import { expect, test } from "./fixtures";
+
+declare global {
+  interface Window {
+    monaco: typeof Monaco;
+  }
+}
 
 // Anonymous visitor: the signed-out paths and the redirects that protect the others.
 test.describe("anonymous visitor", () => {
@@ -26,14 +34,48 @@ test.describe("anonymous visitor", () => {
   });
 
   test.describe("try-it page", () => {
-    // The editor loads from a CDN that the network guard blocks (see fixtures.ts).
-    test.use({ blockedMonacoLoader: true });
+    // Every request the editor makes, with the origin it went to and the status it got (undefined: no response).
+    function recordMonaco(page: Page) {
+      const requests: { url: string; origin: string }[] = [];
+      const statuses = new Map<string, number>();
+      page.context().on("request", (request) => {
+        const url = new URL(request.url());
+        if (!["data:", "blob:", "about:"].includes(url.protocol)) requests.push({ url: request.url(), origin: url.origin });
+      });
+      page.context().on("response", (response) => statuses.set(response.url(), response.status()));
+      return { requests, statuses };
+    }
 
-    test("[S5] opens the try-it page without a page error", async ({ page }) => {
+    test("[S5] loads the editor and its files from the app's own origin", async ({ page }) => {
+      const { requests, statuses } = recordMonaco(page);
       const response = await page.goto("/try_it");
       expect(response?.status()).toBe(200);
-      // Only the page shell is asserted: the editor cannot load.
       await expect(page.getByRole("button", { name: "Chạy Code" })).toBeVisible();
+      await expect(page.locator(".monaco-editor")).toBeVisible();
+
+      const origin = new URL(page.url()).origin;
+      expect(requests.filter((request) => request.origin !== origin), "requests that left the app's origin").toEqual([]);
+      const monaco = () => requests.filter((request) => request.url.startsWith(`${origin}/monaco/vs/`));
+      expect(monaco().some((request) => request.url.endsWith("/monaco/vs/loader.js"))).toBe(true);
+      // A response can arrive after the editor is visible: wait for every request to be answered.
+      await expect.poll(() => monaco().filter((request) => statuses.get(request.url) !== 200).map((request) => request.url)).toEqual([]);
+      expect(await page.evaluate(() => window.monaco.editor.getModels().length)).toBeGreaterThan(0);
+    });
+
+    test("[S5b] runs the language worker, which marks invalid JavaScript", async ({ page }) => {
+      const { requests, statuses } = recordMonaco(page);
+      await page.goto("/try_it");
+      await page.getByRole("button", { name: "JavaScript" }).click();
+      await expect(page.locator(".monaco-editor")).toBeVisible();
+      // Set through the model: typing triggers the suggestion widget, which swallows keys.
+      await expect.poll(() => page.evaluate(() => window.monaco.editor.getModels().length)).toBe(1);
+      await page.evaluate(() => window.monaco.editor.getModels()[0].setValue("const = ;"));
+
+      await expect.poll(() => page.evaluate(() => window.monaco.editor.getModelMarkers({}).length)).toBeGreaterThan(0);
+      const origin = new URL(page.url()).origin;
+      const workers = () => requests.filter((request) => request.url.startsWith(`${origin}/monaco/vs/`) && /worker/i.test(request.url));
+      expect(workers().length, "no worker file was requested").toBeGreaterThan(0);
+      await expect.poll(() => workers().filter((request) => statuses.get(request.url) !== 200).map((request) => request.url)).toEqual([]);
     });
   });
 

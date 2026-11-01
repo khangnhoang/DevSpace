@@ -2,10 +2,14 @@
 import { useState, Suspense } from "react";
 import type { ReactNode } from "react";
 import { Play, FileCode, FileJson, Cpu } from "lucide-react";
-import Editor from "@monaco-editor/react";
+import Editor, { loader } from "@monaco-editor/react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import MobileBlocker from "@/app/components/MobileBlocker";
+
+// Monaco is copied from the npm package to public/monaco/vs at install (scripts/monaco/copy-vs.mjs), so the editor
+// runs the version package-lock.json holds from this origin instead of the loader's default CDN.
+loader.config({ paths: { vs: "/monaco/vs" } });
 
 // --- MẪU CODE GIỮ NGUYÊN ---
 const DEFAULT_CPP = `#include <iostream>

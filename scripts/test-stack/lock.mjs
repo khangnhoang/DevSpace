@@ -26,14 +26,27 @@ export class LockError extends Error {
   }
 }
 
-const pause = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Linux: the state letter (field 3) and the start time (field 22) of a /proc/<pid>/stat text. The command name in
+// field 2 may contain spaces and parentheses, so the fields are counted from its last closing parenthesis.
+export function parseProcStat(text) {
+  const fields = text.slice(text.lastIndexOf(")") + 2).split(" ");
+  return { state: fields[0], start: fields[19] };
+}
 
 export function pidAlive(pid) {
-  try { process.kill(pid, 0); return true; }
+  try { process.kill(pid, 0); }
   catch (error) {
-    if (error.code === "ESRCH") return false;
-    return true; // EPERM: the process exists but belongs to someone else
+    // EPERM: the process exists but belongs to someone else
+    return error.code !== "ESRCH";
   }
+  // A killed child stays a zombie until its parent reaps it, and signal 0 still succeeds on it; it has exited.
+  if (process.platform === "linux") {
+    try { if (parseProcStat(readFileSync(`/proc/${pid}/stat`, "utf8")).state === "Z") return false; }
+    catch (error) { if (error.code === "ENOENT") return false; }
+  }
+  return true;
 }
 
 // The start time of a process, as an opaque string; null only when the process does not exist. A live process
@@ -47,8 +60,7 @@ export function processStart(pid) {
     if (out) return out;
   } else if (process.platform === "linux") {
     try {
-      const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
-      return stat.slice(stat.lastIndexOf(")") + 2).split(" ")[19];
+      return parseProcStat(readFileSync(`/proc/${pid}/stat`, "utf8")).start;
     } catch (error) {
       if (error.code === "ENOENT") return null;
       throw error;
@@ -177,6 +189,7 @@ const safe = (value) => String(value).replace(/[^0-9A-Za-z]/g, "_");
 // A writer records itself, then checks that its run still holds the lock, and only then writes or spawns. A
 // new holder publishes its lock before it scans the records, so a process that passed this check has a
 // record that scan sees, and one that did not exits without writing.
+/** @param {{ dir?: string, runId?: string, role?: string, start?: string }} [options] */
 export function registerWriter({ dir = stateDir(), runId = process.env.DEVSPACE_TEST_RUN, role, start } = {}) {
   if (!runId) throw new LockError("lost", "No test run is active for this process (DEVSPACE_TEST_RUN is not set). Run it through npm test or npm run test:e2e.");
   const own = start ?? processStart(process.pid);
@@ -201,13 +214,14 @@ function readWriters(dir) {
 
 // Stops every recorded writer of earlier runs whose identity still matches a live process, waits until it has
 // exited, and scans again until a scan finds none alive; only then are the records deleted. A writer that
-// cannot be stopped throws, and its records stay.
-export function reapOrphans({ dir = stateDir(), waitMs = 10_000, stop = killProcess } = {}) {
+// cannot be stopped throws, and its records stay. The waits are asynchronous so that a stopped child of this very
+// process is reaped by the event loop while it waits.
+export async function reapOrphans({ dir = stateDir(), waitMs = 10_000, stop = killProcess } = {}) {
   const stopped = [];
   for (let round = 0; round < 50; round++) {
     const entries = readWriters(dir);
     // A record that is still being written reads as unparseable; give it a moment before it counts as junk.
-    if (entries.some((entry) => !entry.record) && round < 3) { pause(50); continue; }
+    if (entries.some((entry) => !entry.record) && round < 3) { await sleep(50); continue; }
     const live = entries.filter((entry) => isLive(entry.record));
     if (!live.length) {
       for (const entry of entries) rmSync(entry.file, { force: true });
@@ -219,7 +233,7 @@ export function reapOrphans({ dir = stateDir(), waitMs = 10_000, stop = killProc
       stopped.push(record);
     }
     const deadline = Date.now() + waitMs;
-    while (live.some(({ record }) => pidAlive(record.pid)) && Date.now() < deadline) pause(25);
+    while (live.some(({ record }) => pidAlive(record.pid)) && Date.now() < deadline) await sleep(25);
     const stuck = live.find(({ record }) => isLive(record));
     if (stuck) throw new LockError("writer-alive", `Writer process ${stuck.record.pid} (${stuck.record.role ?? "writer"} of an earlier test run) could not be stopped. No reset or test ran; stop that process yourself, then run the command again.`);
   }
@@ -232,7 +246,7 @@ export function reapOrphans({ dir = stateDir(), waitMs = 10_000, stop = killProc
 export async function awaitRunWriters({ dir = stateDir(), runId, timeoutMs = 30_000, pollMs = 50 } = {}) {
   const others = () => readWriters(dir).filter((entry) => entry.record?.runId === runId && entry.record.pid !== process.pid);
   const deadline = Date.now() + timeoutMs;
-  while (others().some((entry) => pidAlive(entry.record.pid)) && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, pollMs));
+  while (others().some((entry) => pidAlive(entry.record.pid)) && Date.now() < deadline) await sleep(pollMs);
   return others().filter((entry) => pidAlive(entry.record.pid) && isLive(entry.record)).map((entry) => entry.record);
 }
 
@@ -264,7 +278,25 @@ export function clearOldUncleanMarks({ dir = stateDir(), keep }) {
   for (const name of names) if (name !== `${keep}.json`) rmSync(join(dir, "unclean", name), { force: true });
 }
 
-// The run a process belongs to, from the environment the launcher gives its children. Null outside a run.
+// The run a process belongs to, from the environment the launcher gives its children (the run id and the
+// directory it chose). Null outside a run.
+/** @param {Record<string, string | undefined>} [env] */
 export function runContext(env = process.env) {
-  return env.DEVSPACE_TEST_RUN ? { dir: stateDir(), runId: env.DEVSPACE_TEST_RUN } : null;
+  return env.DEVSPACE_TEST_RUN ? { dir: env.DEVSPACE_TEST_RUN_DIR ?? stateDir(), runId: env.DEVSPACE_TEST_RUN } : null;
+}
+
+// The entry points that write to the test stack (the rls global setup, the Playwright config) call this first, so
+// a direct `vitest` or `playwright test` is refused before it reads the stack, starts a server or writes. It
+// checks the fixed production directory, never a directory from the environment: the run must hold the current
+// lock there, and this process must have registered itself as a writer of that run.
+/** @param {{ command: string, env?: Record<string, string | undefined>, dir?: string }} options */
+export function requireActiveRun({ command, env = process.env, dir = stateDir() }) {
+  const refuse = (why) => { throw new LockError("lost", `${why} Run it through ${command}, which takes the test stack lock and starts the test stack.`); };
+  const runId = env.DEVSPACE_TEST_RUN;
+  if (!runId) refuse("No test run is active for this process, so it would write to the test stack without the lock.");
+  if (!holdsLock(dir, runId)) refuse(`Test run ${runId} does not hold the test stack lock.`);
+  const prefix = `${runId}-${process.pid}-`;
+  let names = [];
+  try { names = readdirSync(writersDir(dir)); } catch { /* no records */ }
+  if (!names.some((name) => name.startsWith(prefix) && name.endsWith(".json"))) refuse("This process is not registered as a writer of the test run.");
 }

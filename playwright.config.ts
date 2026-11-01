@@ -1,6 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 import { E2E_ORIGIN, buildE2eEnv } from "./__tests__/helpers/e2e-env";
+import { requireActiveRun } from "./scripts/test-stack/lock.mjs";
 import { readTestStack } from "./scripts/test-stack/read.mjs";
+
+// A direct `npx playwright test` would write to the test stack beside a locked run; refuse it before the stack is read
+// or a server starts.
+requireActiveRun({ command: "npm run test:e2e" });
 
 // The API URL and keys come from the test stack's `supabase status` only, never from a file: the local environment file
 // points at the hosted project. The same map is set for the build, which inlines the NEXT_PUBLIC_* values,

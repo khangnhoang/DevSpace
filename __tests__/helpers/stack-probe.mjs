@@ -1,6 +1,7 @@
 // A child process for the lock and lifecycle rows of __tests__/unit/test-stack-lock.test.ts. Each mode is one
 // role in a scenario; it prints one JSON line per event on stdout. The test owns the state directory
-// (DEVSPACE_TEST_STACK_DIR) and runs this from the repository root. No Docker and no database are involved.
+// (STACK_PROBE_DIR, passed to every call as `dir`; the production directory ignores the environment) and runs this
+// from the repository root. No Docker and no database are involved.
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -8,24 +9,25 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const url = (path) => pathToFileURL(join(process.cwd(), path)).href;
 const lock = await import(url("scripts/test-stack/lock.mjs"));
+const dir = process.env.STACK_PROBE_DIR;
 const say = (event) => console.log(JSON.stringify(event));
 const forever = () => new Promise(() => setInterval(() => {}, 1000));
 const sleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 const [mode, ...args] = process.argv.slice(2);
 
 if (mode === "hold") {
-  const held = lock.acquireLock({ command: args[0] ?? "probe hold", checkout: args[1] ?? process.cwd() });
+  const held = lock.acquireLock({ command: args[0] ?? "probe hold", checkout: args[1] ?? process.cwd(), dir });
   say({ event: "held", pid: process.pid, generation: held.generation });
   await forever();
 } else if (mode === "acquire-release") {
-  const held = lock.acquireLock({ command: "probe acquire-release" });
+  const held = lock.acquireLock({ command: "probe acquire-release", dir });
   lock.releaseLock(held);
   say({ event: "released", generation: held.generation });
 } else if (mode === "contend") {
   const [barrier, checkout] = args;
   while (!existsSync(barrier)) sleep(5);
   try {
-    const held = lock.acquireLock({ command: "probe contend", checkout });
+    const held = lock.acquireLock({ command: "probe contend", checkout, dir });
     say({ event: "won", generation: held.generation, tookOver: Boolean(held.tookOver) });
     await forever();
   } catch (error) {
@@ -35,7 +37,7 @@ if (mode === "hold") {
   // Reads the lock, then waits for the go file before it claims.
   const [goFile] = args;
   try {
-    const held = lock.acquireLock({ command: "probe pause-contend", afterRead: () => { say({ event: "read" }); while (!existsSync(goFile)) sleep(5); } });
+    const held = lock.acquireLock({ command: "probe pause-contend", dir, afterRead: () => { say({ event: "read" }); while (!existsSync(goFile)) sleep(5); } });
     say({ event: "won", generation: held.generation });
   } catch (error) {
     say({ event: "refused", code: error.code, message: error.message });
@@ -49,6 +51,7 @@ if (mode === "hold") {
   if (args[0] === "spawn-unrecorded") {
     const env = { ...process.env };
     delete env.DEVSPACE_TEST_RUN;
+    delete env.DEVSPACE_TEST_RUN_DIR;
     delete env.NODE_OPTIONS;
     const child = spawn(process.execPath, [fileURLToPath(import.meta.url), "idle"], { env, stdio: ["ignore", "pipe", "inherit"], detached: true });
     child.stdout.once("data", () => say({ event: "child", pid: child.pid }));
@@ -62,7 +65,7 @@ if (mode === "hold") {
   const [barrier] = args;
   while (!existsSync(barrier)) sleep(2);
   try {
-    lock.registerWriter({ role: "probe" });
+    lock.registerWriter({ dir, role: "probe" });
     say({ event: "passed", pid: process.pid });
     await forever();
   } catch (error) {
@@ -94,6 +97,7 @@ if (mode === "hold") {
   const code = await run.runOnTestStack({
     command: `probe run ${scenario}`,
     root: root ?? process.cwd(),
+    dir,
     waitMs: 800,
     ensure: async ({ state, onMutate }) => {
       const decision = decideReset({ state, hash: "h", fresh: false, force: false });
@@ -127,6 +131,6 @@ if (mode === "hold") {
   say({ event: "done", code });
 } else if (mode === "stop") {
   const run = await import(url("scripts/test-stack/run.mjs"));
-  await run.stopOnTestStack({ root: process.cwd(), stop: async () => say({ event: "stopped" }) })
+  await run.stopOnTestStack({ root: process.cwd(), dir, stop: async () => say({ event: "stopped" }) })
     .then(() => say({ event: "done" }), (error) => say({ event: "refused", code: error.code, message: error.message }));
 }

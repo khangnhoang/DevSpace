@@ -14,8 +14,10 @@ import { clearState, readState, stateDir, writeState } from "./state.mjs";
 const preload = pathToFileURL(join(dirname(fileURLToPath(import.meta.url)), "writer-preload.mjs")).href;
 
 // Every Node process below the child registers as a writer before application code runs (writer-preload.mjs).
-export function childEnvironment(runId, inherited = process.env) {
-  return { ...inherited, DEVSPACE_TEST_RUN: runId, NODE_OPTIONS: `${inherited.NODE_OPTIONS ?? ""} --import=${preload}`.trim() };
+// The state directory travels with the run id, so the children use the launcher's directory and nothing else.
+/** @param {Record<string, string | undefined>} [inherited] */
+export function childEnvironment(runId, dir, inherited = process.env) {
+  return { ...inherited, DEVSPACE_TEST_RUN: runId, DEVSPACE_TEST_RUN_DIR: dir, NODE_OPTIONS: `${inherited.NODE_OPTIONS ?? ""} --import=${preload}`.trim() };
 }
 
 export function spawnNode(args, env) {
@@ -40,7 +42,7 @@ function markDirty(dir, cause) {
 }
 
 // Takes the lock and stops earlier writers; a writer that cannot be stopped leaves the run unclean.
-function enter({ command, root, dir }) {
+async function enter({ command, root, dir }) {
   const lock = acquireLock({ command, dir, checkout: root });
   try {
     // The holder may have died between publishing its lock and marking the state dirty, so a state that still reads
@@ -50,7 +52,7 @@ function enter({ command, root, dir }) {
       markDirty(dir, `took over the lock of PID ${holder.pid} ("${holder.command}"), which did not finish`);
     }
     clearOldUncleanMarks({ dir, keep: lock.runId });
-    reapOrphans({ dir });
+    await reapOrphans({ dir });
   } catch (error) {
     if (error instanceof LockError && error.code === "writer-alive") markDirty(dir, error.message);
     releaseLock(lock);
@@ -63,7 +65,7 @@ export async function runOnTestStack({
   command, root = process.cwd(), dir = stateDir(), reset = false, waitMs = 30_000,
   ensure = ensureTestStack, audit = { takeSnapshot, compareSnapshots }, beforeChild, runChild,
 }) {
-  const lock = enter({ command, root, dir });
+  const lock = await enter({ command, root, dir });
   const { runId } = lock;
   try {
     registerWriter({ dir, runId, role: "launcher", start: lock.start });
@@ -87,7 +89,7 @@ export async function runOnTestStack({
       : { resetHash: prior?.resetHash, snapshot: prior?.snapshot, resetAt: prior?.resetAt };
     writeState({ ...base, status: "dirty", cause: inProgress, runId }, dir);
 
-    const exitCode = await runChild({ stack: ensured.stack, env: childEnvironment(runId) });
+    const exitCode = await runChild({ stack: ensured.stack, env: childEnvironment(runId, dir) });
 
     const causes = [];
     const survivors = await awaitRunWriters({ dir, runId, timeoutMs: waitMs });
@@ -119,7 +121,7 @@ export async function runOnTestStack({
 
 // `test:stack:stop` takes the same lock, so it can neither race a start or reset nor stop a stack a live run uses.
 export async function stopOnTestStack({ root = process.cwd(), dir = stateDir(), stop = stopTestStack } = {}) {
-  const lock = enter({ command: "npm run test:stack:stop", root, dir });
+  const lock = await enter({ command: "npm run test:stack:stop", root, dir });
   try {
     await stop({ root });
   } finally {

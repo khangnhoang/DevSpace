@@ -15,8 +15,9 @@ export type RunMarker = { check(): string | null; mark(cause: string): void };
 
 export function sharedRunMarker(): RunMarker {
   const run = runContext();
-  // Outside a test run (a unit row) there is no shared state to read or write.
-  if (!run) return { check: () => null, mark: () => {} };
+  // rls and e2e cannot start outside a run (requireActiveRun); a unit row that builds a scope outside one passes its
+  // own marker, so a scope never fails silently with no shared state.
+  if (!run) throw new Error("No test run is active, so a fixture scope has no shared run state; pass an explicit run marker in an isolated probe.");
   return { check: () => uncleanCause(run), mark: (cause) => markUnclean({ ...run, cause }) };
 }
 

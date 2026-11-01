@@ -1,4 +1,5 @@
 import type { TestProject } from "vitest/node";
+import { requireActiveRun } from "../../scripts/test-stack/lock.mjs";
 import { readTestStack } from "../../scripts/test-stack/read.mjs";
 import { IDS } from "../e2e/accounts";
 
@@ -43,16 +44,10 @@ async function signIn(apiUrl: string, anonKey: string, actor: ActorName): Promis
 // Each actor signs in once per run (the local Auth limit is 30 sign-ins per 5 minutes) and the tokens are
 // handed to the test files. The host and test-project checks inside readTestStack run before any request is sent.
 export default async function setup(project: TestProject) {
-  // Only npm test starts the run: it holds the stack lock and registers this process as a writer. Vitest run
-  // directly would write to the test stack without either.
-  if (!process.env.DEVSPACE_TEST_RUN) {
-    // Vitest 5.0.5 crashes while source-mapping the stack of an error thrown from a global setup and hides the
-    // message; a frame-less error prints it.
-    const failure = new Error("The rls project runs only through npm test, which takes the test stack lock and starts the test stack.");
-    failure.stack = `Error: ${failure.message}`;
-    throw failure;
-  }
   try {
+    // Only npm test starts the run: it holds the stack lock and registers this process as a writer. Vitest run
+    // directly would write to the test stack without either.
+    requireActiveRun({ command: "npm test" });
     const stack = readTestStack(project.config.root);
     const tokens = {
       learner: await signIn(stack.apiUrl, stack.anonKey, "learner"),
@@ -61,6 +56,8 @@ export default async function setup(project: TestProject) {
     };
     project.provide("localStack", { ...stack, tokens });
   } catch (error) {
+    // Vitest 5.0.5 crashes while source-mapping the stack of an error thrown from a global setup and hides the
+    // message; a frame-less error prints it.
     const failure = new Error(error instanceof Error ? error.message : String(error));
     failure.stack = `Error: ${failure.message}`;
     throw failure;

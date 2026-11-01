@@ -3,11 +3,11 @@
 // spawning anything (AC4). Worker threads share their process's record.
 import { basename } from "node:path";
 import { isMainThread } from "node:worker_threads";
-import { registerWriter } from "./lock.mjs";
+import { registerWriter, runContext } from "./lock.mjs";
 
 if (isMainThread && process.env.DEVSPACE_TEST_RUN) {
   try {
-    registerWriter({ role: `node ${basename(process.argv[1] ?? "")}`.trim() });
+    registerWriter({ ...runContext(), role: `node ${basename(process.argv[1] ?? "")}`.trim() });
   } catch (error) {
     console.error(`test writer: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);

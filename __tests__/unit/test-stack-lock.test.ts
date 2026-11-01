@@ -16,7 +16,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { compareSnapshots } from "../../scripts/test-stack/audit.mjs";
 import { decideReset } from "../../scripts/test-stack/ensure.mjs";
 import * as lock from "../../scripts/test-stack/lock.mjs";
-import { readState, writeState } from "../../scripts/test-stack/state.mjs";
+import { childEnvironment } from "../../scripts/test-stack/run.mjs";
+import { readState, stateDir, writeState } from "../../scripts/test-stack/state.mjs";
 
 const root = process.cwd();
 const probePath = join(root, "__tests__/helpers/stack-probe.mjs");
@@ -26,11 +27,19 @@ type Env = Record<string, string | undefined>;
 type Event = { event: string; [key: string]: unknown };
 let dir: string;
 let started: ChildProcess[] = [];
+// Processes a row detached on purpose (a grandchild the probe cannot reach), with the start time that identifies them.
+let strays: { pid: number; start: string | null }[] = [];
 
 beforeEach(() => { dir = mkdtempSync(join(tmpdir(), "devspace-stack-lock-")); });
-afterEach(() => {
+afterEach(async () => {
   for (const child of started) { try { child.kill("SIGKILL"); } catch { /* gone */ } }
   started = [];
+  // Only the exact process that was recorded is stopped, never a later one that reused the PID.
+  for (const { pid, start } of strays) {
+    if (lock.pidAlive(pid) && lock.processStart(pid) === start) { try { process.kill(pid, "SIGKILL"); } catch { /* gone */ } }
+    await gone(pid);
+  }
+  strays = [];
   rmSync(dir, { recursive: true, force: true });
 });
 
@@ -38,10 +47,11 @@ afterEach(() => {
 function environment(extra: Env = {}) {
   const env: Env = { ...process.env };
   delete env.DEVSPACE_TEST_RUN;
+  delete env.DEVSPACE_TEST_RUN_DIR;
   env.NODE_OPTIONS = (env.NODE_OPTIONS ?? "").replace(/--import=\S*writer-preload\.mjs/, "").trim();
-  return { ...env, DEVSPACE_TEST_STACK_DIR: dir, ...extra };
+  return { ...env, STACK_PROBE_DIR: dir, ...extra };
 }
-const withPreload = (runId: string) => environment({ DEVSPACE_TEST_RUN: runId, NODE_OPTIONS: `--import=${preload}` });
+const withPreload = (runId: string) => environment({ DEVSPACE_TEST_RUN: runId, DEVSPACE_TEST_RUN_DIR: dir, NODE_OPTIONS: `--import=${preload}` });
 
 class Probe {
   readonly events: Event[] = [];
@@ -172,7 +182,7 @@ describe("test stack lock", { timeout: 120_000 }, () => {
     const first = new Probe("idle"); const second = new Probe("idle");
     const firstPid = (await first.event("idle")).pid as number; const secondPid = (await second.event("idle")).pid as number;
     record(firstPid);
-    lock.reapOrphans({
+    await lock.reapOrphans({
       dir,
       waitMs: 10_000,
       stop: (pid: number) => { process.kill(pid, "SIGKILL"); if (pid === firstPid) record(secondPid); },
@@ -215,7 +225,7 @@ describe("test stack lock", { timeout: 120_000 }, () => {
     writeFileSync(barrier, "");
     try {
       lock.acquireLock({ command: "npm test (taker)", dir, runId: "taker-run" });
-      lock.reapOrphans({ dir });
+      await lock.reapOrphans({ dir });
       await Promise.all(probes.map((probe) => Promise.race([probe.event("passed"), probe.event("lost")]).catch(() => undefined)));
       await new Promise((resolve) => setTimeout(resolve, 300));
       // A registrant that passed the check before the takeover has a record the scan saw, so it was stopped.
@@ -231,9 +241,11 @@ describe("test stack lock", { timeout: 120_000 }, () => {
     const parent = new Probe("writer", ["spawn-unrecorded"]);
     await parent.event("passed");
     const childPid = (await parent.event("child")).pid as number;
+    // The grandchild is detached, so afterEach cannot reach it through a Probe: record who it is to stop exactly it.
+    strays.push({ pid: childPid, start: lock.processStart(childPid) });
     record(parent.pid);
 
-    lock.reapOrphans({ dir });
+    await lock.reapOrphans({ dir });
     expect(await gone(parent.pid)).toBe(true);
     expect(alive(unrelatedPid)).toBe(true);
     expect(alive(childPid)).toBe(true);
@@ -262,6 +274,41 @@ describe("test stack lock", { timeout: 120_000 }, () => {
     await taken.event("stopped");
     await taken.event("done");
     expect(readState(dir)).toMatchObject({ status: "dirty" });
+  });
+
+  it("keeps the production directory fixed whatever the environment says, and hands a launcher's directory to its children", () => {
+    const production = stateDir();
+    const saved = { dir: process.env.DEVSPACE_TEST_STACK_DIR, data: process.env.ProgramData, runDir: process.env.DEVSPACE_TEST_RUN_DIR };
+    try {
+      process.env.DEVSPACE_TEST_STACK_DIR = join(dir, "other");
+      process.env.ProgramData = join(dir, "elsewhere");
+      process.env.DEVSPACE_TEST_RUN_DIR = join(dir, "forged");
+      expect(stateDir()).toBe(production);
+    } finally {
+      for (const [key, value] of [["DEVSPACE_TEST_STACK_DIR", saved.dir], ["ProgramData", saved.data], ["DEVSPACE_TEST_RUN_DIR", saved.runDir]] as const) {
+        if (value === undefined) delete process.env[key]; else process.env[key] = value;
+      }
+    }
+    expect(production).toMatch(/devspace-test-stack-v1$/);
+    expect(childEnvironment("run-1", dir, {})).toMatchObject({ DEVSPACE_TEST_RUN: "run-1", DEVSPACE_TEST_RUN_DIR: dir });
+    expect(lock.runContext({ DEVSPACE_TEST_RUN: "run-1", DEVSPACE_TEST_RUN_DIR: dir })).toEqual({ dir, runId: "run-1" });
+  });
+
+  it("counts a Linux zombie as exited and reads the start time of any process name", () => {
+    const stat = "4242 (node (x) y) Z 1 4242 4242 0 -1 4194560 100 0 0 0 0 0 0 0 20 0 1 0 987654 1000 500";
+    expect(lock.parseProcStat(stat)).toEqual({ state: "Z", start: "987654" });
+    expect(lock.parseProcStat(stat.replace(" Z ", " S "))).toMatchObject({ state: "S" });
+  });
+
+  it("admits a process to a run only when it holds the lock and has its own writer record", () => {
+    const env = { DEVSPACE_TEST_RUN: "guard-run" };
+    expect(() => lock.requireActiveRun({ command: "npm test", env: {}, dir })).toThrow(/No test run is active.*npm test/);
+    expect(() => lock.requireActiveRun({ command: "npm test", env, dir })).toThrow(/does not hold the test stack lock/);
+    lock.acquireLock({ command: "npm test (guard)", dir, runId: "guard-run" });
+    expect(() => lock.requireActiveRun({ command: "npm test", env, dir })).toThrow(/not registered as a writer/);
+    lock.registerWriter({ dir, runId: "guard-run", role: "guard" });
+    expect(() => lock.requireActiveRun({ command: "npm test", env, dir })).not.toThrow();
+    expect(() => lock.requireActiveRun({ command: "npm test", env: { DEVSPACE_TEST_RUN: "other-run" }, dir })).toThrow(/does not hold/);
   });
 
   it("treats an unreadable or unparseable state.json as unclean, so the next run resets", () => {

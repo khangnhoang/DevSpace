@@ -3,10 +3,11 @@
 import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
+// One fixed directory per machine, because container names are machine-wide: an environment variable or a changed
+// ProgramData would give two launchers two locks over the same containers. Only a test or probe that passes `dir`
+// explicitly uses another one, and a launcher hands its directory to its children (run.mjs, childEnvironment).
 export function stateDir() {
-  if (process.env.DEVSPACE_TEST_STACK_DIR) return process.env.DEVSPACE_TEST_STACK_DIR;
-  const base = process.platform === "win32" ? process.env.ProgramData || "C:\\ProgramData" : "/var/tmp";
-  return join(base, "devspace-test-stack-v1");
+  return process.platform === "win32" ? "C:\\ProgramData\\devspace-test-stack-v1" : "/var/tmp/devspace-test-stack-v1";
 }
 
 // A missing file is a first run. An unreadable one is an unclean state: the reset it forces is the safe answer.

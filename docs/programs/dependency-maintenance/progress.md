@@ -7,12 +7,12 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | DM-U4 `implementation-plans/dm-u4-monaco-self-host/plan.md` r1 (2026-11-01), written from a trial install; Codex plan gate PASS in round 2 (round 1: four Required on the install hook, worker and crafted-link checks and manual data, fixed); Owner-approved 2026-11-01. DM-U3 r1 closed (PR 48). |
-| Current unit / checkpoint | DM-U4 on `fix/dm-u4-monaco-self-host`; CP1 and CP2 done locally, CP3 next (one dispatch). |
-| Status | DM-U3 delivered in PR #48 (`0666754`); DM-P1 groups A and C fixed, group B open; DM-U4 r1 written. |
+| Current unit / checkpoint | DM-U4 on `fix/dm-u4-monaco-self-host`; CP1 to CP3 done locally; waiting for Main's review, the manual pass and delivery. |
+| Status | DM-U3 delivered in PR #48 (`0666754`); DM-P1 groups A and C fixed, group B open (served from npm 0.57.0 once DM-U4 is delivered); DM-U4 r1 implemented locally. |
 | Completed evidence | DM-U3: PR 48 (`0666754`), see milestones. DM-U4 trial (2026-11-01, plan section 2): Monaco 0.57.0 copied from the npm package to `public/monaco/vs` loads on `next start` with no request off the origin; `tsc`, lint and build pass. |
 | Accepted deviations | (1) G3 expected `monaco-editor` to lose the lockfile `peer` flag; npm 11 keeps it on direct dependencies that are also peers; no version change. (2) Windows e2e builds timed out on the ownership gate because `joinRun` resolved process ancestry inside it; fixed in DM-U4 by resolving it before the gate, outside plan section 1.2 (Owner decision 2026-11-01). (3) The "Thử ngay" e2e rows run as the admin (`admin.spec.ts` A11 to A13, not `student.spec.ts`), because the learn-in-order gate in `LearnClient` redirects the seed student to their next unfinished lesson and the fixture lesson is the last of course 2. |
 | Blockers / Owner decisions | none. |
-| Next action | The implementor runs CP3; Main reviews the report and the commits, then runs the manual pass. |
+| Next action | Main reviews the report and the commits, runs the manual pass, then the Codex diff gate, push and PR (AC8 on the preview). |
 | Current authority | 2026-11-01: new branch for DM-U4 (BL-P4 included, Owner decision D1), its trial install and plan, one read-only hosted query counting code-fence languages (D3), the PR 48 docs catch-up, plan approval and a local commit of the plan and records; implementation of DM-U4 r1 by a Sonnet implementor with one local commit per checkpoint and the local stack only. No push, PR, merge or hosted access is granted. |
 
 ## Milestones
@@ -46,4 +46,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-01 DM-U4 r1 approved after the Codex plan gate PASS in round 2: Monaco self-hosted from the npm package and the BL-P4 Try It fixes in one PR (`a9c0c72`).
 - 2026-11-01 DM-U4 gate fix: `joinRun` resolves process ancestry before taking the ownership gate, so the seven `next build` workers no longer time out on Windows; `npm test` (267) passes (`82fee44`).
 - 2026-11-01 DM-U4 CP1: `monaco-editor` 0.57.0 is copied to `public/monaco/vs` by `postinstall` and `/try_it` loads it from the app's origin; the Monaco network exception is removed from the e2e guard; a clean `npm ci` recreates an identical copy, tsc, lint, build, unit tests and `npm run test:e2e` (61) pass (`bcadf5c`).
-- 2026-11-01 DM-U4 CP2: "Thử ngay" opens a lesson example in its own language with the exact code (no second decode), a block in another language has no button, and the example returns on its own tab; `npm test` (293), `npm run test:e2e` (69, run twice) and build pass (this commit).
+- 2026-11-01 DM-U4 CP2: "Thử ngay" opens a lesson example in its own language with the exact code (no second decode), a block in another language has no button, and the example returns on its own tab; `npm test` (293), `npm run test:e2e` (69, run twice) and build pass (`bf90da1`).
+- 2026-11-01 DM-U4 CP3: the `dependency-updates` Monaco row, description and Dependency check, the charter capability line and DM-P1 say Monaco comes from the npm package; BL-P4 is `Fixed locally, awaiting delivery`; `npm audit --omit=dev` still reports `dompurify` and `monaco-editor` (2 findings), now for the running version (this commit).

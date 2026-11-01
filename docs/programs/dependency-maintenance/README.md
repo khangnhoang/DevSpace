@@ -4,7 +4,7 @@ Progress: [progress.md](progress.md). Problems: [problems.md](problems.md). Futu
 
 ## 1. Capability and boundary
 
-- Capability: DevSpace's npm dependencies, the Node version (production, CI, `@types/node`), the exact pins (Supabase CLI, `@playwright/test`) and the Monaco version loaded from the CDN stay current and free of known high or critical findings on a production path. The program records each dependency check and runs the update initiatives it calls for.
+- Capability: DevSpace's npm dependencies, the Node version (production, CI, `@types/node`), the exact pins (Supabase CLI, `@playwright/test`) and the Monaco version copied from the npm package stay current and free of known high or critical findings on a production path. The program records each dependency check and runs the update initiatives it calls for.
 - Boundary: the update procedure and the dependency rows live in the `dependency-updates` skill, whose content this program maintains; adding a new package for a feature belongs to the program that needs it (`app-foundation` adds Zod, React Hook Form and shadcn with their rows); replacing packages during the techstack migration belongs to that program; the Supabase auth helpers wait for it (ADR 0001); CI jobs other than a Node version change belong to their owning program.
 
 ## 2. Owner decisions

@@ -6,9 +6,8 @@
 // Denied paths: null/empty learner name, reassigned UI slugs and an occupied unknown-course ID.
 // Known bugs: none.
 // Invariants: probe-owned setup is restored; rejected scopes acquire nothing and preserve unrelated rows.
-import { afterEach, beforeEach, expect, inject, it } from "vitest";
+import { afterEach, beforeEach, expect, it } from "vitest";
 import { beginFixtureScope, prepareLearnerEnrollment, assertPaymentFixturesClean, UNKNOWN_COURSE_ID } from "../e2e/service-role";
-import { inspectRun } from "../helpers/run-ownership.mjs";
 import { fixtures, must, IDS, learner, fixtureScope, startFixtureScope, finishFixtureScope, ownedInsert } from "./helpers";
 
 beforeEach(startFixtureScope);
@@ -20,11 +19,12 @@ async function snapshot() {
 }
 
 async function expectReadOnlyRejection(prepare: () => Promise<void>, message: string) {
-  const failed = beginFixtureScope();
+  // The occupied slots are the probe's own; a preflight that finds them must not mark the real run unclean.
+  const failed = beginFixtureScope({ run: { check: () => null, mark: () => {} } });
   try {
     const before = await snapshot();
     await expect(prepare()).rejects.toThrow(message);
-    expect(inspectRun(inject("ownership")).entries.filter(entry => entry.scope === failed.id && entry.kind !== "scope")).toEqual([]);
+    expect(failed.entries).toEqual([]);
     await failed.cleanup();
     expect(await snapshot()).toEqual(before);
   } finally { await failed.cleanup(); }

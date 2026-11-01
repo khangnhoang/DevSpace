@@ -2,12 +2,28 @@ import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import pg from "pg";
-import { assertRun, recordEntry, forgetEntry, inspectRun, closeScope, admitBrowserRequest } from "./run-ownership.mjs";
+import { markUnclean, runContext, uncleanCause } from "../../scripts/test-stack/lock.mjs";
 
-export type RunReference = ReturnType<typeof import("./run-ownership.mjs").acquireRun>;
 type Value = string | number | boolean | null;
 type Where = Record<string, Value>;
 const order = ["notifications", "payments", "user_progress", "notes", "reviews", "comments", "exercises", "lessons", "chapters", "enrollments", "courses", "coupons", "profiles"];
+
+// What a scope tells the rest of its run. The default is the run's shared state, so a failed cleanup, residue or a
+// timed-out test in one process stops every later scope of the run in any other process (AC7). A test that
+// provokes such a failure on purpose passes its own.
+export type RunMarker = { check(): string | null; mark(cause: string): void };
+
+export function sharedRunMarker(): RunMarker {
+  const run = runContext();
+  // Outside a test run (a unit row) there is no shared state to read or write.
+  if (!run) return { check: () => null, mark: () => {} };
+  return { check: () => uncleanCause(run), mark: (cause) => markUnclean({ ...run, cause }) };
+}
+
+// A test that times out may leave a request in flight, so the run is unclean even if the cleanup then succeeds.
+export function noteTimeout(testName: string, run: RunMarker = sharedRunMarker()) {
+  run.mark(`test timed out: ${testName}`);
+}
 
 export function checked<T>(result: { data: T; error: { message: string } | null }): NonNullable<T> {
   if (result.error) throw new Error(`fixture query failed: ${result.error.message}`);
@@ -31,54 +47,66 @@ export async function deleteOwnedUser(db: SupabaseClient, id: string) {
   if (await userExists(db, id)) throw new Error(`cleanup left user ${id}`);
 }
 
-export function trackedFetch(ref: RunReference, scope: () => string, requireOpenScope = false): typeof fetch {
-  return async (input, init) => {
-    const method = (init?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
-    if (["GET", "HEAD"].includes(method)) return fetch(input, init);
-    assertRun(ref);
-    const url = new URL(input instanceof Request ? input.url : String(input));
-    if (url.origin.replace("localhost", "127.0.0.1") !== ref.target.api) throw new Error("Mutation target does not match owned local API");
-    const id = requireOpenScope ? admitBrowserRequest(ref, scope(), url.pathname) : recordEntry(ref, { kind: "request", scope: scope(), path: url.pathname, pid: process.pid });
-    // A rejected transport leaves evidence: an aborted client does not prove the server rolled back.
-    const response = await fetch(input, init);
-    await response.clone().arrayBuffer();
-    forgetEntry(ref, id);
-    return response;
-  };
-}
+type Entry = { id: string; kind: "rows" | "restore" | "auth"; table: string; where?: Where; fields?: Where; email?: string };
+
+// Selectors held by open scopes of this process. It is memory only: a selector that an earlier or a crashed run
+// left occupied is found by the empty-selector check of `reserve`, and a write nobody reserved by the end-of-run audit.
+const held = new Map<string, string>();
+const selectorKey = (table: string, where: Where) => `${table}|${JSON.stringify(Object.entries(where).sort(([a], [b]) => a.localeCompare(b)))}`;
+const authKey = (email: string) => `auth|${email}`;
+// Rows an open scope acquired fields of; deleting such a row would drop fields another scope must restore.
+const acquired = new Set<string>();
 
 export class FixtureScope {
   readonly id = randomUUID();
   readonly tag = this.id.replaceAll("-", "").slice(0, 12);
-  readonly ref: RunReference;
   readonly db: SupabaseClient;
   readonly dbUrl: string;
+  readonly run: RunMarker;
+  readonly entries: Entry[] = [];
   private closed = false;
-  constructor(ref: RunReference, db: SupabaseClient, dbUrl: string) {
-    this.ref = ref; this.db = db; this.dbUrl = dbUrl;
-    assertRun(ref);
-    recordEntry(ref, { kind: "scope", scope: this.id, state: "open" });
+  constructor(db: SupabaseClient, dbUrl: string, options: { run?: RunMarker } = {}) {
+    this.db = db; this.dbUrl = dbUrl; this.run = options.run ?? sharedRunMarker();
+    const cause = this.run.check();
+    if (cause) throw new Error(`Previous fixture cleanup is unresolved or the run is unclean (${cause}); no new scope may acquire mutations`);
   }
 
   label(value: string) { return `${value} [${this.tag}]`; }
   code(value: string) { return `${value}-${this.tag}`.toUpperCase(); }
 
+  private record(key: string, entry: Omit<Entry, "id">): string {
+    if (held.has(key)) throw new Error("Fixture selector is already reserved; do not share ownership between scopes");
+    const added = { ...entry, id: randomUUID() };
+    held.set(key, this.id);
+    if (entry.kind === "restore") acquired.add(key);
+    this.entries.push(added);
+    return added.id;
+  }
+
   async reserve(table: string, where: Where) {
     if (this.closed) throw new Error("Fixture scope no longer admits mutations");
     if (!order.includes(table) || !Object.keys(where).length) throw new Error("Unbounded fixture ownership selector");
-    assertRun(this.ref);
-    if (checked(await this.db.from(table).select("id").match(where)).length) throw new Error(`Fixture prerequisite failed: ${table} selector is already occupied`);
-    return recordEntry(this.ref, { kind: "rows", scope: this.id, table, where });
+    if (checked(await this.db.from(table).select("id").match(where)).length) {
+      // Rows under a selector nobody holds are residue of an earlier write, late or not: report it, never adopt it.
+      this.run.mark(`residue: ${table} selector ${JSON.stringify(where)} was occupied at reservation`);
+      throw new Error(`Fixture prerequisite failed: ${table} selector is already occupied`);
+    }
+    return this.record(selectorKey(table, where), { kind: "rows", table, where });
   }
 
   async acquire(table: string, id: Value, fields: string[], expected?: Where) {
     if (this.closed) throw new Error("Fixture scope no longer admits mutations");
     if (!order.includes(table) || !fields.length || fields.includes("*")) throw new Error("Invalid acquired fields");
-    assertRun(this.ref);
     const row = checked(await this.db.from(table).select(fields.join(",")).eq("id", id).single()) as unknown as Where;
     if (expected && !isDeepStrictEqual(row, expected)) throw new Error(`Fixture prerequisite failed: ${table} acquired fields differ from baseline`);
-    recordEntry(this.ref, { kind: "restore", scope: this.id, table, where: { id }, fields: row });
+    this.record(selectorKey(table, { id }), { kind: "restore", table, where: { id }, fields: row });
     return row;
+  }
+
+  // Replaces the intent recorded before a write whose response may be lost with the row that write created.
+  adopt(table: string, rowId: Value, intent: string) {
+    this.record(selectorKey(table, { id: rowId }), { kind: "rows", table, where: { id: rowId } });
+    this.forget(intent);
   }
 
   async authIds(email: string): Promise<string[]> {
@@ -89,16 +117,31 @@ export class FixtureScope {
 
   async reserveAuth(email: string) {
     if (this.closed) throw new Error("Fixture scope no longer admits mutations");
-    assertRun(this.ref);
     if (!email.endsWith("@devspace.test") || !email.includes(this.tag)) throw new Error("Auth email must belong to this scope");
-    if ((await this.authIds(email)).length) throw new Error("Auth fixture prerequisite failed: email already exists");
-    recordEntry(this.ref, { kind: "auth", scope: this.id, email });
+    if ((await this.authIds(email)).length) {
+      this.run.mark(`residue: Auth user ${email} existed at reservation`);
+      throw new Error("Auth fixture prerequisite failed: email already exists");
+    }
+    this.record(authKey(email), { kind: "auth", table: "auth.users", email });
+  }
+
+  /** @internal */
+  forget(id: string) {
+    const index = this.entries.findIndex(entry => entry.id === id);
+    if (index < 0) return;
+    const [entry] = this.entries.splice(index, 1);
+    const key = entry.kind === "auth" ? authKey(entry.email!) : selectorKey(entry.table, entry.where!);
+    held.delete(key);
+    acquired.delete(key);
   }
 
   async cleanup() {
     this.closed = true;
-    closeScope(this.ref, this.id);
-    await cleanupEntries(this.ref, this.db, this.dbUrl, this.id);
+    try { await cleanupEntries(this, this.db, this.dbUrl); }
+    catch (error) {
+      this.run.mark(`fixture cleanup failed in scope ${this.id}: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
   }
 }
 
@@ -137,32 +180,25 @@ async function assertNoDependents(dbUrl: string, schema: string, table: string, 
   } finally { await client.end(); }
 }
 
-function assertNoAcquiredFields(ref: RunReference, table: string, id: Value) {
-  if (inspectRun(ref).entries.some(other => other.kind === "restore" && other.table === table && other.where?.id === id)) throw new Error(`Cleanup blocked: ${table} still has acquired fields`);
+function assertNoAcquiredFields(table: string, id: Value) {
+  // An acquired row of any scope in this process blocks deleting that row.
+  if (acquired.has(selectorKey(table, { id }))) throw new Error(`Cleanup blocked: ${table} still has acquired fields`);
 }
 
-export async function cleanupEntries(ref: RunReference, db: SupabaseClient, dbUrl: string, scope?: string) {
-  if (scope !== undefined) assertRun(ref);
-  // An HTTP handler must finish before reconciliation: enrollment may precede its later notification.
-  const deadline = Date.now() + 10_000;
-  while (inspectRun(ref).entries.some(entry => entry.kind === "http") && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 25));
-  const state = inspectRun(ref);
-  if (state.entries.some(entry => ["http", "request"].includes(entry.kind))) throw new Error("Outstanding mutation request; ownership retained for explicit investigation");
-  const entries = state.entries.filter(entry => scope === undefined || entry.scope === scope);
-  entries.sort((a, b) => (a.kind === "restore" ? -100 : a.kind === "auth" ? 100 : a.kind === "scope" ? 200 : order.indexOf(a.table)) - (b.kind === "restore" ? -100 : b.kind === "auth" ? 100 : b.kind === "scope" ? 200 : order.indexOf(b.table)));
+export async function cleanupEntries(scope: FixtureScope, db: SupabaseClient, dbUrl: string) {
+  const entries = [...scope.entries];
+  entries.sort((a, b) => (a.kind === "restore" ? -100 : a.kind === "auth" ? 100 : order.indexOf(a.table)) - (b.kind === "restore" ? -100 : b.kind === "auth" ? 100 : order.indexOf(b.table)));
   const failures: unknown[] = [];
   for (const entry of entries) {
     try {
-      if (entry.kind === "scope") {
-        if (failures.length) continue;
-      } else if (entry.kind === "auth") {
+      if (entry.kind === "auth") {
         const client = new pg.Client({ connectionString: dbUrl, application_name: "devspace-fixtures" });
         let ids: string[];
         try { await client.connect(); ids = (await client.query("select id from auth.users where email = $1", [entry.email])).rows.map(row => row.id); }
         finally { await client.end(); }
         if (ids.length > 1) throw new Error("Ambiguous Auth ownership");
         for (const id of ids) {
-          assertNoAcquiredFields(ref, "profiles", id);
+          assertNoAcquiredFields("profiles", id);
           await assertNoDependents(dbUrl, "public", "profiles", id);
           await assertNoDependents(dbUrl, "auth", "users", id, true);
           await deleteOwnedUser(db, id);
@@ -172,20 +208,20 @@ export async function cleanupEntries(ref: RunReference, db: SupabaseClient, dbUr
         checked(await db.from(entry.table).update(entry.fields).match(entry.where));
         const restored = checked(await db.from(entry.table).select(Object.keys(entry.fields).join(",")).match(entry.where).single());
         if (!isDeepStrictEqual(restored, entry.fields)) throw new Error(`Restore verification failed: ${entry.table}`);
-      } else if (entry.kind === "rows") {
+      } else {
         if (!order.includes(entry.table) || !Object.keys(entry.where ?? {}).length) throw new Error("Unrecognized row ownership");
-        const rows = checked(await db.from(entry.table).select("id").match(entry.where));
+        const rows = checked(await db.from(entry.table).select("id").match(entry.where!));
         if (rows.length > 1) throw new Error(`Ambiguous ownership: ${entry.table} selector matched multiple rows`);
         for (const row of rows) {
-          assertNoAcquiredFields(ref, entry.table, row.id);
+          assertNoAcquiredFields(entry.table, row.id);
           // Cascades and SET NULL can change a foreign scope even when the parent ID is ours.
           // Own children were removed earlier; any remaining dependent blocks this deletion.
           await assertNoDependents(dbUrl, "public", entry.table, row.id);
           checked(await db.from(entry.table).delete().in("id", [row.id]));
         }
-        if (checked(await db.from(entry.table).select("id").match(entry.where)).length) throw new Error(`Cleanup left owned ${entry.table} rows`);
-      } else throw new Error(`Unrecognized ownership kind: ${entry.kind}`);
-      forgetEntry(ref, entry.id);
+        if (checked(await db.from(entry.table).select("id").match(entry.where!)).length) throw new Error(`Cleanup left owned ${entry.table} rows`);
+      }
+      scope.forget(entry.id);
     } catch (error) { failures.push(error); }
   }
   if (failures.length) throw new AggregateError(failures, "Owned fixture cleanup failed; unresolved entries retained", { cause: failures[0] });

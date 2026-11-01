@@ -7,15 +7,17 @@
 // Known bugs: none.
 // Invariants: the probes own every sentinel and restore every seed field they acquire; no reset.
 import { afterEach, beforeEach, describe, expect, inject, it } from "vitest";
-import { FixtureScope, userExists, withFixtureScope, cleanupEntries } from "../helpers/fixture-ownership";
-import { inspectRun } from "../helpers/run-ownership.mjs";
+import { FixtureScope, userExists, withFixtureScope, cleanupEntries, type RunMarker } from "../helpers/fixture-ownership";
+import { compareSnapshots, takeSnapshot } from "../../scripts/test-stack/audit.mjs";
 import { fixtures, must, IDS, admin, student, learner, startFixtureScope, finishFixtureScope } from "./helpers";
 
-const ref = inject("ownership");
 const stack = inject("localStack");
 // Same verified test endpoint, with credentials of a role that does not exist.
 const lookupFailureUrl = (dbUrl: string) => { const url = new URL(dbUrl); url.username = "fixture_lookup_failure"; url.password = "fixture-only"; return url.toString(); };
-const scope = () => new FixtureScope(ref, fixtures, stack.dbUrl);
+// These probes fail cleanups and occupy selectors on purpose; their own run marker keeps that out of the real run state,
+// which is covered by the last rows. A marker that remembers causes serves those rows.
+const recorder = () => { const causes: string[] = []; return { causes, check: () => causes[0] ?? null, mark: (cause: string) => { causes.push(cause); } } satisfies RunMarker & { causes: string[] }; };
+const scope = (run: RunMarker = recorder()) => new FixtureScope(fixtures, stack.dbUrl, { run });
 beforeEach(startFixtureScope);
 afterEach(finishFixtureScope);
 
@@ -87,7 +89,7 @@ describe("fixture ownership persistence", () => {
       const manualNote = owner.label("rls-test existing manual note");
       must(await student.from("notes").update({ content: manualNote }).eq("id", 1));
       await expect(failed.acquire("notes", 1, ["content"], initial)).rejects.toThrow("differ from baseline");
-      expect(inspectRun(ref).entries.filter(entry => entry.scope === failed.id && entry.kind !== "scope")).toEqual([]);
+      expect(failed.entries).toEqual([]);
       const before = must(await fixtures.from("notifications").select("id,title,is_read").eq("title", title));
       await failed.cleanup();
       expect(must(await fixtures.from("notifications").select("id,title,is_read").eq("title", title))).toEqual(before);
@@ -159,11 +161,47 @@ describe("fixture ownership persistence", () => {
       expect(created.error).toBeNull(); expect(sentinel.error).toBeNull();
       const id = created.data.user!.id, sentinelId = sentinel.data.user!.id;
       // The real local SQL server refuses this invented, nonexistent role; no policy/schema is changed.
-      await expect(cleanupEntries(ref, fixtures, lookupFailureUrl(stack.dbUrl), owner.id)).rejects.toThrow("unresolved entries retained");
-      expect(inspectRun(ref).entries.some(entry => entry.kind === "auth" && entry.scope === owner.id && entry.email === email)).toBe(true);
+      await expect(cleanupEntries(owner, fixtures, lookupFailureUrl(stack.dbUrl))).rejects.toThrow("unresolved entries retained");
+      expect(owner.entries.some(entry => entry.kind === "auth" && entry.email === email)).toBe(true);
       expect(await userExists(fixtures, id)).toBe(true); expect(await userExists(fixtures, sentinelId)).toBe(true);
       await owner.cleanup();
       expect(await userExists(fixtures, id)).toBe(false); expect(await userExists(fixtures, sentinelId)).toBe(true);
     } finally { await owner.cleanup(); await foreign.cleanup(); }
+  });
+  it("marks the run on residue found at a reservation and refuses every later scope, without touching the residue", async () => {
+    const run = recorder();
+    const owner = scope(run);
+    const title = owner.label("rls-test residue");
+    must(await fixtures.from("notifications").insert({ receiver_id: IDS.learner, title, type: "system" }));
+    try {
+      await expect(owner.reserve("notifications", { title })).rejects.toThrow("already occupied");
+      expect(run.causes).toHaveLength(1);
+      expect(run.causes[0]).toMatch(/^residue: notifications selector/);
+      expect(() => scope(run)).toThrow("Previous fixture cleanup is unresolved or the run is unclean");
+      expect(must(await fixtures.from("notifications").select("id").eq("title", title))).toHaveLength(1);
+    } finally {
+      must(await fixtures.from("notifications").delete().eq("title", title));
+      await owner.cleanup();
+    }
+    expect(must(await fixtures.from("notifications").select("id").eq("title", title))).toEqual([]);
+  });
+
+  it("audits a scope's cleanup as clean and reports a write that lands after it", async () => {
+    const owner = scope();
+    const title = owner.label("rls-test delayed write");
+    const before = await takeSnapshot(stack.dbUrl);
+    try {
+      await owner.reserve("notifications", { title });
+      must(await fixtures.from("notifications").insert({ receiver_id: IDS.learner, title, type: "system" }));
+      await owner.cleanup();
+      expect(compareSnapshots(before, await takeSnapshot(stack.dbUrl))).toEqual([]);
+      // The delayed write is what a writer that outlives its scope would do; the end-of-run audit must name it.
+      must(await fixtures.from("notifications").insert({ receiver_id: IDS.learner, title, type: "system" }));
+      expect(compareSnapshots(before, await takeSnapshot(stack.dbUrl))).toEqual([expect.stringMatching(/^public\.notifications: /)]);
+    } finally {
+      must(await fixtures.from("notifications").delete().eq("title", title));
+      await owner.cleanup();
+    }
+    expect(compareSnapshots(before, await takeSnapshot(stack.dbUrl))).toEqual([]);
   });
 });

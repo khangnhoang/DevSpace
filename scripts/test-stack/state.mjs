@@ -1,6 +1,6 @@
 // What the test commands remember between runs: the hash of the inputs at the last reset and whether the last
 // run finished cleanly. It lives outside the checkout because the containers it describes are machine-wide.
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 export function stateDir() {
@@ -22,6 +22,10 @@ export function readState(dir = stateDir()) {
     if (state && typeof state === "object") return state;
   } catch { /* falls through to the unclean answer */ }
   return { status: "dirty", cause: "state.json cannot be parsed" };
+}
+
+export function clearState(dir = stateDir()) {
+  rmSync(join(dir, "state.json"), { force: true });
 }
 
 export function writeState(state, dir = stateDir()) {

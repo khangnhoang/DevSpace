@@ -2,8 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { join } from "node:path";
 import { type LocalStack } from "../helpers/local-stack";
 import { readTestStack } from "../../scripts/test-stack/read.mjs";
-import { FixtureScope, checked as must, userExists as checkUserExists } from "../helpers/fixture-ownership";
-import { inheritedRun } from "../helpers/run-ownership.mjs";
+import { FixtureScope, checked as must, userExists as checkUserExists, type RunMarker } from "../helpers/fixture-ownership";
 import { IDS } from "./accounts";
 
 let client: SupabaseClient | undefined;
@@ -17,16 +16,12 @@ function serviceRole(): SupabaseClient {
   }
   return client;
 }
-export function beginFixtureScope() {
-  const stack = localStack();
-  const ref = inheritedRun();
-  if (new URL(stack.apiUrl).origin.replace("localhost", "127.0.0.1") !== ref.target.api) throw new Error("Fixture target does not match run ownership");
-  active = new FixtureScope(ref, serviceRole(), stack.dbUrl);
+export function beginFixtureScope(options?: { run?: RunMarker }) {
+  active = new FixtureScope(serviceRole(), localStack().dbUrl, options);
   return active;
 }
 function scope() { if (!active) throw new Error("No active fixture scope"); return active; }
 export const fixtureCode = (value: string) => scope().code(value);
-export const fixtureScopeId = () => scope().id;
 export const userExists = (id: string) => checkUserExists(serviceRole(), id);
 export async function learnerEnrollmentCount(courseId: number): Promise<number> {
   return must(await serviceRole().from("enrollments").select("id").eq("user_id", IDS.learner).eq("course_id", courseId)).length;

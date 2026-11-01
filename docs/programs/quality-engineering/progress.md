@@ -7,12 +7,12 @@ Charter: [README.md](README.md). Problems: [problems.md](problems.md). Git histo
 | Field | Value |
 | --- | --- |
 | Spec revision | QE-U3 `implementation-plans/qe-u3-test-stack/plan.md` r4 (2026-11-01); r1 to r3 failed the Codex plan gate, r4 passed it and was approved by the Owner on 2026-11-01. QE-U2 r1 closed. |
-| Current unit / checkpoint | QE-U3 CP1 (test stack beside dev, reset decision, stop, readers moved) implemented on `test/qe-p2-test-stack`; awaiting Main review. CP2 and CP3 not started. |
+| Current unit / checkpoint | QE-U3 CP1 (`eba3051`, accepted by Main) and CP2 (machine-wide lock, writer records, end-of-run audit, in-memory fixture ownership; old journal and recovery removed) implemented on `test/qe-p2-test-stack`; CP2 awaits Main review. CP3 (CI, docs, skills) not started. |
 | Status | QE-U2 delivered in PR #46 (`3e4b941`); QE-P2 open; QE-F5 transferred from BL-F3 and BL-F5 transferred as QE-F6 and consolidated into QE-F4 (2026-11-01). |
 | Completed evidence | QE-U1: PR #42 (`ddcefd0`). QE-U2: PR #46 (`3e4b941`); see milestones. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | Main reviews CP1; then the implementor starts CP2. |
+| Next action | Main reviews CP2; then the implementor starts CP3. |
 | Current authority | 2026-11-02: QE-U3 r4 implementation by a separate implementor with local checkpoint commits; Main reviews each checkpoint; no push or PR. |
 
 ## Milestones

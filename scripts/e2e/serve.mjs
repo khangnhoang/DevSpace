@@ -12,7 +12,12 @@ import { serverRecordPaths } from "../../__tests__/helpers/e2e-server.ts";
 const root = process.cwd();
 const next = createRequire(import.meta.url).resolve("next/dist/bin/next");
 
-const build = spawnSync(process.execPath, [next, "build"], { cwd: root, env: process.env, stdio: "inherit" });
+// The build only reads, so it does not take part in the test run: without the run id and the writer preload its
+// many worker processes leave no writer records. The server below inherits both and registers.
+const buildEnv = { ...process.env };
+delete buildEnv.DEVSPACE_TEST_RUN;
+buildEnv.NODE_OPTIONS = (process.env.NODE_OPTIONS ?? "").replace(/--import=\S*writer-preload\.mjs/, "").trim();
+const build = spawnSync(process.execPath, [next, "build"], { cwd: root, env: buildEnv, stdio: "inherit" });
 if (build.status !== 0) process.exit(build.status ?? 1);
 
 // Every run starts with empty records, so a row reads only what happened after it began.

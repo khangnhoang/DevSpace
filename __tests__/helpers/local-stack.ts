@@ -52,6 +52,8 @@ export function parseLocalStack(statusJson: string): LocalStack {
 // `workdir` names a generated Supabase workdir (the test stack); without it the CLI uses the checkout's own
 // `supabase/` directory, which is the dev stack.
 export function readLocalStack(cwd: string, workdir?: string): LocalStack {
+  const env = { ...process.env };
+  delete env.DEVSPACE_TEST_RUN;
   let output: string;
   try {
     output = execSync(`npx supabase status -o json${workdir ? ` --workdir "${workdir}"` : ""}`, {
@@ -59,6 +61,8 @@ export function readLocalStack(cwd: string, workdir?: string): LocalStack {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
       timeout: 60_000,
+      // A status read is not a writer: without the run id the writer preload leaves the npx process alone.
+      env,
     });
   } catch (error) {
     const stderr = String((error as { stderr?: unknown }).stderr ?? "").trim();

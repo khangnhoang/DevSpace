@@ -5,7 +5,8 @@ import { localTarget, assertUnmanagedReadiness } from './local-readiness.mjs';
 export async function startManagedRun(stack, mode, cwd = process.cwd()) {
   const target = localTarget(stack, cwd);
   const ref = acquireRun(target, mode);
-  try { await assertUnmanagedReadiness(stack); }
+  // The dev server (port 3000) runs on the dev stack, so a test run only needs the e2e port free (AC1, AC8).
+  try { await assertUnmanagedReadiness(stack, mode === 'dev' ? [3000, 3100] : [3100]); }
   catch (error) { releaseRun(ref); throw error; }
   return ref;
 }

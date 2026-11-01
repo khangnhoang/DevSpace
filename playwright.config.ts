@@ -1,11 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 import { E2E_ORIGIN, buildE2eEnv } from "./__tests__/helpers/e2e-env";
-import { readLocalStack } from "./__tests__/helpers/local-stack";
+import { readTestStack } from "./scripts/test-stack/read.mjs";
 
-// The API URL and keys come from `npx supabase status` only, never from a file: the local environment file
+// The API URL and keys come from the test stack's `supabase status` only, never from a file: the local environment file
 // points at the hosted project. The same map is set for the build, which inlines the NEXT_PUBLIC_* values,
 // and for the server.
-const serverEnv = buildE2eEnv(readLocalStack(__dirname));
+const serverEnv = buildE2eEnv(readTestStack(__dirname));
 const { env: runnerEnv } = process;
 
 export default defineConfig({

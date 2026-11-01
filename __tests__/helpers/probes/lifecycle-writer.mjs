@@ -2,11 +2,11 @@ import { createClient } from '@supabase/supabase-js';
 import { createServer } from 'node:http';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { readLocalStack } from '../local-stack.ts';
+import { readTestStack } from '../../../scripts/test-stack/read.mjs';
 import { FixtureScope, checked } from '../fixture-ownership.ts';
 import { inheritedRun } from '../run-ownership.mjs';
 
-const stack = readLocalStack(process.cwd());
+const stack = readTestStack(process.cwd());
 const db = createClient(stack.apiUrl, stack.serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
 const scope = new FixtureScope(inheritedRun(), db, stack.dbUrl);
 const first = scope.label('rls-test first side effect');

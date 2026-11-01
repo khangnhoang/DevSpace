@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { join } from "node:path";
-import { readLocalStack, type LocalStack } from "../helpers/local-stack";
+import { type LocalStack } from "../helpers/local-stack";
+import { readTestStack } from "../../scripts/test-stack/read.mjs";
 import { FixtureScope, checked as must, userExists as checkUserExists } from "../helpers/fixture-ownership";
 import { inheritedRun } from "../helpers/run-ownership.mjs";
 import { IDS } from "./accounts";
@@ -8,7 +9,7 @@ import { IDS } from "./accounts";
 let client: SupabaseClient | undefined;
 let active: FixtureScope | undefined;
 let local: LocalStack | undefined;
-function localStack() { return local ??= readLocalStack(join(__dirname, "../..")); }
+function localStack() { return local ??= readTestStack(join(__dirname, "../..")); }
 function serviceRole(): SupabaseClient {
   if (!client) {
     const stack = localStack();

@@ -6,7 +6,8 @@ import pg from 'pg';
 
 export function localTarget(stack, cwd) {
   const config = readFileSync(join(cwd, 'supabase/config.toml'), 'utf8');
-  const project = /^project_id\s*=\s*"([a-zA-Z0-9_-]+)"/m.exec(config)?.[1];
+  // The test stack names its project itself; the dev stack's comes from the checkout's own config.
+  const project = stack.project ?? /^project_id\s*=\s*"([a-zA-Z0-9_-]+)"/m.exec(config)?.[1];
   if (!project) throw new Error('Cannot establish local project identity');
   const db = new URL(stack.dbUrl);
   const api = new URL(stack.apiUrl);
@@ -23,10 +24,10 @@ export function localTarget(stack, cwd) {
   return { endpoint: `127.0.0.1:${db.port}${db.pathname}`, project, database: database.id, gateway: gateway.id, api: api.origin.replace('localhost', '127.0.0.1') };
 }
 
-export async function assertUnmanagedReadiness(stack) {
+export async function assertUnmanagedReadiness(stack, ports = [3000, 3100]) {
   // This is cooperative coordination, not machine isolation. Ports catch direct dev/start/manual browser
   // usage; SQL connections catch direct database clients. Neither authorizes resetting unexpected data.
-  for (const port of [3000, 3100]) {
+  for (const port of ports) {
     await new Promise((resolve, reject) => {
       const server = createServer();
       server.once('error', () => reject(new Error(`Port ${port} is in use; establish unmanaged dev/manual QA ownership before proceeding`)));

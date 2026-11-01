@@ -13,6 +13,8 @@ import { fixtures, must, IDS, admin, student, learner, startFixtureScope, finish
 
 const ref = inject("ownership");
 const stack = inject("localStack");
+// Same verified test endpoint, with credentials of a role that does not exist.
+const lookupFailureUrl = (dbUrl: string) => { const url = new URL(dbUrl); url.username = "fixture_lookup_failure"; url.password = "fixture-only"; return url.toString(); };
 const scope = () => new FixtureScope(ref, fixtures, stack.dbUrl);
 beforeEach(startFixtureScope);
 afterEach(finishFixtureScope);
@@ -157,7 +159,7 @@ describe("fixture ownership persistence", () => {
       expect(created.error).toBeNull(); expect(sentinel.error).toBeNull();
       const id = created.data.user!.id, sentinelId = sentinel.data.user!.id;
       // The real local SQL server refuses this invented, nonexistent role; no policy/schema is changed.
-      await expect(cleanupEntries(ref, fixtures, "postgresql://fixture_lookup_failure:fixture-only@127.0.0.1:54322/postgres", owner.id)).rejects.toThrow("unresolved entries retained");
+      await expect(cleanupEntries(ref, fixtures, lookupFailureUrl(stack.dbUrl), owner.id)).rejects.toThrow("unresolved entries retained");
       expect(inspectRun(ref).entries.some(entry => entry.kind === "auth" && entry.scope === owner.id && entry.email === email)).toBe(true);
       expect(await userExists(fixtures, id)).toBe(true); expect(await userExists(fixtures, sentinelId)).toBe(true);
       await owner.cleanup();

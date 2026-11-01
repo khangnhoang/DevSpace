@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | DM-U2 `implementation-plans/dm-u2-nodemailer-10/plan.md` r2 (2026-11-01), written from a trial install; Codex plan gate PASS; Owner-approved 2026-11-01. U1 r3 closed. |
-| Current unit / checkpoint | DM-U2 CP1 and CP2 done on `chore/dm-u2-nodemailer-10`; Main review and the Codex diff gate passed; in delivery. |
-| Status | DM-U2 implemented; the `nodemailer` finding of DM-P1 is fixed by this branch once merged. |
-| Completed evidence | DM-U2 trial (2026-11-01, plan section 2): with `nodemailer` 10.3.1 and without `@types/nodemailer`, `tsc`, lint and build pass, the e2e mail record patches the bundled `sendMail`, the server-guard unit file passes 23/23, and `npm audit --omit=dev` has no `nodemailer` finding. DM-U2 CP1 and CP2 (2026-11-01): the same holds on the branch, plus `npm test` 263 and `npm run test:e2e` 60 passed after `npx supabase db reset`, with the AC5 mail rows green. |
+| Spec revision | DM-U3 `implementation-plans/dm-u3-audit-cleanup/plan.md` r1 (2026-11-01), written from a trial install; Codex plan gate PASS; Owner-approved 2026-11-01. DM-U2 r2 closed (PR 47). |
+| Current unit / checkpoint | DM-U3 planning on `chore/dm-u3-audit-cleanup`; no checkpoint started. |
+| Status | DM-U2 delivered in PR #47 (`f900b18`); DM-U3 plan approved for DM-P1 groups A and C. |
+| Completed evidence | DM-U2: PR 47 (`f900b18`), see milestones. DM-U3 trial (2026-11-01, plan section 2): `npm audit fix` plus the `postcss-selector-parser` override leave 2 production findings; `tsc`, lint, build and unit tests pass; the CSS of a clean build is unchanged. |
 | Accepted deviations | none. |
-| Blockers / Owner decisions | none open. |
-| Next action | CI on the DM-U2 PR; merge needs its own Owner grant. |
-| Current authority | 2026-11-01: new branch, the DM-U2 trial install and plan, the QE-P1 docs catch-up with one local commit (`8b54616`); plan approval, one local plan commit, and implementation by a separate implementor with local checkpoint commits. Local stack commands only. Push of this branch and PR creation granted 2026-11-01; no merge or hosted access. |
+| Blockers / Owner decisions | The implementation grant (the Owner is reading the plan first). |
+| Next action | The Owner decides the implementation grant for DM-U3. |
+| Current authority | 2026-11-01: new branch for DM-U3, its trial install and plan, the PR 47 docs catch-up and the backlog BL-P4 record. Plan approval and local commits of the records and plan. No implementation, push, PR or hosted access is granted yet. |
 
 ## Milestones
 
@@ -37,3 +37,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-28 DM-001/002 merged: historical removal of six unused packages and the trial-install/type-only policy delivered; later features may reintroduce packages (PR 32, `1c99b77`).
 - 2026-11-01 DM-U2 r2 approved for DM-P1's `nodemailer` finding after the Codex plan gate PASS: `nodemailer` 10.3.1 and removal of `@types/nodemailer` (`fba8027`).
 - 2026-11-01 DM-U2 CP1 and CP2: `nodemailer` 10.3.1 installed and `@types/nodemailer` removed with no code edit; tsc, lint, build, `npm test` (263) and `npm run test:e2e` (60) pass, `npm audit --omit=dev` has no `nodemailer` finding (8 findings left), the Gmail SMTP send is not verified; DM-P1's `nodemailer` finding is fixed locally (`c01b360`).
+- 2026-11-01 DM-U2 merged: `nodemailer` 10.3.1 without `@types/nodemailer`, CI green; DM-P1's `nodemailer` finding fixed; the Gmail SMTP send remains unverified (PR 47, `f900b18`).
+- 2026-11-01 DM-U3 r1 approved for DM-P1 groups A and C after the Codex plan gate PASS: `npm audit fix` without `--force` and a `postcss-selector-parser` 6.1.5 override (this commit).

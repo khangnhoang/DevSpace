@@ -207,8 +207,15 @@ export function registerWriter({ dir = stateDir(), runId = process.env.DEVSPACE_
 
 const closedFile = (dir, runId) => join(dir, "closed", runId);
 
+// Only a missing mark means admission is open. A mark that cannot be read (permissions, an I/O error) is unknown,
+// and an unknown state must not admit a late writer: the caller refuses, naming the mark and the cause.
 function admissionClosed(dir, runId) {
-  try { readFileSync(closedFile(dir, runId)); return true; } catch { return false; }
+  const file = closedFile(dir, runId);
+  try { readFileSync(file); return true; }
+  catch (error) {
+    if (error.code === "ENOENT") return false;
+    throw new LockError("unreadable", `The admission mark ${file} cannot be read (${error.code ?? error.message}), so this process cannot tell whether test run ${runId} still admits writers and writes nothing. Check the file's permissions; the next test command stops this process and resets.`);
+  }
 }
 
 // The launcher closes admission once the suite's process has exited and before it waits for the run's writers,

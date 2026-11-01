@@ -331,6 +331,21 @@ describe("test stack lock", { timeout: 120_000 }, () => {
     expect(() => lock.requireActiveRun({ command: "npm test", env, dir })).not.toThrow();
   });
 
+  it("refuses a registration when the admission mark cannot be read, and names the mark", () => {
+    lock.acquireLock({ command: "npm test (unreadable mark)", dir, runId: "mark-run" });
+    // A directory in the mark's place fails to read with a code other than ENOENT, as a permission error would.
+    mkdirSync(join(dir, "closed", "mark-run"), { recursive: true });
+    expect(() => lock.registerWriter({ dir, runId: "mark-run", role: "late" })).toThrow(/admission mark .*mark-run cannot be read/);
+  });
+
+  it("exits a preloaded process with an unreadable admission mark before it writes anything", async () => {
+    lock.acquireLock({ command: "npm test (unreadable mark)", dir, runId: "mark-run" });
+    mkdirSync(join(dir, "closed", "mark-run"), { recursive: true });
+    const marker = join(dir, "marker");
+    expect(await new Probe("late-write", [marker], withPreload("mark-run")).exited).toBe(1);
+    expect(existsSync(marker)).toBe(false);
+  });
+
   it("refuses a registration once admission is closed, and keeps admitting before", () => {
     lock.acquireLock({ command: "npm test (admission)", dir, runId: "admission-run" });
     expect(() => lock.registerWriter({ dir, runId: "admission-run", role: "early" })).not.toThrow();

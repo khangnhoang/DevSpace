@@ -91,9 +91,10 @@ jobs:
       - run: npm run docs:check
       - run: npm run docs:check:test
 
-  # Blocking (infrastructure D14). Local Supabase stack only, no hosted secret or connection. `start` skips
-  # unused containers; Storage stays for the `storage` schema the baseline's policies use, and Auth for the
-  # `auth` schema its trigger and the seed's users use (Kong and PostgREST stay as the API in front).
+  # Blocking (infrastructure D14). Local Supabase stack only, no hosted secret or connection. `npm test` starts
+  # the generated `devspace-test` stack itself (scripts/test-stack), which skips unused containers; Storage stays
+  # for the `storage` schema the baseline's policies use, and Auth for the `auth` schema its trigger and the
+  # seed's users use (Kong and PostgREST stay as the API in front). Its lock and run state live in /var/tmp.
   db:
     # Skipped only for a pull request that the classifier called docs-only. Fail-open: a failed, skipped or
     # silent classifier, and every push to main, run this job. `!cancelled()` (not `always()`) keeps a cancelled
@@ -110,16 +111,13 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx supabase start -x studio,mailpit,edge-runtime,logflare,vector,imgproxy,supavisor,realtime,postgres-meta
-      # `start` already applied the migrations and the seed on the empty database. `db reset` is the
-      # developer command; the tests below run after it (infrastructure D14).
-      - run: npx supabase db reset
-      # Unit and RLS tests (infrastructure U3). The rls project reads the API URL and keys from the local
+      # Unit and RLS tests (infrastructure U3). The start applies the migrations and the seed on the empty
+      # database, so the fresh runner needs no reset. The rls project reads the API URL and keys from the test
       # stack only. A failing test, a known bug that stopped reproducing, or a setup failure fails the job.
       - run: npm test
 
   # Blocking (infrastructure D20). Playwright smoke against its own local Supabase stack, same service list as
-  # `db`; no hosted secret or connection. `npm run test:e2e` reads the stack's URL and keys from
+  # `db`; no hosted secret or connection. `npm run test:e2e` starts the test stack, reads its URL and keys from
   # `supabase status`, builds the app with them and serves it on port 3100.
   e2e:
     # Same skip condition as `db`.
@@ -134,7 +132,6 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx supabase start -x studio,mailpit,edge-runtime,logflare,vector,imgproxy,supavisor,realtime,postgres-meta
       # No `--with-deps`: the runner image already has every library the headless shell needs, and the apt
       # step only added fonts and patch upgrades while it took 2 to 15 minutes on a slow Ubuntu mirror
       # (infrastructure FEAT-018). A library the image drops later makes the browser launch fail, so the job

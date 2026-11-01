@@ -27,7 +27,7 @@ Future initiatives retain their transferred scope and need separate approval. QE
 
 ## QE-F5: Separate dev and test local stacks
 
-- Status: Planned in QE-U3 together with QE-P2; transferred from BL-F3 (Owner decision 2026-10-25) on 2026-11-01.
+- Status: Fixed locally, awaiting delivery: QE-U3 runs `rls` and `e2e` on the `devspace-test` stack (ports 55320–55329) beside the dev stack, started, checked and reset by the test commands and stopped by `npm run test:stack:stop`; transferred from BL-F3 (Owner decision 2026-10-25) on 2026-11-01. Main closes the entry with the PR at delivery.
 - Direction: run two local Supabase stacks instead of one. The `dev` stack holds the seed data for manual QA. The `test` stack runs the `rls` and `e2e` suites, and tests still clean up after themselves. The two stacks have distinct `project_id`s and port ranges, share migrations and seed, and test helpers read the `test` stack. A stack is started only when needed and stopped after use. Every start and stop is confirmed (`supabase status` and `docker ps` for that `project_id`), not assumed from the command's exit, and a reset needs to know who owns the stack. A third stack (separate `rls` and `e2e`) was considered and not chosen: double the containers for little gain.
 - Target program: quality-engineering.
 

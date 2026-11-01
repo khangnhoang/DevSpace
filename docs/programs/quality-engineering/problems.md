@@ -6,7 +6,7 @@ Charter: [README.md](README.md). Progress: [progress.md](progress.md).
 
 ### QE-P2: ownership journals retained on Windows that recovery cannot always clear
 
-- Status: Open (2026-11-01, recorded during dependency-maintenance DM-U4).
+- Status: Fixed locally, awaiting delivery (2026-11-01, recorded during dependency-maintenance DM-U4). QE-U3 on `test/qe-p2-test-stack` runs tests on a separate `devspace-test` stack and replaces the ownership journal, gate, process-tree tracking and `recover.mjs` with one machine-wide lock, one record per writer process and an end-of-run audit. None of the four causes below can occur: no journal exists, a writer is judged by PID plus start time, and the next command stops a dead run's writers and resets. Main closes the entry with the PR at delivery.
 - Problem: during DM-U4, six local ownership journals under `C:\ProgramData\devspace-fixture-ownership-v1\` blocked the next run. Each held no recorded resources. Four causes were observed:
   - (1) An e2e run ended with `Writer descendants are still alive; ownership retained`, although the writers exited soon after. `runManagedChild` waits at most 10 s (`awaitWritersExit`, `__tests__/helpers/managed-run.mjs:38`) for 87 registered writers.
   - (2) Stopping `npm run dev` from the desktop preview (`preview_stop`) leaves its journal in phase `open` with a dead owner, so the next dev or test run is refused.
@@ -29,7 +29,7 @@ Charter: [README.md](README.md). Progress: [progress.md](progress.md).
     - Whether the tests can run without realtime or storage is unverified. A failed realtime websocket may count as a page error under the e2e network guard.
   - To verify in the plan: running two stacks with the repository-pinned Supabase CLI (a second config and project id with its own ports); Docker memory with both stacks up; `buildE2eEnv` and the host check reading the test stack instead of `npx supabase status` of the dev stack; the CI job, which runs one stack only; and each guard of the QE-U1 invariants. Each guard is either kept or dropped, with the reason the separate stack covers it.
   - Fallback if two stacks prove impractical: keep one stack and patch the four cases. Measure the writer-exit deadline on Windows. Close the dev journal when the server is killed. Let `recover.mjs` detect a reused pid by its start time and a reset stack.
-- Exit condition: on Windows, a passing `npm run test:e2e` and a stopped dev preview leave no journal, and the four cases above are cleared by `recover.mjs` without manual removal.
+- Exit condition: on Windows, a passing `npm run test:e2e` and a stopped dev preview leave no journal, and an interrupted run is cleaned up by the next command (writers stopped, database reset) without manual removal. Verified locally in QE-U3 CP2: a killed e2e run left its server and Next child alive, and the next `npm run test:e2e` stopped both, reset and passed.
 
 ## Resolved
 

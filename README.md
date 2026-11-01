@@ -117,9 +117,9 @@ npx supabase db reset
 npm run dev
 ```
 
-`npm run dev` chạy trên Supabase local và báo lỗi nếu Supabase local chưa chạy.
+`npm run dev` chạy trên stack dev của Supabase local (`devspace-local`, cổng 54320–54329) và báo lỗi nếu stack này chưa chạy. Khi dùng xong, chạy `npx supabase stop`.
 
-Managed dev, RLS and E2E share exclusive use of the local stack. Before the reset above, establish that the target is disposable and unused by other work. After an interrupted test, preserve its journal and follow [fixture recovery](.claude/skills/test-quality-strategy/references/fixture-recovery.md); normal setup never resets or sweeps old fixtures automatically.
+`npm test` và `npm run test:e2e` dùng stack riêng (`devspace-test`, cổng 55320–55329): hai lệnh tự khởi động, kiểm tra và reset stack đó khi cần, không đọc hay xoá dữ liệu của stack dev. `npm run test:stack:stop` dừng stack test. Chi tiết: mục Commands của [AGENTS.md](AGENTS.md).
 
 Truy cập: [http://127.0.0.1:3000](http://127.0.0.1:3000)
 

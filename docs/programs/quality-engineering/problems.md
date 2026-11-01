@@ -20,6 +20,13 @@ Charter: [README.md](README.md). Progress: [progress.md](progress.md).
   - A gate timeout in `joinRun` was a separate cause, fixed by DM-U4 `82fee44`.
 - Direction: Owner direction (2026-11-01), not yet planned or verified. Run tests on their own local Supabase stack, separate from the dev stack, and then simplify the ownership layer instead of patching it.
   - With two stacks, the dev data is out of reach of test cleanup and resets. The test stack is disposable and can be reset freely. Keep tag-based fixture identity and cleanup. Replace the gate, membership, process-tree and writer-exit checks with one run lock that records a pid and start time, and treat the lock as stale when that process is gone. Sweep leftover e2e-tagged rows at start.
+  - Lifecycle and resources (Owner direction, 2026-11-01):
+    - One test command starts the test stack if it is down. It then checks that the stack is the test project, that every required container exists and is healthy, and that the data is reset or swept, and only then runs the tests. A missing or unhealthy container stops the command with its name, and no test runs.
+    - A separate command stops the test stack once local work is done. It never touches the dev stack or another project's stack.
+    - The test stack starts only the services the tests need (`supabase start -x <service>`).
+    - The dev stack runs only while the Owner or an agent needs manual QA, and is stopped afterwards.
+    - Measured on 2026-11-01: the dev stack runs db, auth, rest, kong, storage and realtime, about 700 MB in total (realtime 238 MB, kong 191 MB). The app uses all six (realtime in `SidebarContent.tsx`, storage for avatars).
+    - Whether the tests can run without realtime or storage is unverified. A failed realtime websocket may count as a page error under the e2e network guard.
   - To verify in the plan: running two stacks with the repository-pinned Supabase CLI (a second config and project id with its own ports); Docker memory with both stacks up; `buildE2eEnv` and the host check reading the test stack instead of `npx supabase status` of the dev stack; the CI job, which runs one stack only; and each guard of the QE-U1 invariants. Each guard is either kept or dropped, with the reason the separate stack covers it.
   - Fallback if two stacks prove impractical: keep one stack and patch the four cases. Measure the writer-exit deadline on Windows. Close the dev journal when the server is killed. Let `recover.mjs` detect a reused pid by its start time and a reset stack.
 - Exit condition: on Windows, a passing `npm run test:e2e` and a stopped dev preview leave no journal, and the four cases above are cleared by `recover.mjs` without manual removal.

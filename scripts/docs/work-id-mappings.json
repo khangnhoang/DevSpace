@@ -818,5 +818,25 @@
       "file": "docs/programs/security-hotfix/problems.md",
       "id": "SH-P32"
     }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "BL-F3"
+    },
+    "to": {
+      "file": "docs/programs/quality-engineering/future-features.md",
+      "id": "QE-F5"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "BL-F5"
+    },
+    "to": {
+      "file": "docs/programs/quality-engineering/future-features.md",
+      "id": "QE-F6"
+    }
   }
 ]

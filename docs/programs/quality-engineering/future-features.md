@@ -16,14 +16,23 @@ Future initiatives retain their transferred scope and need separate approval. QE
 
 ## QE-F4: Assert mail content through a local Mailpit
 
-- Status: Recorded 2026-11-01 by the Owner; deferred until its own initiative is approved.
+- Status: Recorded 2026-11-01 by the Owner; deferred until its own initiative is approved; absorbs QE-F6 (from BL-F5: local mail into the local stack's mail sink, Owner, agent-workflow U4, 2026-10-25), transferred on 2026-11-01.
 - Direction:
   - Today the app sends one mail: the course activation mail from `app/action/payment.ts:293` through `lib/email.server.ts`, whose nodemailer transport is fixed to `service: "gmail"`. E2E replaces `sendMail` with a record of recipient and subject only (`__tests__/e2e/server-mail.cjs`), so no test reads the body or its link. Backlog BL-P6 and BL-P7 are both content defects that such a test would catch.
   - Make the transport configurable by environment (SMTP host and port), then point the test stack at Supabase's local mail server (`[local_smtp]`, Mailpit; disabled today in `supabase/config.toml`). E2E reads the delivered mail through Mailpit's API and asserts the recipient, the rendered name and the action link. The local mail server stays inside the network guard's local hosts.
   - Enable Mailpit only on the stack that needs it (the QE-P2 direction). Plan it when a new mail flow arrives (password reset, auth confirmations) or together with the NestJS mail module. ADR 0001 replaces the current server-action mail path, so build no mail infrastructure the migration discards.
+  - From QE-F6 (BL-F5): `npm run dev` sends with Gmail placeholders, so a send fails and is only logged (`app/action/payment.ts:293` ignores the result). Route dev mail into the same local mail server (an SMTP port exposed), with the SMTP host set in `__tests__/helpers/dev-env.ts`, so a manual pass can read the mail. Hosted mail stays Gmail.
   - Real provider delivery (Gmail) stays out of scope, as QE-F2 says.
 - Target program: quality-engineering.
 
+## QE-F5: Separate dev and test local stacks
+
+- Status: Planned in QE-U3 together with QE-P2; transferred from BL-F3 (Owner decision 2026-10-25) on 2026-11-01.
+- Direction: run two local Supabase stacks instead of one. The `dev` stack holds the seed data for manual QA. The `test` stack runs the `rls` and `e2e` suites, and tests still clean up after themselves. The two stacks have distinct `project_id`s and port ranges, share migrations and seed, and test helpers read the `test` stack. A stack is started only when needed and stopped after use. Every start and stop is confirmed (`supabase status` and `docker ps` for that `project_id`), not assumed from the command's exit, and a reset needs to know who owns the stack. A third stack (separate `rls` and `e2e`) was considered and not chosen: double the containers for little gain.
+- Target program: quality-engineering.
+
 ## Closed
+
+- QE-F6 — Dropped: transferred from BL-F5 on 2026-11-01 and consolidated into QE-F4, which carries its dev-mail direction
 
 - QE-F1 — Done: QE-U1 delivered scoped test-data ownership, cleanup/recovery and preflight regressions; later intermittent Windows lifecycle observations remain separately tracked as QE-P1 (PR #42)

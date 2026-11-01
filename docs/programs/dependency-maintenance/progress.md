@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | DM-U3 `implementation-plans/dm-u3-audit-cleanup/plan.md` r1 (2026-11-01), written from a trial install; Codex plan gate PASS; Owner-approved 2026-11-01. DM-U2 r2 closed (PR 47). |
-| Current unit / checkpoint | DM-U3 on `chore/dm-u3-audit-cleanup`; CP1 and CP2 done, Main review and the Codex diff gate passed. |
-| Status | DM-U2 delivered in PR #47 (`f900b18`); DM-U3 implemented for DM-P1 groups A and C, in delivery. |
-| Completed evidence | DM-U2: PR 47 (`f900b18`), see milestones. DM-U3 trial (2026-11-01, plan section 2): `npm audit fix` plus the `postcss-selector-parser` override leave 2 production findings; `tsc`, lint, build and unit tests pass; the CSS of a clean build is unchanged. |
+| Spec revision | DM-U4 `implementation-plans/dm-u4-monaco-self-host/plan.md` r1 (2026-11-01), written from a trial install; Codex plan gate PASS in round 2 (round 1: four Required on the install hook, worker and crafted-link checks and manual data, fixed); Owner-approved 2026-11-01. DM-U3 r1 closed (PR 48). |
+| Current unit / checkpoint | DM-U4 on `fix/dm-u4-monaco-self-host`; CP1 to CP3 assigned to the implementor in one dispatch. |
+| Status | DM-U3 delivered in PR #48 (`0666754`); DM-P1 groups A and C fixed, group B open; DM-U4 r1 written. |
+| Completed evidence | DM-U3: PR 48 (`0666754`), see milestones. DM-U4 trial (2026-11-01, plan section 2): Monaco 0.57.0 copied from the npm package to `public/monaco/vs` loads on `next start` with no request off the origin; `tsc`, lint and build pass. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | CI on the DM-U3 PR, then the Owner's merge decision. |
-| Current authority | 2026-11-01: plan approval, implementation of DM-U3 r1 with local commits, one push of `chore/dm-u3-audit-cleanup` and the PR creation with its CI result. No merge or hosted access is granted. |
+| Next action | The implementor runs CP1 to CP3; Main reviews the report and the commits, then runs the manual pass. |
+| Current authority | 2026-11-01: new branch for DM-U4 (BL-P4 included, Owner decision D1), its trial install and plan, one read-only hosted query counting code-fence languages (D3), the PR 48 docs catch-up, plan approval and a local commit of the plan and records; implementation of DM-U4 r1 by a Sonnet implementor with one local commit per checkpoint and the local stack only. No push, PR, merge or hosted access is granted. |
 
 ## Milestones
 
@@ -41,4 +41,6 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-01 DM-U3 r1 approved for DM-P1 groups A and C after the Codex plan gate PASS: `npm audit fix` without `--force` and a `postcss-selector-parser` 6.1.5 override (`00981f8`).
 - 2026-11-01 DM-U3 CP1: `npm audit fix` without `--force` (`gaxios` 7.3.1, `rimraf` chain removed, `typescript-eslint` 8.72.1) and the `postcss-selector-parser` 6.1.5 override; tsc, lint, build and 173 unit tests pass, the CSS of a clean build is byte-identical to the baseline (`0af8fda`).
 - 2026-11-01 DM-U3 CP2: `npm test` (263) and `npm run test:e2e` (60) pass, `npm audit --omit=dev` reports only `dompurify` and `monaco-editor` (group B); DM-P1 groups A and C fixed locally, AI Magic through `gaxios` 7.3.1 not verified (the Gemini key is not renewed) (`26b976b`).
-- 2026-11-01 DM-U3 Codex diff gate PASS on `40bef4b..26b976b` with no findings (this commit).
+- 2026-11-01 DM-U3 Codex diff gate PASS on `40bef4b..26b976b` with no findings (`37ed5d1`).
+- 2026-11-01 DM-U3 merged: `gaxios` 7.3.1 and the `postcss-selector-parser` 6.1.5 override, CI green; DM-P1 groups A and C fixed, AI Magic not verified (PR 48, `0666754`).
+- 2026-11-01 DM-U4 r1 approved after the Codex plan gate PASS in round 2: Monaco self-hosted from the npm package and the BL-P4 Try It fixes in one PR (this commit).

@@ -10,6 +10,13 @@ import type { Request } from "@playwright/test";
 
 export { expect };
 
+// The global the Monaco loader sets on a page that shows the editor; rows read the editor through it.
+declare global {
+  interface Window {
+    monaco: typeof import("monaco-editor");
+  }
+}
+
 // Every spec imports `test` from here. The `context` fixture is replaced so that every browser context of the
 // suite goes through the network guard: a request to a non-local host is aborted, one aimed at the hosted
 // project or the production site is aborted and fails the test, and so does a page error or a 5xx answer

@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useRef, ComponentProps } from "react";
+import { useState, useRef, Children, isValidElement, ComponentProps } from "react";
+import { tryItHref, tryItLanguage } from "@/lib/try-it";
 
 export default function Pre({ children, ...props }: ComponentProps<"pre">) {
   const preRef = useRef<HTMLPreElement>(null);
   const [isCopied, setIsCopied] = useState(false);
+  const codeElement = Children.toArray(children).find(isValidElement);
+  const codeClassName = (codeElement?.props as { className?: string } | undefined)?.className;
+  const language = tryItLanguage(codeClassName);
 
   const handleCopy = async () => {
     if (!preRef.current) return;
@@ -20,11 +24,9 @@ export default function Pre({ children, ...props }: ComponentProps<"pre">) {
   };
 
   const handleTryIt = () => {
-    if (!preRef.current) return;
+    if (!preRef.current || !language) return;
 
-    const text = preRef.current.innerText;
-    const encodedCode = encodeURIComponent(text);
-    window.open(`/try_it?code=${encodedCode}`, "_blank");
+    window.open(tryItHref(preRef.current.innerText, language), "_blank");
   };
 
   return (
@@ -34,13 +36,15 @@ export default function Pre({ children, ...props }: ComponentProps<"pre">) {
       {/* Nút Copy Logic */}
       <div className="absolute top-3 right-3 flex gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
         {/* Nút Thử Ngay (Màu Xanh W3Schools) */}
-        <button
-          onClick={handleTryIt}
-          className="px-3 py-1.5 rounded bg-green-600 hover:bg-green-700 text-white text-xs font-bold shadow-md transition-colors flex items-center gap-1 cursor-pointer"
-          title="Chạy code này trong trình soạn thảo"
-        >
-          <span>🚀</span> Thử ngay
-        </button>
+        {language && (
+          <button
+            onClick={handleTryIt}
+            className="px-3 py-1.5 rounded bg-green-600 hover:bg-green-700 text-white text-xs font-bold shadow-md transition-colors flex items-center gap-1 cursor-pointer"
+            title="Chạy code này trong trình soạn thảo"
+          >
+            <span>🚀</span> Thử ngay
+          </button>
+        )}
 
         {/* Nút Copy (Màu Xám) */}
         <button

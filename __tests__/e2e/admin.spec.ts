@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { ACCOUNTS, authFile } from "./accounts";
 import { backgroundOf, confirmDialogOf, expectDismissKeepsObject, expectFitsPhone, expectKeyboardFlow, expectOnTop, recordMutations } from "./confirm-dialog";
 import { expect, test } from "./fixtures";
@@ -258,5 +259,84 @@ test.describe("confirm dialogs on the admin pages", () => {
     await expectFitsPhone(page);
     await expectOnTop(page);
     await page.keyboard.press("Escape");
+  });
+});
+
+// "Thử ngay" on a lesson example (BL-P4): Try It opens in the language of the code block with the exact code, and
+// a block in another language has no button. The fixture lesson is the last of course 2. The admin opens it because the
+// learn-in-order gate (LearnClient) sends a student back to their next unfinished lesson; the button is the same for both.
+test.describe("Thử ngay on a lesson example", () => {
+  const EXAMPLES = {
+    html: "<p>width: 50%</p>",
+    javascript: 'console.log("a%20b");',
+    cpp: 'printf("%d", x);',
+    css: "p { width: 50%; }",
+    plain: "echo 100%",
+  };
+  const CONTENT = [
+    "Ví dụ:", "",
+    "```html", EXAMPLES.html, "```", "",
+    "```js", EXAMPLES.javascript, "```", "",
+    "```cpp", EXAMPLES.cpp, "```", "",
+    "```css", EXAMPLES.css, "```", "",
+    "```", EXAMPLES.plain, "```",
+  ].join("\n");
+
+  async function openLesson(page: Page) {
+    const lesson = await createLessonFixture({ courseId: 2, chapterId: 2, content: CONTENT });
+    await page.goto(`/learn/javascript-can-ban/${lesson.slug}`);
+    await expect(page.locator("pre").first()).toBeVisible();
+  }
+
+  // The box around a code block, which holds its buttons.
+  const blockOf = (page: Page, code: string) => page.locator("pre", { hasText: code }).locator("xpath=..");
+
+  async function tryIt(page: Page, code: string) {
+    const block = blockOf(page, code);
+    const sent = await block.locator("pre").innerText();
+    await block.hover();
+    const [popup] = await Promise.all([page.waitForEvent("popup"), block.getByRole("button", { name: "Thử ngay" }).click()]);
+    await expect(popup.locator(".monaco-editor")).toBeVisible();
+    const value = () => popup.evaluate(() => window.monaco.editor.getModels().map((model) => model.getValue()));
+    return { popup, sent, value };
+  }
+
+  const tab = (popup: Page, name: string) => popup.getByRole("button", { name, exact: true });
+
+  for (const [name, code, label] of [
+    ["html", EXAMPLES.html, "HTML"],
+    ["js", EXAMPLES.javascript, "JavaScript"],
+    ["cpp", EXAMPLES.cpp, "C++"],
+    ["with no language", EXAMPLES.plain, "HTML"],
+  ] as const) {
+    test(`[A11] a ${name} example opens the ${label} tab with its exact code`, async ({ page }) => {
+      await openLesson(page);
+      const { popup, sent, value } = await tryIt(page, code);
+
+      await expect(tab(popup, label)).toHaveAttribute("aria-pressed", "true");
+      await expect.poll(value).toEqual([sent]);
+      expect(sent.trimEnd()).toBe(code);
+    });
+  }
+
+  test("[A12] a CSS example has Copy but no Thử ngay", async ({ page }) => {
+    await openLesson(page);
+    const block = blockOf(page, EXAMPLES.css);
+    await expect(block.getByRole("button", { name: "Copy" })).toBeAttached();
+    await expect(block.getByRole("button", { name: "Thử ngay" })).toHaveCount(0);
+  });
+
+  test("[A13] another tab shows its default code and the example's tab shows the example again", async ({ page }) => {
+    await openLesson(page);
+    const { popup, sent, value } = await tryIt(page, EXAMPLES.javascript);
+    await expect.poll(value).toEqual([sent]);
+
+    await tab(popup, "HTML").click();
+    await expect(tab(popup, "HTML")).toHaveAttribute("aria-pressed", "true");
+    await expect.poll(value).toEqual([expect.stringContaining("Demo HTML Live")]);
+
+    await tab(popup, "JavaScript").click();
+    await expect(tab(popup, "JavaScript")).toHaveAttribute("aria-pressed", "true");
+    await expect.poll(value).toEqual([sent]);
   });
 });

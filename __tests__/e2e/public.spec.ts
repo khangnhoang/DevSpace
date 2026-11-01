@@ -1,12 +1,6 @@
 import type { Page } from "@playwright/test";
-import type * as Monaco from "monaco-editor";
+import { tryItHref } from "../../lib/try-it";
 import { expect, test } from "./fixtures";
-
-declare global {
-  interface Window {
-    monaco: typeof Monaco;
-  }
-}
 
 // Anonymous visitor: the signed-out paths and the redirects that protect the others.
 test.describe("anonymous visitor", () => {
@@ -76,6 +70,47 @@ test.describe("anonymous visitor", () => {
       const workers = () => requests.filter((request) => request.url.startsWith(`${origin}/monaco/vs/`) && /worker/i.test(request.url));
       expect(workers().length, "no worker file was requested").toBeGreaterThan(0);
       await expect.poll(() => workers().filter((request) => statuses.get(request.url) !== 200).map((request) => request.url)).toEqual([]);
+    });
+  });
+
+  // AC6: a link anyone can craft puts its text in the editor and runs nothing until the learner clicks "Chạy Code".
+  test.describe("crafted try-it link", () => {
+    const output = (page: Page) => page.locator('iframe[title="output"]');
+    const messagesFromFrame = (page: Page) => page.evaluate(() => (window as unknown as { __messages: string[] }).__messages);
+
+    test.beforeEach(async ({ page }) => {
+      await page.addInitScript(() => {
+        const messages: string[] = [];
+        (window as unknown as { __messages: string[] }).__messages = messages;
+        // Monaco posts objects to itself; the frame under test posts strings.
+        window.addEventListener("message", (event) => { if (typeof event.data === "string") messages.push(event.data); });
+      });
+    });
+
+    test("[S7] an HTML link loads its exact text, runs nothing before Chạy Code and keeps the sandbox", async ({ page }) => {
+      const code = '<h1>ok</h1><script>parent.postMessage("ran", "*")</script>';
+      await page.goto(tryItHref(code, "html"));
+      await expect(page.locator(".monaco-editor")).toBeVisible();
+      await expect.poll(() => page.evaluate(() => window.monaco.editor.getModels().map((model) => model.getValue()))).toEqual([code]);
+
+      await expect(output(page)).toHaveAttribute("sandbox", "allow-scripts allow-modals");
+      await expect(output(page)).toHaveAttribute("srcdoc", "");
+      expect(await messagesFromFrame(page)).toEqual([]);
+
+      await page.getByRole("button", { name: "Chạy Code" }).click();
+      await expect(page.frameLocator('iframe[title="output"]').getByRole("heading", { name: "ok" })).toBeVisible();
+      await expect.poll(() => messagesFromFrame(page)).toEqual(["ran"]);
+    });
+
+    test("[S8] a JavaScript link opens the JavaScript tab and shows its console line after Chạy Code", async ({ page }) => {
+      const code = 'console.log("hello %d");';
+      await page.goto(tryItHref(code, "javascript"));
+      await expect(page.getByRole("button", { name: "JavaScript", exact: true })).toHaveAttribute("aria-pressed", "true");
+      await expect(page.locator(".monaco-editor")).toBeVisible();
+      await expect.poll(() => page.evaluate(() => window.monaco.editor.getModels().map((model) => model.getValue()))).toEqual([code]);
+
+      await page.getByRole("button", { name: "Chạy Code" }).click();
+      await expect(page.frameLocator('iframe[title="output"]').getByText("> hello %d")).toBeVisible();
     });
   });
 

@@ -131,7 +131,7 @@ The original 2026-10-21 discovery table is preserved in Git at ddcefd0. Legacy I
 - Status: Open (Owner action).
 - Problem: AI quiz creation does not run: `GEMINI_API_KEY` has expired. The Owner's job (issue a new key); includes the audit item of merging the 2 Gemini SDKs.
 - Evidence: Legacy P24; severity Low; discovery-era Planned: Owner; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: The Owner supplies a renewed key; retain the related audit work to consolidate the two Gemini SDKs.
+- Direction: The Owner supplies a renewed key; retain the related audit work to consolidate the two Gemini SDKs. Superseded 2026-11-01: the Owner will not renew the Gemini key, and AI quiz generation moves to DeepSeek in [backlog BL-F9](../../backlog/future-features.md); this entry closes when BL-F9 is delivered (one SDK remains today, `@google/genai`, which BL-F9 removes).
 - Exit condition: The Owner verifies real AI quiz generation with a valid key and the related SDK audit work is accounted for.
 
 ### SH-P25: Order approval and rejection are not atomic

@@ -18,10 +18,10 @@ Charter: [README.md](README.md). Progress: [progress.md](progress.md).
   - (2) Journals `8e436200-…` and `cd978a3c-…` (mode `dev`, phase `open`, owner pid dead, 0 entries); `apply` cleared `cd978a3c`.
   - (3) and (4): journals `8e436200-…` and `18d88ba2-…`, removed by hand with Owner approval.
   - A gate timeout in `joinRun` was a separate cause, fixed by DM-U4 `82fee44`.
-- Direction: one initiative of this program, which keeps every guard fail-closed:
-  - measure writer-exit time on Windows and size the deadline from it, or wait per writer;
-  - release or close the dev journal when the dev server is stopped by a signal or a tree kill;
-  - let `recover.mjs` handle a reused pid (compare process start time) and a reset stack whose recorded resources are already gone, with an explicit Owner-visible prompt.
+- Direction: Owner direction (2026-11-01), not yet planned or verified. Run tests on their own local Supabase stack, separate from the dev stack, and then simplify the ownership layer instead of patching it.
+  - With two stacks, the dev data is out of reach of test cleanup and resets. The test stack is disposable and can be reset freely. Keep tag-based fixture identity and cleanup. Replace the gate, membership, process-tree and writer-exit checks with one run lock that records a pid and start time, and treat the lock as stale when that process is gone. Sweep leftover e2e-tagged rows at start.
+  - To verify in the plan: running two stacks with the repository-pinned Supabase CLI (a second config and project id with its own ports); Docker memory with both stacks up; `buildE2eEnv` and the host check reading the test stack instead of `npx supabase status` of the dev stack; the CI job, which runs one stack only; and each guard of the QE-U1 invariants. Each guard is either kept or dropped, with the reason the separate stack covers it.
+  - Fallback if two stacks prove impractical: keep one stack and patch the four cases. Measure the writer-exit deadline on Windows. Close the dev journal when the server is killed. Let `recover.mjs` detect a reused pid by its start time and a reset stack.
 - Exit condition: on Windows, a passing `npm run test:e2e` and a stopped dev preview leave no journal, and the four cases above are cleared by `recover.mjs` without manual removal.
 
 ## Resolved

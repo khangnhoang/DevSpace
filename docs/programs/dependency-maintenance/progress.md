@@ -7,13 +7,13 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | DM-U2 `implementation-plans/dm-u2-nodemailer-10/plan.md` r2 (2026-11-01), written from a trial install; Codex plan gate PASS; Owner-approved 2026-11-01. U1 r3 closed. |
-| Current unit / checkpoint | DM-U2 CP1 and CP2 done on `chore/dm-u2-nodemailer-10` (implementor); waiting for Main's diff review and the Codex diff gate. |
-| Status | DM-U2 implemented locally; checks green; not pushed. |
+| Current unit / checkpoint | DM-U2 CP1 and CP2 done on `chore/dm-u2-nodemailer-10`; Main review and the Codex diff gate passed; in delivery. |
+| Status | DM-U2 implemented; the `nodemailer` finding of DM-P1 is fixed by this branch once merged. |
 | Completed evidence | DM-U2 trial (2026-11-01, plan section 2): with `nodemailer` 10.3.1 and without `@types/nodemailer`, `tsc`, lint and build pass, the e2e mail record patches the bundled `sendMail`, the server-guard unit file passes 23/23, and `npm audit --omit=dev` has no `nodemailer` finding. DM-U2 CP1 and CP2 (2026-11-01): the same holds on the branch, plus `npm test` 263 and `npm run test:e2e` 60 passed after `npx supabase db reset`, with the AC5 mail rows green. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none open. |
-| Next action | Main reviews the diff and runs the Codex diff gate; push and PR need the Owner's grants. |
-| Current authority | 2026-11-01: new branch, the DM-U2 trial install and plan, the QE-P1 docs catch-up with one local commit (`8b54616`); plan approval, one local plan commit, and implementation by a separate implementor with local checkpoint commits. Local stack commands only; no push, PR, merge or hosted access. |
+| Next action | CI on the DM-U2 PR; merge needs its own Owner grant. |
+| Current authority | 2026-11-01: new branch, the DM-U2 trial install and plan, the QE-P1 docs catch-up with one local commit (`8b54616`); plan approval, one local plan commit, and implementation by a separate implementor with local checkpoint commits. Local stack commands only. Push of this branch and PR creation granted 2026-11-01; no merge or hosted access. |
 
 ## Milestones
 

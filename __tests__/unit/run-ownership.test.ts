@@ -267,6 +267,18 @@ describe("run ownership", { timeout: 20_000 }, () => {
     const exited = once(proc, "exit"); proc.kill(); await exited;
     releaseRun(ref);
   });
+  it("refuses a process outside the coordinator's process tree", async () => {
+    const dir = root();
+    const { proc, output } = await child(`import {acquireRun} from ${JSON.stringify(moduleUrl)}; console.log(JSON.stringify(acquireRun(${JSON.stringify(target)}, 'probe', ${JSON.stringify(dir)}))); setInterval(()=>{},1000);`);
+    const ref = JSON.parse(output.trim());
+    try {
+      expect(() => joinRun(ref)).toThrow("belongs to another process tree");
+      expect(inspectRun(ref).members).toEqual([]);
+    } finally {
+      const exited = once(proc, "exit"); proc.kill(); await exited;
+      releaseRun(ref, true);
+    }
+  });
   it("does not admit a forged process-tree reference", async () => {
     const dir = root(); const ref = acquireRun(target, "probe", dir);
     joinRun(ref);

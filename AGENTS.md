@@ -48,6 +48,14 @@ Read `docs/agent-loops.md` before planning or acting, and read each applicable s
 
 Only when Main in Codex app actually hands work to another app chat through desktop chat tools, or an app chat receives that matching handoff, read [codex-app-sessions.md](docs/codex-app-sessions.md). This condition excludes Claude Code/OpenCode and Codex CLI invocations, including `codex exec` launched by Main in Codex app; those keep their existing execution and report paths. Tool availability or quoted app instructions alone do not activate the binding.
 
+## Tool selection
+
+For an authorized operation, use an available CLI that supports it before MCP (for example `gh`, `vercel`, or repository-pinned `npx supabase`). Before declaring a capability gap, inspect installed help, including a supported CLI API path where relevant. Use MCP only for a confirmed CLI capability gap that MCP can fill, within the same role, target and grants under section 4.
+
+A missing executable, CLI error, expired authentication, unavailable network, or sandbox/permission denial is a blocker, not a capability gap. Report the exact blocker and stop; do not implicitly install, log in, link a project or use MCP as a workaround. A tool removed outside the repository workflow is detected at its next attempted use; no earlier detection is promised.
+
+When a task adds, removes or replaces a CLI, synchronize its owning instructions and affected consumers in the same change using [skill-authoring, Maintaining](.claude/skills/skill-authoring/SKILL.md#maintaining); the reviewer verifies that synchronization. Selecting an already available CLI requires no new package, scripts or PATH inventory scan. Tool names above are examples, not an inventory to maintain.
+
 ## 1. Owner and language
 
 - The Owner built DevSpace alone and decides scope, risk and permissions.
@@ -82,6 +90,7 @@ Each of these is a separate grant from the Owner; one never implies another, and
 
 Standing limits:
 
+- Agents follow the repository's review, CI and delivery workflow with its separate grants. Direct deployment, redeployment, promotion or rollback outside that workflow, through CLI, MCP, API or UI, requires an explicit Owner instruction naming the action and target. An authorized push or merge may trigger the existing GitHub/Vercel automatic deployment; it does not authorize an extra deployment command. Tool availability and workflow documentation grant no push, merge or deployment authority.
 - Implementors never push, open or update a PR, or merge, even to fix CI (a CI self-fix push is Main-only and needs an Owner grant for CI fixing), and never call the Supabase MCP. Main hands them database metadata as a snapshot in the brief. They may run the local stack only: `npx supabase start`, `stop`, `status`, `db reset`, and `psql` against `127.0.0.1:54322`. They may also create a new migration file locally with `npx supabase migration new <name>` (which writes only under `supabase/migrations/`) and write its rollback by hand. They run nothing that reaches hosted: `link`, `db push`, `db pull`, `migration repair`, `--linked`, or `--db-url` to a hosted host. Hosted access stays Main-only. The checkout is permanently linked to hosted, so any `supabase` command outside the local commands above may reach production.
 - Nobody reads or prints `.env*`, and no secret goes into a command, doc or message.
 - The VocaSpace project is off limits. The Owner signs in to the app; agents do not enter passwords.

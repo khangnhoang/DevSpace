@@ -14,6 +14,7 @@ Do not use it to justify committing unfinished, conflicting, unrelated or knowin
 ## The rule: no git action beyond what was granted
 
 - Which git and remote actions need a grant, and what an implementor may do, is owned by `AGENTS.md` section 4. Run only the action the Owner requested or a handoff to you granted (for example "local commits per checkpoint").
+- Tool selection follows [AGENTS.md, Tool selection](../../../AGENTS.md#tool-selection); delivery authority follows [section 4](../../../AGENTS.md#4-permissions).
 - Natural phrasing counts ("commit đi", "create the commit"). Anything vaguer is not a grant: ask, or take the narrower action.
 - Committing a plan: `planning`, Git and approval.
 - Never force-push, `git reset --hard`, `git clean`, `git checkout -- .`, `git restore .`, amend, squash or rebase without the Owner's explicit request.

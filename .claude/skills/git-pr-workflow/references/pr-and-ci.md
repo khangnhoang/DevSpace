@@ -2,6 +2,8 @@
 
 Read this before any push, PR creation or update, check watching, CI failure or merge. Grants are owned by `AGENTS.md` section 4; the narrowest mode the Owner stated applies (`docs/agent-loops.md` Loop 3).
 
+Select tools under [AGENTS.md, Tool selection](../../../../AGENTS.md#tool-selection), and apply its [section 4 delivery boundary](../../../../AGENTS.md#4-permissions) throughout this procedure.
+
 ## Preconditions
 
 Before any PR or CI action run `git status -sb`, `git branch --show-current`, `git remote -v`, `gh --version` and `gh auth status`, and confirm the remote and the authenticated account are the ones the task means (`khangnhoang/DevSpace`). Stop and report when:
@@ -24,7 +26,7 @@ Needs a push grant (`AGENTS.md` section 4). Before a normal push confirm: clean 
 3. Check for an existing PR (`gh pr view <branch>`); never create a duplicate. Update title, body, labels or draft state only as asked.
 4. Create with `gh pr create --base main --head <branch> --title "<title>" --body-file <file>`; update with `gh pr edit`. Use an exact title or body when the Owner gives one. Otherwise title and body follow the language rule in `AGENTS.md` section 1. Keep the body file out of the commit.
 5. The body follows `.github/pull_request_template.md`: Summary, Changes, Checks run, CI result, Production impact and pending hosted steps, Risks and limits, Follow-ups. `gh pr create --body-file` does not apply the template, so build the body file from it; leave `CI result` as the placeholder table until CI ends (see "Record the CI result"). Link the plan or problem IDs.
-6. After a PR exists, the desktop app's PR tools handle status and auto-fix; do not poll with scheduled tasks. When the Owner says to wait for CI, watch in the foreground instead (Watch CI).
+6. After a PR exists, inspect status and handle any authorized CI fix using the shared Tool selection rule linked above; do not poll with scheduled tasks. When the Owner says to wait for CI, watch in the foreground (Watch CI).
 
 Creating, updating, pushing and merging are separate grants (`AGENTS.md` section 4).
 

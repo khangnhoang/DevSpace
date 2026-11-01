@@ -10,6 +10,7 @@ Progress: [progress.md](progress.md). Problems: [problems.md](problems.md). Futu
 ## 2. Owner decisions
 
 1. (2026-10-30) Open Quality Engineering as an evergreen program for BL-F6 and subsequent testing/CI work; start with test-data ownership, safe cleanup and recovery on a new branch, including PR #41 documentation catch-up.
+2. (2026-11-01) Address QE-P1 as QE-U2 on a new branch: bounded writer-exit wait before teardown release, and a measured `rls` test timeout.
 
 ## 3. Invariants
 
@@ -24,6 +25,7 @@ Progress: [progress.md](progress.md). Problems: [problems.md](problems.md). Futu
 | Initiative | Branch | Outcome | Dependencies | Gate to open |
 | --- | --- | --- | --- | --- |
 | QE-U1 [Owned fixtures and safe cleanup](implementation-plans/qe-u1-fixture-ownership/plan.md) | `test/bl-f6-fixture-ownership` | QE-F1: cleanup preserves unrelated data, handles partial failure and supports explicit interrupted-run recovery. | Testing policy delivered in PR #39; current test baseline after PR #41. | r2 approved on 2026-10-30 after independent Codex plan PASS; separate implementor and local checkpoint commits authorized. |
+| QE-U2 [Windows full-suite teardown and preflight timing](implementation-plans/qe-u2-windows-teardown/plan.md) | `test/qe-p1-windows-teardown` | QE-P1: a passing Windows full suite releases ownership despite late RLS worker exit; preflight has a measured timeout; guards stay fail-closed. | QE-U1 ownership lifecycle (PR #42). | r1 approved on 2026-11-01; separate implementor and local checkpoint commits authorized. |
 
 ## 5. Opening an initiative
 

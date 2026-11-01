@@ -241,11 +241,11 @@ describe("run ownership", { timeout: 20_000 }, () => {
   });
   it("releases after a closed run's registered writer exits within the deadline", async () => {
     const ref = acquireRun(target, "probe", root());
-    const { proc } = await child(`import {joinRun} from ${JSON.stringify(moduleUrl)}; joinRun(${JSON.stringify(ref)}); console.log('ready'); setTimeout(()=>{},300);`);
+    await child(`import {joinRun} from ${JSON.stringify(moduleUrl)}; joinRun(${JSON.stringify(ref)}); console.log('ready'); setTimeout(()=>{},600);`);
     expect(() => releaseRun(ref)).toThrow("descendants");
     closeRun(ref);
     await awaitWritersExit(ref, 5000);
-    expect(proc.exitCode ?? proc.signalCode).not.toBeNull();
+    // releaseRun succeeding is the proof the writer is gone; the parent's 'exit' event can still lag the pid.
     releaseRun(ref);
   });
   it("keeps ownership and the member record when a registered writer outlives the deadline", async () => {

@@ -311,6 +311,34 @@ describe("test stack lock", { timeout: 120_000 }, () => {
     expect(() => lock.requireActiveRun({ command: "npm test", env: { DEVSPACE_TEST_RUN: "other-run" }, dir })).toThrow(/does not hold/);
   });
 
+  it("checks the writer record's content, not its file name, against this process", () => {
+    const env = { DEVSPACE_TEST_RUN: "record-run" };
+    lock.acquireLock({ command: "npm test (record)", dir, runId: "record-run" });
+    const file = join(dir, "writers", `record-run-${process.pid}-x.json`);
+    mkdirSync(join(dir, "writers"), { recursive: true });
+    const refused = (pattern: RegExp) => expect(() => lock.requireActiveRun({ command: "npm test", env, dir })).toThrow(pattern);
+
+    writeFileSync(file, "{not json");
+    refused(/cannot be read or parsed/);
+    writeFileSync(file, JSON.stringify({ runId: "record-run", pid: process.pid }));
+    refused(/malformed/);
+    writeFileSync(file, JSON.stringify({ runId: "other-run", pid: process.pid, start: lock.processStart(process.pid) }));
+    refused(/malformed/);
+    // An earlier process with the same PID: valid record, other start time.
+    writeFileSync(file, JSON.stringify({ runId: "record-run", pid: process.pid, start: "1" }));
+    refused(/earlier process with the same PID/);
+    writeFileSync(file, JSON.stringify({ runId: "record-run", pid: process.pid, start: lock.processStart(process.pid) }));
+    expect(() => lock.requireActiveRun({ command: "npm test", env, dir })).not.toThrow();
+  });
+
+  it("refuses a registration once admission is closed, and keeps admitting before", () => {
+    lock.acquireLock({ command: "npm test (admission)", dir, runId: "admission-run" });
+    expect(() => lock.registerWriter({ dir, runId: "admission-run", role: "early" })).not.toThrow();
+    lock.closeAdmission({ dir, runId: "admission-run" });
+    lock.closeAdmission({ dir, runId: "admission-run" });
+    expect(() => lock.registerWriter({ dir, runId: "admission-run", role: "late", start: "2" })).toThrow(/already finishing/);
+  });
+
   it("treats an unreadable or unparseable state.json as unclean, so the next run resets", () => {
     writeFileSync(join(dir, "state.json"), "{broken");
     const state = readState(dir);
@@ -354,6 +382,18 @@ describe("test run lifecycle", { timeout: 120_000 }, () => {
     expect((await launcher.event("done")).code).toBe(1);
     expect(readState(dir)).toMatchObject({ status: "dirty" });
     expect(readState(dir).cause).toContain("fixture cleanup failed");
+  });
+
+  it("refuses a writer that registers during the audit, so the run neither ends clean with it alive nor lets it write", async () => {
+    writeState(clean, dir);
+    const launcher = new Probe("run", ["late-register"]);
+    const late = (await launcher.event("late-child")).pid as number;
+    strays.push({ pid: late, start: lock.processStart(late) });
+    const result = String((await launcher.event("late-result")).result);
+    expect(result).toMatch(/^lost: .*already finishing/);
+    expect((await launcher.event("done")).code).toBe(0);
+    expect(await gone(late)).toBe(true);
+    expect(readState(dir)).toMatchObject({ status: "clean" });
   });
 
   it("keeps a run with a surviving writer dirty, and the next command stops that writer", async () => {

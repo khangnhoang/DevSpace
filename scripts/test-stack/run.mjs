@@ -8,7 +8,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { compareSnapshots, takeSnapshot } from "./audit.mjs";
 import { ensureTestStack, stopTestStack } from "./ensure.mjs";
-import { LockError, acquireLock, awaitRunWriters, clearOldUncleanMarks, clearRunWriters, reapOrphans, registerWriter, releaseLock, uncleanCause } from "./lock.mjs";
+import { LockError, acquireLock, awaitRunWriters, clearOldRunMarks, clearRunWriters, closeAdmission, reapOrphans, registerWriter, releaseLock, uncleanCause } from "./lock.mjs";
 import { clearState, readState, stateDir, writeState } from "./state.mjs";
 
 const preload = pathToFileURL(join(dirname(fileURLToPath(import.meta.url)), "writer-preload.mjs")).href;
@@ -51,7 +51,7 @@ async function enter({ command, root, dir }) {
       const { holder } = lock.tookOver;
       markDirty(dir, `took over the lock of PID ${holder.pid} ("${holder.command}"), which did not finish`);
     }
-    clearOldUncleanMarks({ dir, keep: lock.runId });
+    clearOldRunMarks({ dir, keep: lock.runId });
     await reapOrphans({ dir });
   } catch (error) {
     if (error instanceof LockError && error.code === "writer-alive") markDirty(dir, error.message);
@@ -91,6 +91,9 @@ export async function runOnTestStack({
 
     const exitCode = await runChild({ stack: ensured.stack, env: childEnvironment(runId, dir) });
 
+    // No process joins the run from here on, so a child that outlived its parent cannot register after the wait
+    // below has judged the run and write after the audit. The lock stays held through the audit and the state write.
+    closeAdmission({ dir, runId });
     const causes = [];
     const survivors = await awaitRunWriters({ dir, runId, timeoutMs: waitMs });
     if (survivors.length) {

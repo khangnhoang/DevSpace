@@ -9,6 +9,8 @@
 //   released.<generation>   the holder's release mark.
 //   writers/<run>-<pid>-<start>.json  one record per process that writes to the stack or starts such a process.
 //   unclean/<run>.json      the first cause that made the run unclean, visible to every process of the run.
+//   closed/<run>            admission mark: once the launcher has seen the run's last child exit and starts the
+//                           final writer wait and audit, no new process may join the run.
 //
 // A process is judged by PID plus its start time, never by PID alone (G4): a reused PID neither keeps a lock
 // forever nor gets an unrelated process killed.
@@ -197,7 +199,24 @@ export function registerWriter({ dir = stateDir(), runId = process.env.DEVSPACE_
   const file = join(writersDir(dir), `${runId}-${process.pid}-${safe(own)}.json`);
   writeFileSync(file, JSON.stringify({ runId, pid: process.pid, start: own, role, registeredAt: new Date().toISOString() }), { flag: "wx" });
   if (!holdsLock(dir, runId)) throw new LockError("lost", `This process's test run ${runId} no longer holds the test stack lock, so it writes nothing. A newer test command owns the stack.`);
+  // The launcher writes the mark and then scans the records, and a writer publishes its record and then reads the
+  // mark: a writer that read "open" has a record the scan sees, and one that read "closed" exits without writing.
+  if (admissionClosed(dir, runId)) throw new LockError("lost", `This process's test run ${runId} is already finishing, so it no longer admits writers and this process writes nothing. A process that outlives the command that started it cannot join a run late.`);
   return file;
+}
+
+const closedFile = (dir, runId) => join(dir, "closed", runId);
+
+function admissionClosed(dir, runId) {
+  try { readFileSync(closedFile(dir, runId)); return true; } catch { return false; }
+}
+
+// The launcher closes admission once the suite's process has exited and before it waits for the run's writers,
+// audits the database and publishes its state; the lock stays held until after the state write.
+export function closeAdmission({ dir = stateDir(), runId }) {
+  mkdirSync(join(dir, "closed"), { recursive: true });
+  try { writeFileSync(closedFile(dir, runId), "", { flag: "wx" }); }
+  catch (error) { if (error.code !== "EEXIST") throw error; }
 }
 
 function readWriters(dir) {
@@ -272,10 +291,12 @@ export function uncleanCause({ dir = stateDir(), runId }) {
 }
 
 // Marks left by earlier runs are history once the next command holds the lock.
-export function clearOldUncleanMarks({ dir = stateDir(), keep }) {
-  let names;
-  try { names = readdirSync(join(dir, "unclean")); } catch { return; }
-  for (const name of names) if (name !== `${keep}.json`) rmSync(join(dir, "unclean", name), { force: true });
+export function clearOldRunMarks({ dir = stateDir(), keep }) {
+  for (const [folder, kept] of [["unclean", `${keep}.json`], ["closed", keep]]) {
+    let names;
+    try { names = readdirSync(join(dir, folder)); } catch { continue; }
+    for (const name of names) if (name !== kept) rmSync(join(dir, folder, name), { force: true });
+  }
 }
 
 // The run a process belongs to, from the environment the launcher gives its children (the run id and the
@@ -295,8 +316,20 @@ export function requireActiveRun({ command, env = process.env, dir = stateDir() 
   const runId = env.DEVSPACE_TEST_RUN;
   if (!runId) refuse("No test run is active for this process, so it would write to the test stack without the lock.");
   if (!holdsLock(dir, runId)) refuse(`Test run ${runId} does not hold the test stack lock.`);
+  // The file name alone proves nothing: a process that reused the PID of an exited worker inherits the run id and
+  // would find that worker's record. Read it and compare the identity with this process.
   const prefix = `${runId}-${process.pid}-`;
   let names = [];
-  try { names = readdirSync(writersDir(dir)); } catch { /* no records */ }
-  if (!names.some((name) => name.startsWith(prefix) && name.endsWith(".json"))) refuse("This process is not registered as a writer of the test run.");
+  try { names = readdirSync(writersDir(dir)).filter((name) => name.startsWith(prefix) && name.endsWith(".json")); } catch { /* no records */ }
+  if (!names.length) refuse("This process is not registered as a writer of the test run.");
+  let problem = "";
+  for (const name of names) {
+    let record;
+    try { record = JSON.parse(readFileSync(join(writersDir(dir), name), "utf8")); }
+    catch { problem ||= `The writer record ${name} cannot be read or parsed.`; continue; }
+    if (!record || record.runId !== runId || record.pid !== process.pid || typeof record.start !== "string") { problem ||= `The writer record ${name} is malformed.`; continue; }
+    if (record.start === processStart(process.pid)) return;
+    problem ||= `The writer record ${name} belongs to an earlier process with the same PID, not to this one.`;
+  }
+  refuse(problem);
 }

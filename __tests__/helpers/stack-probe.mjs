@@ -61,6 +61,18 @@ if (mode === "hold") {
   const { writeFileSync } = await import("node:fs");
   writeFileSync(args[0], "written");
   say({ event: "wrote" });
+} else if (mode === "delayed-register") {
+  // A child that outlived its parent and joins the run only when told to, after the launcher has stopped admitting.
+  const [goFile, resultFile] = args;
+  while (!existsSync(goFile)) sleep(5);
+  const { writeFileSync } = await import("node:fs");
+  try {
+    lock.registerWriter({ dir, role: "late" });
+    writeFileSync(resultFile, "passed");
+    await forever();
+  } catch (error) {
+    writeFileSync(resultFile, `lost: ${error.message}`);
+  }
 } else if (mode === "register") {
   const [barrier] = args;
   while (!existsSync(barrier)) sleep(2);
@@ -106,7 +118,18 @@ if (mode === "hold") {
       return { stack: { dbUrl: "unused" }, decision, hash: "h", snapshot: { tables: {} } };
     },
     audit: {
-      takeSnapshot: async () => { if (scenario === "hang-audit") { say({ event: "auditing" }); await forever(); } return { tables: {} }; },
+      takeSnapshot: async () => {
+        if (scenario === "hang-audit") { say({ event: "auditing" }); await forever(); }
+        if (scenario === "late-register") {
+          // The audit interval: the child registers now.
+          const { writeFileSync, readFileSync } = await import("node:fs");
+          writeFileSync(join(dir, "late-go"), "");
+          const deadline = Date.now() + 20_000;
+          while (!existsSync(join(dir, "late-result")) && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 20));
+          say({ event: "late-result", result: existsSync(join(dir, "late-result")) ? readFileSync(join(dir, "late-result"), "utf8") : null });
+        }
+        return { tables: {} };
+      },
       compareSnapshots: () => (scenario === "residue" ? ["public.notes: 1 rows at the last reset, 2 now"] : []),
     },
     runChild: async ({ env }) => {
@@ -114,6 +137,15 @@ if (mode === "hold") {
       if (scenario === "fixture-failure") {
         await run.spawnNode([probe, "fixture-fail"], env);
         await run.spawnNode([probe, "fixture-open"], env);
+        return 0;
+      }
+      if (scenario === "late-register") {
+        // Detached, and without the preload, so it does not register at startup: it registers late, on cue.
+        const childEnv = { ...env };
+        delete childEnv.NODE_OPTIONS;
+        const late = spawn(process.execPath, [probe, "delayed-register", join(dir, "late-go"), join(dir, "late-result")], { env: childEnv, stdio: "ignore", detached: true });
+        late.unref();
+        say({ event: "late-child", pid: late.pid });
         return 0;
       }
       if (scenario === "leak" || scenario === "hang-writer") {

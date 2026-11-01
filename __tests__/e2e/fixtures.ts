@@ -10,27 +10,27 @@ import type { Request } from "@playwright/test";
 
 export { expect };
 
+// The global the Monaco loader sets on a page that shows the editor; rows read the editor through it.
+declare global {
+  interface Window {
+    monaco: typeof import("monaco-editor");
+  }
+}
+
 // Every spec imports `test` from here. The `context` fixture is replaced so that every browser context of the
 // suite goes through the network guard: a request to a non-local host is aborted, one aimed at the hosted
 // project or the production site is aborted and fails the test, and so does a page error or a 5xx answer
 // from a local host. Redirect hops skip the route handler: the browser cannot resolve a non-local host
 // (`playwright.config.ts`) and the request listener still reports a hosted hop.
-// The guard blocks Monaco's CDN loader on /try_it, and `@monaco-editor/loader` then rejects an unhandled promise
-// with the `error` Event of that script element. A row that sets `blockedMonacoLoader` marks exactly that
-// rejection as handled in the page, so Playwright never reports it; any other page error still fails the test.
-const MONACO_LOADER_PREFIX = "https://cdn.jsdelivr.net/npm/monaco-editor@";
-const MONACO_LOADER_SUFFIX = "/min/vs/loader.js";
-
 // The e2e server runs behind the server guard (server-guard.cjs). `mailsSent()` returns the mails the server
 // recorded since this test began; a test during which the server tried to resolve or reach a non-local host fails.
 export type ServerRecords = { mailsSent: () => MailRecord[] };
 
-export const test = base.extend<{ owned: FixtureScope; blockedMonacoLoader: boolean; serverRecords: ServerRecords; callAction: ActionCaller }>({
+export const test = base.extend<{ owned: FixtureScope; serverRecords: ServerRecords; callAction: ActionCaller }>({
   owned: [async ({}, provide) => {
     const scope = beginFixtureScope();
     await withFixtureScope(scope, () => provide(scope));
   }, { auto: true }],
-  blockedMonacoLoader: [false, { option: true }],
 
   // Posts to a server action endpoint as an actor (server-action.ts). Its contexts are closed after the test.
   callAction: async ({}, provide) => {
@@ -57,7 +57,7 @@ export const test = base.extend<{ owned: FixtureScope; blockedMonacoLoader: bool
   ],
 
   // The callback is not named `use` (Playwright's usual name): the react-hooks lint rule reads that as a hook.
-  context: async ({ context, blockedMonacoLoader, owned }, provide) => {
+  context: async ({ context, owned }, provide) => {
     await context.setExtraHTTPHeaders({ "X-DevSpace-Fixture-Scope": owned.id });
     // A set, because a hosted request is recorded by the route handler and by the request listener.
     const problems = new Set<string>();
@@ -86,20 +86,6 @@ export const test = base.extend<{ owned: FixtureScope; blockedMonacoLoader: bool
     context.on("request", (request) => {
       if (classifyRequest(request.url()) === "hosted") problems.add(`request to a hosted host: ${request.url()}`);
     });
-    if (blockedMonacoLoader) {
-      await context.addInitScript(
-        ({ prefix, suffix }) => {
-          window.addEventListener("unhandledrejection", (event) => {
-            const reason: unknown = event.reason;
-            const script = reason instanceof Event ? reason.target : null;
-            if (script instanceof HTMLScriptElement && script.src.startsWith(prefix) && script.src.endsWith(suffix)) {
-              event.preventDefault();
-            }
-          });
-        },
-        { prefix: MONACO_LOADER_PREFIX, suffix: MONACO_LOADER_SUFFIX },
-      );
-    }
     context.on("weberror", (webError) => problems.add(`page error: ${webError.error().message}`));
     context.on("response", (response) => {
       if (response.status() >= 500) problems.add(`HTTP ${response.status()} from ${response.url()}`);

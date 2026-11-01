@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/dev/local.mjs",
+    "monaco:copy": "node scripts/monaco/copy-vs.mjs",
+    "postinstall": "npm run monaco:copy",
     "build": "next build",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
@@ -30,6 +32,7 @@
     "date-fns": "^4.4.0",
     "gray-matter": "^4.0.3",
     "lucide-react": "^0.554.0",
+    "monaco-editor": "^0.57.0",
     "next": "^16.4.3",
     "next-mdx-remote": "^6.0.0",
     "nodemailer": "^10.3.1",

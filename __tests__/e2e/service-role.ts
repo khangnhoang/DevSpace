@@ -90,7 +90,13 @@ async function createFixture(table: string, labelColumn: string, label: string, 
 }
 export const createCourseFixture = () => createFixture("courses", "name", "E2E Khóa học xóa", { slug: `e2e-course-${scope().tag}`, description: "E2E fixture", price: 0 });
 export const createChapterFixture = () => createFixture("chapters", "title", "E2E Chương xóa", { course_id: 1, order_index: 99 });
-export const createLessonFixture = () => createFixture("lessons", "title", "E2E Bài học xóa", { course_id: 1, chapter_id: 1, slug: `e2e-lesson-${scope().tag}`, order_index: 99, content: "E2E fixture" });
+// The defaults are the course 1 lesson of the admin delete rows; a row that needs a lesson its student can open passes course 2 (the seed student is enrolled there).
+export type LessonFixtureOptions = { courseId?: number; chapterId?: number; content?: string };
+export const createLessonFixture = async ({ courseId = 1, chapterId = 1, content = "E2E fixture" }: LessonFixtureOptions = {}) => {
+  const slug = `e2e-lesson-${scope().tag}`;
+  const fixture = await createFixture("lessons", "title", "E2E Bài học xóa", { course_id: courseId, chapter_id: chapterId, slug, order_index: 99, content });
+  return { ...fixture, slug };
+};
 export const createExerciseFixture = (lessonId: number) => createFixture("exercises", "question", "E2E Câu hỏi xóa", { lesson_id: lessonId, option_a: "a", option_b: "b", option_c: "c", option_d: "d", correct_answer: "a", explanation: "E2E fixture" });
 export const createCommentFixture = () => createFixture("comments", "content", "E2E bình luận xóa", { user_id: IDS.student, lesson_id: 3 });
 export async function createUserFixture() {

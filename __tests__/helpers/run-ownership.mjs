@@ -107,11 +107,14 @@ export function closeRun(ref) {
 }
 
 export function joinRun(ref) {
-  const { dir } = validate(ref);
+  const { dir, owner: recorded } = validate(ref);
+  // Resolved before the gate: on Windows ancestorPids() spawns PowerShell (about 0.5 s, more under build load),
+  // and the 5 s gate bound is shared by every worker joining one after another. The owner pid never changes.
+  const ancestors = recorded.pid === process.pid ? [] : ancestorPids();
   return guarded(dir, () => {
     assertRun(ref);
     const { owner } = validate(ref);
-    if (owner.pid !== process.pid && !ancestorPids().includes(owner.pid)) throw new Error('Ownership reference belongs to another process tree');
+    if (owner.pid !== process.pid && !ancestors.includes(owner.pid)) throw new Error('Ownership reference belongs to another process tree');
     const id = randomUUID();
     atomic(join(dir, 'members', `${id}.json`), { id, pid: process.pid });
     return id;

@@ -2,10 +2,15 @@
 import { useState, Suspense } from "react";
 import type { ReactNode } from "react";
 import { Play, FileCode, FileJson, Cpu } from "lucide-react";
-import Editor from "@monaco-editor/react";
+import Editor, { loader } from "@monaco-editor/react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import MobileBlocker from "@/app/components/MobileBlocker";
+import { readTryItParams, type TryItLanguage } from "@/lib/try-it";
+
+// Monaco is copied from the npm package to public/monaco/vs at install (scripts/monaco/copy-vs.mjs), so the editor
+// runs the version package-lock.json holds from this origin instead of the loader's default CDN.
+loader.config({ paths: { vs: "/monaco/vs" } });
 
 // --- MẪU CODE GIỮ NGUYÊN ---
 const DEFAULT_CPP = `#include <iostream>
@@ -39,25 +44,26 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-type LanguageType = "javascript" | "html" | "cpp";
+const DEFAULT_CODE: Record<TryItLanguage, string> = {
+  html: DEFAULT_HTML,
+  javascript: DEFAULT_JS,
+  cpp: DEFAULT_CPP,
+};
 
 function TryItEditor() {
   const searchParams = useSearchParams();
-  const codeFromUrl = searchParams.get("code");
+  // The example is kept so its own tab can show it again after the learner visits another tab.
+  const [example] = useState(() => readTryItParams(searchParams));
 
-  const [language, setLanguage] = useState<LanguageType>("html");
-  const [code, setCode] = useState(
-    codeFromUrl ? decodeURIComponent(codeFromUrl) : DEFAULT_HTML
-  );
+  const [language, setLanguage] = useState<TryItLanguage>(example.language);
+  const [code, setCode] = useState(example.code ?? DEFAULT_CODE[example.language]);
   const [srcDoc, setSrcDoc] = useState("");
   const [consoleOutput, setConsoleOutput] = useState<string[]>([]);
   const [isRunning, setIsRunning] = useState(false);
 
-  const switchLanguage = (lang: LanguageType) => {
+  const switchLanguage = (lang: TryItLanguage) => {
     setLanguage(lang);
-    if (lang === "html") setCode(DEFAULT_HTML);
-    else if (lang === "javascript") setCode(DEFAULT_JS);
-    else setCode(DEFAULT_CPP);
+    setCode(example.code !== null && lang === example.language ? example.code : DEFAULT_CODE[lang]);
 
     setSrcDoc("");
     setConsoleOutput([]);
@@ -257,6 +263,7 @@ interface TabBtnProps {
 const TabBtn = ({ active, onClick, icon, label, color }: TabBtnProps) => (
   <button
     onClick={onClick}
+    aria-pressed={active}
     // Đã thêm cursor-pointer
     className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all cursor-pointer select-none ${
       active

@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     // Playwright output (git-ignored): the HTML report bundles the trace viewer.
     "playwright-report/**",
     "test-results/**",
+    // Monaco copied from node_modules at install (git-ignored): minified third-party code.
+    "public/monaco/**",
   ]),
 ]);
 

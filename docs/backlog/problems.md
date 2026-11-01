@@ -30,11 +30,28 @@ Problems that no open program owns. This is not a program: it has no plan and no
 
 ### BL-P4: "Thử ngay" breaks lesson code with `%` and always opens Try It in HTML
 
-- Status: Open (2026-11-01).
+- Status: Fixed locally, awaiting delivery (dependency-maintenance DM-U4, 2026-11-01).
 - Problem: `PreBlock.handleTryIt` sends the lesson code as `/try_it?code=<encodeURIComponent(code)>` (`app/components/PreBlock.tsx:22-28`). `app/(main)/try_it/page.tsx:50` calls `decodeURIComponent` on `useSearchParams().get("code")`, which is already decoded: code with a `%` not followed by two hex digits (`width: 50%;`, `printf("%d")`) throws `URIError` during render, and code holding a sequence such as `%20` is silently changed. The page also starts with `language` fixed to `"html"` (`page.tsx:48`), so a JavaScript or C++ example runs as an HTML preview, and switching tab replaces the example with the default code (`page.tsx:56-60`). Any third party can craft a `/try_it?code=...` link that loads its text into the learner's editor.
 - Evidence: read from the code at `f900b18`; the double decode reproduced in Node (`decodeURIComponent` of the decoded `x="50%"` throws `URI malformed`, `a%20b` becomes `a b`). Code runs only after "Chạy Code": HTML and JavaScript in an iframe with `sandbox="allow-scripts allow-modals"` and no `allow-same-origin` (`page.tsx:220`); C++ is sent to the external Piston API (`page.tsx:111`). The crafted link matters for dependency-maintenance DM-P1 group B, because Monaco's sanitizer can then see third-party text.
-- Direction: one PR with the Monaco CDN pin to 0.57.0 (DM-P1 group B): drop the extra decode, pass the code block's language (`language-*` class) from `PreBlock` and start Try It in it (`html`, `javascript` or `cpp` only), keep the example when the tab matches, with automated tests for `50%`, `%20` and a JavaScript example plus a manual editor pass. Code stays text until the learner runs it; no filtering of HTML or JavaScript.
+- Direction: planned in dependency-maintenance [DM-U4](../programs/dependency-maintenance/implementation-plans/dm-u4-monaco-self-host/plan.md), one PR with self-hosted Monaco 0.57.0 (DM-P1 group B, Owner decision 2026-11-01 instead of the CDN pin): drop the extra decode, pass the code block's language (`language-*` class) from `PreBlock` and start Try It in it (`html`, `javascript` or `cpp` only), keep the example when the tab matches, with automated tests for `50%`, `%20` and a JavaScript example plus a manual editor pass. Code stays text until the learner runs it; no filtering of HTML or JavaScript.
 - Exit condition: "Thử ngay" on HTML, JavaScript and C++ examples, including ones with `%`, opens Try It in the matching language with the exact code, and runs it there.
+
+### BL-P5: running C++ on Try It shows nothing, because the public Piston API now refuses it
+
+- Status: Open (2026-11-01).
+- Problem: the C++ tab of `/try_it` posts to `https://emkc.org/api/v2/piston/execute` (`app/(main)/try_it/page.tsx:117`). The public Piston API answers 401: since 2026-02-15 it accepts only whitelisted callers. The handler reads only `data.run` (`page.tsx:129`), so a 401 body shows no output, no toast and no error. The learner sees nothing happen.
+- Evidence:
+  - DM-U4 manual pass on the local dev server, 2026-11-01: a C++ link from `tryItHref` loaded the exact code, and "Chạy Code" left the console at its placeholder.
+  - The same request sent from the page returned status 401 with the message "Public Piston API is now whitelist only as of 2/15/2026".
+  - The behavior predates DM-U4, which did not change this request.
+- Direction: suggested only. These options come from a first look at public docs (2026-11-01); none was tried, so each needs research before a plan. The Owner picks the backend. Separately, any non-OK response or a body without `run` should show an error to the learner.
+  - The Piston whitelist is unlikely to fit: its README grants keys only to non-commercial educational projects and excludes individual, portfolio and university-assignment projects.
+  - Judge0 through a server-side call (free RapidAPI plan, or self-hosted later). It is the leading suggestion, but the key must stay on the server, so the call adds a public POST endpoint that needs rate limiting (`server-actions`). The free quota is unverified.
+  - Wandbox (`wandbox.org/api/compile.json`) needs no key and is the smallest change, but it is a community service with no guarantee. Browser CORS and its terms are unverified.
+  - Compiler Explorer (godbolt.org) can execute code, but its docs warn that rate limits and authentication may come later.
+  - Self-hosted Piston needs a privileged Docker host with cgroup v2, which Vercel cannot provide.
+  - Removing the C++ tab.
+- Exit condition: C++ code runs and shows its output, or the C++ tab is removed; a failed run always shows an error.
 
 ## Resolved
 

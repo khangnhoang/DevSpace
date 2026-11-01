@@ -44,7 +44,13 @@ Problems that no open program owns. This is not a program: it has no plan and no
   - DM-U4 manual pass on the local dev server, 2026-11-01: a C++ link from `tryItHref` loaded the exact code, and "Chạy Code" left the console at its placeholder.
   - The same request sent from the page returned status 401 with the message "Public Piston API is now whitelist only as of 2/15/2026".
   - The behavior predates DM-U4, which did not change this request.
-- Direction: the Owner picks the backend: a self-hosted Piston instance, another compile service, or removing the C++ tab. Separately, any non-OK response or a body without `run` should show an error to the learner.
+- Direction: suggested only. These options come from a first look at public docs (2026-11-01); none was tried, so each needs research before a plan. The Owner picks the backend. Separately, any non-OK response or a body without `run` should show an error to the learner.
+  - The Piston whitelist is unlikely to fit: its README grants keys only to non-commercial educational projects and excludes individual, portfolio and university-assignment projects.
+  - Judge0 through a server-side call (free RapidAPI plan, or self-hosted later). It is the leading suggestion, but the key must stay on the server, so the call adds a public POST endpoint that needs rate limiting (`server-actions`). The free quota is unverified.
+  - Wandbox (`wandbox.org/api/compile.json`) needs no key and is the smallest change, but it is a community service with no guarantee. Browser CORS and its terms are unverified.
+  - Compiler Explorer (godbolt.org) can execute code, but its docs warn that rate limits and authentication may come later.
+  - Self-hosted Piston needs a privileged Docker host with cgroup v2, which Vercel cannot provide.
+  - Removing the C++ tab.
 - Exit condition: C++ code runs and shows its output, or the C++ tab is removed; a failed run always shows an error.
 
 ## Resolved

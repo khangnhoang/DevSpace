@@ -31,6 +31,7 @@ At most one initiative has an open plan at a time. A closed initiative keeps its
 | Initiative | Branch | Outcome | Dependencies | Gate to open |
 | --- | --- | --- | --- | --- |
 | U1 [In-range patch and minor updates](implementation-plans/u1-in-range-updates/plan.md) | `chore/deps-in-range-updates` | Every package behind within its major on 2026-10-27 is updated, except the Supabase CLI, with the full suite and a manual pass green. | none | Owner approval of the plan after the Codex plan gate |
+| DM-U2 [nodemailer 10](implementation-plans/dm-u2-nodemailer-10/plan.md) | `chore/dm-u2-nodemailer-10` | DM-P1's high `nodemailer` finding is fixed by 10.3.1, `@types/nodemailer` is removed, and the e2e mail record and network guard still stop every real send. | none | Owner approval of the plan after the Codex plan gate |
 
 ## 5. Opening an initiative
 

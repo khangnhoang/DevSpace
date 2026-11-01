@@ -22,7 +22,7 @@ describe("tryItLanguage", () => {
     expect(tryItLanguage(className)).toBe("html");
   });
 
-  it.each(["language-css", "language-python", "language-"])("gives %s no Thử ngay button", (className) => {
+  it.each(["language-css", "language-python", "language-", "language-constructor", "language-__proto__", "language-toString"])("gives %s no Thử ngay button", (className) => {
     expect(tryItLanguage(className)).toBeNull();
   });
 });
@@ -32,7 +32,7 @@ describe("parseTryItLanguage", () => {
     expect(parseTryItLanguage(lang)).toBe(lang);
   });
 
-  it.each([null, "", "css", "js", "JAVASCRIPT"])("opens the HTML tab for %j", (lang) => {
+  it.each([null, "", "css", "js", "JAVASCRIPT", "constructor", "__proto__"])("opens the HTML tab for %j", (lang) => {
     expect(parseTryItLanguage(lang)).toBe("html");
   });
 });

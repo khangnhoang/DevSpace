@@ -14,10 +14,6 @@ import { cpSync, existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-/**
- * @param {string} source folder to copy
- * @param {string} destination replaced by an exact copy of `source`
- */
 export function copyMonaco(source, destination) {
   if (!existsSync(source)) {
     throw new Error(`Monaco source folder not found: ${source}. Run npm install first.`);

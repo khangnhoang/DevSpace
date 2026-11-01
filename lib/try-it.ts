@@ -13,7 +13,9 @@ const FENCE_LANGUAGES: Record<string, TryItLanguage> = {
 export function tryItLanguage(className: string | undefined): TryItLanguage | null {
   const fence = className?.split(/\s+/).find((token) => token.startsWith("language-"));
   if (!fence) return "html";
-  return FENCE_LANGUAGES[fence.slice("language-".length).toLowerCase()] ?? null;
+  // Own keys only: `language-constructor` or `language-__proto__` must not match what Object.prototype inherits.
+  const name = fence.slice("language-".length).toLowerCase();
+  return Object.hasOwn(FENCE_LANGUAGES, name) ? FENCE_LANGUAGES[name] : null;
 }
 
 // `lang` comes from a link anyone can craft: anything but the three values opens the HTML tab.

@@ -36,6 +36,17 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Direction: planned in dependency-maintenance [DM-U4](../programs/dependency-maintenance/implementation-plans/dm-u4-monaco-self-host/plan.md), one PR with self-hosted Monaco 0.57.0 (DM-P1 group B, Owner decision 2026-11-01 instead of the CDN pin): drop the extra decode, pass the code block's language (`language-*` class) from `PreBlock` and start Try It in it (`html`, `javascript` or `cpp` only), keep the example when the tab matches, with automated tests for `50%`, `%20` and a JavaScript example plus a manual editor pass. Code stays text until the learner runs it; no filtering of HTML or JavaScript.
 - Exit condition: "Thử ngay" on HTML, JavaScript and C++ examples, including ones with `%`, opens Try It in the matching language with the exact code, and runs it there.
 
+### BL-P5: running C++ on Try It shows nothing, because the public Piston API now refuses it
+
+- Status: Open (2026-11-01).
+- Problem: the C++ tab of `/try_it` posts to `https://emkc.org/api/v2/piston/execute` (`app/(main)/try_it/page.tsx:117`). The public Piston API answers 401: since 2026-02-15 it accepts only whitelisted callers. The handler reads only `data.run` (`page.tsx:129`), so a 401 body shows no output, no toast and no error. The learner sees nothing happen.
+- Evidence:
+  - DM-U4 manual pass on the local dev server, 2026-11-01: a C++ link from `tryItHref` loaded the exact code, and "Chạy Code" left the console at its placeholder.
+  - The same request sent from the page returned status 401 with the message "Public Piston API is now whitelist only as of 2/15/2026".
+  - The behavior predates DM-U4, which did not change this request.
+- Direction: the Owner picks the backend: a self-hosted Piston instance, another compile service, or removing the C++ tab. Separately, any non-OK response or a body without `run` should show an error to the learner.
+- Exit condition: C++ code runs and shows its output, or the C++ tab is removed; a failed run always shows an error.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

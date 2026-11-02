@@ -65,4 +65,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-27 U7 CP4: Main review of `8e58883..30da7c8` passed; AC8 passed, the nodemailer planning session loaded `dependency-updates` and the BL-004 planning session loaded no skill (sessions `local_11cbcd4a`, `local_f764c8ef`) (`7165565`).
 - 2026-10-27 U7 AC6: manual rows Q1 to Q4 passed on the seeded local stack, the Owner signed in as `student@devspace.test` and `admin@devspace.test` (`2cb2696`).
 - 2026-10-27 U7 merged; CI on head `2cb2696` passed all six jobs (PR 29, `3ea4a09`).
-- 2026-10-27 Program closed: FEAT-001 done, the closing dependency check recorded in `dependency-maintenance`, the backlog reviewed with the Owner, the capability handed to `dependency-maintenance` (ADR 0004) (this commit).
+- 2026-10-27 Program closed: FEAT-001 done, the closing dependency check recorded in `dependency-maintenance`, the backlog reviewed with the Owner, the capability handed to `dependency-maintenance` (ADR 0004) (82db821).

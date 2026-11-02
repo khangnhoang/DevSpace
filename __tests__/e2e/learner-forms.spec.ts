@@ -8,7 +8,7 @@ import {
   commentContent,
   createCommentFixture,
   fixtureLabel,
-  removeE2eAvatarObjects,
+  removeAvatarObject,
   reserveStudentComment,
   reserveStudentNote,
   reserveStudentReview,
@@ -120,17 +120,26 @@ test.describe("profile form", () => {
   // next.config.ts lists the local Storage path (lib/image-hosts.ts) and the optimizer may fetch the local address.
   test("[F12] a really uploaded avatar renders on the profile card and the object is removed afterwards", async ({ page }) => {
     await acquireStudentProfile();
+    // The name is recorded from the upload request as it leaves, before the save ends, so a failure after the upload still
+    // removes exactly this object. The request itself is not touched.
+    let uploaded: string | undefined;
+    page.on("request", (request) => {
+      const name = new URL(request.url()).pathname.split("/storage/v1/object/avatars/")[1];
+      if (request.method() !== "OPTIONS" && name && /^avatar_\d+_avatar_e2e\.png$/.test(name)) uploaded = name;
+    });
     try {
       await openProfileDialog(page);
       await page.locator('input[type="file"]').setInputFiles(AVATAR_FILE);
       await page.getByRole("button", { name: "Lưu thay đổi" }).click();
       await expect(page.getByText("Cập nhật thành công")).toBeVisible();
       await expect(page.getByRole("heading", { name: "Cập nhật hồ sơ" })).toBeHidden();
+      expect(uploaded, "the save uploaded one avatar").toBeDefined();
+      expect(await avatarObjectNames()).toContain(uploaded);
 
       const avatars = () => page.evaluate(() => [...document.images].filter((image) => decodeURIComponent(image.src).includes("avatar_")).map((image) => image.complete && image.naturalWidth > 0));
       await expect.poll(async () => { const loaded = await avatars(); return loaded.length > 0 && loaded.every(Boolean); }).toBe(true);
     } finally {
-      await removeE2eAvatarObjects();
+      await removeAvatarObject(uploaded);
     }
   });
 });

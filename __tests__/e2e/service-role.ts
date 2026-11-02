@@ -65,14 +65,13 @@ export async function studentProfile(): Promise<StudentProfile> {
 export async function avatarObjectNames(): Promise<string[]> {
   return must(await serviceRole().storage.from("avatars").list("", { limit: 1000 })).map((object) => object.name);
 }
-// Removes the Storage objects a row made by uploading AVATAR_FILE (the browser names them avatar_<time>_<file name>) and
-// checks that none is left: the run's audit covers storage.objects, so a row that really uploads cleans up itself.
-export async function removeE2eAvatarObjects(): Promise<void> {
-  const bucket = serviceRole().storage.from("avatars");
-  const stale = (await avatarObjectNames()).filter((name) => /^avatar_\d+_avatar_e2e\.png$/.test(name));
-  if (stale.length) must(await bucket.remove(stale));
-  const left = (await avatarObjectNames()).filter((name) => /^avatar_\d+_avatar_e2e\.png$/.test(name));
-  if (left.length) throw new Error(`e2e avatar objects left in Storage: ${left.join(", ")}`);
+// Removes the one Storage object a row uploaded, by the exact name it recorded from its own upload request, and checks
+// that it is gone. A shared name pattern would prove no ownership, so with no recorded name nothing is removed and the
+// end-of-run audit of storage.objects reports any residue.
+export async function removeAvatarObject(name: string | undefined): Promise<void> {
+  if (!name) return;
+  must(await serviceRole().storage.from("avatars").remove([name]));
+  if ((await avatarObjectNames()).includes(name)) throw new Error(`e2e avatar object left in Storage: ${name}`);
 }
 export const fixtureLabel = (value: string) => scope().label(value);
 // The learner-form rows create their rows through the UI, so each reserves the exact selector of the row it expects

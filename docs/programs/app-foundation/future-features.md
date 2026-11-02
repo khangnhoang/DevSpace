@@ -8,6 +8,12 @@ Direction the Owner has set that this program delivers in a later unit. Each ent
 - Direction: extend `server-actions` with Zod schemas, parsing and the shared client and server contract instead of creating a second skill (agent-workflow D15); extend `frontend-workflow` with React Hook Form, shadcn controls, async state and forms (D16); update `frontend-design`, which said there was no shadcn and no UI library (done in U1). The text is written from this repository, not from VocaSpace (off limits).
 - Target program: app-foundation.
 
+## AF-F2: Warn before losing unsaved learner form input
+
+- Status: Deferred (2026-11-03, Owner after AF-U3 manual QA).
+- Direction: a learner who leaves a form with unsaved text loses it silently. This happens when they navigate to another page, reload or close the tab. Closing the comments panel keeps the draft only because the panel slides away instead of unmounting. `app/` has no `beforeunload` handler and no navigation guard. When a learner form is dirty (React Hook Form `formState.isDirty`), warn on reload, tab close or leaving the site through `beforeunload`, which shows the browser's own prompt. For in-app navigation, which the App Router cannot block by itself, and for closing a panel or dialog, confirm through `ConfirmDialog`. Covers the profile dialog, the course review, the comment add and edit boxes and the lesson note. Planned after AF-U3; its e2e rows come with it.
+- Target program: app-foundation.
+
 ## Closed
 
 - FEAT-006 — Done: U1 replaces all nine native confirmations with the shared ConfirmDialog; the Owner accepts closure with real Gemini execution unverified due to an expired key (PR #38)

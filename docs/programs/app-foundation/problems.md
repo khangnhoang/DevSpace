@@ -36,6 +36,14 @@ Plan: [plan.md](plan.md). Progress: [progress.md](progress.md).
 - Direction: a small task, or H2-2b when it rewrites the payment actions: catch the reload, clear `isLoading` in `finally`, and show an error with a retry.
 - Exit condition: a failed reload shows an error state instead of a stuck loader, with no unhandled rejection.
 
+### AF-P5: the profile transaction history header centres itself on a phone, and its status filter uses the browser's option list
+
+- Status: Open (2026-11-03, Owner QA of AF-U3 at iPhone SE width; outside AF-U3, which does not touch this section).
+- Problem: the "Lịch sử giao dịch" heading and the status filter sit in `flex flex-col md:flex-row justify-between items-center` (`app/(main)/profile/page.tsx`), so below `md` both are stacked and centred instead of aligned left. The filter is a bare `<select>`, so its open option list is drawn by the browser, unstyled and with emoji markers. On a real iPhone Safari shows its own picker; the boxed list in the screenshot is Chrome's desktop popup in device emulation.
+- Evidence: Owner screenshot on the dev stack, 2026-11-03; the same markup exists at `fff1b13`, before AF-U3.
+- Direction: a small task or the app-foundation unit that next touches this page: align the header left below `md` (`items-start md:items-center`). For the list, the shadcn `Select` (Radix, not yet in `components/ui/`) draws a styled popup; `NativeSelect` styles only the closed control. Adding `Select` is a design choice for the Owner, and its e2e and accessibility checks come with it.
+- Exit condition: at 375px the heading and filter align with the table, and the filter's open list matches the decided control.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

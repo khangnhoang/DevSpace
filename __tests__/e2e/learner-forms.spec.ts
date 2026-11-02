@@ -8,6 +8,7 @@ import {
   commentContent,
   createCommentFixture,
   fixtureLabel,
+  removeE2eAvatarObjects,
   reserveStudentComment,
   reserveStudentNote,
   reserveStudentReview,
@@ -23,8 +24,8 @@ import {
 test.use({ storageState: authFile("student") });
 
 const PROFILE_NAME = "E2E Học viên mới";
-// A 1x1 PNG, so the avatar input has a real image file; no row uploads it (the Storage request is aborted or fulfilled).
-const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+// A 16x16 PNG, so the avatar input has a real image file that the image optimizer can re-encode; only [F12] uploads it.
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABw0lEQVR4nAXBoRJFQAAAwPclsizL8kWzSRAkI140kiBIRrxoJEEQRZ/1dn+ZL/cVvtJX+YKPr/X1vuibfItv8yXf6bt9v8ybewtv6a28wcvbentv9E7exbt5k/f03t5f5sk9haf0VJ7g4Wk9vSd6Js/i2TzJc3puzy9z5a7CVboqV3Bxta7eFV2Ta3FtruQ6XbfrlzlyR+EoHZUjODhaR++IjsmxODZHcpyO2/HLpFwqpFKqpCCRWqmXojRJi7RJSTqlW/pl9txe2Et7ZQ929tbe26N9si/2zZ7sp/22/zJrbi2spbWyBitra+2t0TpZF+tmTdbTelt/mTk3F+bSXJmDmbk19+ZonsyLeTMn82m+zb/MmBsLY2msjMHI2Bp7YzROxsW4GZPxNN7GXybmYiGWYiUGkdiKvRjFSVzETUziKd7iLzPkhsJQGipDMDC0ht4QDZNhMWyGZDgNt+GX6XJdoSt1lS7o6Fpdr4u6SbfoNl3Snbpb98s0uabQlJpKEzQ0rabXRM2kWTSbJmlOza35ZepcXahLdaUOaupW3aujelIv6k2d1Kf6Vv8yIRcKoRQqIQiEVuiFKEzCImxCEk7hFv4EYU8QaRMVsgAAAABJRU5ErkJggg==", "base64");
 const AVATAR_FILE = { name: "avatar e2e.png", mimeType: "image/png", buffer: PNG };
 const AVATAR_REQUEST = "**/storage/v1/object/avatars/**";
 
@@ -46,14 +47,16 @@ test.describe("profile form", () => {
     await page.getByLabel("Họ và tên").fill(PROFILE_NAME);
     await page.getByLabel("Giới tính").selectOption({ label: "Nam" });
     await page.getByLabel("Tỉnh / Thành phố").selectOption({ label: "Hà Nội" });
-    await page.getByLabel("Họ và tên").press("Enter");
-    await page.getByLabel("Họ và tên").press("Enter");
+    // Both Enters leave in one task: a second press after the first save has closed the dialog would wait on a detached input.
+    await Promise.all([page.getByLabel("Họ và tên").press("Enter"), page.getByLabel("Họ và tên").press("Enter")]);
 
     await expect(page.getByText("Cập nhật thành công")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Cập nhật hồ sơ" })).toBeHidden();
     expect(await studentProfile()).toEqual({ full_name: PROFILE_NAME, gender: "male", province: "Hà Nội", dob: null, avatar_url: null });
     expect(profileWrites(mutations), "a repeated Enter makes one write").toHaveLength(1);
 
+    // The page reloads the profile after the save; reopening before that would show the old values.
+    await expect(page.getByText(PROFILE_NAME, { exact: true }).first()).toBeVisible();
     // The dialog opens with the stored values; a blank name, gender and province are stored as null, not "".
     await page.getByRole("button", { name: "Chỉnh sửa hồ sơ" }).click();
     await expect(page.getByLabel("Họ và tên")).toHaveValue(PROFILE_NAME);
@@ -111,6 +114,24 @@ test.describe("profile form", () => {
     expect(fileName).toMatch(/^avatar_\d+_avatar_e2e\.png$/);
     expect((await studentProfile()).avatar_url).toBe(`${origin}/storage/v1/object/public/avatars/${fileName}`);
     expect(await avatarObjectNames()).toEqual(objectsBefore);
+  });
+
+  // The one row that really uploads: the saved avatar is a local Storage URL, which next/image renders only when
+  // next.config.ts lists the local Storage path (lib/image-hosts.ts) and the optimizer may fetch the local address.
+  test("[F12] a really uploaded avatar renders on the profile card and the object is removed afterwards", async ({ page }) => {
+    await acquireStudentProfile();
+    try {
+      await openProfileDialog(page);
+      await page.locator('input[type="file"]').setInputFiles(AVATAR_FILE);
+      await page.getByRole("button", { name: "Lưu thay đổi" }).click();
+      await expect(page.getByText("Cập nhật thành công")).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Cập nhật hồ sơ" })).toBeHidden();
+
+      const avatars = () => page.evaluate(() => [...document.images].filter((image) => decodeURIComponent(image.src).includes("avatar_")).map((image) => image.complete && image.naturalWidth > 0));
+      await expect.poll(async () => { const loaded = await avatars(); return loaded.length > 0 && loaded.every(Boolean); }).toBe(true);
+    } finally {
+      await removeE2eAvatarObjects();
+    }
   });
 });
 

@@ -94,6 +94,7 @@ A handoff carries exactly one task, never another task's scope. The docs catch-u
 A handoff is tied to its task and is deleted with it. The task is complete when its PR is merged and the owning docs record every durable fact the handoff held; session facts (running processes, idle sessions, a branch to start from) expire with the task. Docs usually lag at a merge, and the Owner fixes them in a later PR:
 
 - When the owning docs lag at the merge, Main does not fix them in that turn. It trims the handoff to the lagging doc items only, each naming the doc and the fact it must record, and adds no new task's scope. That task is not complete: its trimmed handoff is not deleted at the merge, and a session that finds the PR merged does not delete it.
+- When the owning docs lag at the merge and the task has no handoff, Main writes one in that turn holding only the lagging doc items, each naming the doc and the fact it must record, so they do not live only in the chat. It is then handled as a trimmed handoff.
 - When the Owner asks for a handoff for a new task, Main writes the new handoff with the catch-up as one scope item ("docs catch-up from PR n") and deletes the old handoff in the same turn. The catch-up ships in the new task's PR.
 - The trimmed handoff is also deleted when its docs are updated.
 - When the docs do not lag at the merge, the session that confirms the merge deletes the handoff in that turn, and a session that loads a handoff whose task is complete (check `git log origin/main` or the PR state) deletes it before any other work.

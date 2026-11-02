@@ -34,6 +34,7 @@ At most one initiative has an open plan at a time. A closed initiative keeps its
 | DM-U2 [nodemailer 10](implementation-plans/dm-u2-nodemailer-10/plan.md) | `chore/dm-u2-nodemailer-10` | DM-P1's high `nodemailer` finding is fixed by 10.3.1, `@types/nodemailer` is removed, and the e2e mail record and network guard still stop every real send. | none | Owner approval of the plan after the Codex plan gate |
 | DM-U3 [Audit cleanup of groups A and C](implementation-plans/dm-u3-audit-cleanup/plan.md) | `chore/dm-u3-audit-cleanup` | DM-P1 groups A (`gaxios` chain, in range) and C (`postcss-selector-parser` override) are fixed; only the Monaco/DOMPurify findings remain. | DM-U2 (PR 47) | Owner approval of the plan after the Codex plan gate |
 | DM-U4 [Self-hosted Monaco and the Try It fixes](implementation-plans/dm-u4-monaco-self-host/plan.md) | `fix/dm-u4-monaco-self-host` | Monaco is served from the npm package on the app's origin, so `npm audit` sees the running version (DM-P1 group B), and "Thử ngay" opens lesson examples with their exact code and language (backlog BL-P4). | DM-U3 (PR 48) | Owner approval of the plan after the Codex plan gate |
+| DM-U5 [Node 26](implementation-plans/dm-u5-node-26/plan.md) | `chore/node-26` | Production, every CI job and `@types/node` use Node 26 (DM-F1), with the full suite green on Node 26. | none | Owner approval of the plan after the Codex plan gate |
 
 ## 5. Opening an initiative
 

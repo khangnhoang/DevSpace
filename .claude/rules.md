@@ -37,3 +37,7 @@ To read a skill completely (`AGENTS.md`, rule 6), load it with the `Skill` tool,
 Information placement and non-authoritative memory principles: `AGENTS.md` section 7. Handoff timing, scope and completion: `docs/agent-loops.md`, Handoff.
 
 Delete a Claude memory line once the owning doc has caught up. When the shared lifecycle calls for a handoff, Main writes one memory file linked from `MEMORY.md`; use [handoff.md](skills/program-docs/references/templates/handoff.md). Deleting a Claude handoff also deletes its `MEMORY.md` line; replacing an old handoff with the next task's catch-up deletes the old file and index line in the same turn. These storage operations apply only to Claude memory, not another agent's personal memory.
+
+## 8. Desktop app file virtualization
+
+On Windows the Claude desktop app runs as an MSIX package, so a file that a Claude process (Main, an implementor, or a tool they start) writes under `%APPDATA%` or `%LOCALAPPDATA%` lands in `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache` and is invisible to the Owner's own shells and programs; a junction into it fails for native programs. Install or configure anything the Owner also uses (a runtime, a version manager, a shared cache) in a folder outside `AppData`, such as `%USERPROFILE%\.<tool>`, and confirm it from the Owner's own shell before relying on it. Files only Claude processes read, such as the scratchpad, may stay under `AppData`.

@@ -990,11 +990,11 @@ export async function getProfile(userId: string) {
 export async function updateProfile(
   userId: string,
   dataUser: {
-    full_name: string;
-    gender: string;
-    dob: string;
-    province: string;
-    avatar_url: string;
+    full_name: string | null;
+    gender: string | null;
+    dob: string | null;
+    province: string | null;
+    avatar_url: string | null;
   },
   newImageFile?: File | null,
 ) {

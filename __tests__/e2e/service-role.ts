@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { type LocalStack } from "../helpers/local-stack";
 import { readTestStack } from "../../scripts/test-stack/read.mjs";
 import { FixtureScope, checked as must, userExists as checkUserExists, type RunMarker } from "../helpers/fixture-ownership";
-import { IDS } from "./accounts";
+import { ACCOUNTS, IDS } from "./accounts";
 
 let client: SupabaseClient | undefined;
 let active: FixtureScope | undefined;
@@ -51,6 +51,19 @@ export async function prepareLearnerEnrollment(courseId: number) {
 }
 export async function profileOf(id: string): Promise<{ role: string; full_name: string | null; avatar_url: string | null }> {
   return must(await serviceRole().from("profiles").select("role,full_name,avatar_url").eq("id", id).single());
+}
+// The profile fields the learner-form rows change. The scope restores them on cleanup; the baseline is the seed student
+// (the on_auth_user_created trigger copies the name, nothing else is set).
+const STUDENT_PROFILE_FIELDS = ["full_name", "gender", "province", "dob", "avatar_url"];
+export async function acquireStudentProfile() {
+  await scope().acquire("profiles", IDS.student, STUDENT_PROFILE_FIELDS, { full_name: ACCOUNTS.student.fullName, gender: null, province: null, dob: null, avatar_url: null });
+}
+export type StudentProfile = { full_name: string | null; gender: string | null; province: string | null; dob: string | null; avatar_url: string | null };
+export async function studentProfile(): Promise<StudentProfile> {
+  return must(await serviceRole().from("profiles").select(STUDENT_PROFILE_FIELDS.join(",")).eq("id", IDS.student).single()) as unknown as StudentProfile;
+}
+export async function avatarObjectNames(): Promise<string[]> {
+  return must(await serviceRole().storage.from("avatars").list("", { limit: 1000 })).map((object) => object.name);
 }
 export const PAID_COURSE_ID = 2;
 export const UNKNOWN_COURSE_ID = 9999;

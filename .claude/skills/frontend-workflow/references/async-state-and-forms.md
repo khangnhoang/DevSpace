@@ -1,6 +1,6 @@
 # Async state and forms
 
-Read this before implementing or reviewing an async mutation, optimistic update, form, dynamic field or complex client-state transition. There is no form library yet, and `zod` validates server actions only (`server-actions`, schemas in `lib/schemas/`) with no form using it yet; forms use controlled state and the server action's validation.
+Read this before implementing or reviewing an async mutation, optimistic update, form, dynamic field or complex client-state transition. The learner forms use React Hook Form with a Zod resolver and shadcn controls (Forms with React Hook Form below); the auth and admin forms still use controlled state until the later units of the app-foundation program convert them, and a form that posts to a server action also keeps the action's own validation (`server-actions`).
 
 ## Async behavior
 
@@ -18,6 +18,18 @@ Read this before implementing or reviewing an async mutation, optimistic update,
 - Do not send or trust server-owned fields (user id, role, price, status); the server derives them.
 - Keyboard and mobile: labels, enter-to-submit where natural, proper input types.
 - Dynamic lists: stable keys (not the array index when items are removed or reordered), keep values on add and remove, keep errors by the item, and submit the intended order. A removal that loses data confirms first (`frontend-design`).
+
+## Forms with React Hook Form
+
+The profile dialog, the course review, the lesson comments (add, and the edit box of one comment) and the lesson notes show the pattern; read one of them before building the next form.
+
+- **Schema.** One Zod schema per form in `lib/schemas/` (the learner forms: `learner-forms.ts`), importing only `zod` so the server can reuse it. It refuses what the database refuses or what is blank, never a value the form sends today: a stored gender or province outside today's lists must still save (trimmed strings, not enums), optional text trims and a blank becomes `null` (`blankToNull`), and there is no length limit the database does not have (a comment is 3 to 999 characters like `comments_content_check`, counted by code point like `char_length`). Messages are short Vietnamese strings next to the schema. Unit tests with the payloads the form sends and each rejected case ship with it (`__tests__/unit/learner-form-schemas.test.ts`).
+- **Form.** `useForm<z.input<S>, unknown, z.output<S>>({ resolver: zodResolver(S), defaultValues })`; `defaultValues` come from the loaded record (`""` for a blank), and `reset(values)` loads a record that arrives later. `register` drives the native and shadcn controls (`Input`, `Textarea`, `NativeSelect`), a `Controller` drives a custom control (the star rating), `useWatch` reads a value during render. The `<form>` has `noValidate` and a real submit button, so Enter submits and a disabled submit button blocks Enter too. State that is not a text field (a chosen file) stays in component state, outside the schema.
+- **Field errors.** Each control sits in a `Field` with `data-invalid`, an `id` and `FieldLabel htmlFor` (or an `aria-label` when the design has no visible label), `aria-invalid` on the control, and `<FieldError errors={[errors.name]} />` right under it. Errors show on the first submit and update as the learner types.
+- **Submit.** The handler receives the parsed (trimmed, nulled) values and keeps its write helper and arguments; ids such as the user id come from the session, never from a field. Call `handleSubmit(save)(event)` from an event handler (`(e) => handleSubmit(save)(e)`): passing a function that reads a ref to `handleSubmit` during render fails the `react-hooks/refs` lint rule.
+- **Duplicate-submit guard.** Set an in-flight ref before the first await in `save` and clear it in `finally`; mirror it in state only to disable the control and show the spinner. The resolver runs asynchronously before React Hook Form sets `isSubmitting`, and two Enter presses can both pass a state check before React renders, so neither `isSubmitting` nor the `disabled` attribute is the guard. Do not rely on disabling a registered input while it submits: a disabled control's value is undefined.
+- **Failure.** A dialog closes only when the save returned success (`onSave` resolves a boolean): a failed save keeps the dialog open with what was typed and toasts the failure. A thrown error is caught and toasted the same way.
+- **Tests.** E2E rows in `__tests__/e2e/learner-forms.spec.ts` cover the accepted and the refused path of each form, a repeated Enter and a repeated `submit` event (`form.requestSubmit()` twice in one task) with exactly one row, and the Storage boundary of the avatar through `page.route` (see `test-quality-strategy`).
 
 ## States
 

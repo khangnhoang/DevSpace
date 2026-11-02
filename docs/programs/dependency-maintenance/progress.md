@@ -6,7 +6,7 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | [DM-U5](implementation-plans/dm-u5-node-26/plan.md) r5 (2026-11-02), Codex plan gate PASS in round 7 (`gpt-6.1-sol`, high, read-only); approved by the Owner on 2026-11-02. DM-U4 r1 closed (PR 49). |
+| Spec revision | [DM-U5](implementation-plans/dm-u5-node-26/plan.md) r6 (2026-11-02), Codex plan gate PASS in round 8 (`gpt-6.1-sol`, high, read-only); approved by the Owner on 2026-11-02. DM-U4 r1 closed (PR 49). |
 | Current unit / checkpoint | DM-U5 Node 26, branch `chore/node-26`; CP1 and CP2 not started. |
 | Status | DM-U5 approved: production, CI and `@types/node` move to Node 26 (DM-F1), with `.node-version` read by CI and fnm and the AC8 fnm rule in `AGENTS.md`. The Owner's machine runs fnm with `FNM_DIR` outside AppData. DM-U4 delivered in PR #49 (`1bc9802`); DM-P1 open for group B only. |
 | Completed evidence | DM-U3: PR 48 (`0666754`); DM-U4: PR 49 (`1bc9802`); see milestones. |
@@ -51,4 +51,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-01 DM-U4 correction after the Codex diff gate: `tryItLanguage` matches own keys only, so `language-constructor` and `language-__proto__` get no Thử ngay button, and the routine JSDoc of the copy script is removed (`fd81c24`).
 - 2026-11-01 DM-U4 Codex diff gate PASS in round 2 (round 1: one Required, inherited keys in the language lookup, fixed); manual pass on the local dev server: HTML and JavaScript links load the exact code and run, Monaco and its workers load from `/monaco/vs/`; C++ cannot run because the public Piston API refuses it (backlog BL-P5, predates DM-U4) (`eb6c89a`).
 - 2026-11-01 DM-U4 merged: Monaco 0.57.0 served from `/monaco/vs/` and the BL-P4 Try It fixes, CI green; on the Vercel preview the editor and workers load from the app's origin and `loader.js` has `Cache-Control: public, max-age=0, must-revalidate` (PR 49, `1bc9802`).
-- 2026-11-02 DM-U5 r5 approved after the Codex plan gate PASS in round 7: Node 26 for Vercel, CI (through `.node-version`) and `@types/node`, and the shared fnm rule (this commit).
+- 2026-11-02 DM-U5 r5 approved after the Codex plan gate PASS in round 7: Node 26 for Vercel, CI (through `.node-version`) and `@types/node`, and the shared fnm rule (6580ebf).
+- 2026-11-02 DM-U5 r6 approved after the implementor stopped before any edit: `fnm exec -- npm` cannot start the Windows `.cmd` shim, so AC8 and G1 use `npm.cmd` and `npx.cmd`; Codex plan gate PASS in round 8 (this commit).

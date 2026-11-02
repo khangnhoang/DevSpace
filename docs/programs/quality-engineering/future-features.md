@@ -25,14 +25,9 @@ Future initiatives retain their transferred scope and need separate approval. QE
   - Real provider delivery (Gmail) stays out of scope, as QE-F2 says.
 - Target program: quality-engineering.
 
-## QE-F5: Separate dev and test local stacks
-
-- Status: Fixed locally, awaiting delivery: QE-U3 runs `rls` and `e2e` on the `devspace-test` stack (ports 55320–55329) beside the dev stack, started, checked and reset by the test commands and stopped by `npm run test:stack:stop`; transferred from BL-F3 (Owner decision 2026-10-25) on 2026-11-01. Main closes the entry with the PR at delivery.
-- Direction: run two local Supabase stacks instead of one. The `dev` stack holds the seed data for manual QA. The `test` stack runs the `rls` and `e2e` suites, and tests still clean up after themselves. The two stacks have distinct `project_id`s and port ranges, share migrations and seed, and test helpers read the `test` stack. A stack is started only when needed and stopped after use. Every start and stop is confirmed (`supabase status` and `docker ps` for that `project_id`), not assumed from the command's exit, and a reset needs to know who owns the stack. A third stack (separate `rls` and `e2e`) was considered and not chosen: double the containers for little gain.
-- Target program: quality-engineering.
-
 ## Closed
 
+- QE-F5 — Done: QE-U3 runs `rls` and `e2e` on a separate `devspace-test` stack (ports 55320–55329) that the test commands start, check and reset, beside the dev stack (PR #50)
 - QE-F6 — Dropped: transferred from BL-F5 on 2026-11-01 and consolidated into QE-F4, which carries its dev-mail direction
 
 - QE-F1 — Done: QE-U1 delivered scoped test-data ownership, cleanup/recovery and preflight regressions; later intermittent Windows lifecycle observations remain separately tracked as QE-P1 (PR #42)

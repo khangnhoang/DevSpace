@@ -5,11 +5,13 @@
 type ManifestEntry = { workers?: Record<string, unknown>; filename?: string; exportedName?: string };
 export type ServerReferenceManifest = { node?: Record<string, ManifestEntry> };
 
-// Page workers of the actions the payment rows call, and a URL that renders that page. A POST with the action ID
+// Page workers of the actions the rows call, and a URL that renders that page. A POST with the action ID
 // to any other URL would answer "Failed to find Server Action".
 const WORKER_URLS: Record<string, string> = {
   "app/(main)/course/[slug]/page": "/course/javascript-can-ban",
   "app/admin/transactions/page": "/admin/transactions",
+  "app/admin/users/page": "/admin/users",
+  "app/admin/lessons/page": "/admin/lessons",
 };
 
 export function findAction(

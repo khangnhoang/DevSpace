@@ -3,6 +3,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth.server";
+import { courseIdSchema } from "@/lib/schemas/enrollment";
+import { parseFailure } from "@/lib/schemas/parse-failure";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -55,6 +57,10 @@ async function sendAdminNotification(userId: string, courseId: number) {
 }
 
 export async function enrollCourse(courseId: number) {
+  const parsed = courseIdSchema.safeParse(courseId);
+  if (!parsed.success) return { error: parseFailure(parsed.error) };
+  const validCourseId = parsed.data;
+
   try {
     const auth = await requireUser();
     if ("error" in auth) return { error: auth.error };
@@ -63,7 +69,7 @@ export async function enrollCourse(courseId: number) {
     const { data: course } = await supabaseAdmin
       .from("courses")
       .select("price, slug")
-      .eq("id", courseId)
+      .eq("id", validCourseId)
       .single();
 
     if (!course) return { error: "Khóa học không tồn tại" };
@@ -75,14 +81,14 @@ export async function enrollCourse(courseId: number) {
 
     const { error } = await supabaseAdmin.from("enrollments").insert({
       user_id: userId,
-      course_id: courseId,
+      course_id: validCourseId,
     });
 
     if (error) {
       return { error: error.message };
     }
 
-    await sendAdminNotification(userId, courseId);
+    await sendAdminNotification(userId, validCourseId);
 
     revalidatePath(`/courses/${course.slug}`);
 

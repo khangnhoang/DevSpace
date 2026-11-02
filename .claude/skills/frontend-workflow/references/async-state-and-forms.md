@@ -1,6 +1,6 @@
 # Async state and forms
 
-Read this before implementing or reviewing an async mutation, optimistic update, form, dynamic field or complex client-state transition. Form and validation libraries are not in the repo yet; forms use controlled state and the server action's validation.
+Read this before implementing or reviewing an async mutation, optimistic update, form, dynamic field or complex client-state transition. There is no form library yet, and `zod` validates server actions only (`server-actions`, schemas in `lib/schemas/`) with no form using it yet; forms use controlled state and the server action's validation.
 
 ## Async behavior
 

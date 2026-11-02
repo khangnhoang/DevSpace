@@ -26,6 +26,14 @@ export const userExists = (id: string) => checkUserExists(serviceRole(), id);
 export async function learnerEnrollmentCount(courseId: number): Promise<number> {
   return must(await serviceRole().from("enrollments").select("id").eq("user_id", IDS.learner).eq("course_id", courseId)).length;
 }
+const enrollmentNotification = (learnerName: string, courseName: string) => ({ receiver_id: IDS.admin, actor_id: IDS.learner, type: "enrollment", title: "Đăng ký khóa học mới", message: `${learnerName} đã đăng ký khóa học ${courseName}`, link: "/admin" });
+// The admin notification a free enrollment of course 1 by the learner sends; zero before the enrollment.
+export async function learnerEnrollmentNotificationCount(courseId: number): Promise<number> {
+  const db = serviceRole();
+  const course = must(await db.from("courses").select("name").eq("id", courseId).single());
+  const learner = must(await db.from("profiles").select("full_name").eq("id", IDS.learner).single());
+  return must(await db.from("notifications").select("id").match(enrollmentNotification(learner.full_name, course.name))).length;
+}
 export async function prepareLearnerEnrollment(courseId: number) {
   const db = serviceRole();
   // The UI resolves this slug and submits its ID; reservations must describe that same course.
@@ -35,11 +43,14 @@ export async function prepareLearnerEnrollment(courseId: number) {
   const admins = must(await db.from("profiles").select("id").eq("role", "admin"));
   if (course.price !== 0 || admins.length !== 1 || admins[0].id !== IDS.admin) throw new Error("Free-enrollment baseline differs");
   if (!learner.full_name) throw new Error("Free-enrollment learner name is absent; no resources acquired");
-  const notification = { receiver_id: IDS.admin, actor_id: IDS.learner, type: "enrollment", title: "Đăng ký khóa học mới", message: `${learner.full_name} đã đăng ký khóa học ${course.name}`, link: "/admin" };
+  const notification = enrollmentNotification(learner.full_name, course.name);
   // Every prerequisite precedes acquisition; a failed preflight owns nothing to delete.
   if (await learnerEnrollmentCount(courseId) || must(await db.from("notifications").select("id").match(notification)).length) throw new Error("Free-enrollment fixture slot is occupied");
   await scope().reserve("enrollments", { user_id: IDS.learner, course_id: courseId });
   await scope().reserve("notifications", notification);
+}
+export async function profileOf(id: string): Promise<{ role: string; full_name: string | null; avatar_url: string | null }> {
+  return must(await serviceRole().from("profiles").select("role,full_name,avatar_url").eq("id", id).single());
 }
 export const PAID_COURSE_ID = 2;
 export const UNKNOWN_COURSE_ID = 9999;

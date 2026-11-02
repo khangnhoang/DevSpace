@@ -14,6 +14,16 @@ const manifest: ServerReferenceManifest = {
       filename: "app/action/payment.ts",
       exportedName: "approvePayment",
     },
+    "7010aa11bb22": {
+      workers: { "app/admin/users/page": { moduleId: 4, async: false } },
+      filename: "app/action/user.ts",
+      exportedName: "createNewUser",
+    },
+    "7020aa11bb33": {
+      workers: { "app/admin/lessons/page": { moduleId: 5, async: false } },
+      filename: "app/action/gemini.ts",
+      exportedName: "generateQuizFromContent",
+    },
     "409f40801acb": {
       workers: { "app/other/page": { moduleId: 3, async: false } },
       filename: "app/action/other.ts",
@@ -39,6 +49,14 @@ describe("findAction", () => {
     expect(findAction(manifest, "app/action/payment.ts", "approvePayment")).toEqual({
       id: "4040ef769714",
       path: "/admin/transactions",
+    });
+  });
+
+  it("maps the workers of the users page and the lessons page", () => {
+    expect(findAction(manifest, "app/action/user.ts", "createNewUser")).toEqual({ id: "7010aa11bb22", path: "/admin/users" });
+    expect(findAction(manifest, "app/action/gemini.ts", "generateQuizFromContent")).toEqual({
+      id: "7020aa11bb33",
+      path: "/admin/lessons",
     });
   });
 

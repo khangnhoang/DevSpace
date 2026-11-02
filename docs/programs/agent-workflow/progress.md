@@ -124,3 +124,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-01 AW-U12 CP3: Main validated 43534cc and the complete implementor report against r2; docs/whitespace/protected-path checks and 3-file/12-link skill comparisons passed, 0 Critical and 0 Required; Vercel project-context read then remained explicitly blocked, local implementation complete and nothing pushed (`cad910a`).
 - 2026-11-01 Owner linked Vercel; subsequent project and production-deployment metadata reads passed with the expected devspace/khang-devs-projects target and READY alias. Owner granted push, PR/CI reporting and merge conditional on green CI; no direct deployment or database action (`69b66cb`).
 - 2026-11-01 AW-U12 merged: CLI-first tool selection and the section 4 delivery boundary; AW-P3 resolved (PR 45, `29ad22e`).
+- 2026-11-03 AW-P5 resolved in the post-AF-U3 small-task batch: `preview_start` serves the dev server on the fnm-selected Node 26 (PR 55, `9d6198c`).

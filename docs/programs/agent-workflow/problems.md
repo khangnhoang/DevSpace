@@ -12,18 +12,11 @@ Charter: `README.md`. Progress: `progress.md`.
 - Direction: keep the link, because a copied template must keep a working `progress.md` link; move the progress template and the detail template together.
 - Exit condition: none needed while both templates stay in the same folder; reopen if one of them moves.
 
-### AW-P5: preview_start runs the dev server on the system Node, not the `.node-version` major
-
-- Status: Fixed locally, awaiting delivery (2026-11-03, small-task batch on `fix/small-task-batch`: `devspace-dev` runs `fnm exec -- npm.cmd run dev` through `powershell.exe`, whose profile sets `FNM_DIR`; without the profile fnm looks under AppData and finds no Node 26. After `preview_start` the process on port 3000 was `C:\Users\khang\.fnm\node-versions\v26.13.0\installation\node.exe`, and `preview_stop` left no process behind; opened 2026-11-03).
-- Problem: `.claude/launch.json` (`devspace-dev`, the launcher `.claude/rules.md` section 5 names) runs `npm run dev` with `"runtimeExecutable": "npm"`. The desktop app starts it without the shell profile, so fnm's use-on-cd hook never runs and the server runs on the system Node, against the Node rule in `AGENTS.md` (Commands).
-- Evidence: 2026-11-03, after `preview_start` with `devspace-dev`, the process listening on port 3000 was `C:\Program Files\nodejs\node.exe`; the same command run as `fnm exec -- npm.cmd run dev` in a terminal tab printed `Using Node v26.13.0`.
-- Direction: a small task, batched with the other small tasks after AF-U3 (Owner, 2026-11-03): run the launcher through fnm (`fnm` with `exec -- npm.cmd run dev`, or what the app accepts) and confirm from the listening process's path that `preview_start` serves on the `.node-version` major.
-- Exit condition: `preview_start` with `devspace-dev` serves from the fnm-selected Node 26.
-
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.
 
+- AW-P5 — Resolved 2026-11-03: `devspace-dev` runs `fnm exec -- npm.cmd run dev` through `powershell.exe` with its profile, so `preview_start` serves on the fnm-selected Node 26 (PR 55, `9d6198c`).
 - AW-P3 — Resolved 2026-11-01: AW-U12 delivered CLI-first tool selection and the section 4 delivery boundary, with machine setup evidence recorded in progress at `69b66cb`; static cases are not live compliance proof (PR 45, `29ad22e`).
 - AW-P4 — Resolved 2026-11-01: AW-U11 app-only callback/receipt binding delivered after Main validation and independent review; bounded runtime evidence and limits retained in progress (PR 44, `f16ed1e`).
 

@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | DM-U4 `implementation-plans/dm-u4-monaco-self-host/plan.md` r1 (2026-11-01), written from a trial install; Codex plan gate PASS in round 2 (round 1: four Required on the install hook, worker and crafted-link checks and manual data, fixed); Owner-approved 2026-11-01. DM-U3 r1 closed (PR 48). |
-| Current unit / checkpoint | DM-U4 on `fix/dm-u4-monaco-self-host`; CP1 to CP3 and one correction done locally (`fd81c24`); Main review, Codex diff gate and manual pass done; waiting for push and PR. |
-| Status | DM-U3 delivered in PR #48 (`0666754`); DM-P1 groups A and C fixed, group B open (served from npm 0.57.0 once DM-U4 is delivered); DM-U4 r1 implemented locally. |
-| Completed evidence | DM-U3: PR 48 (`0666754`), see milestones. DM-U4 trial (2026-11-01, plan section 2): Monaco 0.57.0 copied from the npm package to `public/monaco/vs` loads on `next start` with no request off the origin; `tsc`, lint and build pass. |
-| Accepted deviations | (1) G3 expected `monaco-editor` to lose the lockfile `peer` flag; npm 11 keeps it on direct dependencies that are also peers; no version change. (2) Windows e2e builds timed out on the ownership gate because `joinRun` resolved process ancestry inside it; fixed in DM-U4 by resolving it before the gate, outside plan section 1.2 (Owner decision 2026-11-01). (3) The "Thử ngay" e2e rows run as the admin (`admin.spec.ts` A11 to A13, not `student.spec.ts`), because the learn-in-order gate in `LearnClient` redirects the seed student to their next unfinished lesson and the fixture lesson is the last of course 2. |
+| Spec revision | none open; DM-U4 r1 closed (PR 49). |
+| Current unit / checkpoint | none. |
+| Status | DM-U4 delivered in PR #49 (`1bc9802`): Monaco 0.57.0 served from the npm package and backlog BL-P4 fixed; DM-P1 open for group B only, waiting for a Monaco release with DOMPurify 3.4.17 or later. |
+| Completed evidence | DM-U3: PR 48 (`0666754`); DM-U4: PR 49 (`1bc9802`); see milestones. |
+| Accepted deviations | none open. |
 | Blockers / Owner decisions | none. |
-| Next action | With the Owner's grants: push, open the PR, check AC8 on its Vercel preview and record the `Cache-Control` header in the PR body. |
-| Current authority | 2026-11-01: new branch for DM-U4 (BL-P4 included, Owner decision D1), its trial install and plan, one read-only hosted query counting code-fence languages (D3), the PR 48 docs catch-up, plan approval and a local commit of the plan and records; implementation of DM-U4 r1 by a Sonnet implementor with one local commit per checkpoint and the local stack only. No push, PR, merge or hosted access is granted. |
+| Next action | Re-check DM-P1 group B at the next dependency check. |
+| Current authority | none. |
 
 ## Milestones
 
@@ -49,4 +49,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-01 DM-U4 CP2: "Thử ngay" opens a lesson example in its own language with the exact code (no second decode), a block in another language has no button, and the example returns on its own tab; `npm test` (293), `npm run test:e2e` (69, run twice) and build pass (`bf90da1`).
 - 2026-11-01 DM-U4 CP3: the `dependency-updates` Monaco row, description and Dependency check, the charter capability line and DM-P1 say Monaco comes from the npm package; BL-P4 is `Fixed locally, awaiting delivery`; `npm audit --omit=dev` still reports `dompurify` and `monaco-editor` (2 findings), now for the running version (`62a48b5`).
 - 2026-11-01 DM-U4 correction after the Codex diff gate: `tryItLanguage` matches own keys only, so `language-constructor` and `language-__proto__` get no Thử ngay button, and the routine JSDoc of the copy script is removed (`fd81c24`).
-- 2026-11-01 DM-U4 Codex diff gate PASS in round 2 (round 1: one Required, inherited keys in the language lookup, fixed); manual pass on the local dev server: HTML and JavaScript links load the exact code and run, Monaco and its workers load from `/monaco/vs/`; C++ cannot run because the public Piston API refuses it (backlog BL-P5, predates DM-U4) (this commit).
+- 2026-11-01 DM-U4 Codex diff gate PASS in round 2 (round 1: one Required, inherited keys in the language lookup, fixed); manual pass on the local dev server: HTML and JavaScript links load the exact code and run, Monaco and its workers load from `/monaco/vs/`; C++ cannot run because the public Piston API refuses it (backlog BL-P5, predates DM-U4) (`eb6c89a`).
+- 2026-11-01 DM-U4 merged: Monaco 0.57.0 served from `/monaco/vs/` and the BL-P4 Try It fixes, CI green; on the Vercel preview the editor and workers load from the app's origin and `loader.js` has `Cache-Control: public, max-age=0, must-revalidate` (PR 49, `1bc9802`).

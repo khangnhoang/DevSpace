@@ -28,14 +28,6 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Direction: small UI fix: close the menu in `handleLogout` (and check whether the menu should also close on route change), then check sign out and sign in by hand.
 - Exit condition: after signing out and signing in again, the avatar menu is closed until clicked.
 
-### BL-P4: "Thử ngay" breaks lesson code with `%` and always opens Try It in HTML
-
-- Status: Fixed locally, awaiting delivery (dependency-maintenance DM-U4, 2026-11-01).
-- Problem: `PreBlock.handleTryIt` sends the lesson code as `/try_it?code=<encodeURIComponent(code)>` (`app/components/PreBlock.tsx:22-28`). `app/(main)/try_it/page.tsx:50` calls `decodeURIComponent` on `useSearchParams().get("code")`, which is already decoded: code with a `%` not followed by two hex digits (`width: 50%;`, `printf("%d")`) throws `URIError` during render, and code holding a sequence such as `%20` is silently changed. The page also starts with `language` fixed to `"html"` (`page.tsx:48`), so a JavaScript or C++ example runs as an HTML preview, and switching tab replaces the example with the default code (`page.tsx:56-60`). Any third party can craft a `/try_it?code=...` link that loads its text into the learner's editor.
-- Evidence: read from the code at `f900b18`; the double decode reproduced in Node (`decodeURIComponent` of the decoded `x="50%"` throws `URI malformed`, `a%20b` becomes `a b`). Code runs only after "Chạy Code": HTML and JavaScript in an iframe with `sandbox="allow-scripts allow-modals"` and no `allow-same-origin` (`page.tsx:220`); C++ is sent to the external Piston API (`page.tsx:111`). The crafted link matters for dependency-maintenance DM-P1 group B, because Monaco's sanitizer can then see third-party text.
-- Direction: planned in dependency-maintenance [DM-U4](../programs/dependency-maintenance/implementation-plans/dm-u4-monaco-self-host/plan.md), one PR with self-hosted Monaco 0.57.0 (DM-P1 group B, Owner decision 2026-11-01 instead of the CDN pin): drop the extra decode, pass the code block's language (`language-*` class) from `PreBlock` and start Try It in it (`html`, `javascript` or `cpp` only), keep the example when the tab matches, with automated tests for `50%`, `%20` and a JavaScript example plus a manual editor pass. Code stays text until the learner runs it; no filtering of HTML or JavaScript.
-- Exit condition: "Thử ngay" on HTML, JavaScript and C++ examples, including ones with `%`, opens Try It in the matching language with the exact code, and runs it there.
-
 ### BL-P5: running C++ on Try It shows nothing, because the public Piston API now refuses it
 
 - Status: Open (2026-11-01).
@@ -53,6 +45,22 @@ Problems that no open program owns. This is not a program: it has no plan and no
   - Removing the C++ tab.
 - Exit condition: C++ code runs and shows its output, or the C++ tab is removed; a failed run always shows an error.
 
+### BL-P6: the activation mail links to a 404 when the course has no lesson
+
+- Status: Open (2026-11-01).
+- Problem: the course activation mail sends the learner to `${baseUrl}/courses/${courseSlug}` when no first lesson is found (`lib/email.server.ts:60`). The course page route is `/course/<slug>` (`app/(main)/course`), so the button opens a 404. With an empty slug, the link is `/courses/`.
+- Evidence: read from the code on 2026-11-01 at `1bc9802`. `sendSuccessEmail` is called from `app/action/payment.ts:293` with `payment.courses?.slug || ""` and an optional `firstLessonSlug`. The 404 has not been reproduced in a browser.
+- Direction: small fix: build the fallback link from the real course route, and cover it with a content check (see quality-engineering QE-F4) or a unit test of the template.
+- Exit condition: the activation mail of a course with no lesson links to that course's page, and the page opens.
+
+### BL-P7: a learner's display name is inserted unescaped into the activation mail HTML
+
+- Status: Open (2026-11-01).
+- Problem: `getEmailTemplate` interpolates `userName` and `courseName` straight into HTML (`lib/email.server.ts`). `userName` is `profile.full_name` (`app/action/payment.ts:295`), which the learner sets. A name containing markup, such as a link, renders inside a mail sent from DevSpace's own Gmail account.
+- Evidence: read from the code on 2026-11-01 at `1bc9802`. Not reproduced. Whether profile updates restrict `full_name` was not checked.
+- Direction: escape every interpolated value in the mail template (and limit `full_name` where it is saved, if that fits the profile rules). Add a test with a name containing `<a>` and `&`. Severity is to be assessed before scheduling.
+- Exit condition: a name with HTML characters shows as plain text in the mail.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.
@@ -65,3 +73,4 @@ One line each: ID, status, one-line outcome. Details stay in Git.
 - BL-008 — Done: a course without an image shows the shared `/no-course-image.png` on the home page, hero slider, course page and admin list (PR #33)
 - BL-005 — Moved to [app-foundation](../programs/app-foundation/problems.md)
 - BL-010 — Done: the quiz compares the selected option and the correct answer case-insensitively; hosted held no row outside `a` to `d` (PR #33)
+- BL-P4 — Done: "Thử ngay" opens a lesson example with its exact code in its own language (html, javascript or cpp), other languages get no button, and a crafted link stays text until "Chạy Code"; delivered by dependency-maintenance DM-U4 (PR #49)

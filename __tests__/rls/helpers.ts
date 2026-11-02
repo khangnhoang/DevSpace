@@ -1,20 +1,17 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import pg from "pg";
 import { expect, inject } from "vitest";
-import { FixtureScope, trackedFetch } from "../helpers/fixture-ownership";
-import { joinRun, recordEntry, forgetEntry } from "../helpers/run-ownership.mjs";
+import { FixtureScope, noteTimeout } from "../helpers/fixture-ownership";
 
 const stack = inject("localStack");
-const ownership = inject("ownership");
-joinRun(ownership);
 let currentScope: FixtureScope | undefined;
 
-const clientOptions = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: trackedFetch(ownership, () => currentScope?.id ?? "probe") } };
+const clientOptions = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } };
 
 function clientWith(token?: string): SupabaseClient {
   return createClient(stack.apiUrl, stack.anonKey, {
     ...clientOptions,
-    global: { fetch: trackedFetch(ownership, () => fixtureScope().id, true), ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}) },
+    global: token ? { headers: { Authorization: `Bearer ${token}` } } : {},
   });
 }
 
@@ -32,9 +29,14 @@ export const newAnonClient = () => clientWith();
 // never for the request under test.
 export const fixtures = createClient(stack.apiUrl, stack.serviceRoleKey, clientOptions);
 
-export function startFixtureScope() { currentScope = new FixtureScope(ownership, fixtures, stack.dbUrl); }
+export function startFixtureScope() { currentScope = new FixtureScope(fixtures, stack.dbUrl); }
 export function fixtureScope() { if (!currentScope) throw new Error("No RLS fixture scope"); return currentScope; }
-export async function finishFixtureScope() { if (currentScope) await currentScope.cleanup(); currentScope = undefined; }
+// A timed-out test may leave a request in flight, so it makes the run unclean even when the cleanup succeeds.
+export async function finishFixtureScope(context?: { task?: { name?: string; result?: { errors?: { message?: string }[] } } }) {
+  if (context?.task?.result?.errors?.some(error => /timed out/i.test(error.message ?? ""))) noteTimeout(context.task.name ?? "unnamed test");
+  if (currentScope) await currentScope.cleanup();
+  currentScope = undefined;
+}
 
 export async function ownedInsert<V extends Record<string, unknown>, T>(table: string, values: V, run: (values: V) => PromiseLike<T>): Promise<T> {
   const columns: Record<string, string[]> = { courses: ["slug"], chapters: ["title"], lessons: ["slug"], reviews: ["user_id", "course_id"], comments: ["content"], notes: ["content"], user_progress: ["user_id", "lesson_id"], enrollments: ["user_id", "course_id"], payments: ["user_id", "course_id"], notifications: ["title"], profile_cards: ["id"] };
@@ -50,8 +52,7 @@ export async function ownedInsert<V extends Record<string, unknown>, T>(table: s
   const rows = must(await fixtures.from(actualTable).select("id").match(where));
   if (rows.length > 1) throw new Error("Ambiguous inserted fixture ownership");
   if (rows.length && where.id !== rows[0].id) {
-    recordEntry(ownership, { kind: "rows", scope: scope.id, table: actualTable, where: { id: rows[0].id } });
-    forgetEntry(ownership, intent);
+    scope.adopt(actualTable, rows[0].id, intent);
   }
   return result;
 }

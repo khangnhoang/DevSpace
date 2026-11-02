@@ -6,14 +6,14 @@ Charter: [README.md](README.md). Problems: [problems.md](problems.md). Git histo
 
 | Field | Value |
 | --- | --- |
-| Spec revision | QE-U2 r1 (2026-11-01), closed; no initiative has an open plan. |
-| Current unit / checkpoint | none active. |
-| Status | QE-U2 delivered in PR #46 (`3e4b941`), 2026-11-01; QE-P1 resolved. |
+| Spec revision | QE-U3 `implementation-plans/qe-u3-test-stack/plan.md` r4 (2026-11-01); r1 to r3 failed the Codex plan gate, r4 passed it and was approved by the Owner on 2026-11-01. QE-U2 r1 closed. |
+| Current unit / checkpoint | QE-U3 CP1 (`eba3051`) and CP2 (`02c89e2`) accepted by Main; CP3 (CI uses the commands, docs, skills and `AGENTS.md`, QE-P2 and QE-F5 records) implemented on `test/qe-p2-test-stack`, awaiting Main review. |
+| Status | QE-U2 delivered in PR #46 (`3e4b941`); QE-P2 and QE-F5 fixed locally, awaiting delivery; QE-F5 transferred from BL-F3 and BL-F5 transferred as QE-F6 and consolidated into QE-F4 (2026-11-01). |
 | Completed evidence | QE-U1: PR #42 (`ddcefd0`). QE-U2: PR #46 (`3e4b941`); see milestones. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | The Owner selects the next quality-engineering task; none is active. |
-| Current authority | PR #46 delivery is complete. No quality-engineering implementation or remote action is currently granted. |
+| Next action | Main reviews CP3, runs the Codex gate on the whole diff, then delivery (PR, CI durations against run 41311090918; Main closes QE-P2 and QE-F5 with the PR). |
+| Current authority | 2026-11-02: QE-U3 r4 implementation by a separate implementor with local checkpoint commits; Main reviews each checkpoint; no push or PR. |
 
 ## Milestones
 
@@ -33,3 +33,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-01 QE-U2 r1 approved for QE-P1: bounded writer-exit wait before RLS teardown release and a measured `rls` test timeout (`e5062a5`).
 - 2026-11-01 QE-U2 CP1 waits for registered writers before RLS teardown release (`c8f8be8`, correction `6a9895d`); CP2 sets the `rls` test timeout to 15 s from Windows measurements; QE-P1 fixed locally, awaiting delivery (`3194a0e`).
 - 2026-11-01 QE-U2 merged: Windows RLS teardown waits for registered writers before release and `rls` has a measured 15 s timeout; QE-P1 resolved (PR 46, `3e4b941`).
+- 2026-11-01 QE-U3 r4 approved for QE-P2 and QE-F5: separate test stack, lock with writer records, end-of-run audit (`038e334`).
+- 2026-11-02 QE-U3 CP1 runs rls and e2e on a separate `devspace-test` stack beside the dev stack (`eba3051`); CP2 replaces the ownership journal with a machine-wide lock, writer records and an end-of-run audit (`02c89e2`); CP3 moves CI and the docs to the new commands; QE-P2 and QE-F5 fixed locally, awaiting delivery (this commit).

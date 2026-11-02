@@ -1,5 +1,7 @@
 "use client";
-import React, { useEffect, useState, use, useCallback } from "react";
+import React, { useEffect, useRef, useState, use, useCallback } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Check,
   CircleFadingArrowUp,
@@ -30,6 +32,13 @@ import Image from "next/image";
 import VideoModal from "@/app/components/VideoModal";
 import CustomAvatar from "@/app/components/CustomAvatar";
 import { NO_COURSE_IMAGE } from "@/lib/constants";
+import { Field, FieldError } from "@/components/ui/field";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  reviewSchema,
+  type ReviewFormInput,
+  type ReviewFormValues,
+} from "@/lib/schemas/learner-forms";
 
 interface ReviewItem {
   id: number | string;
@@ -50,10 +59,21 @@ const CourseReviews = ({
   hasEnrolled: boolean;
 }) => {
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
-  const [rating, setRating] = useState(5);
-  const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const {
+    control,
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ReviewFormInput, unknown, ReviewFormValues>({
+    resolver: zodResolver(reviewSchema),
+    defaultValues: { rating: 5, content: "" },
+  });
+  // Set before the first await: the resolver runs before React Hook Form sets isSubmitting, so a second
+  // submit can pass a state-only check.
+  const submittingRef = useRef(false);
 
   // -- STATE PHÂN TRANG --
   const [page, setPage] = useState(0); // Trang hiện tại (bắt đầu từ 0)
@@ -115,11 +135,10 @@ const CourseReviews = ({
       .maybeSingle(); // Dùng maybeSingle để không lỗi nếu chưa có
 
     if (data) {
-      setRating(data.rating);
-      setContent(data.content || "");
+      reset({ rating: data.rating, content: data.content || "" });
       setIsEditing(true); // Bật chế độ sửa
     }
-  }, [courseId]);
+  }, [courseId, reset]);
 
   // Load lần đầu
   useEffect(() => {
@@ -159,39 +178,45 @@ const CourseReviews = ({
   });
 
   // --- SUBMIT REVIEW ---
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!content.trim()) return;
+  const submitReview = async (values: ReviewFormValues) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    const { error } = await supabase.from("reviews").upsert(
-      {
-        user_id: user?.id,
-        course_id: courseId,
-        rating: rating,
-        content: content,
-        created_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id, course_id" },
-    );
+      const { error } = await supabase.from("reviews").upsert(
+        {
+          user_id: user?.id,
+          course_id: courseId,
+          rating: values.rating,
+          content: values.content,
+          created_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id, course_id" },
+      );
 
-    if (error) {
-      toast.error("Lỗi: " + error.message);
-    } else {
-      toast.success("Đánh giá thành công!");
-      setContent("");
-      // Reset lại list để hiện review mới nhất lên đầu
-      setPage(0);
-      setHasMore(true);
-      fetchReviews(0, true);
-      setIsEditing(true);
+      if (error) {
+        toast.error("Lỗi: " + error.message);
+      } else {
+        toast.success("Đánh giá thành công!");
+        reset({ rating: values.rating, content: "" });
+        // Reset lại list để hiện review mới nhất lên đầu
+        setPage(0);
+        setHasMore(true);
+        fetchReviews(0, true);
+        setIsEditing(true);
+      }
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
+  const handleReviewSubmit = (e: React.FormEvent<HTMLFormElement>) =>
+    handleSubmit(submitReview)(e);
 
   return (
     <div className="mt-12 max-w-4xl border-t border-gray-700 pt-8">
@@ -242,30 +267,43 @@ const CourseReviews = ({
       {/* FORM VIẾT ĐÁNH GIÁ (GIỮ NGUYÊN) */}
       {hasEnrolled && (
         <form
-          onSubmit={handleSubmit}
+          onSubmit={handleReviewSubmit}
+          noValidate
           className="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-8"
         >
           <h3 className="text-white font-bold mb-4">
             {isEditing ? "Chỉnh sửa đánh giá của bạn" : "Viết đánh giá của bạn"}
           </h3>
-          <div className="flex gap-2 mb-4">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <button
-                type="button"
-                key={star}
-                onClick={() => setRating(star)}
-                className={`cursor-pointer text-3xl transition-transform hover:scale-110 ${star <= rating ? "text-yellow-400" : "text-gray-600"}`}
-              >
-                ★
-              </button>
-            ))}
-          </div>
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Chia sẻ cảm nhận..."
-            className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white mb-3 h-24 focus:outline-none focus:border-blue-500"
+          <Controller
+            control={control}
+            name="rating"
+            render={({ field }) => (
+              <div className="flex gap-2 mb-4">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    type="button"
+                    key={star}
+                    aria-label={`${star} sao`}
+                    onClick={() => field.onChange(star)}
+                    className={`cursor-pointer text-3xl transition-transform hover:scale-110 ${star <= field.value ? "text-yellow-400" : "text-gray-600"}`}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+            )}
           />
+          {/* The review surface is always dark: its colours are set here, not taken from the shadcn tokens, which follow the OS scheme. */}
+          <Field className="mb-3 gap-1" data-invalid={!!errors.content}>
+            <Textarea
+              placeholder="Chia sẻ cảm nhận..."
+              aria-label="Nội dung đánh giá"
+              aria-invalid={!!errors.content}
+              className="field-sizing-fixed h-24 min-h-0 w-full rounded-lg border-gray-700 bg-gray-900 p-3 text-white shadow-none placeholder:text-white/50 focus-visible:border-blue-500 focus-visible:ring-0 aria-invalid:border-red-400 aria-invalid:ring-0 md:text-base"
+              {...register("content")}
+            />
+            <FieldError className="text-red-400" errors={[errors.content]} />
+          </Field>
           <div className="flex justify-end">
             <button
               disabled={submitting}

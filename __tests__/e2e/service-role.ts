@@ -65,6 +65,26 @@ export async function studentProfile(): Promise<StudentProfile> {
 export async function avatarObjectNames(): Promise<string[]> {
   return must(await serviceRole().storage.from("avatars").list("", { limit: 1000 })).map((object) => object.name);
 }
+export const fixtureLabel = (value: string) => scope().label(value);
+// The learner-form rows create their rows through the UI, so each reserves the exact selector of the row it expects
+// first; the scope deletes whatever the UI wrote under it (a row a rule refused is never created).
+const STUDENT_LESSON_ID = 3;
+export async function reserveStudentReview() { await scope().reserve("reviews", { user_id: IDS.student, course_id: PAID_COURSE_ID }); }
+export async function studentReviews(): Promise<{ rating: number; content: string }[]> {
+  return must(await serviceRole().from("reviews").select("rating,content").match({ user_id: IDS.student, course_id: PAID_COURSE_ID }));
+}
+export async function reserveStudentComment(content: string) { await scope().reserve("comments", { user_id: IDS.student, lesson_id: STUDENT_LESSON_ID, content }); }
+export async function studentCommentsWith(content: string): Promise<number> {
+  return must(await serviceRole().from("comments").select("id").match({ user_id: IDS.student, lesson_id: STUDENT_LESSON_ID, content })).length;
+}
+export async function commentContent(id: number): Promise<string> { return must(await serviceRole().from("comments").select("content").eq("id", id).single()).content; }
+export async function reserveStudentNote(content: string) { await scope().reserve("notes", { user_id: IDS.student, lesson_id: STUDENT_LESSON_ID, content }); }
+export async function studentNotesWith(content: string): Promise<number> {
+  return must(await serviceRole().from("notes").select("id").match({ user_id: IDS.student, lesson_id: STUDENT_LESSON_ID, content })).length;
+}
+export async function studentNoteCount(): Promise<number> {
+  return must(await serviceRole().from("notes").select("id").match({ user_id: IDS.student, lesson_id: STUDENT_LESSON_ID })).length;
+}
 export const PAID_COURSE_ID = 2;
 export const UNKNOWN_COURSE_ID = 9999;
 export const SEED_COUPON = "LOCAL10";

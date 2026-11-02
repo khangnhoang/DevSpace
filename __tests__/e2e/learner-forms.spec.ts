@@ -1,8 +1,22 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { authFile } from "./accounts";
 import { recordMutations } from "./confirm-dialog";
 import { expect, test } from "./fixtures";
-import { acquireStudentProfile, avatarObjectNames, studentProfile } from "./service-role";
+import {
+  acquireStudentProfile,
+  avatarObjectNames,
+  commentContent,
+  createCommentFixture,
+  fixtureLabel,
+  reserveStudentComment,
+  reserveStudentNote,
+  reserveStudentReview,
+  studentCommentsWith,
+  studentNoteCount,
+  studentNotesWith,
+  studentProfile,
+  studentReviews,
+} from "./service-role";
 
 // The learner forms of AF-U3 (profile edit, course review, lesson comments, lesson notes) on the student session. The
 // student is enrolled in the paid course 2 and has no date of birth in the seed (AF-P4).
@@ -97,5 +111,202 @@ test.describe("profile form", () => {
     expect(fileName).toMatch(/^avatar_\d+_avatar_e2e\.png$/);
     expect((await studentProfile()).avatar_url).toBe(`${origin}/storage/v1/object/public/avatars/${fileName}`);
     expect(await avatarObjectNames()).toEqual(objectsBefore);
+  });
+});
+
+// Two submit events in the same task, before React renders: only an in-flight flag set before the first await
+// (a ref, not state) lets exactly one through. This is what a repeated Enter in a form with a submit button does.
+const submitTwice = (control: Locator) =>
+  control.evaluate((element) => {
+    const form = (element as HTMLInputElement).form;
+    if (!form) throw new Error("the control is not in a form");
+    form.requestSubmit();
+    form.requestSubmit();
+  });
+
+test.describe("course review form", () => {
+  const COURSE_URL = "/course/javascript-can-ban";
+  const textbox = (page: Page) => page.getByPlaceholder("Chia sẻ cảm nhận...");
+
+  async function openReviewForm(page: Page) {
+    await page.goto(COURSE_URL);
+    await expect(page.getByRole("heading", { name: "Viết đánh giá của bạn" })).toBeVisible();
+  }
+
+  test("[F2] submits a rating with trimmed text, writes one review row and lists it", async ({ page }) => {
+    await reserveStudentReview();
+    const text = fixtureLabel("E2E đánh giá");
+    await openReviewForm(page);
+
+    await page.getByRole("button", { name: "4 sao" }).click();
+    await textbox(page).fill(`  ${text}  `);
+    await page.getByRole("button", { name: "Gửi đánh giá" }).click();
+
+    await expect(page.getByText("Đánh giá thành công!")).toBeVisible();
+    await expect(page.getByText(text, { exact: true })).toBeVisible();
+    expect(await studentReviews()).toEqual([{ rating: 4, content: text }]);
+  });
+
+  test("[F3] blank review text shows the field error and writes nothing", async ({ page }) => {
+    await reserveStudentReview();
+    await openReviewForm(page);
+    const mutations = recordMutations(page);
+
+    await textbox(page).fill("   ");
+    await page.getByRole("button", { name: "Gửi đánh giá" }).click();
+
+    await expect(page.getByText("Vui lòng nhập nội dung đánh giá")).toBeVisible();
+    await expect(textbox(page)).toHaveAttribute("aria-invalid", "true");
+    expect(await studentReviews()).toEqual([]);
+    expect(mutations, "nothing was sent").toEqual([]);
+  });
+
+  test("[F11] the review form keeps its dark surface in a light and a dark OS scheme", async ({ page }) => {
+    await openReviewForm(page);
+    // The reference is the page's own bg-gray-900, so the check follows the palette and not a pinned colour value.
+    const surfaces = () =>
+      textbox(page).evaluate((el) => {
+        const probe = document.createElement("div");
+        probe.className = "bg-gray-900";
+        document.body.append(probe);
+        const reference = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        const style = getComputedStyle(el);
+        return { reference, background: style.backgroundColor, color: style.color, border: style.borderTopColor };
+      });
+
+    await page.emulateMedia({ colorScheme: "light" });
+    const light = await surfaces();
+    await page.emulateMedia({ colorScheme: "dark" });
+    const dark = await surfaces();
+
+    expect(light.background).toBe(light.reference);
+    expect(dark).toEqual(light);
+    expect(light.reference).not.toBe("rgba(0, 0, 0, 0)");
+  });
+});
+
+test.describe("lesson comment forms", () => {
+  const LESSON_URL = "/learn/javascript-can-ban/bien-va-kieu-du-lieu";
+  const input = (page: Page) => page.getByPlaceholder("Viết bình luận...");
+
+  async function openComments(page: Page) {
+    await page.goto(LESSON_URL);
+    // The button has no text below the sm breakpoint, so it is found by its icon (as in T4).
+    await page.locator("button").filter({ has: page.locator("svg.lucide-message-square-text") }).click();
+    await expect(input(page)).toBeEnabled();
+  }
+
+  test("[F4] sends a comment, one row for a repeated Enter or a repeated submit", async ({ page }) => {
+    const byEnter = fixtureLabel("E2E bình luận Enter");
+    const bySubmit = fixtureLabel("E2E bình luận submit");
+    await reserveStudentComment(byEnter);
+    await reserveStudentComment(bySubmit);
+    await openComments(page);
+
+    await input(page).fill(`  ${byEnter}  `);
+    await Promise.all([input(page).press("Enter"), input(page).press("Enter")]);
+    await expect(page.getByText(byEnter, { exact: true })).toBeVisible();
+    await expect.poll(() => studentCommentsWith(byEnter)).toBe(1);
+
+    await input(page).fill(bySubmit);
+    await submitTwice(input(page));
+    await expect(page.getByText(bySubmit, { exact: true })).toBeVisible();
+    expect(await studentCommentsWith(bySubmit), "a repeated submit writes one row").toBe(1);
+    expect(await studentCommentsWith(byEnter)).toBe(1);
+  });
+
+  test("[F5] a comment under 3 or from 1000 characters shows the field error and writes nothing", async ({ page }) => {
+    await openComments(page);
+    const mutations = recordMutations(page);
+    const long = "x".repeat(1000);
+
+    await input(page).fill("ab");
+    await input(page).press("Enter");
+    await expect(page.getByText("Bình luận cần ít nhất 3 ký tự")).toBeVisible();
+    await expect(input(page)).toHaveAttribute("aria-invalid", "true");
+
+    await input(page).fill(long);
+    await input(page).press("Enter");
+    await expect(page.getByText("Bình luận chỉ được dưới 1000 ký tự")).toBeVisible();
+
+    await input(page).fill("x".repeat(999));
+    await expect(page.getByText("Bình luận chỉ được dưới 1000 ký tự")).toBeHidden();
+    expect(await studentCommentsWith("ab")).toBe(0);
+    expect(await studentCommentsWith(long)).toBe(0);
+    expect(mutations, "nothing was sent").toEqual([]);
+  });
+
+  test("[F6] edits a comment with the same limits and saves the trimmed text", async ({ page }) => {
+    const comment = await createCommentFixture();
+    const edited = fixtureLabel("E2E bình luận đã sửa");
+    await reserveStudentComment(edited);
+    await openComments(page);
+
+    const row = page.locator("div.group").filter({ hasText: comment.label });
+    await row.getByRole("button").first().click();
+    await row.getByRole("button", { name: "Sửa", exact: true }).click();
+    const box = page.getByLabel("Sửa bình luận");
+    await expect(box).toHaveValue(comment.label);
+
+    await box.fill("  ab ");
+    await page.getByTitle("Lưu").click();
+    await expect(page.getByText("Bình luận cần ít nhất 3 ký tự")).toBeVisible();
+    await box.fill("x".repeat(1000));
+    await page.getByTitle("Lưu").click();
+    await expect(page.getByText("Bình luận chỉ được dưới 1000 ký tự")).toBeVisible();
+    expect(await commentContent(comment.id), "a refused edit changes nothing").toBe(comment.label);
+
+    await box.fill(`  ${edited}  `);
+    await page.getByTitle("Lưu").click();
+    await expect(box).toBeHidden();
+    await expect(page.getByText(edited, { exact: true })).toBeVisible();
+    expect(await commentContent(comment.id)).toBe(edited);
+  });
+});
+
+test.describe("lesson note form", () => {
+  const LESSON_URL = "/learn/javascript-can-ban/bien-va-kieu-du-lieu";
+  const input = (page: Page) => page.getByPlaceholder("Nhập ghi chú mới...");
+
+  async function openNotes(page: Page) {
+    await page.goto(LESSON_URL);
+    await page.getByTitle("Mở ghi chú").click();
+    await expect(input(page)).toBeEnabled();
+  }
+
+  test("[F7] adds a note, one row for a repeated Enter or a repeated submit", async ({ page }) => {
+    const byEnter = fixtureLabel("E2E ghi chú Enter");
+    const bySubmit = fixtureLabel("E2E ghi chú submit");
+    await reserveStudentNote(byEnter);
+    await reserveStudentNote(bySubmit);
+    await openNotes(page);
+
+    await input(page).fill(`  ${byEnter}  `);
+    await Promise.all([input(page).press("Enter"), input(page).press("Enter")]);
+    await expect(page.getByText(byEnter, { exact: true })).toHaveCount(1);
+    await expect.poll(() => studentNotesWith(byEnter)).toBe(1);
+
+    await input(page).fill(bySubmit);
+    await submitTwice(input(page));
+    await expect(page.getByText(bySubmit, { exact: true })).toHaveCount(1);
+    expect(await studentNotesWith(bySubmit), "a repeated submit writes one row").toBe(1);
+    expect(await studentNotesWith(byEnter)).toBe(1);
+  });
+
+  test("[F8] a blank note shows the field error and writes nothing", async ({ page }) => {
+    await openNotes(page);
+    const before = await studentNoteCount();
+    const mutations = recordMutations(page);
+
+    await input(page).press("Enter");
+    await expect(page.getByText("Vui lòng nhập nội dung ghi chú")).toBeVisible();
+    await input(page).fill("   ");
+    await input(page).press("Enter");
+    await expect(page.getByText("Vui lòng nhập nội dung ghi chú")).toBeVisible();
+    await expect(input(page)).toHaveAttribute("aria-invalid", "true");
+
+    expect(await studentNoteCount()).toBe(before);
+    expect(mutations, "nothing was sent").toEqual([]);
   });
 });

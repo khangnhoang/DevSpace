@@ -28,6 +28,10 @@ The existing Codex review workflow stays read-only. Main runs it and decides on 
 
 For manual UI validation in Claude, start the dev server with `preview_start` using `devspace-dev` in `.claude/launch.json` (`npm run dev`, `http://127.0.0.1:3000`). Use `read_page` or `get_page_text` for structure/text; `read_console_messages` and `read_network_requests` for errors and calls; `computer` and `form_input` for interaction; `resize_window` for viewport checks. The shared procedure and its stop/report boundaries are in `frontend-workflow/references/manual-ui-validation.md`.
 
+## 6. Reading skills
+
+To read a skill completely (`AGENTS.md`, rule 6), load it with the `Skill` tool, which loads the whole `SKILL.md`; read a file under its `references/` with `Read`, completely, because the `Skill` tool does not load references. Do not read a skill or a reference through Bash or a partial `Read`.
+
 ## 7. Claude memory storage
 
 Information placement and non-authoritative memory principles: `AGENTS.md` section 7. Handoff timing, scope and completion: `docs/agent-loops.md`, Handoff.

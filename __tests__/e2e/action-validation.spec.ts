@@ -1,6 +1,6 @@
 // Test plan
 // Goal: describe how the server actions of app-foundation AF-U2 refuse a malformed argument and still serve the
-//   admin users form.
+//   admin users form, and (AF-P1, V8 to V10) return fixed messages instead of database or Auth error text.
 // Layer: e2e (the e2e server on the local stack). V rows post straight to the action endpoints with `callAction`
 //   (the UI cannot send a malformed value); V4 drives the form of /admin/users.
 // Subject: app/action/enroll.ts (enrollCourse), app/action/user.ts (createNewUser, deleteUserAccount),
@@ -125,4 +125,29 @@ test("[V7] a malformed quiz request is refused before Gemini is called", async (
   for (const [name, args, expected] of cases) {
     expect(await callAction("admin", "app/action/gemini.ts", "generateQuizFromContent", args), name).toEqual(expected);
   }
+});
+
+// AF-P1: a database or Auth failure returns a fixed Vietnamese message, never the provider's error text.
+test("[V8] enrolling twice in a free course says so and keeps one enrollment", async ({ callAction }) => {
+  await prepareLearnerEnrollment(FREE_COURSE_ID);
+
+  expect(await callAction("learner", "app/action/enroll.ts", "enrollCourse", [FREE_COURSE_ID])).toEqual({ success: true, slug: "lam-quen-voi-html" });
+  expect(await callAction("learner", "app/action/enroll.ts", "enrollCourse", [FREE_COURSE_ID])).toEqual({ error: "Bạn đã đăng ký khóa học này." });
+
+  expect(await learnerEnrollmentCount(FREE_COURSE_ID)).toBe(1);
+  expect(await learnerEnrollmentNotificationCount(FREE_COURSE_ID)).toBe(1);
+});
+
+test("[V9] creating a user with an email already in use names the conflict and creates nobody", async ({ callAction }) => {
+  expect(await callAction("admin", "app/action/user.ts", "createNewUser", [userPayload("learner@devspace.test")])).toEqual({ error: "Email này đã được sử dụng." });
+
+  expect(await userExists(IDS.learner)).toBe(true);
+});
+
+test("[V10] deleting a user that does not exist returns a fixed message and deletes nobody", async ({ callAction }) => {
+  expect(await callAction("admin", "app/action/user.ts", "deleteUserAccount", ["99999999-9999-4999-8999-999999999999"])).toEqual({
+    error: "Không thể xóa người dùng. Vui lòng thử lại.",
+  });
+
+  for (const id of Object.values(IDS)) expect(await userExists(id), `seed user ${id}`).toBe(true);
 });

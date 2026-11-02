@@ -144,7 +144,7 @@ export default function UsersManagerPage() {
     }
 
     if (result.error) {
-      toast.error("Lưu người dùng thất bại" + result.error);
+      toast.error("Lưu người dùng thất bại: " + result.error);
     } else {
       toast.success(editingUser ? "Sửa thành công" : "Thêm thành công");
       setIsOpenForm(false);

@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "devspace-dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeExecutable": "powershell.exe",
+      "runtimeArgs": ["-NoLogo", "-Command", "fnm exec -- npm.cmd run dev"],
       "port": 3000,
       "url": "http://127.0.0.1:3000"
     }

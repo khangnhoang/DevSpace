@@ -82,6 +82,6 @@ export async function generateQuizFromContent(content: string, quantity: number 
     if ((error as { message?: string }).message?.includes("API key not valid")) {
         return { error: "API Key không hợp lệ hoặc tài khoản bị khóa." };
     }
-    return { error: `Lỗi xử lý: ${(error as { message?: string }).message}` };
+    return { error: "Không thể tạo câu hỏi bằng AI. Vui lòng thử lại." };
   }
 }

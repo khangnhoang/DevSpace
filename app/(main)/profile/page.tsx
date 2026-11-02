@@ -38,10 +38,24 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   profileSchema,
   type ProfileFormInput,
   type ProfileFormValues,
 } from "@/lib/schemas/learner-forms";
+
+const STATUS_FILTERS = [
+  { value: "all", label: "Tất cả trạng thái" },
+  { value: "success", label: "Thành công" },
+  { value: "pending", label: "Chờ duyệt" },
+  { value: "failed", label: "Thất bại" },
+] as const;
 
 // --- SKELETON ---
 const ProfileSkeleton = () => {
@@ -502,27 +516,43 @@ export default function ProfilePage() {
 
         {/* --- PHẦN 2: LỊCH SỬ GIAO DỊCH (ĐÃ LỌC & PHÂN TRANG) --- */}
         <div>
-          <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
             <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
               <History className="text-purple-600" /> Lịch sử giao dịch
             </h2>
 
             {/* Bộ lọc trạng thái */}
-            <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg p-1.5 shadow-sm">
-              <Filter size={16} className="text-gray-500 ml-2" />
-              <select
-                className="p-1 text-sm bg-transparent outline-none text-gray-700 font-medium cursor-pointer"
+            <div className="flex items-center gap-2">
+              <Filter size={16} className="text-gray-500" aria-hidden="true" />
+              <Select
                 value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value as typeof statusFilter);
+                onValueChange={(value) => {
+                  setStatusFilter(value as typeof statusFilter);
                   setCurrentPage(1); // Reset về trang 1
                 }}
               >
-                <option value="all">Tất cả trạng thái</option>
-                <option value="success">✅ Thành công</option>
-                <option value="pending">⏳ Chờ duyệt</option>
-                <option value="failed">❌ Thất bại</option>
-              </select>
+                <SelectTrigger
+                  aria-label="Lọc theo trạng thái"
+                  className="min-w-44 rounded-lg border-gray-200 bg-white font-medium text-gray-700 cursor-pointer"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                {/* The learner page is always light, so the list sets its own surface instead of the OS-scheme tokens. */}
+                <SelectContent
+                  position="popper"
+                  className="rounded-lg border-gray-200 bg-white text-gray-700"
+                >
+                  {STATUS_FILTERS.map((opt) => (
+                    <SelectItem
+                      key={opt.value}
+                      value={opt.value}
+                      className="cursor-pointer focus:bg-purple-50 focus:text-purple-700"
+                    >
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

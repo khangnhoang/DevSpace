@@ -91,3 +91,43 @@ test.describe("confirm dialog on the lesson comments", () => {
     expect(await commentDeletedAt(comment.id)).toBeNull();
   });
 });
+
+test("[T6] the transaction history filter is labelled, filters by status from mouse and keyboard and aligns left on a phone", async ({ page }) => {
+  await page.goto("/profile");
+  const heading = page.getByRole("heading", { name: "Lịch sử giao dịch" });
+  const filter = page.getByRole("combobox", { name: "Lọc theo trạng thái" });
+  const history = page.getByRole("table");
+  // The seed gives the student one approved payment and no other order.
+  await expect(history).toContainText("Thành công");
+
+  await filter.click();
+  await page.getByRole("option", { name: "Chờ duyệt" }).click();
+  await expect(filter).toHaveText("Chờ duyệt");
+  await expect(history).toContainText("Không tìm thấy giao dịch nào.");
+  await expect(history).not.toContainText("Thành công");
+
+  // Keyboard: open from the focused trigger, move to the next option and pick it; focus returns to the trigger.
+  await filter.focus();
+  await page.keyboard.press("Enter");
+  // Radix moves focus to the selected option after the list opens; a key sent before that is lost.
+  await expect(page.getByRole("option", { name: "Chờ duyệt" })).toBeFocused();
+  await page.keyboard.press("ArrowUp");
+  await expect(page.getByRole("option", { name: "Thành công" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(filter).toHaveText("Thành công");
+  await expect(filter).toBeFocused();
+  await expect(history).toContainText("Thành công");
+
+  // The list keeps the page's white surface in a dark OS scheme (the shadcn tokens would turn it dark).
+  await page.emulateMedia({ colorScheme: "dark" });
+  await filter.click();
+  expect(await page.getByRole("listbox").evaluate((el) => getComputedStyle(el.closest("[data-slot=select-content]")!).backgroundColor)).toBe("rgb(255, 255, 255)");
+  await page.keyboard.press("Escape");
+  await page.emulateMedia({ colorScheme: "light" });
+
+  // AF-P5: below md the heading and the filter start at the table's left edge instead of centring.
+  await page.setViewportSize({ width: 375, height: 812 });
+  const [headingBox, filterBox, historyBox] = await Promise.all([heading.boundingBox(), filter.boundingBox(), history.boundingBox()]);
+  expect(headingBox && historyBox && Math.abs(headingBox.x - historyBox.x) < 2, "the heading aligns with the table").toBe(true);
+  expect(filterBox && historyBox && filterBox.x - historyBox.x < 40, "the filter starts near the table's left edge").toBe(true);
+});

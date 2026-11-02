@@ -19,9 +19,9 @@ type ActorName = "learner" | "student" | "admin";
 
 // The passwords are the local test values written in supabase/seed.sql.
 const ACTORS: Record<ActorName, { email: string; password: string }> = {
-  learner: { email: "learner@devspace.test", password: "learner-local-pass-1" },
-  student: { email: "student@devspace.test", password: "student-local-pass-1" },
-  admin: { email: "admin@devspace.test", password: "admin-local-pass-1" },
+  learner: { email: "learner@devspace.test", password: "localpassword123" },
+  student: { email: "student@devspace.test", password: "localpassword123" },
+  admin: { email: "admin@devspace.test", password: "localpassword123" },
 };
 
 async function signIn(apiUrl: string, anonKey: string, actor: ActorName): Promise<string> {

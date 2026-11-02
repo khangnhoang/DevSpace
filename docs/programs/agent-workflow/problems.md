@@ -14,7 +14,7 @@ Charter: `README.md`. Progress: `progress.md`.
 
 ### AW-P5: preview_start runs the dev server on the system Node, not the `.node-version` major
 
-- Status: Open (2026-11-03).
+- Status: Fixed locally, awaiting delivery (2026-11-03, small-task batch on `fix/small-task-batch`: `devspace-dev` runs `fnm exec -- npm.cmd run dev` through `powershell.exe`, whose profile sets `FNM_DIR`; without the profile fnm looks under AppData and finds no Node 26. After `preview_start` the process on port 3000 was `C:\Users\khang\.fnm\node-versions\v26.13.0\installation\node.exe`, and `preview_stop` left no process behind; opened 2026-11-03).
 - Problem: `.claude/launch.json` (`devspace-dev`, the launcher `.claude/rules.md` section 5 names) runs `npm run dev` with `"runtimeExecutable": "npm"`. The desktop app starts it without the shell profile, so fnm's use-on-cd hook never runs and the server runs on the system Node, against the Node rule in `AGENTS.md` (Commands).
 - Evidence: 2026-11-03, after `preview_start` with `devspace-dev`, the process listening on port 3000 was `C:\Program Files\nodejs\node.exe`; the same command run as `fnm exec -- npm.cmd run dev` in a terminal tab printed `Using Node v26.13.0`.
 - Direction: a small task, batched with the other small tasks after AF-U3 (Owner, 2026-11-03): run the launcher through fnm (`fnm` with `exec -- npm.cmd run dev`, or what the app accepts) and confirm from the listening process's path that `preview_start` serves on the `.node-version` major.

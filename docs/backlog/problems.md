@@ -63,7 +63,7 @@ Problems that no open program owns. This is not a program: it has no plan and no
 
 ### BL-P8: confirming a payment shows two toasts at once, stacked over each other
 
-- Status: Open (2026-11-03, Owner QA on the dev stack).
+- Status: Fixed locally, awaiting delivery (2026-11-03, small-task batch on `fix/small-task-batch`: one toast with a `description`, e2e PF9 asserts a single toast; opened 2026-11-03, Owner QA on the dev stack).
 - Problem: `handleConfirmPayment` in `app/components/CoursePaymentModal.tsx` calls `toast.success("Đã gửi xác nhận thanh toán!")` and `toast.info("Vui lòng đợi Admin duyệt trong giây lát.")` together. Sonner stacks them collapsed, so the second covers the first and both can be read only by hovering.
 - Evidence: Owner screenshot, 2026-11-03, as a learner submitting a payment for course 2; the calls are unchanged since `e2f3395`.
 - Direction: one toast with a title and a description (sonner `description`), or one message. Small task; security-hotfix H2-2b rewrites the payment actions but not this modal's copy.

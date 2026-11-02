@@ -43,7 +43,7 @@ Detail that only one skill uses goes in that skill's `references/`, never in a n
 
 ## What a skill holds
 
-A skill holds the process, the project's choices and boundaries, and the repo-specific pitfalls that the tool cannot describe itself (for example "validate on the server without a schema library" in `server-actions`). It does not hold syntax or API behavior the agent can read from types, docs or a run. The test for a line is whether removing it would change what the agent does. Two exceptions: version-specific behavior the agent is likely to get wrong on the version in `package.json` (state the pitfall and where to check it, not the docs), and a tool agents do not know (the vendored `playwright-cli`).
+A skill holds the process, the project's choices and boundaries, and the repo-specific pitfalls that the tool cannot describe itself (for example "never `strict` a schema for a payload that carries whole rows" in `server-actions`). It does not hold syntax or API behavior the agent can read from types, docs or a run. The test for a line is whether removing it would change what the agent does. Two exceptions: version-specific behavior the agent is likely to get wrong on the version in `package.json` (state the pitfall and where to check it, not the docs), and a tool agents do not know (the vendored `playwright-cli`).
 
 A skill states only what DevSpace has today. Tooling that does not exist yet is named once as deferred, with no steps, and the steps arrive in the PR that adds the tooling.
 

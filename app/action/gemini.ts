@@ -29,7 +29,7 @@ export async function generateQuizFromContent(content: string, quantity: number 
     const prompt = `
       Bạn là một API trả về JSON. Nhiệm vụ: Tạo ${request.quantity} câu hỏi trắc nghiệm khác với các câu hỏi trước đó (nếu có) ${prevQuestion} từ nội dung sau.
       
-      Nội dung: """${request.content}""", 
+      Nội dung: """${request.content}""",
       
       Yêu cầu Output: Chỉ trả về một mảng JSON (Array of Objects), không Markdown, không lời dẫn.
       Schema bắt buộc:

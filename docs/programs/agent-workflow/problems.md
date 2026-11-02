@@ -12,20 +12,19 @@ Charter: `README.md`. Progress: `progress.md`.
 - Direction: keep the link, because a copied template must keep a working `progress.md` link; move the progress template and the detail template together.
 - Exit condition: none needed while both templates stay in the same folder; reopen if one of them moves.
 
-### AW-P3: CLI-first tooling and repository-controlled delivery
+### AW-P5: preview_start runs the dev server on the system Node, not the `.node-version` major
 
-- Status: Fixed locally, awaiting delivery (2026-11-01); [AW-U12 r2](implementation-plans/aw-u12-cli-first/plan.md) CP0-CP3 complete locally, Main validation passed on `43534cc`; no PR or delivery yet.
-- Problem: Agents selected MCP before checking available CLI capabilities. At discovery, GitHub CLI was behind the current stable release and Vercel CLI was absent from PATH; adding tools without an explicit delivery boundary also risks bypassing the repository's review, CI and release workflow.
-- Evidence: H2-2a hosted catalog reads used the CLI successfully after MCP failures. The repository pins `supabase` to `2.121.0`. Main-supplied CP1 evidence records `gh` upgraded from `2.96.0` to `2.103.3` and previously absent Vercel CLI installed globally at `65.9.0`; paths, installer outcomes and read-only probes are in progress. Owner subsequently linked Vercel; Main's project and production-deployment metadata reads exited 0 and confirmed devspace/khang-devs-projects and the READY production alias, clearing the initial link_required blocker. CP2 repository checks and all 13 static cases pass; these are not runtime agent-compliance proof or application QA. Existing GitHub/Vercel integration remains the deployment path; permission ownership stays in `AGENTS.md` section 4.
-- Direction: Deliver one coherent agent-workflow task: update the machine's GitHub CLI, install Vercel CLI globally, and align shared instructions and their direct consumers with CLI-first selection. Recheck official stable versions before installation; keep machine tooling outside application dependencies and record installation evidence alongside the repository change.
-- Tool-selection boundary: Prefer the available CLI for supported operations (`npx supabase`, `gh`, `vercel`); check CLI help before declaring a capability missing. Use MCP only when the CLI lacks the required operation and MCP provides it. CLI errors, authentication failures or permission denials do not establish missing capability or authorize an MCP workaround; preserve role, target and permission boundaries.
-- Delivery boundary: Encode the shared permission rule in `AGENTS.md` section 4 and link procedures to it. Tool availability grants no deployment authority. Agents follow the repository's delivery workflow with its existing separate grants; direct deployment, redeployment, promotion or rollback through CLI, MCP, API or UI outside that workflow requires an explicit Owner instruction naming the action and target. An authorized push/merge may trigger the existing automatic deployment, but a workflow description alone grants no push, merge or deployment permission.
-- Exit condition: Resolved executable paths and installed versions are verified, permitted read-only CLI checks pass or remain explicitly blocked, and repository instructions consistently cover CLI-first selection and delivery authority. Bounded static decision cases cover supported CLI operations, confirmed CLI capability gaps, CLI/auth failures, inspection without deployment authority, workflow-triggered deployment, and an explicit Owner-directed deployment. Docs checks pass; machine setup evidence is distinguished from Git changes, and static cases are not claimed as live agent-compliance proof.
+- Status: Open (2026-11-03).
+- Problem: `.claude/launch.json` (`devspace-dev`, the launcher `.claude/rules.md` section 5 names) runs `npm run dev` with `"runtimeExecutable": "npm"`. The desktop app starts it without the shell profile, so fnm's use-on-cd hook never runs and the server runs on the system Node, against the Node rule in `AGENTS.md` (Commands).
+- Evidence: 2026-11-03, after `preview_start` with `devspace-dev`, the process listening on port 3000 was `C:\Program Files\nodejs\node.exe`; the same command run as `fnm exec -- npm.cmd run dev` in a terminal tab printed `Using Node v26.13.0`.
+- Direction: a small task, batched with the other small tasks after AF-U3 (Owner, 2026-11-03): run the launcher through fnm (`fnm` with `exec -- npm.cmd run dev`, or what the app accepts) and confirm from the listening process's path that `preview_start` serves on the `.node-version` major.
+- Exit condition: `preview_start` with `devspace-dev` serves from the fnm-selected Node 26.
 
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.
 
+- AW-P3 — Resolved 2026-11-01: AW-U12 delivered CLI-first tool selection and the section 4 delivery boundary, with machine setup evidence recorded in progress at `69b66cb`; static cases are not live compliance proof (PR 45, `29ad22e`).
 - AW-P4 — Resolved 2026-11-01: AW-U11 app-only callback/receipt binding delivered after Main validation and independent review; bounded runtime evidence and limits retained in progress (PR 44, `f16ed1e`).
 
 - AW-P2 — Resolved 2026-10-29: the shared link reader ignores multiline code, rejects invalid fence closes and requires matched labels, with regression coverage (PR 41, `b071d62`).

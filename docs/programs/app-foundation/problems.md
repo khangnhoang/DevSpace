@@ -6,7 +6,7 @@ Plan: [plan.md](plan.md). Progress: [progress.md](progress.md).
 
 ### AF-P4: saving a profile without a date of birth fails
 
-- Status: Open (2026-10-25); moved from `docs/backlog/` on 2026-10-28, owned by AF-U3. The same bug is security-hotfix P16.
+- Status: Fixed locally, awaiting delivery (2026-11-03, AF-U3 CP1; opened 2026-10-25 and moved from `docs/backlog/` on 2026-10-28). The same bug is security-hotfix P16.
 - Problem: the profile edit dialog defaults an empty `dob` to `""` (`app/(main)/profile/page.tsx:89`) and `handleUpdateProfile` sends it unchanged (`page.tsx:327`), so a user who has never set a date of birth cannot save any other field: the toast reads `Lỗi cập nhật: invalid input syntax for type date: ""`.
 - Evidence: infrastructure U6 manual pass row M6, 2026-10-25, as `student@devspace.test` on the local stack (seed `dob` is null); saving with a date set succeeds.
 - Direction: AF-U3's profile schema turns blank optional fields into `null`; an e2e row saves a profile with no date of birth.
@@ -35,6 +35,14 @@ Plan: [plan.md](plan.md). Progress: [progress.md](progress.md).
 - Evidence: read at `e44489f`; the same calls exist at `4179bf5`. Not reproduced.
 - Direction: a small task, or H2-2b when it rewrites the payment actions: catch the reload, clear `isLoading` in `finally`, and show an error with a retry.
 - Exit condition: a failed reload shows an error state instead of a stuck loader, with no unhandled rejection.
+
+### AF-P5: the profile transaction history header centres itself on a phone, and its status filter uses the browser's option list
+
+- Status: Open (2026-11-03, Owner QA of AF-U3 at iPhone SE width; outside AF-U3, which does not touch this section).
+- Problem: the "Lịch sử giao dịch" heading and the status filter sit in `flex flex-col md:flex-row justify-between items-center` (`app/(main)/profile/page.tsx`), so below `md` both are stacked and centred instead of aligned left. The filter is a bare `<select>`, so its open option list is drawn by the browser, unstyled and with emoji markers. On a real iPhone Safari shows its own picker; the boxed list in the screenshot is Chrome's desktop popup in device emulation.
+- Evidence: Owner screenshot on the dev stack, 2026-11-03; the same markup exists at `fff1b13`, before AF-U3.
+- Direction: a small task or the app-foundation unit that next touches this page: align the header left below `md` (`items-start md:items-center`). For the list, the shadcn `Select` (Radix, not yet in `components/ui/`) draws a styled popup; `NativeSelect` styles only the closed control. Adding `Select` is a design choice for the Owner, and its e2e and accessibility checks come with it.
+- Exit condition: at 375px the heading and filter align with the table, and the filter's open list matches the decided control.
 
 ## Resolved
 

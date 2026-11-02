@@ -61,6 +61,14 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Direction: escape every interpolated value in the mail template (and limit `full_name` where it is saved, if that fits the profile rules). Add a test with a name containing `<a>` and `&`. Severity is to be assessed before scheduling.
 - Exit condition: a name with HTML characters shows as plain text in the mail.
 
+### BL-P8: confirming a payment shows two toasts at once, stacked over each other
+
+- Status: Open (2026-11-03, Owner QA on the dev stack).
+- Problem: `handleConfirmPayment` in `app/components/CoursePaymentModal.tsx` calls `toast.success("Đã gửi xác nhận thanh toán!")` and `toast.info("Vui lòng đợi Admin duyệt trong giây lát.")` together. Sonner stacks them collapsed, so the second covers the first and both can be read only by hovering.
+- Evidence: Owner screenshot, 2026-11-03, as a learner submitting a payment for course 2; the calls are unchanged since `e2f3395`.
+- Direction: one toast with a title and a description (sonner `description`), or one message. Small task; security-hotfix H2-2b rewrites the payment actions but not this modal's copy.
+- Exit condition: confirming a payment shows one readable toast without hovering.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

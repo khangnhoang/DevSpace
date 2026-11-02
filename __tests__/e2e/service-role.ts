@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { type LocalStack } from "../helpers/local-stack";
 import { readTestStack } from "../../scripts/test-stack/read.mjs";
 import { FixtureScope, checked as must, userExists as checkUserExists, type RunMarker } from "../helpers/fixture-ownership";
-import { IDS } from "./accounts";
+import { ACCOUNTS, IDS } from "./accounts";
 
 let client: SupabaseClient | undefined;
 let active: FixtureScope | undefined;
@@ -51,6 +51,47 @@ export async function prepareLearnerEnrollment(courseId: number) {
 }
 export async function profileOf(id: string): Promise<{ role: string; full_name: string | null; avatar_url: string | null }> {
   return must(await serviceRole().from("profiles").select("role,full_name,avatar_url").eq("id", id).single());
+}
+// The profile fields the learner-form rows change. The scope restores them on cleanup; the baseline is the seed student
+// (the on_auth_user_created trigger copies the name, nothing else is set).
+const STUDENT_PROFILE_FIELDS = ["full_name", "gender", "province", "dob", "avatar_url"];
+export async function acquireStudentProfile() {
+  await scope().acquire("profiles", IDS.student, STUDENT_PROFILE_FIELDS, { full_name: ACCOUNTS.student.fullName, gender: null, province: null, dob: null, avatar_url: null });
+}
+export type StudentProfile = { full_name: string | null; gender: string | null; province: string | null; dob: string | null; avatar_url: string | null };
+export async function studentProfile(): Promise<StudentProfile> {
+  return must(await serviceRole().from("profiles").select(STUDENT_PROFILE_FIELDS.join(",")).eq("id", IDS.student).single()) as unknown as StudentProfile;
+}
+export async function avatarObjectNames(): Promise<string[]> {
+  return must(await serviceRole().storage.from("avatars").list("", { limit: 1000 })).map((object) => object.name);
+}
+// Removes the one Storage object a row uploaded, by the exact name it recorded from its own upload request, and checks
+// that it is gone. A shared name pattern would prove no ownership, so with no recorded name nothing is removed and the
+// end-of-run audit of storage.objects reports any residue.
+export async function removeAvatarObject(name: string | undefined): Promise<void> {
+  if (!name) return;
+  must(await serviceRole().storage.from("avatars").remove([name]));
+  if ((await avatarObjectNames()).includes(name)) throw new Error(`e2e avatar object left in Storage: ${name}`);
+}
+export const fixtureLabel = (value: string) => scope().label(value);
+// The learner-form rows create their rows through the UI, so each reserves the exact selector of the row it expects
+// first; the scope deletes whatever the UI wrote under it (a row a rule refused is never created).
+const STUDENT_LESSON_ID = 3;
+export async function reserveStudentReview() { await scope().reserve("reviews", { user_id: IDS.student, course_id: PAID_COURSE_ID }); }
+export async function studentReviews(): Promise<{ rating: number; content: string }[]> {
+  return must(await serviceRole().from("reviews").select("rating,content").match({ user_id: IDS.student, course_id: PAID_COURSE_ID }));
+}
+export async function reserveStudentComment(content: string) { await scope().reserve("comments", { user_id: IDS.student, lesson_id: STUDENT_LESSON_ID, content }); }
+export async function studentCommentsWith(content: string): Promise<number> {
+  return must(await serviceRole().from("comments").select("id").match({ user_id: IDS.student, lesson_id: STUDENT_LESSON_ID, content })).length;
+}
+export async function commentContent(id: number): Promise<string> { return must(await serviceRole().from("comments").select("content").eq("id", id).single()).content; }
+export async function reserveStudentNote(content: string) { await scope().reserve("notes", { user_id: IDS.student, lesson_id: STUDENT_LESSON_ID, content }); }
+export async function studentNotesWith(content: string): Promise<number> {
+  return must(await serviceRole().from("notes").select("id").match({ user_id: IDS.student, lesson_id: STUDENT_LESSON_ID, content })).length;
+}
+export async function studentNoteCount(): Promise<number> {
+  return must(await serviceRole().from("notes").select("id").match({ user_id: IDS.student, lesson_id: STUDENT_LESSON_ID })).length;
 }
 export const PAID_COURSE_ID = 2;
 export const UNKNOWN_COURSE_ID = 9999;

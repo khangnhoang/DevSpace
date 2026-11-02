@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import ProgressBar from "./ProgressBar";
 import {
   getUserDashboardData,
@@ -31,6 +33,15 @@ import CustomAvatar from "@/app/components/CustomAvatar";
 import { format } from "date-fns";
 import { ProfileData } from "@/lib/types";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+import {
+  profileSchema,
+  type ProfileFormInput,
+  type ProfileFormValues,
+} from "@/lib/schemas/learner-forms";
 
 // --- SKELETON ---
 const ProfileSkeleton = () => {
@@ -58,7 +69,8 @@ const ProfileSkeleton = () => {
   );
 };
 
-interface EditProfileFormData extends ProfileData {
+interface EditProfileFormData extends ProfileFormValues {
+  avatar_url: string | null;
   file: File | null;
 }
 
@@ -66,7 +78,8 @@ interface EditProfileFormData extends ProfileData {
 interface EditProfileModalProps {
   userProfile: ProfileData | null;
   onClose: () => void;
-  onSave: (formData: EditProfileFormData) => Promise<void>;
+  // Resolves true only when the profile was saved: a failed save keeps the dialog open with what was typed.
+  onSave: (formData: EditProfileFormData) => Promise<boolean>;
 }
 
 interface TransactionRow {
@@ -78,24 +91,38 @@ interface TransactionRow {
   courses?: { name?: string | null } | null;
 }
 
+// The shadcn controls are restyled here to keep the look this form always had; the generated files stay generic.
+const PROFILE_CONTROL =
+  "h-auto w-full rounded-lg border-gray-300 p-2 text-base text-gray-500 shadow-none focus-visible:border-gray-300 focus-visible:ring-2 focus-visible:ring-blue-500 md:text-base";
+const PROFILE_LABEL = "text-sm leading-5 font-medium text-gray-700";
+
 const EditProfileModal = ({
   userProfile,
   onClose,
   onSave,
 }: EditProfileModalProps) => {
-  const [formData, setFormData] = useState({
-    full_name: userProfile?.full_name || "",
-    gender: userProfile?.gender || "",
-    dob: userProfile?.dob || "",
-    province: userProfile?.province || "",
-    avatar_url: userProfile?.avatar_url || "",
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ProfileFormInput, unknown, ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      full_name: userProfile?.full_name || "",
+      gender: userProfile?.gender || "",
+      dob: userProfile?.dob || "",
+      province: userProfile?.province || "",
+    },
   });
 
   const [previewAvatar, setPreviewAvatar] = useState<string | null>(
-    formData.avatar_url,
+    userProfile?.avatar_url || null,
   );
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  // Set before the first await: the resolver runs before React Hook Form sets isSubmitting, so a second
+  // submit can pass a state-only check.
+  const savingRef = useRef(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -105,19 +132,36 @@ const EditProfileModal = ({
     }
   };
 
-  const handleSaveClick = async () => {
+  const saveProfile = async (values: ProfileFormValues) => {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setIsSaving(true);
-    await onSave({ ...formData, file: fileToUpload });
-    setIsSaving(false);
-    onClose();
+    try {
+      const saved = await onSave({
+        ...values,
+        avatar_url: userProfile?.avatar_url || null,
+        file: fileToUpload,
+      });
+      if (saved) onClose();
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
+    }
   };
+  const handleSaveClick = (event: React.FormEvent<HTMLFormElement>) =>
+    handleSubmit(saveProfile)(event);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+      <form
+        onSubmit={handleSaveClick}
+        noValidate
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
+      >
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
           <h3 className="font-bold text-lg text-gray-800">Cập nhật hồ sơ</h3>
           <button
+            type="button"
             onClick={onClose}
             className="p-1 hover:bg-gray-200 rounded-full transition"
           >
@@ -145,32 +189,34 @@ const EditProfileModal = ({
             <p className="text-xs text-gray-400">Nhấn vào ảnh để thay đổi</p>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">
+          <Field className="gap-1" data-invalid={!!errors.full_name}>
+            <FieldLabel htmlFor="profile-full-name" className={PROFILE_LABEL}>
               Họ và tên
-            </label>
-            <input
+            </FieldLabel>
+            <Input
+              id="profile-full-name"
               type="text"
-              className="w-full p-2 border text-gray-500 placeholder:text-gray-500 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              value={formData.full_name}
-              onChange={(e) =>
-                setFormData({ ...formData, full_name: e.target.value })
-              }
+              className={cn(PROFILE_CONTROL, "placeholder:text-gray-500")}
               placeholder="Ví dụ: Nguyễn Văn A"
+              aria-invalid={!!errors.full_name}
+              {...register("full_name")}
             />
-          </div>
+            <FieldError errors={[errors.full_name]} />
+          </Field>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">
+            <Field
+              className="gap-1 [&_[data-slot=native-select-wrapper]]:w-full"
+              data-invalid={!!errors.gender}
+            >
+              <FieldLabel htmlFor="profile-gender" className={PROFILE_LABEL}>
                 Giới tính
-              </label>
-              <select
-                className="w-full p-2 text-gray-500 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                value={formData.gender}
-                onChange={(e) =>
-                  setFormData({ ...formData, gender: e.target.value })
-                }
+              </FieldLabel>
+              <NativeSelect
+                id="profile-gender"
+                className={cn(PROFILE_CONTROL, "bg-white pr-9")}
+                aria-invalid={!!errors.gender}
+                {...register("gender")}
               >
                 <option value="">-- Chọn --</option>
                 {GENDER_OPTIONS.map((opt) => (
@@ -178,33 +224,36 @@ const EditProfileModal = ({
                     {opt.label}
                   </option>
                 ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">
+              </NativeSelect>
+              <FieldError errors={[errors.gender]} />
+            </Field>
+            <Field className="gap-1" data-invalid={!!errors.dob}>
+              <FieldLabel htmlFor="profile-dob" className={PROFILE_LABEL}>
                 Ngày sinh
-              </label>
-              <input
+              </FieldLabel>
+              <Input
+                id="profile-dob"
                 type="date"
-                className="w-full p-2 text-gray-500 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                value={formData.dob}
-                onChange={(e) =>
-                  setFormData({ ...formData, dob: e.target.value })
-                }
+                className={PROFILE_CONTROL}
+                aria-invalid={!!errors.dob}
+                {...register("dob")}
               />
-            </div>
+              <FieldError errors={[errors.dob]} />
+            </Field>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">
+          <Field
+            className="gap-1 [&_[data-slot=native-select-wrapper]]:w-full"
+            data-invalid={!!errors.province}
+          >
+            <FieldLabel htmlFor="profile-province" className={PROFILE_LABEL}>
               Tỉnh / Thành phố
-            </label>
-            <select
-              className="w-full p-2 text-gray-500 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-              value={formData.province}
-              onChange={(e) =>
-                setFormData({ ...formData, province: e.target.value })
-              }
+            </FieldLabel>
+            <NativeSelect
+              id="profile-province"
+              className={cn(PROFILE_CONTROL, "bg-white pr-9")}
+              aria-invalid={!!errors.province}
+              {...register("province")}
             >
               <option value="">-- Chọn tỉnh thành --</option>
               {PROVINCES.map((prov) => (
@@ -212,19 +261,21 @@ const EditProfileModal = ({
                   {prov}
                 </option>
               ))}
-            </select>
-          </div>
+            </NativeSelect>
+            <FieldError errors={[errors.province]} />
+          </Field>
         </div>
 
         <div className="p-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
           <button
+            type="button"
             onClick={onClose}
             className="cursor-pointer px-4 py-2 text-gray-600 font-medium hover:bg-gray-200 rounded-lg transition"
           >
             Hủy
           </button>
           <button
-            onClick={handleSaveClick}
+            type="submit"
             disabled={isSaving}
             className="cursor-pointer px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-70"
           >
@@ -236,7 +287,7 @@ const EditProfileModal = ({
             Lưu thay đổi
           </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 };
@@ -315,27 +366,31 @@ export default function ProfilePage() {
     currentPage * ITEMS_PER_PAGE,
   );
 
-  const handleUpdateProfile = async (formData: EditProfileFormData) => {
+  const handleUpdateProfile = async (
+    formData: EditProfileFormData,
+  ): Promise<boolean> => {
     if (!user) {
       toast.error("Không tìm thấy user");
-      return;
+      return false;
     }
-    const fileToUpload = formData.file;
-    const profilePayload = {
-      full_name: formData.full_name,
-      gender: formData.gender,
-      dob: formData.dob,
-      province: formData.province,
-      avatar_url: formData.avatar_url,
-    };
-    const result = await updateProfile(user.id, profilePayload, fileToUpload);
+    const { file, ...profilePayload } = formData;
+    let result;
+    try {
+      result = await updateProfile(user.id, profilePayload, file);
+    } catch (error) {
+      toast.error(
+        "Lỗi cập nhật: " + (error instanceof Error ? error.message : "Không xác định"),
+      );
+      return false;
+    }
 
     if (result.error) {
       toast.error("Lỗi cập nhật: " + result.error.message);
-    } else {
-      toast.success("Cập nhật thành công");
-      setRefreshKey((prev) => prev + 1);
+      return false;
     }
+    toast.success("Cập nhật thành công");
+    setRefreshKey((prev) => prev + 1);
+    return true;
   };
 
   if (loading) return <ProfileSkeleton />;

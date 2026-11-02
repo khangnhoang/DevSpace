@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   X,
   Loader2,
@@ -24,6 +26,14 @@ import {
   supabase,
 } from "@/lib/supabase";
 import { toast } from "sonner";
+import { Field, FieldError } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  commentSchema,
+  type CommentFormInput,
+  type CommentFormValues,
+} from "@/lib/schemas/learner-forms";
 
 interface Props {
   lessonId: number;
@@ -44,6 +54,78 @@ interface CommentItem {
   } | null;
 }
 
+// The edit box of one comment. It is its own form, so each edited comment keeps its own text, error and pending state.
+function CommentEditForm({
+  initialContent,
+  onSave,
+  onCancel,
+}: {
+  initialContent: string;
+  onSave: (content: string) => Promise<boolean>;
+  onCancel: () => void;
+}) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<CommentFormInput, unknown, CommentFormValues>({
+    resolver: zodResolver(commentSchema),
+    defaultValues: { content: initialContent },
+  });
+  const [saving, setSaving] = useState(false);
+  // Set before the first await: the resolver runs before React Hook Form sets isSubmitting.
+  const savingRef = useRef(false);
+
+  const save = async (values: CommentFormValues) => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      await onSave(values.content);
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form
+      onSubmit={(e) => handleSubmit(save)(e)}
+      noValidate
+      className="mt-2"
+    >
+      <Field className="gap-1" data-invalid={!!errors.content}>
+        <Textarea
+          rows={2}
+          aria-label="Sửa bình luận"
+          aria-invalid={!!errors.content}
+          className="field-sizing-fixed min-h-0 w-full rounded-md border-blue-300 bg-white p-2 text-sm text-gray-900 shadow-none focus-visible:border-blue-300 focus-visible:ring-1 focus-visible:ring-blue-500 aria-invalid:border-red-300 aria-invalid:ring-red-200 md:text-sm"
+          {...register("content")}
+        />
+        <FieldError className="text-xs" errors={[errors.content]} />
+      </Field>
+      <div className="flex gap-2 mt-2 justify-end">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="cursor-pointer p-1 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded"
+          title="Hủy"
+        >
+          <XCircle size={16} />
+        </button>
+        <button
+          type="submit"
+          disabled={saving}
+          className="cursor-pointer p-1 text-blue-600 hover:bg-blue-50 rounded disabled:opacity-50"
+          title="Lưu"
+        >
+          <Check size={16} />
+        </button>
+      </div>
+    </form>
+  );
+}
+
 export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
   // State dữ liệu
   const [comments, setComments] = useState<CommentItem[]>([]);
@@ -55,9 +137,21 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
   const [sending, setSending] = useState(false);
 
   // State Input
-  const [newComment, setNewComment] = useState("");
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    formState: { errors },
+  } = useForm<CommentFormInput, unknown, CommentFormValues>({
+    resolver: zodResolver(commentSchema),
+    defaultValues: { content: "" },
+  });
+  const draft = useWatch({ control, name: "content" });
+  // Set before the first await: the resolver runs before React Hook Form sets isSubmitting, so a second
+  // Enter can pass a state-only check.
+  const sendingRef = useRef(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editContent, setEditContent] = useState("");
 
   // State Menu dropdown (ID của comment đang mở menu)
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
@@ -88,9 +182,8 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
     }
   }, [isOpen, lessonId, refreshKey]);
 
-  const handleSend = async () => {
-    const contentToSubmit = newComment.trim();
-    if (!newComment.trim() || !currentUserId) return;
+  const handleSend = async ({ content: contentToSubmit }: CommentFormValues) => {
+    if (sendingRef.current || !currentUserId) return;
 
     // --- LOGIC CHỐNG SPAM ---
     // Chỉ kiểm tra các comment CỦA CHÍNH MÌNH (user_id === currentUserId)
@@ -106,25 +199,32 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
       return; // Dừng hình, không gọi API nữa
     }
 
+    sendingRef.current = true;
     setSending(true);
-    const result = await addComment(lessonId, currentUserId, contentToSubmit);
+    try {
+      const result = await addComment(lessonId, currentUserId, contentToSubmit);
 
-    // Kiểm tra kết quả trả về
-    // Nếu có thuộc tính 'message' (Lỗi Spam do mình tự return)
-    if (result && "message" in result) {
-      toast.warning(result.message);
+      // Kiểm tra kết quả trả về
+      // Nếu có thuộc tính 'message' (Lỗi Spam do mình tự return)
+      if (result && "message" in result) {
+        toast.warning(result.message);
+      }
+      // Nếu có thuộc tính 'message' của Supabase Error (Lỗi hệ thống)
+      else if (result) {
+        toast.error("Gửi bình luận thất bại");
+      }
+      // Thành công (result là null hoặc undefined)
+      else {
+        reset({ content: "" });
+        setRefreshKey((prev) => prev + 1);
+      }
+    } finally {
+      sendingRef.current = false;
+      setSending(false);
     }
-    // Nếu có thuộc tính 'message' của Supabase Error (Lỗi hệ thống)
-    else if (result) {
-      toast.error("Gửi bình luận thất bại");
-    }
-    // Thành công (result là null hoặc undefined)
-    else {
-      setNewComment("");
-      setRefreshKey((prev) => prev + 1);
-    }
-    setSending(false);
   };
+  const handleSendSubmit = (e: React.FormEvent<HTMLFormElement>) =>
+    handleSubmit(handleSend)(e);
 
   // 4. Xử lý Xóa Comment
   const handleDelete = async (commentId: number) => {
@@ -142,21 +242,21 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
   // 5. Xử lý Bắt đầu Sửa
   const startEdit = (comment: CommentItem) => {
     setEditingId(comment.id);
-    setEditContent(comment.content);
     setOpenMenuId(null); // Đóng menu
   };
 
   // 6. Xử lý Lưu Sửa
-  const handleUpdate = async () => {
-    if (!editingId || !currentUserId || !editContent.trim()) return;
+  const handleUpdate = async (content: string): Promise<boolean> => {
+    if (!editingId || !currentUserId) return false;
 
-    const error = await editComment(editingId, currentUserId, editContent);
+    const error = await editComment(editingId, currentUserId, content);
     if (error) {
       toast.error("Sửa thất bại");
-    } else {
-      setEditingId(null);
-      setRefreshKey((prev) => prev + 1);
+      return false;
     }
+    setEditingId(null);
+    setRefreshKey((prev) => prev + 1);
+    return true;
   };
 
   return (
@@ -320,30 +420,11 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
                         </p>
                       ) : isEditing ? (
                         // 2. Trường hợp ĐANG SỬA
-                        <div className="mt-2">
-                          <textarea
-                            value={editContent}
-                            onChange={(e) => setEditContent(e.target.value)}
-                            className="text-gray-900 w-full text-sm p-2 border border-blue-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-                            rows={2}
-                          />
-                          <div className="flex gap-2 mt-2 justify-end">
-                            <button
-                              onClick={() => setEditingId(null)}
-                              className="cursor-pointer p-1 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded"
-                              title="Hủy"
-                            >
-                              <XCircle size={16} />
-                            </button>
-                            <button
-                              onClick={handleUpdate}
-                              className="cursor-pointer p-1 text-blue-600 hover:bg-blue-50 rounded"
-                              title="Lưu"
-                            >
-                              <Check size={16} />
-                            </button>
-                          </div>
-                        </div>
+                        <CommentEditForm
+                          initialContent={cmt.content}
+                          onSave={handleUpdate}
+                          onCancel={() => setEditingId(null)}
+                        />
                       ) : (
                         // 3. Trường hợp BÌNH THƯỜNG
                         <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed wrap-break-word">
@@ -359,36 +440,43 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
         </div>
 
         {/* INPUT FOOTER */}
-        <div className="p-4 border-t bg-white shrink-0">
-          <div className="relative flex items-center gap-2">
-            <input
-              type="text"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder={
-                currentUserId ? "Viết bình luận..." : "Đăng nhập để bình luận"
-              }
-              disabled={!currentUserId || sending}
-              className="placeholder:text-gray-400 duration-300 text-gray-800 w-full pl-4 pr-10 py-2.5 text-sm border border-gray-300 rounded-full bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-            />
-            <button
-              onClick={handleSend}
-              disabled={!newComment.trim() || sending || !currentUserId}
-              className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-all ${
-                newComment.trim() && !sending
-                  ? "text-blue-600 hover:bg-blue-50 cursor-pointer"
-                  : "text-gray-300 cursor-not-allowed"
-              }`}
-            >
-              {sending ? (
-                <Loader2 size={18} className="animate-spin" />
-              ) : (
-                <Send size={18} />
-              )}
-            </button>
-          </div>
-        </div>
+        <form
+          onSubmit={handleSendSubmit}
+          noValidate
+          className="p-4 border-t bg-white shrink-0"
+        >
+          <Field className="gap-2" data-invalid={!!errors.content}>
+            <div className="relative flex items-center gap-2">
+              <Input
+                type="text"
+                placeholder={
+                  currentUserId ? "Viết bình luận..." : "Đăng nhập để bình luận"
+                }
+                disabled={!currentUserId || sending}
+                aria-invalid={!!errors.content}
+                className="h-auto placeholder:text-gray-400 duration-300 text-gray-800 w-full pl-4 pr-10 py-2.5 text-sm border-gray-300 rounded-full bg-gray-50 shadow-none focus-visible:bg-white focus-visible:border-gray-300 focus-visible:ring-2 focus-visible:ring-blue-100 transition-all disabled:pointer-events-auto disabled:opacity-60 disabled:cursor-not-allowed md:text-sm"
+                {...register("content")}
+              />
+              <button
+                type="submit"
+                aria-label="Gửi bình luận"
+                disabled={!draft?.trim() || sending || !currentUserId}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-all ${
+                  draft?.trim() && !sending
+                    ? "text-blue-600 hover:bg-blue-50 cursor-pointer"
+                    : "text-gray-300 cursor-not-allowed"
+                }`}
+              >
+                {sending ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Send size={18} />
+                )}
+              </button>
+            </div>
+            <FieldError className="pl-4 text-xs" errors={[errors.content]} />
+          </Field>
+        </form>
       </div>
 
       {deleteTarget && (

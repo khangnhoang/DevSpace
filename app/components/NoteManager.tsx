@@ -1,6 +1,8 @@
 "use client";
 
-import { useState} from "react";
+import { useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { 
   NotebookPen, 
   X, 
@@ -13,6 +15,13 @@ import {
 import { toast } from "sonner";
 import { YouTubePlayer } from "react-youtube";
 import { createNote, deleteNote, getLessonNotes } from "@/lib/supabase";
+import { Field, FieldError } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import {
+  noteSchema,
+  type NoteFormInput,
+  type NoteFormValues,
+} from "@/lib/schemas/learner-forms";
 
 // Hàm format thời gian
 const formatTime = (seconds: number) => {
@@ -37,8 +46,19 @@ interface NoteItem {
 export default function NoteManager({ userId, lessonId, player }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [notes, setNotes] = useState<NoteItem[]>([]);
-  const [content, setContent] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<NoteFormInput, unknown, NoteFormValues>({
+    resolver: zodResolver(noteSchema),
+    defaultValues: { content: "" },
+  });
+  // Set before the first await: the resolver runs before React Hook Form sets isSubmitting, so a second
+  // Enter can pass a state-only check and insert the note twice.
+  const savingRef = useRef(false);
   const [isLoadingNotes, setIsLoadingNotes] = useState(false);
 
   // Mở modal -> Load danh sách note & Pause video
@@ -57,22 +77,29 @@ export default function NoteManager({ userId, lessonId, player }: Props) {
     player?.playVideo(); // Tự động chạy lại video
   };
 
-  const handleAddNote = async () => {
-    if (!content.trim()) return;
+  const handleAddNote = async ({ content }: NoteFormValues) => {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setIsSaving(true);
 
-    const timestamp = player ? player.getCurrentTime() : 0;
-    const result = await createNote(userId, lessonId, content, timestamp);
+    try {
+      const timestamp = player ? player.getCurrentTime() : 0;
+      const result = await createNote(userId, lessonId, content, timestamp);
 
-    if (result.error) {
-      toast.error("Lỗi lưu note");
-    } else {
-      toast.success("Đã lưu ghi chú");
-      setNotes((prev) => [...prev, result.data].sort((a, b) => a.timestamp - b.timestamp));
-      setContent("");
+      if (result.error) {
+        toast.error("Lỗi lưu note");
+      } else {
+        toast.success("Đã lưu ghi chú");
+        setNotes((prev) => [...prev, result.data].sort((a, b) => a.timestamp - b.timestamp));
+        reset({ content: "" });
+      }
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
     }
-    setIsSaving(false);
   };
+  const handleNoteSubmit = (e: React.FormEvent<HTMLFormElement>) =>
+    handleSubmit(handleAddNote)(e);
 
   const handleDelete = async (id: number) => {
     const { error } = await deleteNote(id);
@@ -152,30 +179,34 @@ export default function NoteManager({ userId, lessonId, player }: Props) {
             </div>
 
             {/* Footer Form */}
-            <div className="p-4 border-t bg-white">
+            <form onSubmit={handleNoteSubmit} noValidate className="p-4 border-t bg-white">
                <div className="flex items-center gap-2 mb-2 text-xs text-gray-500">
                   <Clock size={12}/>
                   Thời điểm hiện tại: <span className="font-bold text-blue-600">{player ? formatTime(player.getCurrentTime()) : "00:00"}</span>
                </div>
-               <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleAddNote()}
-                    placeholder="Nhập ghi chú mới..."
-                    className="text-gray-400 flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400"
-                    autoFocus
-                  />
-                  <button 
-                    onClick={handleAddNote}
-                    disabled={isSaving}
-                    className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 transition-colors flex items-center justify-center min-w-[50px]"
-                  >
-                    {isSaving ? <Loader2 size={18} className="animate-spin"/> : <PlusCircle size={20}/>}
-                  </button>
-               </div>
-            </div>
+               <Field className="gap-2" data-invalid={!!errors.content}>
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      placeholder="Nhập ghi chú mới..."
+                      aria-label="Nội dung ghi chú"
+                      aria-invalid={!!errors.content}
+                      className="h-auto w-auto flex-1 text-gray-400 border-gray-300 rounded-lg px-4 py-2 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-transparent placeholder:text-gray-400 md:text-sm"
+                      autoFocus
+                      {...register("content")}
+                    />
+                    <button
+                      type="submit"
+                      aria-label="Thêm ghi chú"
+                      disabled={isSaving}
+                      className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 transition-colors flex items-center justify-center min-w-[50px]"
+                    >
+                      {isSaving ? <Loader2 size={18} className="animate-spin"/> : <PlusCircle size={20}/>}
+                    </button>
+                  </div>
+                  <FieldError className="text-xs" errors={[errors.content]} />
+               </Field>
+            </form>
 
           </div>
         </div>

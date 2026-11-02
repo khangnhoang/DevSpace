@@ -838,5 +838,15 @@
       "file": "docs/programs/quality-engineering/future-features.md",
       "id": "QE-F6"
     }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "BL-F10"
+    },
+    "to": {
+      "file": "docs/programs/ui-ux/future-features.md",
+      "id": "UX-F1"
+    }
   }
 ]

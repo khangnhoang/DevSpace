@@ -36,3 +36,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-10-31 Owner authorized committing the AW-P3/AW-P4 follow-up records and pushing/opening the H2-2a PR; the Owner monitors CI, while hosted rollout and merge remain separately gated (`b82f23c`).
 
 - 2026-10-31 H2-2a delivered after separately authorized hosted apply and metadata postflight; Owner prohibited hosted QA-data writes, and the recorded production checks were read-only (PR 43, `dba66e5`).
+- 2026-11-03 SH-P16 resolved by app-foundation AF-U3, whose profile schema saves a blank date of birth as null (PR 53, `33db042`).

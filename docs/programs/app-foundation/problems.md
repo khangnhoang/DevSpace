@@ -4,14 +4,6 @@ Plan: [plan.md](plan.md). Progress: [progress.md](progress.md).
 
 ## Open
 
-### AF-P4: saving a profile without a date of birth fails
-
-- Status: Fixed locally, awaiting delivery (2026-11-03, AF-U3 CP1; opened 2026-10-25 and moved from `docs/backlog/` on 2026-10-28). The same bug is security-hotfix P16.
-- Problem: the profile edit dialog defaults an empty `dob` to `""` (`app/(main)/profile/page.tsx:89`) and `handleUpdateProfile` sends it unchanged (`page.tsx:327`), so a user who has never set a date of birth cannot save any other field: the toast reads `Lỗi cập nhật: invalid input syntax for type date: ""`.
-- Evidence: infrastructure U6 manual pass row M6, 2026-10-25, as `student@devspace.test` on the local stack (seed `dob` is null); saving with a date set succeeds.
-- Direction: AF-U3's profile schema turns blank optional fields into `null`; an e2e row saves a profile with no date of birth.
-- Exit condition: a profile with no date of birth saves another field successfully, and the date stays empty.
-
 ### AF-P1: server actions return raw error text
 
 - Status: Open (2026-10-28, found while planning; outside the program's scope).
@@ -47,3 +39,5 @@ Plan: [plan.md](plan.md). Progress: [progress.md](progress.md).
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.
+
+- AF-P4 — Resolved 2026-11-03: the AF-U3 profile schema turns a blank date of birth into null, so a profile without one saves, covered by an e2e row; security-hotfix SH-P16, the same bug, closes with it (PR 53, `33db042`).

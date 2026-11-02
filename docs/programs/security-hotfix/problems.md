@@ -78,14 +78,6 @@ The original 2026-10-21 discovery table is preserved in Git at ddcefd0. Legacy I
 - Direction: Later work reconciles the transactions page profile lookup with the users returned by getAllPayments.
 - Exit condition: Transactions display the correct learner name from the returned relation.
 
-### SH-P16: Empty birth dates break profile updates
-
-- Status: Deferred.
-- Problem: Updating a profile with an empty date of birth → `invalid input syntax for type date: ""` (the form sends an empty string instead of `null`). The bug predates H1.
-- Evidence: Legacy P16; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Follow the existing [AF-P4](../app-foundation/problems.md#af-p4-saving-a-profile-without-a-date-of-birth-fails) record, owned by AF-U3: its profile schema turns blank optional fields into null and its E2E row saves a profile without a date of birth. This historical SH record adds no independent task or ownership transfer; H2 production check 17g remains recorded as failed on the same older bug.
-- Exit condition: Updating a profile with an empty date of birth succeeds and stores null.
-
 ### SH-P18: Confirmation without a code verifier shows an error
 
 - Status: Deferred.
@@ -204,3 +196,4 @@ One line each: ID, status, historical problem and delivered outcome. Details sta
 - SH-P13 — Resolved 2026-10-22: H2-1 restricted paid lesson/quiz reads and guarded server rendering. Historical problem: Paid lesson/quiz content readable without enrolling: RLS `lessons`/`exercises` SELECT `true`; the learn page queries every lesson on the server and checks enrollment on the client (`LearnClient.tsx`) after the data is already in the RSC payload. Legacy P13; severity High; discovery-era Planned: **H2** (Owner: split into H2-1/H2-2 if large) (PR 3, `36056ec`; PR 4, `5ae5943`; H2 production matrix).
 - SH-P17 — Resolved 2026-10-21: H1 aligned password rules and handled reset feedback. Historical problem: Inconsistent password rules: admin-created users ≥ 8 characters, sign-up/reset only 6; resetting to the same password currently shows the English error `same_password`. Related to the rule H1 just set (A11) → fixed in H1. Legacy P17; severity Low; discovery-era Planned: H1 (PR 2, `5c842d4`).
 - SH-P21 — Resolved 2026-10-29: All nine native confirmations became ConfirmDialog in app-foundation U1; the Owner accepted the separate unverified real Gemini limit. Historical problem: Delete confirmation uses `window.confirm` (comments, admin CRUD of courses/chapters/lessons) — ugly, inconsistent with the UI — fixed in app-foundation U1: all 9 calls use `ConfirmDialog` (FEAT-006). Legacy P21; severity Low; discovery-era Planned: app-foundation U1 (PR 38, `572da83`).
+- SH-P16 — Resolved 2026-11-03: the app-foundation AF-U3 profile schema turns a blank date of birth into null, closing [AF-P4](../app-foundation/problems.md#resolved) with an e2e row; H2 production check 17g stays recorded as failed on the older code. Historical problem: Updating a profile with an empty date of birth → `invalid input syntax for type date: ""` (the form sent an empty string instead of `null`). Legacy P16; severity Low; discovery-era Planned: later (PR 53, `33db042`).

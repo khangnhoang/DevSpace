@@ -502,16 +502,17 @@ export default function ProfilePage() {
 
         {/* --- PHẦN 2: LỊCH SỬ GIAO DỊCH (ĐÃ LỌC & PHÂN TRANG) --- */}
         <div>
-          <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
             <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
               <History className="text-purple-600" /> Lịch sử giao dịch
             </h2>
 
             {/* Bộ lọc trạng thái */}
-            <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg p-1.5 shadow-sm">
-              <Filter size={16} className="text-gray-500 ml-2" />
-              <select
-                className="p-1 text-sm bg-transparent outline-none text-gray-700 font-medium cursor-pointer"
+            <div className="flex items-center gap-2">
+              <Filter size={16} className="text-gray-500" aria-hidden="true" />
+              <NativeSelect
+                aria-label="Lọc theo trạng thái"
+                className="rounded-lg border-gray-200 bg-white font-medium text-gray-700 cursor-pointer"
                 value={statusFilter}
                 onChange={(e) => {
                   setStatusFilter(e.target.value as typeof statusFilter);
@@ -519,10 +520,10 @@ export default function ProfilePage() {
                 }}
               >
                 <option value="all">Tất cả trạng thái</option>
-                <option value="success">✅ Thành công</option>
-                <option value="pending">⏳ Chờ duyệt</option>
-                <option value="failed">❌ Thất bại</option>
-              </select>
+                <option value="success">Thành công</option>
+                <option value="pending">Chờ duyệt</option>
+                <option value="failed">Thất bại</option>
+              </NativeSelect>
             </div>
           </div>
 

@@ -30,7 +30,7 @@ Plan: [plan.md](plan.md). Progress: [progress.md](progress.md).
 
 ### AF-P5: the profile transaction history header centres itself on a phone, and its status filter uses the browser's option list
 
-- Status: Open (2026-11-03, Owner QA of AF-U3 at iPhone SE width; outside AF-U3, which does not touch this section).
+- Status: Fixed locally, awaiting delivery (2026-11-03, small-task batch on `fix/small-task-batch`: the header aligns left below `md`; the Owner chose the existing `NativeSelect` over adding shadcn `Select`, so the open list stays the browser's own, without emoji; the filter gains the name "Lọc theo trạng thái"; e2e T6; opened 2026-11-03, Owner QA of AF-U3 at iPhone SE width).
 - Problem: the "Lịch sử giao dịch" heading and the status filter sit in `flex flex-col md:flex-row justify-between items-center` (`app/(main)/profile/page.tsx`), so below `md` both are stacked and centred instead of aligned left. The filter is a bare `<select>`, so its open option list is drawn by the browser, unstyled and with emoji markers. On a real iPhone Safari shows its own picker; the boxed list in the screenshot is Chrome's desktop popup in device emulation.
 - Evidence: Owner screenshot on the dev stack, 2026-11-03; the same markup exists at `fff1b13`, before AF-U3.
 - Direction: a small task or the app-foundation unit that next touches this page: align the header left below `md` (`items-start md:items-center`). For the list, the shadcn `Select` (Radix, not yet in `components/ui/`) draws a styled popup; `NativeSelect` styles only the closed control. Adding `Select` is a design choice for the Owner, and its e2e and accessibility checks come with it.

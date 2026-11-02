@@ -91,3 +91,24 @@ test.describe("confirm dialog on the lesson comments", () => {
     expect(await commentDeletedAt(comment.id)).toBeNull();
   });
 });
+
+test("[T6] the transaction history filter is labelled, filters by status and aligns left on a phone", async ({ page }) => {
+  await page.goto("/profile");
+  const heading = page.getByRole("heading", { name: "Lịch sử giao dịch" });
+  const filter = page.getByLabel("Lọc theo trạng thái");
+  const history = page.getByRole("table");
+  // The seed gives the student one approved payment and no other order.
+  await expect(history).toContainText("Thành công");
+
+  await filter.selectOption("pending");
+  await expect(history).toContainText("Không tìm thấy giao dịch nào.");
+  await expect(history).not.toContainText("Thành công");
+  await filter.selectOption("success");
+  await expect(history).toContainText("Thành công");
+
+  // AF-P5: below md the heading and the filter start at the table's left edge instead of centring.
+  await page.setViewportSize({ width: 375, height: 812 });
+  const [headingBox, filterBox, historyBox] = await Promise.all([heading.boundingBox(), filter.boundingBox(), history.boundingBox()]);
+  expect(headingBox && historyBox && Math.abs(headingBox.x - historyBox.x) < 2, "the heading aligns with the table").toBe(true);
+  expect(filterBox && historyBox && filterBox.x - historyBox.x < 40, "the filter starts near the table's left edge").toBe(true);
+});

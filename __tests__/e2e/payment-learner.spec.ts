@@ -131,6 +131,10 @@ test.describe("buying the paid course through the page", () => {
 
     // The modal waits 1.5 s before it confirms; the toast is the signal, not a sleep.
     await expect(page.getByText("Đã gửi xác nhận thanh toán!")).toBeVisible();
+    // BL-P8: one toast carries the title and the next step; two stacked toasts hid each other.
+    const toasts = page.locator("[data-sonner-toast]");
+    await expect(toasts).toHaveCount(1);
+    await expect(toasts).toContainText("Vui lòng đợi Admin duyệt trong giây lát.");
     await expect(page.getByRole("heading", { name: "Thanh toán khóa học" })).toBeHidden();
     await expect(page.getByRole("button", { name: "Đang chờ duyệt thanh toán..." })).toBeVisible();
     expect(await learnerOrders()).toMatchObject([{ amount: 199000, status: "pending" }]);

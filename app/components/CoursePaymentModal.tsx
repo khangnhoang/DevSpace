@@ -80,8 +80,8 @@ export default function CoursePaymentModal({
       // LOGIC: Nếu có mã giảm giá, ông có thể update vào bảng payments ở đây (optional)
       // Nhưng để đơn giản, Admin nhìn số tiền chuyển khoản khớp với giá sau giảm là duyệt.
 
-      toast.success("Đã gửi xác nhận thanh toán!");
-      toast.info("Vui lòng đợi Admin duyệt trong giây lát.", {
+      toast.success("Đã gửi xác nhận thanh toán!", {
+        description: "Vui lòng đợi Admin duyệt trong giây lát.",
         duration: 5000,
       });
       onClose();

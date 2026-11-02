@@ -3,8 +3,14 @@
 
 import { GoogleGenAI } from "@google/genai";
 import { requireAdmin } from "@/lib/auth.server";
+import { parseFailure } from "@/lib/schemas/parse-failure";
+import { quizRequestSchema } from "@/lib/schemas/quiz";
 
 export async function generateQuizFromContent(content: string, quantity: number = 1, previousQuestion: { question: string }[]) {
+  const parsed = quizRequestSchema.safeParse({ content, quantity, previousQuestion });
+  if (!parsed.success) return { error: parseFailure(parsed.error) };
+  const request = parsed.data;
+
   const auth = await requireAdmin();
   if ("error" in auth) return { error: auth.error };
 
@@ -15,22 +21,15 @@ export async function generateQuizFromContent(content: string, quantity: number 
     return { error: "Server chưa cấu hình API Key." };
   }
 
-  let prevQuestion = '';
-  if(previousQuestion.length > 0 && previousQuestion){
-    prevQuestion = previousQuestion.map((pq) => `${pq.question}`).join('; ');
-  }
+  const prevQuestion = request.previousQuestion.map((pq) => pq.question).join('; ');
 
   const ai = new GoogleGenAI({apiKey});
 
   try {
-    if (!content || content.length < 50) {
-      return { error: "Nội dung quá ngắn (cần > 50 ký tự)." };
-    }
-
     const prompt = `
-      Bạn là một API trả về JSON. Nhiệm vụ: Tạo ${quantity} câu hỏi trắc nghiệm khác với các câu hỏi trước đó (nếu có) ${prevQuestion} từ nội dung sau.
+      Bạn là một API trả về JSON. Nhiệm vụ: Tạo ${request.quantity} câu hỏi trắc nghiệm khác với các câu hỏi trước đó (nếu có) ${prevQuestion} từ nội dung sau.
       
-      Nội dung: """${content}""", 
+      Nội dung: """${request.content}""", 
       
       Yêu cầu Output: Chỉ trả về một mảng JSON (Array of Objects), không Markdown, không lời dẫn.
       Schema bắt buộc:

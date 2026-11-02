@@ -1,5 +1,5 @@
 -- Local seed: invented data only. It runs after the migrations on `supabase db reset` and never touches hosted.
--- The passwords below are local test values: valid only against the local stack, never reused anywhere.
+-- The one password below is a local test value shared by every seed user: valid only against the local stack, never reused anywhere.
 
 -- Users. The `on_auth_user_created` trigger creates the matching `profiles` rows from raw_user_meta_data.
 -- GoTrue fails password sign-in with "converting NULL to string" when a token column is NULL, so those
@@ -12,14 +12,14 @@ insert into auth.users (
   (
     '00000000-0000-0000-0000-000000000000', '11111111-1111-4111-8111-111111111111',
     'authenticated', 'authenticated', 'learner@devspace.test',
-    extensions.crypt('learner-local-pass-1', extensions.gen_salt('bf')), now(),
+    extensions.crypt('localpassword123', extensions.gen_salt('bf')), now(),
     '', '', '', '',
     '{"provider":"email","providers":["email"]}', '{"full_name":"Nguyễn Văn Học"}', now(), now()
   ),
   (
     '00000000-0000-0000-0000-000000000000', '22222222-2222-4222-8222-222222222222',
     'authenticated', 'authenticated', 'admin@devspace.test',
-    extensions.crypt('admin-local-pass-1', extensions.gen_salt('bf')), now(),
+    extensions.crypt('localpassword123', extensions.gen_salt('bf')), now(),
     '', '', '', '',
     '{"provider":"email","providers":["email"]}', '{"full_name":"Trần Thị Quản"}', now(), now()
   );
@@ -65,7 +65,7 @@ insert into auth.users (
 ) values (
   '00000000-0000-0000-0000-000000000000', '33333333-3333-4333-8333-333333333333',
   'authenticated', 'authenticated', 'student@devspace.test',
-  extensions.crypt('student-local-pass-1', extensions.gen_salt('bf')), now(),
+  extensions.crypt('localpassword123', extensions.gen_salt('bf')), now(),
   '', '', '', '',
   '{"provider":"email","providers":["email"]}', '{"full_name":"Lê Minh Học Viên"}', now(), now()
 );

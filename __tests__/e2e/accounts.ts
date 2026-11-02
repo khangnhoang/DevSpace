@@ -2,17 +2,14 @@ import { join } from "node:path";
 
 export type Actor = "learner" | "student" | "admin";
 
-// The passwords are the local test values written in supabase/seed.sql; only test code on the local server uses them.
-const PASSWORDS: Record<Actor, string> = {
-  learner: "learner-local-pass-1",
-  student: "student-local-pass-1",
-  admin: "admin-local-pass-1",
-};
+// The one local test password written in supabase/seed.sql for every seed user; only test code on the local server
+// uses it.
+const SEED_PASSWORD = "localpassword123";
 
 export const ACCOUNTS: Record<Actor, { email: string; password: string; fullName: string }> = {
-  learner: { email: "learner@devspace.test", password: PASSWORDS.learner, fullName: "Nguyễn Văn Học" },
-  student: { email: "student@devspace.test", password: PASSWORDS.student, fullName: "Lê Minh Học Viên" },
-  admin: { email: "admin@devspace.test", password: PASSWORDS.admin, fullName: "Trần Thị Quản" },
+  learner: { email: "learner@devspace.test", password: SEED_PASSWORD, fullName: "Nguyễn Văn Học" },
+  student: { email: "student@devspace.test", password: SEED_PASSWORD, fullName: "Lê Minh Học Viên" },
+  admin: { email: "admin@devspace.test", password: SEED_PASSWORD, fullName: "Trần Thị Quản" },
 };
 
 export const IDS: Record<Actor, string> = {

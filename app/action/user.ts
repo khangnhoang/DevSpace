@@ -46,7 +46,8 @@ export async function createNewUser(formData: {
 
   if (error) {
     console.error("Lỗi tạo user: ", error.message);
-    return { error: error.message };
+    if (error.code === "email_exists") return { error: "Email này đã được sử dụng." };
+    return { error: "Không thể tạo người dùng. Vui lòng thử lại." };
   }
 
   if (input.role === "admin") {
@@ -79,7 +80,8 @@ export async function deleteUserAccount(userId: string) {
     const { error } = await supabaseAdmin.auth.admin.deleteUser(validUserId);
 
     if (error) {
-      return { error: error.message };
+      console.error("Lỗi xóa user:", error.message);
+      return { error: "Không thể xóa người dùng. Vui lòng thử lại." };
     }
 
     revalidatePath("/admin/users");

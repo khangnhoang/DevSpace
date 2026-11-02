@@ -6,7 +6,7 @@ Plan: [plan.md](plan.md). Progress: [progress.md](progress.md).
 
 ### AF-P1: server actions return raw error text
 
-- Status: Open (2026-10-28, found while planning; outside the program's scope).
+- Status: Fixed locally, awaiting delivery (2026-11-03, small-task batch on `fix/small-task-batch`: the four actions log the detail and return fixed messages, keeping "Email này đã được sử dụng." and "Bạn đã đăng ký khóa học này." for the known cases; `generateQuizFromContent` (`app/action/gemini.ts`) joined at the Owner's decision; e2e V8 to V10 and two unit cases; opened 2026-10-28, found while planning).
 - Problem: some server actions return Supabase error text to the browser instead of a generic Vietnamese message, against the `server-actions` return contract: `createNewUser` returns `error.message` from `auth.admin.createUser` (`app/action/user.ts:50`), `deleteUserAccount` from `auth.admin.deleteUser` (`user.ts:79`), and `enrollCourse` from the `enrollments` insert (`app/action/enroll.ts:82`).
 - Evidence: read at `cf8c60b`; not yet checked across the payment actions, which H2-2b rewrites.
 - Direction: a small task after AF-U2 merges (AF-U2 keeps the messages it does not own); log the detail on the server and return a fixed message, keeping each action's result shape.

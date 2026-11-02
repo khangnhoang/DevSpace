@@ -85,7 +85,10 @@ export async function enrollCourse(courseId: number) {
     });
 
     if (error) {
-      return { error: error.message };
+      // 23505: enrollments_user_course_unique, the learner is already enrolled.
+      if (error.code === "23505") return { error: "Bạn đã đăng ký khóa học này." };
+      console.error("Lỗi đăng ký khóa học:", error.message);
+      return { error: "Không thể đăng ký khóa học. Vui lòng thử lại." };
     }
 
     await sendAdminNotification(userId, validCourseId);

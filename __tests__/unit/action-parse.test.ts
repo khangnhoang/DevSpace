@@ -138,6 +138,18 @@ describe("generateQuizFromContent", () => {
     expectNothingTouched();
   });
 
+  it("returns a fixed message, not the provider's error text, when the provider fails (AF-P1)", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.generateContent.mockRejectedValue(new Error("upstream 503 at internal-host"));
+    expect(await generateQuizFromContent(content, 1, [])).toEqual({ error: "Không thể tạo câu hỏi bằng AI. Vui lòng thử lại." });
+  });
+
+  it("keeps the invalid key message when the provider refuses the key", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.generateContent.mockRejectedValue(new Error("API key not valid. Please pass a valid API key."));
+    expect(await generateQuizFromContent(content, 1, [])).toEqual({ error: "API Key không hợp lệ hoặc tài khoản bị khóa." });
+  });
+
   it("returns the auth error to a non-admin without calling the provider", async () => {
     mocks.requireAdmin.mockResolvedValue({ error: "Không có quyền truy cập" });
     expect(await generateQuizFromContent(content, 1, [])).toEqual({ error: "Không có quyền truy cập" });

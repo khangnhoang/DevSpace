@@ -20,6 +20,14 @@ Plan: [plan.md](plan.md). Progress: [progress.md](progress.md).
 - Direction: a small task, or H2-2b when it rewrites the payment actions: catch the reload, clear `isLoading` in `finally`, and show an error with a retry.
 - Exit condition: a failed reload shows an error state instead of a stuck loader, with no unhandled rejection.
 
+### AF-P6: e2e row C2 failed once on the price error that should clear
+
+- Status: Open (2026-11-04, found in the AF-U5 move correction run).
+- Problem: in `__tests__/e2e/admin-content-forms.spec.ts` `[C2]`, after the price field of `CourseFormDialog` is emptied, the error "Giá phải là số nguyên từ 0 trở lên" stayed visible for the 10 s timeout once; a cause in the form's re-validation of the `type="number"` field is not ruled out.
+- Evidence: one failure in 1 of 5 full `npm run test:e2e` runs on `feat/af-admin-content-forms` (the run after `92f47fc`, machine under load); 8 isolated C2 runs passed in 3.4–4.5 s (0.7 s before); the next full run passed 134. The failure log was not kept.
+- Direction: when it fails again, keep the trace (`--trace on`) and check whether React Hook Form re-validated the emptied number input; fix the form if it did not, or the test if it raced, without raising the timeout.
+- Exit condition: the cause is named and fixed, or 10 consecutive full e2e runs pass C2.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

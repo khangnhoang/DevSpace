@@ -28,6 +28,14 @@ Charter: [README.md](README.md). Progress: [progress.md](progress.md).
 - Direction: reproduce under load (`npm test -- --reporter=default` in a loop, keeping the log), then fix the race in the test or in `scripts/test-stack` lock code, whichever the log shows; do not raise a timeout without a measured reason.
 - Exit condition: the cause is named and fixed, and 10 consecutive `npm test` runs pass that test.
 
+### QE-P6: the "run the tests twice" rule predates the end-of-run audit
+
+- Status: Open (2026-11-04, raised by the Owner during AF-U5; not urgent).
+- Problem: `test-quality-strategy` asks for `npm run test:e2e` twice after a change to a writing row, and `npm test` twice after writing rls tests (also `references/rls-test-design.md` step 3). A full e2e run is slow, and the second run now mostly repeats what the audit already checks.
+- Evidence: the rule landed in `5762f92` (2026-10-30); the end-of-run audit (`scripts/test-stack/audit.mjs`, QE-U3, `167646e` 2026-11-02) hashes every `public` table, `auth.users` and `storage.objects` after each reset and compares at the end of every run and the start of the next clean run, excluding only `auth.users.last_sign_in_at`, `updated_at` and `storage.objects.last_accessed_at`; fixture scopes verify absence after cleanup. What a second run still adds: a test that passes only right after a reset (when the first run reset), residue in the excluded columns, and one more flake sample.
+- Direction: verify that list, then narrow the rule (for example one run by default, a second only when the first run reset the stack) in `test-quality-strategy` with the Owner's approval.
+- Exit condition: the skill states a rule whose second run catches something the audit does not, or the Owner keeps the current rule with a reason.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

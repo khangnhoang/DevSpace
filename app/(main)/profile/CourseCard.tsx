@@ -23,7 +23,7 @@ export default function CourseCard({ course }: { course: DashboardCourse }) {
         </span>
       </div>
       <div>
-        <ProgressBar percent={course.percent} ariaLabel={`Tiến độ khóa ${course.title}`} />
+        <ProgressBar percent={course.percent} showLabel={false} ariaLabel={`Tiến độ khóa ${course.title}`} />
         <div className="mt-2 text-right text-xs text-gray-500">
           {course.completed}/{course.total} bài học
         </div>

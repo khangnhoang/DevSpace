@@ -588,7 +588,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col min-h-[300px]">
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col md:min-h-[300px]">
             <div className="hidden md:block overflow-x-auto flex-1">
               <table className="w-full text-left border-collapse">
                 <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-semibold">

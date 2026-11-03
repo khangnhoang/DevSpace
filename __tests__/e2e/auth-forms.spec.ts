@@ -1,6 +1,7 @@
 import type { Locator, Page, Request, Route } from "@playwright/test";
 import { ACCOUNTS } from "./accounts";
 import { expect, test } from "./fixtures";
+import { authUsersWithEmail, createUserFixture, profileOfEmail, reserveSignUpEmail } from "./service-role";
 
 // The auth forms of AF-U4 on an anonymous context (the project default has no saved session). The local stacks send
 // no mail (`[local_smtp] enabled = false`), so the forgot-password rows answer or hold `/auth/v1/recover` with
@@ -8,6 +9,8 @@ import { expect, test } from "./fixtures";
 // 5xx, which the network guard fails (AF-U4 plan, G5).
 const TOKEN = "**/auth/v1/token**";
 const RECOVER = "**/auth/v1/recover**";
+const SIGNUP = "**/auth/v1/signup**";
+const USER = "**/auth/v1/user**";
 
 const emailBox = (page: Page) => page.getByPlaceholder("Email...");
 const passwordBox = (page: Page) => page.getByPlaceholder("Mật khẩu...");
@@ -22,10 +25,12 @@ function countRequests(page: Page, pattern: RegExp): Request[] {
   return seen;
 }
 
-// Holds every matching request without answering, so the form stays pending until the test aborts it.
-async function holdRequests(page: Page, pattern: string): Promise<Route[]> {
+// Holds every matching request without answering, so the form stays pending until the test aborts it. Other methods
+// fall through to the network guard of the context.
+async function holdRequests(page: Page, pattern: string, method = "POST"): Promise<Route[]> {
   const held: Route[] = [];
   await page.route(pattern, (route) => {
+    if (route.request().method() !== method) return route.fallback();
     held.push(route);
   });
   return held;
@@ -159,5 +164,243 @@ test.describe("forgot-password form", () => {
     await expect(page.getByText("Gửi yêu cầu thất bại (Thử lại sau 1p)")).toBeVisible();
     await expect(sendButton(page)).toBeEnabled();
     await expect(forgotBox(page)).toHaveValue("someone@example.com");
+  });
+});
+
+// The sign-up form, step by step. Its placeholders are the only labels the design has.
+const signUpField = (page: Page, placeholder: string) => page.getByPlaceholder(placeholder);
+const NEXT = (page: Page) => page.getByRole("button", { name: "Tiếp tục" });
+const FINISH = (page: Page) => page.getByRole("button", { name: "Hoàn tất đăng ký" });
+
+async function fillAccountStep(page: Page, email: string, password = "e2e-pass-1234") {
+  await signUpField(page, "Email...").fill(email);
+  await signUpField(page, "Mật khẩu (tối thiểu 8 ký tự)...").fill(password);
+  await signUpField(page, "Xác nhận mật khẩu...").fill(password);
+  await NEXT(page).click();
+}
+
+async function fillProfileStep(page: Page, values: { name: string; phone: string; gender?: string }) {
+  await signUpField(page, "Họ và tên đầy đủ...").fill(values.name);
+  await signUpField(page, "Số điện thoại (10 số)...").fill(values.phone);
+  if (values.gender) await page.getByLabel("Giới tính").selectOption({ label: values.gender });
+}
+
+async function openSignUp(page: Page) {
+  await page.goto("/login");
+  await page.getByRole("button", { name: "Chưa có tài khoản? Đăng ký miễn phí" }).click();
+  await expect(signUpField(page, "Xác nhận mật khẩu...")).toBeVisible();
+}
+
+test.describe("sign-up form", () => {
+  test("[AU3] a visitor completes both steps, is signed in and the profile row holds the trimmed name, phone and gender", async ({ page }) => {
+    const email = await reserveSignUpEmail();
+    await openSignUp(page);
+
+    await fillAccountStep(page, email);
+    await expect(signUpField(page, "Họ và tên đầy đủ...")).toBeVisible();
+    await fillProfileStep(page, { name: "  E2E Người Đăng Ký  ", phone: "0912345678", gender: "Nữ" });
+    await FINISH(page).click();
+
+    await expect(page.getByText("Đăng ký thành công! Đang đăng nhập...")).toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
+    expect(await profileOfEmail(email)).toEqual({ full_name: "E2E Người Đăng Ký", phone: "0912345678", gender: "female" });
+  });
+
+  test("[AU4] step 1 refuses a blank, short or mismatched account, step 2 refuses a bad name or phone, and nothing is sent", async ({ page }) => {
+    await openSignUp(page);
+    const signUpRequests = countRequests(page, /\/auth\/v1\/signup/);
+
+    await NEXT(page).click();
+    await expect(page.getByText("Vui lòng nhập email")).toBeVisible();
+    await expect(page.getByText("Mật khẩu phải có ít nhất 8 ký tự")).toBeVisible();
+    await expect(page.getByText("Vui lòng xác nhận mật khẩu")).toBeVisible();
+
+    await signUpField(page, "Email...").fill("not-an-email");
+    await signUpField(page, "Mật khẩu (tối thiểu 8 ký tự)...").fill("1234567");
+    await signUpField(page, "Xác nhận mật khẩu...").fill("1234567");
+    await NEXT(page).click();
+    await expect(page.getByText("Email không đúng định dạng")).toBeVisible();
+    await expect(page.getByText("Mật khẩu phải có ít nhất 8 ký tự")).toBeVisible();
+
+    await signUpField(page, "Email...").fill("someone@example.com");
+    await signUpField(page, "Mật khẩu (tối thiểu 8 ký tự)...").fill("12345678");
+    await signUpField(page, "Xác nhận mật khẩu...").fill("87654321");
+    await NEXT(page).click();
+    await expect(page.getByText("Mật khẩu xác nhận không khớp")).toBeVisible();
+    await expect(signUpField(page, "Họ và tên đầy đủ...")).toBeHidden();
+
+    await signUpField(page, "Xác nhận mật khẩu...").fill("12345678");
+    await NEXT(page).click();
+    await expect(signUpField(page, "Họ và tên đầy đủ...")).toBeVisible();
+
+    // Going back keeps what step 1 held.
+    await page.getByRole("button", { name: "Quay lại bước trước" }).click();
+    await expect(signUpField(page, "Email...")).toHaveValue("someone@example.com");
+    await expect(signUpField(page, "Mật khẩu (tối thiểu 8 ký tự)...")).toHaveValue("12345678");
+    await expect(signUpField(page, "Xác nhận mật khẩu...")).toHaveValue("12345678");
+    await NEXT(page).click();
+
+    await FINISH(page).click();
+    await expect(page.getByText("Vui lòng nhập họ và tên")).toBeVisible();
+    await expect(page.getByText("Vui lòng nhập số điện thoại")).toBeVisible();
+
+    await fillProfileStep(page, { name: "   ", phone: "8412345678" });
+    await FINISH(page).click();
+    await expect(page.getByText("Vui lòng nhập họ và tên")).toBeVisible();
+    await expect(page.getByText("Số điện thoại không hợp lệ (10 số)")).toBeVisible();
+
+    await signUpField(page, "Số điện thoại (10 số)...").fill("091234567");
+    await FINISH(page).click();
+    await expect(page.getByText("Số điện thoại không hợp lệ (10 số)")).toBeVisible();
+
+    // The phone input keeps digits only.
+    await signUpField(page, "Số điện thoại (10 số)...").fill("09ab1");
+    await expect(signUpField(page, "Số điện thoại (10 số)...")).toHaveValue("091");
+
+    expect(signUpRequests, "no sign-up request was sent").toEqual([]);
+  });
+
+  test("[AU5] an email already registered shows the existing message and creates no user", async ({ page }) => {
+    const email = ACCOUNTS.student.email;
+    const before = await authUsersWithEmail(email);
+    expect(before).toBe(1);
+    await openSignUp(page);
+
+    await fillAccountStep(page, email);
+    await fillProfileStep(page, { name: "E2E Trùng Email", phone: "0912345678" });
+    await FINISH(page).click();
+
+    await expect(page.getByText("Email này đã được sử dụng. Vui lòng chọn email khác hoặc đăng nhập.")).toBeVisible();
+    await expect(page).toHaveURL(/\/login$/);
+    await expect(FINISH(page)).toBeEnabled();
+    expect(await authUsersWithEmail(email)).toBe(before);
+  });
+
+  test("[AU10] a sign-up answered without a session shows the check-your-mail message and stays, with the call unchanged", async ({ page }) => {
+    const email = "no-session@example.com";
+    let sent: Request | undefined;
+    await page.route(SIGNUP, (route) => {
+      sent = route.request();
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "00000000-0000-4000-8000-0000000000a1",
+          aud: "authenticated",
+          role: "",
+          email,
+          identities: [{ identity_id: "00000000-0000-4000-8000-0000000000a2", id: "00000000-0000-4000-8000-0000000000a1", provider: "email", identity_data: {} }],
+          app_metadata: {},
+          user_metadata: {},
+          created_at: "2026-11-03T00:00:00Z",
+        }),
+      });
+    });
+    await openSignUp(page);
+
+    await fillAccountStep(page, email);
+    await fillProfileStep(page, { name: "E2E Chờ Email", phone: "0987654321", gender: "Khác" });
+    await FINISH(page).click();
+
+    await expect(page.getByText("Đăng ký thành công! Vui lòng kiểm tra email để kích hoạt tài khoản.")).toBeVisible();
+    await expect(page).toHaveURL(/\/login$/);
+    expect(sent, "the sign-up request was sent").toBeDefined();
+    const body = sent!.postDataJSON();
+    expect(body).toMatchObject({ email, password: "e2e-pass-1234", data: { full_name: "E2E Chờ Email", phone: "0987654321", gender: "other" } });
+    expect(new URL(sent!.url()).searchParams.get("redirect_to")).toBe(`${new URL(page.url()).origin}/auth/callback`);
+  });
+
+  test("[AU9] sign up: a repeated Enter and a repeated submit send one request; an aborted request shows the generic message and keeps the values", async ({ page }) => {
+    await openSignUp(page);
+    const held = await holdRequests(page, SIGNUP);
+    await fillAccountStep(page, "held@example.com");
+    await fillProfileStep(page, { name: "E2E Giữ Yêu Cầu", phone: "0912345678" });
+
+    await Promise.all([signUpField(page, "Họ và tên đầy đủ...").press("Enter"), signUpField(page, "Họ và tên đầy đủ...").press("Enter")]);
+    await submitTwice(signUpField(page, "Họ và tên đầy đủ..."));
+
+    await expect.poll(() => held.length).toBe(1);
+    await expect(FINISH(page)).toBeDisabled();
+    expect(held, "one request while the first is pending").toHaveLength(1);
+
+    await held[0].abort("failed");
+    await expect(page.getByText("Đăng ký thất bại, vui lòng thử lại")).toBeVisible();
+    await expect(FINISH(page)).toBeEnabled();
+    await expect(signUpField(page, "Họ và tên đầy đủ...")).toHaveValue("E2E Giữ Yêu Cầu");
+    await expect(signUpField(page, "Số điện thoại (10 số)...")).toHaveValue("0912345678");
+  });
+});
+
+test.describe("reset-password page", () => {
+  const NEW_PASSWORD = "e2e-new-pass-2";
+  const newBox = (page: Page) => page.getByPlaceholder("Mật khẩu mới...");
+  const confirmBox = (page: Page) => page.getByPlaceholder("Nhập lại mật khẩu...");
+  const changeButton = (page: Page) => page.getByRole("button", { name: "Đổi mật khẩu" });
+
+  // The reset page needs a session; this fixture user signs in through the login form like a visitor would.
+  async function signInFixtureUser(page: Page) {
+    const user = await createUserFixture();
+    await page.goto("/login");
+    await emailBox(page).fill(user.email);
+    await passwordBox(page).fill(user.password);
+    await signInButton(page).click();
+    await expect(page).toHaveURL(/\/$/);
+    await page.goto("/auth/reset-password");
+    await expect(newBox(page)).toBeVisible();
+    return user;
+  }
+
+  test("[AU7] a short or mismatched password shows a field error, the same password keeps its toast, a new one changes it and goes to /", async ({ page }) => {
+    const user = await signInFixtureUser(page);
+    const updates = countRequests(page, /\/auth\/v1\/user/);
+
+    await changeButton(page).click();
+    await expect(page.getByText("Mật khẩu phải có ít nhất 8 ký tự")).toBeVisible();
+    await expect(page.getByText("Vui lòng xác nhận mật khẩu")).toBeVisible();
+
+    await newBox(page).fill(NEW_PASSWORD);
+    await confirmBox(page).fill("something-else-1");
+    await changeButton(page).click();
+    await expect(page.getByText("Mật khẩu xác nhận không khớp")).toBeVisible();
+    expect(updates.filter((request) => request.method() === "PUT"), "no update was sent").toEqual([]);
+
+    await newBox(page).fill(user.password);
+    await confirmBox(page).fill(user.password);
+    await changeButton(page).click();
+    await expect(page.getByText("Mật khẩu mới phải khác mật khẩu cũ")).toBeVisible();
+    await expect(page).toHaveURL(/\/auth\/reset-password$/);
+
+    await newBox(page).fill(NEW_PASSWORD);
+    await confirmBox(page).fill(NEW_PASSWORD);
+    await changeButton(page).click();
+    await expect(page.getByText("Khôi phục mật khẩu thành công!")).toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
+  });
+
+  test("[AU8] without a session the page shows the expired-link toast and goes to /login", async ({ page }) => {
+    await page.goto("/auth/reset-password");
+
+    await expect(page.getByText("Liên kết không hợp lệ hoặc đã hết hạn.")).toBeVisible();
+    await expect(page).toHaveURL(/\/login$/);
+  });
+
+  test("[AU9] reset password: a repeated Enter and a repeated submit send one request; an aborted request toasts the failure and keeps the values", async ({ page }) => {
+    await signInFixtureUser(page);
+    const held = await holdRequests(page, USER, "PUT");
+    await newBox(page).fill(NEW_PASSWORD);
+    await confirmBox(page).fill(NEW_PASSWORD);
+
+    await Promise.all([confirmBox(page).press("Enter"), confirmBox(page).press("Enter")]);
+    await submitTwice(confirmBox(page));
+
+    await expect.poll(() => held.length).toBe(1);
+    await expect(changeButton(page)).toBeDisabled();
+    expect(held, "one request while the first is pending").toHaveLength(1);
+
+    await held[0].abort("failed");
+    await expect(page.getByText("Không đổi được mật khẩu, vui lòng thử lại")).toBeVisible();
+    await expect(changeButton(page)).toBeEnabled();
+    await expect(newBox(page)).toHaveValue(NEW_PASSWORD);
+    await expect(confirmBox(page)).toHaveValue(NEW_PASSWORD);
   });
 });

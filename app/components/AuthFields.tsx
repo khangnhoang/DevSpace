@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 // cards had, at the usage site (frontend-design). The last two rules hide the password reveal and clear buttons that
 // Edge draws over the field, which the old class hid the same way.
 export const AUTH_INPUT_CLASS =
-  "h-auto w-full rounded-lg border-gray-200 bg-transparent px-4 py-3 text-base leading-normal text-gray-700 shadow-none transition-all duration-200 focus-visible:border-blue-600 focus-visible:ring-[3px] focus-visible:ring-blue-600/10 md:text-base [&::-ms-reveal]:hidden [&::-ms-clear]:hidden [&::-webkit-password-reveal-button]:hidden [&::-webkit-password-reveal-button]:appearance-none";
+  "h-auto w-full rounded-lg border-gray-200 bg-transparent px-4 py-3 text-base leading-normal text-gray-700 shadow-none placeholder:text-[#757575] transition-all duration-200 focus-visible:border-blue-600 focus-visible:ring-[3px] focus-visible:ring-blue-600/10 md:text-base [&::-ms-reveal]:hidden [&::-ms-clear]:hidden [&::-webkit-password-reveal-button]:hidden [&::-webkit-password-reveal-button]:appearance-none";
 
 export function AuthInput({ className, ...props }: ComponentProps<typeof Input>) {
   return <Input className={cn(AUTH_INPUT_CLASS, className)} {...props} />;
@@ -46,6 +46,9 @@ export function usePasswordVisibility() {
   return { visible, toggle: () => setVisible((current) => !current) };
 }
 
+export const AUTH_SUBMIT_CLASS =
+  "flex h-auto w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-3 text-base font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-700 active:scale-[0.98] disabled:opacity-70";
+
 // The big blue submit button. The icons take their size from a `size-*` class because the Button's own
 // `[&_svg:not([class*='size-'])]:size-4` rule would otherwise override the `size` prop.
 export function AuthSubmitButton({
@@ -64,10 +67,7 @@ export function AuthSubmitButton({
     <Button
       type="submit"
       disabled={pending}
-      className={cn(
-        "cursor-pointer mt-6 flex h-auto w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-3 text-base font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-700 active:scale-[0.98] disabled:opacity-70",
-        className,
-      )}
+      className={cn("cursor-pointer mt-6", AUTH_SUBMIT_CLASS, className)}
     >
       {pending ? (
         <>

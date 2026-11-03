@@ -23,11 +23,8 @@ const vietnamPhone = /^0[35789]\d{8}$/;
 
 export const GENDERS = ["male", "female", "other"] as const;
 
-const confirmedPassword = <T extends { password: string; confirmPassword: string }>(schema: z.ZodType<T>) =>
-  schema.refine((values) => values.password === values.confirmPassword, {
-    message: PASSWORD_MISMATCH_MESSAGE,
-    path: ["confirmPassword"],
-  });
+const passwordsMatch = (values: { password: string; confirmPassword: string }) => values.password === values.confirmPassword;
+const mismatchIssue = { message: PASSWORD_MISMATCH_MESSAGE, path: ["confirmPassword"] };
 
 // No length or format rule on the password: an account made before H1 can have 6 characters (`minimum_password_length`).
 export const signInSchema = z.object({
@@ -35,13 +32,13 @@ export const signInSchema = z.object({
   password: z.string().min(1, PASSWORD_REQUIRED_MESSAGE),
 });
 
-export const signUpAccountSchema = confirmedPassword(
-  z.object({
+export const signUpAccountSchema = z
+  .object({
     email: z.string().min(1, EMAIL_REQUIRED_MESSAGE).regex(signUpEmail, EMAIL_INVALID_MESSAGE),
     password: z.string().min(8, PASSWORD_TOO_SHORT_MESSAGE),
     confirmPassword: z.string().min(1, CONFIRM_PASSWORD_REQUIRED_MESSAGE),
-  }),
-);
+  })
+  .refine(passwordsMatch, mismatchIssue);
 
 export const signUpProfileSchema = z.object({
   full_name: z.string().trim().min(1, FULL_NAME_REQUIRED_MESSAGE),
@@ -53,12 +50,12 @@ export const forgotPasswordSchema = z.object({
   email: z.string().min(1, FORGOT_EMAIL_REQUIRED_MESSAGE).regex(signUpEmail, EMAIL_INVALID_MESSAGE),
 });
 
-export const resetPasswordSchema = confirmedPassword(
-  z.object({
+export const resetPasswordSchema = z
+  .object({
     password: z.string().min(8, PASSWORD_TOO_SHORT_MESSAGE),
     confirmPassword: z.string().min(1, CONFIRM_PASSWORD_REQUIRED_MESSAGE),
-  }),
-);
+  })
+  .refine(passwordsMatch, mismatchIssue);
 
 export type SignInValues = z.output<typeof signInSchema>;
 export type SignUpAccountValues = z.output<typeof signUpAccountSchema>;

@@ -99,3 +99,57 @@ export async function submitForgotPassword(
     control.setPending(false);
   }
 }
+
+// --- Sign up ---
+
+export const SIGN_UP_TAKEN_MESSAGE = "Email này đã được sử dụng. Vui lòng chọn email khác hoặc đăng nhập.";
+export const SIGN_UP_WEAK_PASSWORD_MESSAGE = "Mật khẩu quá yếu";
+// Never Supabase's own English text (Owner decision 2026-11-03); the detail goes to the console.
+export const SIGN_UP_FAILED_MESSAGE = "Đăng ký thất bại, vui lòng thử lại";
+export const SIGN_UP_SESSION_MESSAGE = "Đăng ký thành công! Đang đăng nhập...";
+export const SIGN_UP_CHECK_MAIL_MESSAGE = "Đăng ký thành công! Vui lòng kiểm tra email để kích hoạt tài khoản.";
+
+// The part of `signUp`'s `data` the mapping reads. With confirmations on, Supabase answers a registered address with
+// a user that has no identities instead of an error.
+export type SignUpData = { user?: { identities?: unknown[] | null } | null; session?: unknown } | null;
+
+const signUpError = (text: string): AuthOutcome => ({ message: { text, type: "error" }, redirect: null, keepValues: true });
+
+export function signUpOutcome({ data, error }: { data?: SignUpData; error: AuthErrorLike }): AuthOutcome {
+  const emailTaken = error?.code === "user_already_exists" || (!error && data?.user?.identities?.length === 0);
+  if (emailTaken) return signUpError(SIGN_UP_TAKEN_MESSAGE);
+  if (error) {
+    if (error.code === "weak_password") return signUpError(SIGN_UP_WEAK_PASSWORD_MESSAGE);
+    if (isRateLimited(error)) return signUpError(RATE_LIMIT_MESSAGE);
+    return signUpError(SIGN_UP_FAILED_MESSAGE);
+  }
+  if (data?.session) {
+    return {
+      message: { text: SIGN_UP_SESSION_MESSAGE, type: "success" },
+      redirect: { refresh: true, delayMs: 2000 },
+      keepValues: true,
+    };
+  }
+  // No session: the account waits for its mail, so the page stays for the visitor to read the message.
+  return { message: { text: SIGN_UP_CHECK_MAIL_MESSAGE, type: "success" }, redirect: null, keepValues: true };
+}
+
+export async function submitSignUp(
+  control: SubmitControl,
+  signUp: () => Promise<{ data: SignUpData; error: AuthErrorLike }>,
+): Promise<AuthOutcome | null> {
+  if (control.inFlight.current) return null;
+  control.inFlight.current = true;
+  control.setPending(true);
+  try {
+    const result = await signUp();
+    if (result.error && result.error.code !== "user_already_exists") console.error("Lỗi đăng ký:", result.error);
+    return signUpOutcome(result);
+  } catch (error) {
+    console.error("Lỗi đăng ký:", error);
+    return signUpError(SIGN_UP_FAILED_MESSAGE);
+  } finally {
+    control.inFlight.current = false;
+    control.setPending(false);
+  }
+}

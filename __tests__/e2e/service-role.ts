@@ -176,9 +176,21 @@ export async function createUserFixture() {
   const email = `e2e-${scope().tag}@devspace.test`;
   const label = scope().label("E2E Người dùng xóa");
   await scope().reserveAuth(email);
-  const { data, error } = await serviceRole().auth.admin.createUser({ email, password: "e2e-local-pass-1", email_confirm: true, user_metadata: { full_name: label } });
+  const password = "e2e-local-pass-1";
+  const { data, error } = await serviceRole().auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { full_name: label } });
   if (error || !data.user) throw new Error(`e2e createUser failed: ${error?.message}`);
-  return { id: data.user.id, email, label };
+  return { id: data.user.id, email, label, password };
+}
+// A new address for the sign-up row: the scope deletes the user it creates (the profile row cascades), and a seed user's
+// password or profile is never touched.
+export async function reserveSignUpEmail() {
+  const email = `e2e-signup-${scope().tag}@devspace.test`;
+  await scope().reserveAuth(email);
+  return email;
+}
+export const authUsersWithEmail = async (email: string) => (await scope().authIds(email)).length;
+export async function profileOfEmail(email: string): Promise<{ full_name: string | null; phone: string | null; gender: string | null }> {
+  return must(await serviceRole().from("profiles").select("full_name,phone,gender").eq("email", email).single());
 }
 export async function rowExists(table: "courses" | "chapters" | "lessons" | "exercises", id: number) { return must(await serviceRole().from(table).select("id").eq("id", id)).length > 0; }
 export async function commentDeletedAt(id: number): Promise<string | null> { return must(await serviceRole().from("comments").select("deleted_at").eq("id", id).single()).deleted_at; }

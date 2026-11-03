@@ -9,7 +9,6 @@ export * from "@/lib/types";
 import type {
   DBCourse,
   DBLesson,
-  DBProgress,
   DBChapter,
   DBProfile,
   DashboardCourse,
@@ -21,6 +20,13 @@ import type {
   ProfileData,
   Instructor,
 } from "@/lib/types";
+import { pickContinueLessonSlug, sortLessonsInCourseOrder } from "@/lib/lesson-order";
+import {
+  buildDashboardCourses,
+  type DashboardEnrollment,
+  type DashboardLesson,
+  type DashboardProgress,
+} from "@/lib/profile-courses";
 
 // 2. Khởi tạo Client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -160,54 +166,33 @@ export async function getUserDashboardData(
   // 1. Lấy danh sách Khóa học
   const { data: allCoursesData } = await supabase
     .from("courses")
-    .select("id, name, slug"); // Lấy 'name' từ DB
+    .select("id, name, slug, image_url"); // Lấy 'name' từ DB
 
   const allCourses = (allCoursesData || []) as DBCourse[];
   if (allCourses.length === 0) return [];
 
-  // 2. Lấy danh sách Bài học
+  // 2. Lấy danh sách Bài học (slug and orders only: they pick each course's continue link, never the content)
   const { data: allLessonsData } = await supabase
     .from("lessons")
-    .select("id, course_id");
-  const allLessons = (allLessonsData || []) as DBLesson[];
+    .select("id, slug, course_id, order_index, created_at, chapters(id, order_index)");
+  const allLessons = (allLessonsData || []) as unknown as DashboardLesson[];
 
-  // 3. Lấy Tiến độ của User
+  // 3. Lấy Tiến độ và các khóa đã đăng ký của User (own rows only, under RLS)
   const { data: progressData } = await supabase
     .from("user_progress")
-    .select("lesson_id")
+    .select("lesson_id, completed_at")
+    .eq("user_id", userId);
+  const { data: enrollmentData } = await supabase
+    .from("enrollments")
+    .select("course_id, created_at")
     .eq("user_id", userId);
 
-  const userProgress = (progressData || []) as DBProgress[];
-
-  // Chuyển đổi dữ liệu progress thành mảng ID
-  const completedLessonIds = userProgress.map((p) => p.lesson_id);
-
-  // 4. Tính toán phần trăm
-  const dashboardData = allCourses.map((course) => {
-    const lessonsOfCourse = allLessons.filter((l) => l.course_id === course.id);
-    const totalLessons = lessonsOfCourse.length;
-
-    const userCompletedCount = lessonsOfCourse.filter((l) =>
-      completedLessonIds.includes(l.id),
-    ).length;
-
-    const percent =
-      totalLessons > 0
-        ? Math.round((userCompletedCount / totalLessons) * 100)
-        : 0;
-
-    return {
-      id: course.id,
-      title: course.name, // ✅ Mapping: DB 'name' -> UI 'title'
-      slug: course.slug,
-      total: totalLessons,
-      completed: userCompletedCount,
-      percent: percent,
-      isStarted: userCompletedCount > 0,
-    };
-  });
-
-  return dashboardData.filter((course) => course.isStarted);
+  return buildDashboardCourses(
+    allCourses,
+    allLessons,
+    (progressData || []) as DashboardProgress[],
+    (enrollmentData || []) as DashboardEnrollment[],
+  );
 }
 
 export async function getDashboardData(): Promise<HomeCourseData[]> {
@@ -700,21 +685,6 @@ export async function checkHasEnroll(slug: string, userId: string | null) {
   return !!enrollment;
 }
 
-interface SortableLessonRow {
-  order_index?: number | null;
-  created_at: string;
-  chapters?: { order_index?: number | null } | { order_index?: number | null }[] | null;
-}
-
-// Hàm helper để lấy order index của chương an toàn (đặt ở ngoài hoặc trong file utils)
-const getChapterOrder = (lesson: SortableLessonRow) => {
-  // Supabase trả về object hoặc mảng tùy vào quan hệ, handle cả 2 cho chắc
-  const chapter = Array.isArray(lesson.chapters)
-    ? lesson.chapters[0]
-    : lesson.chapters;
-  return chapter?.order_index ?? null;
-};
-
 export async function getLastAccessedLessonSlug(
   userId: string,
   courseId: number, // Nhận courseId luôn cho đỡ phải query lại từ slug
@@ -732,32 +702,6 @@ export async function getLastAccessedLessonSlug(
     return null;
   }
 
-  // 2. Sắp xếp bài học chuẩn luồng: Chương trước -> Bài trước
-  const allLessons = [...rawLessons].sort((a: SortableLessonRow, b: SortableLessonRow) => {
-    const chapA = getChapterOrder(a);
-    const chapB = getChapterOrder(b);
-
-    // Ưu tiên 1: Sort theo thứ tự chương (Chapter Order)
-    if (chapA !== chapB) {
-      if (chapA === null) return 1; // Chương null đẩy xuống cuối
-      if (chapB === null) return -1;
-      return chapA - chapB;
-    }
-
-    const orderA = a.order_index ?? null;
-    const orderB = b.order_index ?? null;
-
-    // Ưu tiên 2: Sort theo thứ tự bài trong chương (Lesson Order)
-    if (orderA !== orderB) {
-      if (orderA === null) return 1;
-      if (orderB === null) return -1;
-      return orderA - orderB;
-    }
-
-    // Ưu tiên 3: Fallback theo ngày tạo
-    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-  });
-
   // 3. Lấy danh sách các bài User ĐÃ học xong
   const { data: progressData } = await supabase
     .from("user_progress")
@@ -765,21 +709,13 @@ export async function getLastAccessedLessonSlug(
     .eq("user_id", userId)
     .in(
       "lesson_id",
-      allLessons.map((l) => l.id),
+      rawLessons.map((l) => l.id),
     ); // Chỉ lấy progress của khóa này
 
   const completedSet = new Set(progressData?.map((p) => p.lesson_id) || []);
 
-  // 4. Tìm bài đầu tiên TRONG DANH SÁCH ĐÃ SẮP XẾP mà User CHƯA học
-  const nextLesson = allLessons.find((lesson) => !completedSet.has(lesson.id));
-
-  // 5. Trả về kết quả
-  if (nextLesson) {
-    return nextLesson.slug; // Bài tiếp theo chưa học
-  }
-
-  // Trường hợp học xong hết rồi -> Trả về bài cuối cùng (hoặc bài đầu tiên tùy bạn chọn)
-  return allLessons[allLessons.length - 1].slug;
+  // 4. The next unfinished lesson in course order, or the last one when every lesson is done.
+  return pickContinueLessonSlug(rawLessons, completedSet);
 }
 
 export async function checkAndSaveProgress(userId: string, lessonId: number) {
@@ -843,31 +779,8 @@ export async function getLastAccessedLessonId(
     return null;
   }
 
-  // 🔥 FIX CHUẨN: Sort logic NULLS LAST & Không mutate gốc
-  const allLessons = [...rawLessons].sort((a: SortableLessonRow, b: SortableLessonRow) => {
-    const chapA = getChapterOrder(a);
-    const chapB = getChapterOrder(b);
-
-    // 1️⃣ Sort theo chapter.order_index (NULLS LAST)
-    if (chapA !== chapB) {
-      if (chapA === null) return 1; // Null xuống cuối
-      if (chapB === null) return -1;
-      return chapA - chapB;
-    }
-
-    const orderA = a.order_index ?? null;
-    const orderB = b.order_index ?? null;
-
-    // 2️⃣ Sort theo lesson.order_index (NULLS LAST)
-    if (orderA !== orderB) {
-      if (orderA === null) return 1; // Null xuống cuối
-      if (orderB === null) return -1;
-      return orderA - orderB;
-    }
-
-    // 3️⃣ Fallback: created_at (Cũ lên trước)
-    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-  });
+  // Same order as the course page and the profile page (NULLS LAST, input not mutated).
+  const allLessons = sortLessonsInCourseOrder(rawLessons);
 
   // 3. Lấy danh sách đã học
   const { data: progressData } = await supabase

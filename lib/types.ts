@@ -73,6 +73,12 @@ export interface DashboardCourse {
   completed: number;
   percent: number;
   isStarted: boolean;
+  isEnrolled: boolean;
+  imageUrl: string | null;
+  // Latest completed_at of the learner's progress in the course, else the enrollment's created_at (ISO); orders the list.
+  lastActivityAt: string | null;
+  // Where the card leads: the next unfinished lesson, or the course page when the course has no lesson.
+  href: string;
 }
 
 // Dùng cho Trang chủ

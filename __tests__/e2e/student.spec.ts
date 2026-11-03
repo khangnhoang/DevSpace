@@ -1,8 +1,8 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { authFile } from "./accounts";
 import { backgroundOf, confirmDialogOf, expectDismissKeepsObject, expectFitsPhone, expectKeyboardFlow, expectOnTop, recordMutations } from "./confirm-dialog";
 import { expect, test } from "./fixtures";
-import { commentDeletedAt, createCommentFixture } from "./service-role";
+import { commentDeletedAt, createCommentFixture, createCompletedStudentCourseFixture, createStudentCourseFixtures } from "./service-role";
 
 // The student is enrolled in the paid course with an approved payment.
 test.use({ storageState: authFile("student") });
@@ -99,6 +99,7 @@ test("[T6] the transaction history filter is labelled, filters by status from mo
   const history = page.getByRole("table");
   // The seed gives the student one approved payment and no other order.
   await expect(history).toContainText("Thành công");
+  await expect(history).toContainText("199.000đ");
 
   await filter.click();
   await page.getByRole("option", { name: "Chờ duyệt" }).click();
@@ -125,9 +126,142 @@ test("[T6] the transaction history filter is labelled, filters by status from mo
   await page.keyboard.press("Escape");
   await page.emulateMedia({ colorScheme: "light" });
 
-  // AF-P5: below md the heading and the filter start at the table's left edge instead of centring.
+  // AF-P5: below md the heading and the filter start at the left edge of the history, which is a list of blocks there
+  // (the table is hidden), instead of centring. The filter still narrows the blocks.
   await page.setViewportSize({ width: 375, height: 812 });
-  const [headingBox, filterBox, historyBox] = await Promise.all([heading.boundingBox(), filter.boundingBox(), history.boundingBox()]);
-  expect(headingBox && historyBox && Math.abs(headingBox.x - historyBox.x) < 2, "the heading aligns with the table").toBe(true);
-  expect(filterBox && historyBox && filterBox.x - historyBox.x < 40, "the filter starts near the table's left edge").toBe(true);
+  const blocks = page.getByRole("list", { name: "Danh sách giao dịch" });
+  await expect(blocks).toContainText("Thành công");
+  const [headingBox, filterBox, blocksBox] = await Promise.all([heading.boundingBox(), filter.boundingBox(), blocks.boundingBox()]);
+  expect(headingBox && blocksBox && Math.abs(headingBox.x - blocksBox.x) < 2, "the heading aligns with the blocks").toBe(true);
+  expect(filterBox && blocksBox && filterBox.x - blocksBox.x < 40, "the filter starts near the blocks' left edge").toBe(true);
+
+  await filter.click();
+  await page.getByRole("option", { name: "Chờ duyệt" }).click();
+  await expect(filter).toHaveText("Chờ duyệt");
+  await expect(page.getByText("Không tìm thấy giao dịch nào.").filter({ visible: true })).toBeVisible();
+  await expect(blocks).toHaveCount(0);
+  await filter.click();
+  await page.getByRole("option", { name: "Thành công" }).click();
+  await expect(blocks).toContainText("Thành công");
+});
+
+// The student is enrolled in course 2 with lesson 3 done and lesson 4 open.
+test("[T7] the course the student is on is a featured card that leads back to the next unfinished lesson", async ({ page }) => {
+  await page.goto("/profile");
+  const card = page.getByRole("article").filter({ hasText: "JavaScript căn bản" });
+  await expect(card.getByRole("heading", { level: 3, name: "JavaScript căn bản" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(0);
+  await expect(card).toContainText("1/2 bài học");
+  await expect(card.getByRole("progressbar", { name: "Tiến độ khóa JavaScript căn bản" })).toHaveAttribute("aria-valuenow", "50");
+  // The seed course has no image: the fallback renders, with an empty alt because the title is beside it.
+  await expect(card.locator("img")).toHaveAttribute("src", /no-course-image/);
+  await expect(card.locator("img")).toHaveAttribute("alt", "");
+
+  const link = card.getByRole("link", { name: "Tiếp tục học" });
+  await expect(link).toHaveAttribute("href", "/learn/javascript-can-ban/ham-va-vong-lap");
+  // Four courses or fewer: no expand button.
+  await expect(page.getByRole("button", { name: /^Xem tất cả/ })).toHaveCount(0);
+
+  await link.click();
+  await expect(page).toHaveURL(/\/learn\/javascript-can-ban\/ham-va-vong-lap$/);
+  await expect(page.getByText("Viết hàm với function và lặp bằng for.")).toBeVisible();
+});
+
+test("[T8] with more than four courses the featured card and three rows show first, newest enrollment first, and the rest expand and collapse in place", async ({ page }) => {
+  const extra = await createStudentCourseFixtures(4);
+  await page.goto("/profile");
+  const cards = page.getByRole("article");
+  const expand = page.getByRole("button", { name: "Xem tất cả (5)" });
+  const shownExtras = async () => (await Promise.all(extra.map((fixture) => cards.filter({ hasText: fixture.label }).count()))).reduce((sum, count) => sum + count, 0);
+
+  await expect(cards).toHaveCount(4);
+  await expect(expand).toHaveAttribute("aria-expanded", "false");
+  // The only unfinished course with lessons is featured on top; the rows follow, the latest enrollment first.
+  await expect(cards.first()).toContainText("JavaScript căn bản");
+  await expect(cards.first().getByRole("link", { name: "Tiếp tục học" })).toBeVisible();
+  await expect(cards.nth(1)).toContainText(extra[3].label);
+  expect(await shownExtras(), "three of the four other courses show").toBe(3);
+
+  const url = page.url();
+  await expand.click();
+  await expect(cards).toHaveCount(5);
+  expect(await shownExtras(), "every course shows once expanded").toBe(4);
+  const collapse = page.getByRole("button", { name: "Thu gọn" });
+  await expect(collapse).toHaveAttribute("aria-expanded", "true");
+  expect(page.url(), "the list expands in place").toBe(url);
+
+  await collapse.click();
+  await expect(cards).toHaveCount(4);
+  await expect(expand).toBeVisible();
+});
+
+test("[T11] a course without lessons reads \"Chưa có bài học\", a finished one \"Hoàn thành\" with its review link, and a row is at most 72px tall at 375px", async ({ page }) => {
+  const [empty] = await createStudentCourseFixtures(1);
+  const done = await createCompletedStudentCourseFixture();
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/profile");
+
+  const emptyRow = page.getByRole("article").filter({ hasText: empty.label });
+  await expect(emptyRow.getByRole("heading", { level: 3, name: empty.label })).toBeVisible();
+  await expect(emptyRow).toContainText("Chưa có bài học");
+  await expect(emptyRow).not.toContainText("0/0");
+  await expect(emptyRow.getByRole("progressbar")).toHaveCount(0);
+  await expect(emptyRow.getByRole("link", { name: "Xem khóa học" })).toHaveAttribute("href", `/course/${empty.slug}`);
+  await expect(emptyRow.locator("img")).toHaveAttribute("src", /no-course-image/);
+
+  const doneRow = page.getByRole("article").filter({ hasText: done.label });
+  await expect(doneRow).toContainText("Hoàn thành");
+  await expect(doneRow.locator("svg.lucide-circle-check-big")).toHaveCount(1);
+  await expect(doneRow.getByRole("link", { name: "Ôn lại" })).toHaveAttribute("href", `/learn/${done.slug}/${done.lessonSlug}`);
+
+  for (const row of [emptyRow, doneRow, page.getByRole("article").filter({ hasText: "JavaScript căn bản" })]) {
+    await expect(row).toBeVisible();
+  }
+  for (const row of [emptyRow, doneRow]) {
+    const box = await row.boundingBox();
+    expect(box && box.height <= 72, `a row is ${box?.height}px tall`).toBe(true);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), "the page scrolls sideways").toBe(true);
+});
+
+const overflows = (page: Page, selector: string) => page.locator(selector).first().evaluate((el) => el.scrollWidth > el.clientWidth);
+
+test("[T9] at 375px the page and the history do not scroll sideways, the payment reads 199.000đ with a date without seconds and the courses start on the first screen", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/profile");
+  const blocks = page.getByRole("list", { name: "Danh sách giao dịch" });
+  await expect(blocks).toContainText("199.000đ");
+  await expect(blocks).toContainText("Thành công");
+  expect(await blocks.innerText()).toMatch(/\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}(?!:\d)/);
+
+  expect(await overflows(page, "html"), "the page scrolls sideways").toBe(false);
+  // The frame clips what overflows it, so check that every part of every block sits inside the list.
+  expect(await blocks.evaluate((list) => Array.from(list.querySelectorAll("*")).some((el) => el.getBoundingClientRect().right > list.getBoundingClientRect().right + 1)), "a block part sticks out of the history").toBe(false);
+
+  const heading = page.getByRole("heading", { name: "Khóa học của tôi" });
+  const box = await heading.boundingBox();
+  expect(box && box.y < 812, "the courses heading starts within the first 812px").toBe(true);
+});
+
+test("[T10] at 768px the name and the edit button do not wrap", async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await page.goto("/profile");
+  const button = page.getByRole("button", { name: "Chỉnh sửa hồ sơ" });
+  const name = page.getByRole("heading", { level: 2, name: "Lê Minh Học Viên" });
+  await expect(button).toBeVisible();
+  // One line of text each: the label is not split across lines (text nodes only, the icon sits at its own height).
+  const lines = (locator: Locator) => locator.evaluate((el) => {
+    const tops = new Set<number>();
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!node.textContent?.trim()) continue;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      for (const rect of Array.from(range.getClientRects())) tops.add(Math.round(rect.top));
+    }
+    return tops.size;
+  });
+  expect(await lines(button), "the button label wraps").toBeLessThanOrEqual(1);
+  expect(await lines(name), "the name wraps").toBe(1);
+  expect(await overflows(page, "html"), "the page scrolls sideways").toBe(false);
 });

@@ -22,7 +22,7 @@ One row per scenario:
 | --- | --- | --- | --- | --- | --- |
 | 1 | <actor> | <steps or request> | <observable result, including denial where applicable> | <data/account> | <perceptual judgment, exploration, live provider or explicit approved requirement> |
 
-Keep only justified/required manual scenarios, reusing automated assertions rather than repeating them. The Owner signs in for browser passes (`AGENTS.md` section 4). Preserve approved feature minima and explicit Owner QA; an empty residual matrix needs its reason, not a fabricated browser pass.
+Keep only justified/required manual scenarios, reusing automated assertions rather than repeating them. Local browser passes sign in as a seed user; any other sign-in is the Owner's (`AGENTS.md` section 4). Preserve approved feature minima and explicit Owner QA; an empty residual matrix needs its reason, not a fabricated browser pass.
 
 ## Readiness
 
@@ -33,4 +33,4 @@ Decide before the final checkpoint and record readiness for each scenario (one o
 - no data is needed;
 - blocked until the Owner provides an account or data.
 
-Say which checks the agent can do (commands, simulated-role SQL by Main, a browser pass with the Owner signed in) and which only the Owner can. Missing credentials/helper support or an uncertain target stays a concrete blocker, not permission to use hosted or reset shared data. Required manual QA may stay pending locally, but the plan states when it blocks approval or merge.
+Say which checks the agent can do (commands, simulated-role SQL by Main, a local browser pass as a seed user) and which only the Owner can. Missing credentials/helper support or an uncertain target stays a concrete blocker, not permission to use hosted or reset shared data. Required manual QA may stay pending locally, but the plan states when it blocks approval or merge.

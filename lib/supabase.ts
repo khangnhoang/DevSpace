@@ -20,7 +20,10 @@ import type {
   ProfileData,
   Instructor,
 } from "@/lib/types";
-import { pickContinueLessonSlug, sortLessonsInCourseOrder } from "@/lib/lesson-order";
+import {
+  pickContinueLessonSlug,
+  sortLessonsInCourseOrder,
+} from "@/lib/lesson-order";
 import {
   buildDashboardCourses,
   type DashboardEnrollment,
@@ -174,7 +177,9 @@ export async function getUserDashboardData(
   // 2. Lấy danh sách Bài học (slug and orders only: they pick each course's continue link, never the content)
   const { data: allLessonsData } = await supabase
     .from("lessons")
-    .select("id, slug, course_id, order_index, created_at, chapters(id, order_index)");
+    .select(
+      "id, slug, course_id, order_index, created_at, chapters(id, order_index)",
+    );
   const allLessons = (allLessonsData || []) as unknown as DashboardLesson[];
 
   // 3. Lấy Tiến độ và các khóa đã đăng ký của User (own rows only, under RLS)
@@ -247,13 +252,15 @@ export async function getAdminCourseData() {
     return [];
   }
 
-  const formattedData = courses?.map((course: { lessons: unknown[]; [key: string]: unknown }) => {
-    const { lessons, ...rest } = course;
-    return {
-      ...rest,
-      lessonCount: lessons.length || 0,
-    };
-  });
+  const formattedData = courses?.map(
+    (course: { lessons: unknown[]; [key: string]: unknown }) => {
+      const { lessons, ...rest } = course;
+      return {
+        ...rest,
+        lessonCount: lessons.length || 0,
+      };
+    },
+  );
 
   return formattedData as AdminCourseData[];
 }
@@ -263,7 +270,7 @@ export async function getInstructors() {
   const { data, error } = await supabase
     .from("instructors")
     .select("id, profiles:profile_cards(full_name)");
-  
+
   return { data, error };
 }
 
@@ -272,7 +279,7 @@ export async function updateCourse(
   courseData: {
     name: string;
     slug: string;
-    description: string;
+    description: string | null;
     image_url: string;
     price: number;
     instructor_id: number | null;
@@ -312,7 +319,7 @@ export async function addCourse(
   coursesData: {
     name: string;
     slug: string;
-    description: string;
+    description: string | null;
     price: number;
     instructor_id: number | null;
   },
@@ -391,7 +398,10 @@ export async function deleteLesson(id: number) {
   return { error };
 }
 
-export async function editLesson(id: number, lessonData: Record<string, unknown>) {
+export async function editLesson(
+  id: number,
+  lessonData: Record<string, unknown>,
+) {
   const { error } = await supabase
     .from("lessons")
     .update({
@@ -438,7 +448,10 @@ export async function addChapter(dataChapter: Record<string, unknown>) {
   return { error };
 }
 
-export async function editChapter(id: number, dataChapter: Record<string, unknown>) {
+export async function editChapter(
+  id: number,
+  dataChapter: Record<string, unknown>,
+) {
   const { error } = await supabase
     .from("chapters")
     .update(dataChapter)

@@ -6,7 +6,7 @@ Plan: [plan.md](plan.md). Progress: [progress.md](progress.md).
 
 ### AF-P2: the AI bulk-create on the lessons page does not await its saves
 
-- Status: Open (2026-10-29, found in the U1 plan review; outside U1, whose G4 keeps the handler as it is).
+- Status: Fixed locally, awaiting delivery (2026-11-04, AF-U5 CP2: `bulkCreateAiExercises` awaits every save and reports a partial save, both handlers clear the busy state in `finally`, covered by `__tests__/unit/ai-exercises.test.ts`). Found 2026-10-29 in the U1 plan review.
 - Problem: `handleAiBulkCreate` maps the generated questions with a block-bodied arrow that calls `addExercise` without `return` (`app/admin/lessons/page.tsx:285-295`), so `Promise.all` awaits nothing and the success path runs before the saves finish or fail; and when `generateQuizFromContent` returns nothing, both AI handlers return without `setIsGenerating(false)` (`page.tsx:247`, `:278`), leaving the button busy.
 - Evidence: read at `4179bf5`; not reproduced (it needs the AI key).
 - Direction: AF-U5, which converts this page's forms, returns the promises and resets the busy state on every path.
@@ -19,6 +19,22 @@ Plan: [plan.md](plan.md). Progress: [progress.md](progress.md).
 - Evidence: read at `e44489f`; the same calls exist at `4179bf5`. Not reproduced.
 - Direction: a small task, or H2-2b when it rewrites the payment actions: catch the reload, clear `isLoading` in `finally`, and show an error with a retry.
 - Exit condition: a failed reload shows an error state instead of a stuck loader, with no unhandled rejection.
+
+### AF-P6: e2e row C2 failed once on the price error that should clear
+
+- Status: Open (2026-11-04, found in the AF-U5 move correction run).
+- Problem: in `__tests__/e2e/admin-content-forms.spec.ts` `[C2]`, after the price field of `CourseFormDialog` is emptied, the error "Giá phải là số nguyên từ 0 trở lên" stayed visible for the 10 s timeout once; a cause in the form's re-validation of the `type="number"` field is not ruled out.
+- Evidence: one failure in 1 of 5 full `npm run test:e2e` runs on `feat/af-admin-content-forms` (the run after `92f47fc`, machine under load); 8 isolated C2 runs passed in 3.4–4.5 s (0.7 s before); the next full run passed 134. The failure log was not kept.
+- Direction: when it fails again, keep the trace (`--trace on`) and check whether React Hook Form re-validated the emptied number input; fix the form if it did not, or the test if it raced, without raising the timeout.
+- Exit condition: the cause is named and fixed, or 10 consecutive full e2e runs pass C2.
+
+### AF-P7: the admin user form can save the role "Chọn vai trò"
+
+- Status: Open (2026-11-04, found by the Owner in AF-U5 manual QA; for AF-U6, which converts the admin user forms).
+- Problem: the role select in `app/admin/users/page.tsx` has a placeholder `<option>Chọn vai trò</option>` with no `value`, so its value is its text; the form sends it unchanged through `editUser` (and `createNewUser`), and `profiles.role` has no check constraint, so a user is saved with the role "Chọn vai trò". Such a user is neither `admin` nor `user` in the counters and filters.
+- Evidence: Owner screenshot on the dev stack: student@devspace.test shows the role "Chọn vai trò" after an edit; `supabase/migrations/20261021000000_baseline.sql` has no constraint on `profiles.role`.
+- Direction: AF-U6's user schema accepts only `user` or `admin` (the placeholder an empty value that fails) on client and server; a check constraint on `profiles.role` is a separate, Codex-gated migration (QE-F9 would catch its absence). The dev row is fixed by editing the user back to `user`.
+- Exit condition: neither the form nor the action can store a role other than `user` or `admin`.
 
 ## Resolved
 

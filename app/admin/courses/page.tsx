@@ -1,5 +1,5 @@
 import { getAdminCourseData } from "@/lib/supabase";
-import CoursesClientPage from "@/app/admin/courses/coursesclient";
+import CoursesClientPage from "@/app/admin/courses/_components/CoursesClient";
 
 export const dynamic = "force-dynamic";
 

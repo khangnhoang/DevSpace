@@ -1,5 +1,7 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   SquarePen,
   Trash,
@@ -11,6 +13,7 @@ import {
   ChevronDown,
   Sparkles,
   Bolt,
+  Loader2,
 } from "lucide-react";
 import {
   getCoursesForSelect,
@@ -25,13 +28,67 @@ import {
 } from "@/lib/supabase";
 import MdxEditor from "@/app/components/MdxEditor";
 import { generateQuizFromContent } from "@/app/action/gemini";
-import type { DBExercise, ExerciseData } from "@/lib/types";
+import type { DBExercise } from "@/lib/types";
 import { getLessonsForAdmin } from "@/app/action/lessons";
 import { toast } from "sonner";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import { useRouter } from "next/navigation";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+import { cn } from "@/lib/utils";
+import {
+  exerciseSchema,
+  lessonSchema,
+  type ExerciseFormInput,
+  type ExerciseFormValues,
+  type LessonFormInput,
+  type LessonFormValues,
+} from "@/lib/schemas/admin-content-forms";
+import {
+  AI_INVALID_MESSAGE,
+  bulkCreateAiExercises,
+  describeAiBulk,
+  firstAiExerciseToForm,
+} from "./_lib/ai-exercises";
 
 const ITEMS_PER_PAGE = 10;
+
+const LESSON_CONTENT_PLACEHOLDER = "**Viết nội dung bài học ở đây...**";
+const BLANK_LESSON: LessonFormInput = {
+  title: "",
+  slug: "",
+  course_id: "",
+  chapter_id: "",
+  video_url: "",
+  order_index: "",
+  content: LESSON_CONTENT_PLACEHOLDER,
+};
+const BLANK_EXERCISE: ExerciseFormInput = {
+  question: "",
+  option_a: "",
+  option_b: "",
+  option_c: "",
+  option_d: "",
+  correct_answer: "",
+  explanation: "",
+};
+
+// The shadcn controls are restyled here to keep the look these forms always had on the always-dark admin surface; the
+// generated files stay generic and their tokens would follow the OS colour scheme.
+const LESSON_CONTROL =
+  "h-auto rounded-md border-[#4B5563] bg-[#2C3039] p-2 text-base text-white shadow-none focus-visible:border-[#4B5563] focus-visible:ring-0 aria-invalid:border-red-500 md:text-base";
+const LESSON_LABEL = "block text-base leading-6 font-bold text-white";
+const LESSON_FIELD =
+  "gap-2 [&_[data-slot=native-select-wrapper]]:w-full [&_[data-slot=native-select-icon]]:text-white [&_[data-slot=native-select-icon]]:opacity-100";
+const EXERCISE_CONTROL =
+  "h-auto rounded-md border-gray-400 bg-[#222732] p-2 text-base text-white shadow-none focus-visible:border-gray-400 focus-visible:ring-0 aria-invalid:border-red-500 md:text-base";
+const EXERCISE_FIELD =
+  "gap-1 [&_[data-slot=native-select-wrapper]]:w-full [&_[data-slot=native-select-icon]]:text-white [&_[data-slot=native-select-icon]]:opacity-100";
+const FORM_ERROR = "text-red-400";
+const EXERCISE_OPTIONS = ["a", "b", "c", "d"] as const;
+
+const isRowId = (value: string) => /^[1-9]\d*$/.test(value);
 
 // Runtime shape of getLessonsForAdmin rows: the client types a joined relation
 // as an array, but each lesson has one course and one chapter.
@@ -58,27 +115,9 @@ export default function LessonsManagerPage() {
   const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [editLessonId, setEditLessonId] = useState<number | null>(null);
-  const [title, setTitle] = useState("");
-  const [slug, setSlug] = useState("");
-  const [videoUrl, setVideoUrl] = useState("");
-  const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
-  const [selectedChapterId, setSelectedChapterId] = useState<number | null>(
-    null
-  );
   const [editExerciseId, setEditExerciseId] = useState<number | null>(null);
-  const [question, setQuestion] = useState("");
-  const [optionA, setOptionA] = useState("");
-  const [optionB, setOptionB] = useState("");
-  const [optionC, setOptionC] = useState("");
-  const [optionD, setOptionD] = useState("");
-  const [correctAnswer, setCorrectAnswer] = useState("");
-  const [explanation, setExplanation] = useState("");
   const [courses, setCourses] = useState<{ id: number; name: string }[]>([]);
   const [chapters, setChapters] = useState<{ id: number; title: string }[]>([]);
-  const [content, setContent] = useState<string>(
-    "**Viết nội dung bài học ở đây...**"
-  );
-  const [orderIndex, setOrderIndex] = useState<number | "">("");
   const [lessons, setLessons] = useState<LessonAdminRow[]>([]);
   const [exercise, setExercise] = useState<DBExercise[]>([]);
 
@@ -91,85 +130,121 @@ export default function LessonsManagerPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [refreshExerciseKey, setRefreshExerciseKey] = useState(0);
 
+  // Both forms live on the page, like the state they replace, so the lesson values survive a switch of tab while the
+  // panel stays open. Every open and every close of the panel starts the exercise form blank in add mode: a question
+  // being edited belongs to the lesson it was opened from, and its id must not outlive that lesson.
+  const {
+    register: registerLesson,
+    handleSubmit: handleLessonSubmit,
+    reset: resetLesson,
+    setValue: setLessonValue,
+    getValues: getLessonValues,
+    control: lessonControl,
+    formState: { errors: lessonErrors },
+  } = useForm<LessonFormInput, unknown, LessonFormValues>({
+    resolver: zodResolver(lessonSchema),
+    defaultValues: BLANK_LESSON,
+  });
+  const {
+    register: registerExercise,
+    handleSubmit: handleExerciseSubmit,
+    reset: resetExercise,
+    formState: { errors: exerciseErrors },
+  } = useForm<ExerciseFormInput, unknown, ExerciseFormValues>({
+    resolver: zodResolver(exerciseSchema),
+    defaultValues: BLANK_EXERCISE,
+  });
+  const watchedCourse = useWatch({ control: lessonControl, name: "course_id" });
+  const selectedCourseId = isRowId(watchedCourse)
+    ? Number(watchedCourse)
+    : null;
+  const [isSavingLesson, setIsSavingLesson] = useState(false);
+  const [isSavingExercise, setIsSavingExercise] = useState(false);
+  // Set before the first await: the resolver runs before React Hook Form sets isSubmitting, so a second Enter can
+  // pass a state-only check and insert the row twice.
+  const savingLessonRef = useRef(false);
+  const savingExerciseRef = useRef(false);
+
+  const resetExerciseEditing = () => {
+    setEditExerciseId(null);
+    resetExercise(BLANK_EXERCISE);
+  };
+
+  const closePanel = () => {
+    setIsOpenForm(false);
+    resetExerciseEditing();
+  };
+
   const handleOpenAddForm = () => {
     setEditLessonId(null);
-    setTitle("");
-    setSlug("");
-    setVideoUrl("");
-    setOrderIndex("");
-    setSelectedCourseId(null);
-    setSelectedChapterId(null);
-    setContent("**Viết nội dung bài học ở đây...**");
+    resetLesson(BLANK_LESSON);
+    resetExerciseEditing();
+    setActiveTab("infor");
     setIsOpenForm(true);
   };
 
   const handOpenEditForm = (lesson: LessonAdminRow) => {
+    resetExerciseEditing();
+    setActiveTab("infor");
     setEditLessonId(lesson.id);
-    setTitle(lesson.title);
-    setSlug(lesson.slug);
-    setVideoUrl(lesson.video_url || "");
-    setOrderIndex(lesson.order_index ?? '');
-    setSelectedCourseId(lesson.course_id);
-    setSelectedChapterId(lesson.chapter_id);
-    setContent(lesson.content || "");
+    resetLesson({
+      title: lesson.title,
+      slug: lesson.slug,
+      course_id: String(lesson.course_id),
+      chapter_id: lesson.chapter_id ? String(lesson.chapter_id) : "",
+      video_url: lesson.video_url || "",
+      order_index: lesson.order_index == null ? "" : String(lesson.order_index),
+      content: lesson.content || "",
+    });
     setIsOpenForm(true);
   };
 
   const handleOpenEditExerciseForm = (exercise: DBExercise) => {
     setEditExerciseId(exercise.id);
-    setQuestion(exercise.question);
-    setOptionA(exercise.option_a);
-    setOptionB(exercise.option_b);
-    setOptionC(exercise.option_c);
-    setOptionD(exercise.option_d);
-    setCorrectAnswer(exercise.correct_answer);
-    setExplanation(exercise.explanation);
+    resetExercise({
+      question: exercise.question,
+      option_a: exercise.option_a,
+      option_b: exercise.option_b,
+      option_c: exercise.option_c,
+      option_d: exercise.option_d,
+      correct_answer: exercise.correct_answer,
+      explanation: exercise.explanation ?? "",
+    });
   };
 
   const handleInActiveEditExerciseForm = () => {
     setEditExerciseId(null);
-    setQuestion("");
-    setOptionA("");
-    setOptionB("");
-    setOptionC("");
-    setOptionD("");
-    setCorrectAnswer("");
-    setExplanation("");
+    resetExercise(BLANK_EXERCISE);
   };
 
-  const handleSave = async () => {
-    if (!title || !slug || !selectedCourseId || !selectedChapterId) {
-      toast.warning("Vui lòng điền đầy đủ thông tin bắt buộc.");
-      return;
-    }
+  const saveLesson = async (values: LessonFormValues) => {
+    if (savingLessonRef.current) return;
+    savingLessonRef.current = true;
+    setIsSavingLesson(true);
 
-    const lessonPayload = {
-      title,
-      slug,
-      content: content || "",
-      course_id: selectedCourseId!,
-      chapter_id: selectedChapterId!,
-      video_url: videoUrl,
-      order_index: orderIndex,
-    };
+    try {
+      const result = editLessonId
+        ? await editLesson(editLessonId, values)
+        : await addLesson(values);
 
-    let result;
-
-    if (editLessonId) {
-      result = await editLesson(editLessonId, lessonPayload);
-    } else {
-      result = await addLesson(lessonPayload);
-    }
-
-    if (result.error) {
-      toast.error("Lưu bài học thất bại: " + result.error.message);
-    } else {
+      if (result.error) {
+        toast.error("Lưu bài học thất bại: " + result.error.message);
+        return;
+      }
       toast.success(
-        editLessonId ? "Cập nhật thành công" : "Lưu bài học thành công!"
+        editLessonId ? "Cập nhật thành công" : "Lưu bài học thành công!",
       );
-      setIsOpenForm(false);
+      closePanel();
       router.refresh();
       setRefreshKey((prev) => prev + 1);
+    } catch (error) {
+      toast.error(
+        "Lưu bài học thất bại: " +
+          (error instanceof Error ? error.message : "Không xác định"),
+      );
+    } finally {
+      savingLessonRef.current = false;
+      setIsSavingLesson(false);
     }
   };
 
@@ -185,42 +260,30 @@ export default function LessonsManagerPage() {
     }
   };
 
-  const handleExerciseSave = async () => {
-    if (
-      !question ||
-      !optionA ||
-      !optionB ||
-      !optionC ||
-      !optionD ||
-      !correctAnswer
-    ) {
-      toast.warning("Bạn chưa điền đầy đủ thông tin bài tập");
-      return;
-    }
+  const saveExercise = async (values: ExerciseFormValues) => {
+    if (savingExerciseRef.current) return;
+    savingExerciseRef.current = true;
+    setIsSavingExercise(true);
 
-    const exercisePayload = {
-      question,
-      option_a: optionA,
-      option_b: optionB,
-      option_c: optionC,
-      option_d: optionD,
-      correct_answer: correctAnswer,
-      explanation,
-    };
+    try {
+      const result = editExerciseId
+        ? await editExercise(editExerciseId, values)
+        : await addExercise(editLessonId, values);
 
-    let result;
-
-    if (editExerciseId) {
-      result = await editExercise(editExerciseId, exercisePayload);
-    } else {
-      result = await addExercise(editLessonId, exercisePayload);
-    }
-
-    if (result.error) {
-      toast.error("Đã có lỗi xảy ra: " + result.error.message);
-    } else {
+      if (result.error) {
+        toast.error("Đã có lỗi xảy ra: " + result.error.message);
+        return;
+      }
       toast.success(editExerciseId ? "Cập nhật thành công" : "Thêm thành công");
       setRefreshExerciseKey((prev) => prev + 1);
+    } catch (error) {
+      toast.error(
+        "Đã có lỗi xảy ra: " +
+          (error instanceof Error ? error.message : "Không xác định"),
+      );
+    } finally {
+      savingExerciseRef.current = false;
+      setIsSavingExercise(false);
     }
   };
 
@@ -237,35 +300,41 @@ export default function LessonsManagerPage() {
   };
 
   const handleAiFillForm = async () => {
+    const content = getLessonValues("content");
     if (!content) return toast.warning("Chưa có nội dung bài học");
     setIsGenerating(true);
     setShowAiMenu(false);
 
-    const res = await generateQuizFromContent(content, 1, exercise);
+    try {
+      const res = await generateQuizFromContent(content, 1, exercise);
 
-    if (!res) {
+      if (!res) {
+        toast.error("Lỗi lấy câu trả lời từ AI");
+        return;
+      }
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
+
+      const filled = firstAiExerciseToForm(res.data);
+      if (!filled) {
+        toast.error(AI_INVALID_MESSAGE);
+        return;
+      }
+      // The result is a new question: filling it over an edited one must not leave the form updating that question.
+      setEditExerciseId(null);
+      resetExercise(filled);
+    } catch {
       toast.error("Lỗi lấy câu trả lời từ AI");
-      return;
-    }
-
-    setIsGenerating(false);
-    if (res.error) return toast.error(res.error);
-
-    if (res.data && res.data.length > 0) {
-      const q = res.data[0];
-      setQuestion(q.question);
-      setOptionA(q.option_a);
-      setOptionB(q.option_b);
-      setOptionC(q.option_c);
-      setOptionD(q.option_d);
-      setCorrectAnswer(q.correct_answer);
-      setExplanation(q.explanation);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
   const handleAiBulkCreate = async () => {
     if (!editLessonId) return toast.error("Chưa lưu bài học");
-    if (!content) return toast.error("Nội dung trống");
+    if (!getLessonValues("content")) return toast.error("Nội dung trống");
 
     setIsBulkConfirmOpen(true);
   };
@@ -276,36 +345,33 @@ export default function LessonsManagerPage() {
     setIsGenerating(true);
     setShowAiMenu(false);
 
-    const res = await generateQuizFromContent(content, 3, exercise);
-    if (!res) {
-      toast.error("Lỗi lấy câu trả lời từ AI");
-      return;
-    }
-
-    if (res.error) {
-      setIsGenerating(false);
-      return toast.error(res.error);
-    }
-
     try {
-      await Promise.all(
-        res.data.map((q: ExerciseData) => {
-          addExercise(editLessonId, {
-            question: q.question,
-            option_a: q.option_a,
-            option_b: q.option_b,
-            option_c: q.option_c,
-            option_d: q.option_d,
-            correct_answer: q.correct_answer,
-            explanation: q.explanation,
-          });
-        })
+      const res = await generateQuizFromContent(
+        getLessonValues("content"),
+        3,
+        exercise,
       );
+      if (!res) {
+        toast.error("Lỗi lấy câu trả lời từ AI");
+        return;
+      }
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
 
-      toast.success("Đã thêm thành công 3 câu hỏi!");
-      setRefreshExerciseKey((prev) => prev + 1);
-    } catch (e) {
-      toast.error("Có lỗi khi lưu vào db" + e);
+      const outcome = await bulkCreateAiExercises(
+        editLessonId,
+        res.data,
+        addExercise,
+      );
+      const { ok, message } = describeAiBulk(outcome);
+      if (ok) toast.success(message);
+      else toast.error(message);
+      // Some of the questions may be saved even when others failed, so the list reloads unless nothing was tried.
+      if (outcome.kind !== "invalid") setRefreshExerciseKey((prev) => prev + 1);
+    } catch {
+      toast.error("Lỗi lấy câu trả lời từ AI");
     } finally {
       setIsGenerating(false);
     }
@@ -362,7 +428,7 @@ export default function LessonsManagerPage() {
   const totalPages = Math.ceil(filteredLessons.length / ITEMS_PER_PAGE);
   const paginatedLessons = filteredLessons.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    currentPage * ITEMS_PER_PAGE,
   );
 
   return (
@@ -594,51 +660,78 @@ export default function LessonsManagerPage() {
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={handleSave}
-                  disabled={activeTab === "exercise"}
+                  type="submit"
+                  form="lesson-form"
+                  disabled={activeTab === "exercise" || isSavingLesson}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                     activeTab === "exercise"
                       ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                      : "bg-green-600 hover:bg-green-500 text-white cursor-pointer"
+                      : "bg-green-600 hover:bg-green-500 text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   }`}
                 >
+                  {isSavingLesson && (
+                    <Loader2 className="animate-spin" size={18} />
+                  )}
                   {editLessonId ? "Lưu thay đổi" : "Thêm bài học"}
                 </button>
-                <X
-                  className="cursor-pointer"
-                  scale={20}
-                  onClick={() => setIsOpenForm(false)}
-                />
+                <button
+                  type="button"
+                  aria-label="Đóng"
+                  onClick={closePanel}
+                  className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-white/10"
+                >
+                  <X size={24} />
+                </button>
               </div>
             </div>
             {activeTab === "infor" && (
-              <div className="w-full flex h-[85vh]">
+              <form
+                id="lesson-form"
+                onSubmit={(e) => handleLessonSubmit(saveLesson)(e)}
+                noValidate
+                className="w-full flex h-[85vh]"
+              >
                 <div className="flex w-full">
-                  <div className="w-1/3 flex flex-col gap-3">
-                    <div className="flex flex-col gap-2">
-                      <label className="font-bold">Tên bài</label>
-                      <input
+                  <div className="w-1/3 flex flex-col gap-3 overflow-y-auto">
+                    <Field
+                      className={LESSON_FIELD}
+                      data-invalid={!!lessonErrors.title}
+                    >
+                      <FieldLabel
+                        htmlFor="lesson-title"
+                        className={LESSON_LABEL}
+                      >
+                        Tên bài
+                      </FieldLabel>
+                      <Input
+                        id="lesson-title"
                         type="text"
-                        name=""
-                        id=""
-                        className="bg-[#2C3039] border border-[#4B5563] rounded-md p-2 focus:outline-none"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
+                        className={LESSON_CONTROL}
+                        aria-invalid={!!lessonErrors.title}
+                        {...registerLesson("title")}
                       />
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <label htmlFor="" className="font-bold">
-                        Khóa học
-                      </label>
-                      <select
-                        name=""
-                        id=""
-                        className="bg-[#2C3039] text-white p-2 rounded border border-[#4B5563] focus:outline-none focus:border-blue-500"
-                        value={selectedCourseId || ""}
-                        onChange={(e) => {
-                          setSelectedCourseId(Number(e.target.value));
-                          setSelectedChapterId(null);
-                        }}
+                      <FieldError
+                        className={FORM_ERROR}
+                        errors={[lessonErrors.title]}
+                      />
+                    </Field>
+                    <Field
+                      className={LESSON_FIELD}
+                      data-invalid={!!lessonErrors.course_id}
+                    >
+                      <FieldLabel
+                        htmlFor="lesson-course"
+                        className={LESSON_LABEL}
+                      >
+                        Khóa học
+                      </FieldLabel>
+                      <NativeSelect
+                        id="lesson-course"
+                        className={cn(LESSON_CONTROL, "pr-9")}
+                        aria-invalid={!!lessonErrors.course_id}
+                        {...registerLesson("course_id", {
+                          onChange: () => setLessonValue("chapter_id", ""),
+                        })}
                       >
                         <option value="">Chọn khóa học</option>
                         {courses.map((course) => (
@@ -646,20 +739,29 @@ export default function LessonsManagerPage() {
                             {course.name}
                           </option>
                         ))}
-                      </select>
-                    </div>
-                    <div className="flex flex-col  gap-2">
-                      <label htmlFor="" className="font-bold">
+                      </NativeSelect>
+                      <FieldError
+                        className={FORM_ERROR}
+                        errors={[lessonErrors.course_id]}
+                      />
+                    </Field>
+                    <Field
+                      className={LESSON_FIELD}
+                      data-invalid={!!lessonErrors.chapter_id}
+                    >
+                      <FieldLabel
+                        htmlFor="lesson-chapter"
+                        className={LESSON_LABEL}
+                      >
                         Chương
-                      </label>
-                      <select
-                        name=""
-                        id=""
-                        className="bg-[#2C3039] border border-[#4B5563] text-white p-2 rounded focus:outline-none focus:border-blue-500"
-                        value={selectedChapterId || ""}
-                        onChange={(e) =>
-                          setSelectedChapterId(Number(e.target.value))
-                        }
+                      </FieldLabel>
+                      {/* The chapters load after the course is chosen; a new key lets the select take its stored value once its options exist. */}
+                      <NativeSelect
+                        key={chapters.map((chapter) => chapter.id).join(",")}
+                        id="lesson-chapter"
+                        className={cn(LESSON_CONTROL, "pr-9")}
+                        aria-invalid={!!lessonErrors.chapter_id}
+                        {...registerLesson("chapter_id")}
                       >
                         <option value="">Chọn chương</option>
                         {chapters.map((chapter) => (
@@ -667,189 +769,219 @@ export default function LessonsManagerPage() {
                             {chapter.title}
                           </option>
                         ))}
-                      </select>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <label htmlFor="" className="font-bold">
-                        Đường dẫn
-                      </label>
-                      <input
-                        type="text"
-                        name=""
-                        id=""
-                        className="bg-[#2C3039] border border-[#4B5563] rounded-md p-2 focus:outline-none"
-                        value={slug}
-                        onChange={(e) => setSlug(e.target.value)}
+                      </NativeSelect>
+                      <FieldError
+                        className={FORM_ERROR}
+                        errors={[lessonErrors.chapter_id]}
                       />
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <label htmlFor="" className="font-bold">
-                        Đường dẫn video
-                      </label>
-                      <input
+                    </Field>
+                    <Field
+                      className={LESSON_FIELD}
+                      data-invalid={!!lessonErrors.slug}
+                    >
+                      <FieldLabel
+                        htmlFor="lesson-slug"
+                        className={LESSON_LABEL}
+                      >
+                        Đường dẫn
+                      </FieldLabel>
+                      <Input
+                        id="lesson-slug"
                         type="text"
-                        name=""
-                        id=""
-                        className="bg-[#2C3039] border border-[#4B5563] rounded-md p-2 focus:outline-none"
-                        value={videoUrl}
-                        onChange={(e) => setVideoUrl(e.target.value)}
+                        className={LESSON_CONTROL}
+                        aria-invalid={!!lessonErrors.slug}
+                        {...registerLesson("slug")}
                       />
-                    </div>
+                      <FieldError
+                        className={FORM_ERROR}
+                        errors={[lessonErrors.slug]}
+                      />
+                    </Field>
+                    <Field
+                      className={LESSON_FIELD}
+                      data-invalid={!!lessonErrors.video_url}
+                    >
+                      <FieldLabel
+                        htmlFor="lesson-video"
+                        className={LESSON_LABEL}
+                      >
+                        Đường dẫn video
+                      </FieldLabel>
+                      <Input
+                        id="lesson-video"
+                        type="text"
+                        className={LESSON_CONTROL}
+                        aria-invalid={!!lessonErrors.video_url}
+                        {...registerLesson("video_url")}
+                      />
+                      <FieldError
+                        className={FORM_ERROR}
+                        errors={[lessonErrors.video_url]}
+                      />
+                    </Field>
 
-                    <div className="flex flex-col gap-2">
-                      <label htmlFor="" className="font-bold">
+                    <Field
+                      className={LESSON_FIELD}
+                      data-invalid={!!lessonErrors.order_index}
+                    >
+                      <FieldLabel
+                        htmlFor="lesson-order"
+                        className={LESSON_LABEL}
+                      >
                         Số thứ tự
-                      </label>
-                      <input
+                      </FieldLabel>
+                      <Input
+                        id="lesson-order"
                         type="number"
-                        name=""
-                        id=""
-                        className="bg-[#2C3039] border border-[#4B5563] rounded-md p-2 focus:outline-none"
-                        value={orderIndex}
-                        onChange={(e) =>
-                          setOrderIndex(
-                            e.target.value === "" ? "" : Number(e.target.value)
-                          )
-                        }
+                        className={LESSON_CONTROL}
+                        aria-invalid={!!lessonErrors.order_index}
+                        {...registerLesson("order_index")}
                       />
-                    </div>
+                      <FieldError
+                        className={FORM_ERROR}
+                        errors={[lessonErrors.order_index]}
+                      />
+                    </Field>
                   </div>
                   <div className="w-2/3 bg-[#364153] p-2 rounded-r-md flex flex-col gap-2">
                     <div className="flex justify-between items-center">
-                      <p className="font-bold">Viết Content MDX </p>
+                      <p className="font-bold">Viết Content MDX </p>
                     </div>
 
                     <div className="flex-1 p-0 overflow-hidden">
-                      <MdxEditor
-                        value={content}
-                        onChange={(val) => setContent(val || "")}
+                      <Controller
+                        control={lessonControl}
+                        name="content"
+                        render={({ field }) => (
+                          <MdxEditor
+                            value={field.value}
+                            onChange={(val) => field.onChange(val || "")}
+                          />
+                        )}
                       />
                     </div>
                   </div>
                 </div>
-              </div>
+              </form>
             )}
             {activeTab === "exercise" && (
               <div className="w-full bg-[#191C24] flex flex-col items-center gap-3 p-4 rounded-xl overflow-auto">
-                <div className="flex justify-between w-1/2 items-center">
-                  <p className="font-bold">
-                    {editExerciseId ? "Cập nhật câu hỏi" : "Thêm câu hỏi mới"}
-                  </p>
+                <form
+                  onSubmit={(e) => handleExerciseSubmit(saveExercise)(e)}
+                  noValidate
+                  className="contents"
+                >
+                  <div className="flex justify-between w-1/2 items-center">
+                    <p className="font-bold">
+                      {editExerciseId ? "Cập nhật câu hỏi" : "Thêm câu hỏi mới"}
+                    </p>
 
-                  <button
-                    onClick={handleInActiveEditExerciseForm}
-                    className={`${
-                      editExerciseId ? "display" : "hidden"
-                    } bg-blue-500 p-2 rounded-md cursor-pointer hover:bg-blue-700`}
+                    <button
+                      type="button"
+                      onClick={handleInActiveEditExerciseForm}
+                      className={`${
+                        editExerciseId ? "display" : "hidden"
+                      } bg-blue-500 p-2 rounded-md cursor-pointer hover:bg-blue-700`}
+                    >
+                      Thêm bài tập
+                    </button>
+                  </div>
+                  <Field
+                    className={cn(EXERCISE_FIELD, "w-1/2")}
+                    data-invalid={!!exerciseErrors.question}
                   >
-                    Thêm bài tập
-                  </button>
-                </div>
-                <div className="w-1/2">
-                  <input
-                    className="w-full p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
-                    type="text"
-                    placeholder="Nhập nội dung câu hỏi?"
-                    value={question}
-                    onChange={(e) => setQuestion(e.target.value)}
-                  />
-                </div>
-                <div className="grid grid-cols-2 w-1/2 gap-3">
-                  <div className="flex flex-col gap-2">
-                    <span className="text-white text-md uppercase font-bold">
-                      a
-                    </span>
-                    <input
+                    <Input
+                      className={EXERCISE_CONTROL}
                       type="text"
-                      name=""
-                      id=""
-                      placeholder="Đáp Án A"
-                      className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
-                      value={optionA}
-                      onChange={(e) => setOptionA(e.target.value)}
+                      placeholder="Nhập nội dung câu hỏi?"
+                      aria-label="Nội dung câu hỏi"
+                      aria-invalid={!!exerciseErrors.question}
+                      {...registerExercise("question")}
                     />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {" "}
-                    <span className="text-white text-md uppercase font-bold">
-                      b
-                    </span>
-                    <input
-                      type="text"
-                      name=""
-                      id=""
-                      placeholder="Đáp Án B"
-                      className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
-                      value={optionB}
-                      onChange={(e) => setOptionB(e.target.value)}
+                    <FieldError
+                      className={FORM_ERROR}
+                      errors={[exerciseErrors.question]}
                     />
+                  </Field>
+                  <div className="grid grid-cols-2 w-1/2 gap-3">
+                    {EXERCISE_OPTIONS.map((letter) => (
+                      <Field
+                        key={letter}
+                        className={cn(EXERCISE_FIELD, "gap-2")}
+                        data-invalid={!!exerciseErrors[`option_${letter}`]}
+                      >
+                        <span className="text-white text-md uppercase font-bold">
+                          {letter}
+                        </span>
+                        <Input
+                          type="text"
+                          placeholder={`Đáp Án ${letter.toUpperCase()}`}
+                          aria-label={`Đáp án ${letter.toUpperCase()}`}
+                          className={EXERCISE_CONTROL}
+                          aria-invalid={!!exerciseErrors[`option_${letter}`]}
+                          {...registerExercise(`option_${letter}`)}
+                        />
+                        <FieldError
+                          className={FORM_ERROR}
+                          errors={[exerciseErrors[`option_${letter}`]]}
+                        />
+                      </Field>
+                    ))}
                   </div>
-                  <div className="flex flex-col gap-2">
-                    {" "}
-                    <span className="text-white text-md uppercase font-bold">
-                      C
-                    </span>
-                    <input
-                      type="text"
-                      name=""
-                      id=""
-                      placeholder="Đáp Án C"
-                      className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
-                      value={optionC}
-                      onChange={(e) => setOptionC(e.target.value)}
-                    />
+                  <div className="flex gap-2 item-center w-1/2">
+                    <Field
+                      className={cn(EXERCISE_FIELD, "w-1/3")}
+                      data-invalid={!!exerciseErrors.correct_answer}
+                    >
+                      <NativeSelect
+                        aria-label="Đáp án đúng"
+                        className={cn(EXERCISE_CONTROL, "pr-9")}
+                        aria-invalid={!!exerciseErrors.correct_answer}
+                        {...registerExercise("correct_answer")}
+                      >
+                        <option value="">Chọn đáp án đúng</option>
+                        {EXERCISE_OPTIONS.map((letter) => (
+                          <option value={letter} key={letter}>
+                            {letter}
+                          </option>
+                        ))}
+                      </NativeSelect>
+                      <FieldError
+                        className={FORM_ERROR}
+                        errors={[exerciseErrors.correct_answer]}
+                      />
+                    </Field>
+                    <Field
+                      className={cn(EXERCISE_FIELD, "w-2/3")}
+                      data-invalid={!!exerciseErrors.explanation}
+                    >
+                      <Input
+                        type="text"
+                        placeholder="Giải thích tại sao đúng?"
+                        aria-label="Giải thích"
+                        className={EXERCISE_CONTROL}
+                        aria-invalid={!!exerciseErrors.explanation}
+                        {...registerExercise("explanation")}
+                      />
+                      <FieldError
+                        className={FORM_ERROR}
+                        errors={[exerciseErrors.explanation]}
+                      />
+                    </Field>
                   </div>
-                  <div className="flex flex-col gap-2">
-                    {" "}
-                    <span className="text-white text-md uppercase font-bold">
-                      D
-                    </span>
-                    <input
-                      type="text"
-                      name=""
-                      id=""
-                      placeholder="Đáp Án D"
-                      className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
-                      value={optionD}
-                      onChange={(e) => setOptionD(e.target.value)}
-                    />
+                  <div className="w-1/2 flex items-center justify-center">
+                    <button
+                      type="submit"
+                      disabled={isSavingExercise}
+                      className="bg-blue-500 p-2 font-bold w-full rounded-md cursor-pointer hover:bg-blue-700 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSavingExercise && (
+                        <Loader2 className="animate-spin" size={18} />
+                      )}
+                      {editExerciseId ? "Cập nhật câu hỏi" : "Thêm câu hỏi"}
+                    </button>
                   </div>
-                </div>
-                <div className="flex gap-2 item-center w-1/2">
-                  <select
-                    name=""
-                    id=""
-                    className="w-1/3 p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none"
-                    value={correctAnswer}
-                    onChange={(e) => setCorrectAnswer(e.target.value)}
-                  >
-                    <option value="">Chọn đáp án đúng</option>
-                    {[{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }].map(
-                      (o) => (
-                        <option value={o.id} key={o.id}>
-                          {o.id}
-                        </option>
-                      )
-                    )}
-                  </select>
-                  <input
-                    type="text"
-                    name=""
-                    id=""
-                    placeholder="Giải thích tại sao đúng?"
-                    className="p-2 bg-[#222732] rounded-md border border-gray-400 focus:outline-none w-2/3"
-                    value={explanation || ""}
-                    onChange={(e) => setExplanation(e.target.value)}
-                  />
-                </div>
-                <div className="w-1/2 flex items-center justify-center">
-                  <button
-                    onClick={handleExerciseSave}
-                    className="bg-blue-500 p-2 font-bold w-full rounded-md cursor-pointer hover:bg-blue-700"
-                  >
-                    {editExerciseId ? "Cập nhật câu hỏi" : "Thêm câu hỏi"}
-                  </button>
-                </div>
+                </form>
                 <div className="border w-1/2 border-gray-500"></div>
                 <div className="w-1/2 flex flex-col gap-2">
                   <h1 className="font-bold text-md">

@@ -25,6 +25,31 @@ Future initiatives retain their transferred scope and need separate approval. QE
   - Real provider delivery (Gmail) stays out of scope, as QE-F2 says.
 - Target program: quality-engineering.
 
+## QE-F7: Classify tests by layer, then by area
+
+- Status: Recorded 2026-11-04 by the Owner; deferred until its own initiative is approved.
+- Direction:
+  - Today `__tests__/` has three flat top folders named after Vitest projects or the Playwright suite (`unit`, `rls`, `e2e`) and no rule below them. About half of `unit/` tests the test tooling, not the app (`test-stack-*`, `server-guard`, `e2e-env`, `local-stack`, `known-bug`, `monaco-copy`, `docs-only`). `rls/` is really the integration layer: it also holds RPC (`is_admin`, `[P11]`), Auth (`[P13]` in `profiles.test.ts`) and tooling tests (`fixture-ownership`, `setup`, `e2e-preflight`). `e2e/` mixes specs with harness files.
+  - Target: layers first, `unit` (with `unit/components/` from QE-F8), `integration` (today's `rls`) and `e2e`, plus a separate branch for tests of the test tooling. Below a layer, unit tests follow the source path (`unit/lib/schemas/...`, `unit/app/admin/lessons/...`) and integration tests follow the app area (profiles, content, coupons...), not the mechanism (RLS, RPC, Auth), so one area's guarantees stay together. No empty category folders.
+  - Migrate gradually: new tests follow the rule at once; an existing file moves when a task touches it. Renaming `rls` touches `vitest.config.mts`, the rls global setup, `npm test`, CI and `test-quality-strategy`, so it is an initiative of its own. The techstack migration (ADR 0001) rewrites most Supabase integration tests, so do not reshape them more than the rule needs.
+- Target program: quality-engineering.
+
+## QE-F8: Component tests for client components under `unit/components/`
+
+- Status: Recorded 2026-11-04 by the Owner; deferred until its own initiative is approved, preferably before AF-U6.
+- Direction:
+  - Add Testing Library and a DOM environment (`jsdom` or `happy-dom`) for client-component logic: field errors and `aria-invalid`, an error clearing after a fix, no request for an invalid form, disabled states, the duplicate-submit guard (a deferred save submitted twice is called once). Files sit under `unit/components/` in their own Vitest project with the DOM environment and setup; `npm run test:unit` runs it with the rest of `unit`, with no Docker. New packages need the Owner's grant (`dependency-updates`).
+  - Limits: Vitest renders synchronous Server and Client Components but not `async` Server Components (Next.js Vitest guide), so data-loading `page.tsx` files stay in e2e. jsdom has no layout engine: Radix `AlertDialog` usually works, `Select` needs polyfills, and anything that depends on size, position or focus geometry stays in the browser. Action and Supabase calls are replaced at a boundary (a save passed as a parameter, as `saveAiExercises` does); the behavior under test is never mocked. Component tests do not replace RLS, server-action or persistence checks, nor the visual review.
+  - Start small, as its own initiative and not inside AF-U6 (Codex-gated, admin roles and passwords): set up the tooling and cover one existing form, `CourseFormDialog` (rows C1–C4, D1, and AF-P6). Extend to other forms only once that runs fast and stable.
+  - Moving e2e rows: a row whose assertions are client-only moves to a component test and the e2e row is deleted, form by form when a task touches it. Each form keeps at least one successful and one rejected e2e row proving the wiring (action, persistence, server refusal, permission, upload). Before deleting a row, show the replacement fails when the logic is broken, and record the mapping (for example `C2 -> unit/components/CourseFormDialog.test.tsx`). This changes the app-foundation minimum of field-level e2e rows, so the Owner approves the rule change in `test-quality-strategy` and the app-foundation master plan first. Most e2e time is likely fixed cost (build, stack, browser); measure any saving under QE-F3 rather than promising one.
+- Target program: quality-engineering.
+
+## QE-F9: Catalog tests for the database schema
+
+- Status: Recorded 2026-11-04 by the Owner; deferred until its own initiative is approved.
+- Direction: a few whole-schema assertions in the integration layer, written like the existing catalog checks (`has_function_privilege` in `[P10]` of `__tests__/rls/profiles.test.ts` and in `community.test.ts`): every `public` table has RLS enabled; no `security definer` function is executable by `anon` or `authenticated` outside an explicit allowlist with reasons; named constraints the app relies on exist (a unique `courses.slug` once BL-P12 adds it). They fail on the migration that forgets one. No pgTAP or `supabase test db`, since the techstack migration (ADR 0001) replaces Supabase.
+- Target program: quality-engineering.
+
 ## Closed
 
 - QE-F5 — Done: QE-U3 runs `rls` and `e2e` on a separate `devspace-test` stack (ports 55320–55329) that the test commands start, check and reset, beside the dev stack (PR #50)

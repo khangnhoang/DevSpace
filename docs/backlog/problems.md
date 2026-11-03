@@ -79,11 +79,27 @@ Problems that no open program owns. This is not a program: it has no plan and no
 
 ### BL-P11: local Auth allows 6-character passwords while hosted requires 8
 
-- Status: Open (2026-11-03).
-- Problem: `supabase/config.toml` sets `minimum_password_length = 6`, while the Owner set the hosted minimum to 8 on 2026-11-03. Local tests and manual QA accept passwords that hosted Auth refuses, so a local pass does not prove the hosted rule.
+- Status: Fixed locally, awaiting delivery (2026-11-04): `minimum_password_length = 8`, and `[P13]` in `__tests__/rls/profiles.test.ts` proves a 7-character sign-up is refused and an 8-character one accepted (it fails with the old value 6). No fixture used a shorter password. The setting reaches a running stack only after a restart (QE-P4); the dev stack needs `npx supabase stop` and `npx supabase start` once.
+- Problem: `supabase/config.toml` set `minimum_password_length = 6`, while the Owner set the hosted minimum to 8 on 2026-11-03. Local tests and manual QA accept passwords that hosted Auth refuses, so a local pass does not prove the hosted rule.
 - Evidence: the Owner reported the hosted change on 2026-11-03; `supabase/config.toml:183` read at `250d0a0`. The seed users' password is longer than 8 characters.
 - Direction: small task after AF-U4 merges: set the local minimum to 8, run `npm test` and `npm run test:e2e` (the config change resets the test stack), and fix any fixture that creates a shorter password.
 - Exit condition: local and hosted Auth share the minimum password length of 8, and the test suites pass.
+
+### BL-P12: course and lesson slugs have no format rule, and a course slug is not unique
+
+- Status: Open (2026-11-04, Owner decision while planning AF-U5: the AF-U5 forms add no slug rule, and this is recorded instead).
+- Problem: the admin course and lesson forms accept any non-blank slug (spaces, capitals, Vietnamese accents, `/`), which then becomes the `/course/<slug>` or `/learn/<course>/<lesson>` URL. `lessons.slug` is unique (`lessons_slug_key`), but `courses.slug` has no unique constraint, and the course readers use `.eq("slug", …).single()` (`lib/supabase.ts:60-63`), so a second course with the same slug makes its page fail.
+- Evidence: `supabase/migrations/20261021000000_baseline.sql` (only `lessons_slug_key`, read at `cc2d5ff`); `app/admin/courses/coursesclient.tsx` and `app/admin/lessons/page.tsx` send the typed slug unchanged. Hosted slugs were not read (reading data rows needs the Owner's approval).
+- Direction: first read the hosted slugs (Owner-approved read) to see whether any existing slug breaks a kebab-case rule or is duplicated; then a migration with a unique constraint on `courses.slug` (Codex-gated, `supabase-migration`) and a slug rule in the admin schemas that new and edited slugs follow, with a plan for any existing slug that does not. Possibly with the techstack migration's schema review (BL-F11).
+- Exit condition: two courses cannot share a slug, and a slug the forms accept is a valid URL segment, or the Owner drops it.
+
+### BL-P13: the admin chapters page always names "HTML & CSS Cơ bản" as the current course
+
+- Status: Open (2026-11-04, found by Main during AF-U5 manual QA; outside AF-U5, which changed only the chapter form).
+- Problem: the "Khóa học hiện tại" card on `/admin/chapters` shows a hard-coded course name, so it disagrees with the course chosen in "Chuyển khóa học" and names a course even before one is chosen.
+- Evidence: `app/admin/chapters/page.tsx` renders the literal `HTML & CSS Cơ bản` (also at `1cab557`, before AF-U5); on the dev stack with course 1 ("Làm quen với HTML") selected, the card still read "HTML & CSS Cơ bản".
+- Direction: derive the card from the selected course (or an empty-state text when none is chosen); a small UI fix with one browser check.
+- Exit condition: the card names the selected course, or says none is chosen.
 
 ## Resolved
 

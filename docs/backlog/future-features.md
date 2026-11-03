@@ -35,6 +35,12 @@ Direction the Owner has set that is outside the current scope. Work that is in s
   - Coupon reservation against overselling is already decided in security-hotfix `plan-h2.md` (D1, B12, B13) and is not part of this entry.
 - Target program: the techstack migration (not opened yet); the `role` and `payments.status` checks may move earlier with security-hotfix H2-2b.
 
+## BL-F12: Prettier for the files a change touches
+
+- Status: Planned after AF-U4 merges (Owner decision, 2026-11-03).
+- Direction: add Prettier as a pinned devDependency (dependency-updates) with a near-default config (`printWidth` 80, `endOfLine: "auto"` because the repo mixes CRLF and LF) and a `.prettierignore` for build output, `supabase/`, generated shadcn files and the vendored skill; add `npm run format` and `npm run format:check`; record the commands in `AGENTS.md` and add a format step to the delivery flow (implement, format the changed files, self-review, test, commit) in the owning skill. Existing code is not reformatted in bulk, and CI gets no format check (Owner decision: the goal is that the files the Owner reads are formatted, not history).
+- Target program: none yet (backlog; small task).
+
 ## Closed
 
 - BL-F6 — Moved to [quality-engineering](../programs/quality-engineering/future-features.md)

@@ -26,6 +26,18 @@ test("[L4] sees their name and email on the profile page", async ({ page }) => {
   await expect(page.getByText(ACCOUNTS.learner.email)).toBeVisible();
 });
 
+test("[L7] the profile card hides empty details, invites the learner to add them and opens the edit dialog", async ({ page }) => {
+  await page.goto("/profile");
+  await expect(page.getByText("Thêm giới tính, ngày sinh và nơi ở để hoàn thiện hồ sơ của bạn.")).toBeVisible();
+  await expect(page.getByText("Trống")).toHaveCount(0);
+  await expect(page.getByText("Giới tính:")).toHaveCount(0);
+  await expect(page.getByText("Ngày sinh:")).toHaveCount(0);
+  await expect(page.getByText("Nơi ở:")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Chỉnh sửa hồ sơ" }).click();
+  await expect(page.getByRole("heading", { name: "Cập nhật hồ sơ" })).toBeVisible();
+});
+
 // The only write path of the suite. The cleanup runs even when the test fails (G5).
 test.describe("enrolling in a free course", () => {
   test.beforeEach(async () => { await prepareLearnerEnrollment(FREE_COURSE_ID); });

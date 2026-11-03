@@ -116,6 +116,23 @@ test.describe("profile form", () => {
     expect(await avatarObjectNames()).toEqual(objectsBefore);
   });
 
+  test("[F13] the profile card shows the gender, date of birth and province the learner saved, and nothing else", async ({ page }) => {
+    await acquireStudentProfile();
+    await openProfileDialog(page);
+    await page.getByLabel("Giới tính").selectOption({ label: "Nữ" });
+    await page.getByLabel("Ngày sinh").fill("2000-01-31");
+    await page.getByLabel("Tỉnh / Thành phố").selectOption({ label: "Hà Nội" });
+    await page.getByRole("button", { name: "Lưu thay đổi" }).click();
+    await expect(page.getByRole("heading", { name: "Cập nhật hồ sơ" })).toBeHidden();
+
+    await expect(page.getByText("Giới tính:")).toBeVisible();
+    await expect(page.getByText("Nữ", { exact: true })).toBeVisible();
+    await expect(page.getByText("31/01/2000")).toBeVisible();
+    await expect(page.getByText("Hà Nội", { exact: true })).toBeVisible();
+    await expect(page.getByText("Trống")).toHaveCount(0);
+    await expect(page.getByText("Thêm giới tính, ngày sinh và nơi ở")).toHaveCount(0);
+  });
+
   // The one row that really uploads: the saved avatar is a local Storage URL, which next/image renders only when
   // next.config.ts lists the local Storage path (lib/image-hosts.ts) and the optimizer may fetch the local address.
   test("[F12] a really uploaded avatar renders on the profile card and the object is removed afterwards", async ({ page }) => {

@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { authFile } from "./accounts";
 import { backgroundOf, confirmDialogOf, expectDismissKeepsObject, expectFitsPhone, expectKeyboardFlow, expectOnTop, recordMutations } from "./confirm-dialog";
 import { expect, test } from "./fixtures";
@@ -99,6 +99,7 @@ test("[T6] the transaction history filter is labelled, filters by status from mo
   const history = page.getByRole("table");
   // The seed gives the student one approved payment and no other order.
   await expect(history).toContainText("Thành công");
+  await expect(history).toContainText("199.000đ");
 
   await filter.click();
   await page.getByRole("option", { name: "Chờ duyệt" }).click();
@@ -125,11 +126,23 @@ test("[T6] the transaction history filter is labelled, filters by status from mo
   await page.keyboard.press("Escape");
   await page.emulateMedia({ colorScheme: "light" });
 
-  // AF-P5: below md the heading and the filter start at the table's left edge instead of centring.
+  // AF-P5: below md the heading and the filter start at the left edge of the history, which is a list of blocks there
+  // (the table is hidden), instead of centring. The filter still narrows the blocks.
   await page.setViewportSize({ width: 375, height: 812 });
-  const [headingBox, filterBox, historyBox] = await Promise.all([heading.boundingBox(), filter.boundingBox(), history.boundingBox()]);
-  expect(headingBox && historyBox && Math.abs(headingBox.x - historyBox.x) < 2, "the heading aligns with the table").toBe(true);
-  expect(filterBox && historyBox && filterBox.x - historyBox.x < 40, "the filter starts near the table's left edge").toBe(true);
+  const blocks = page.getByRole("list", { name: "Danh sách giao dịch" });
+  await expect(blocks).toContainText("Thành công");
+  const [headingBox, filterBox, blocksBox] = await Promise.all([heading.boundingBox(), filter.boundingBox(), blocks.boundingBox()]);
+  expect(headingBox && blocksBox && Math.abs(headingBox.x - blocksBox.x) < 2, "the heading aligns with the blocks").toBe(true);
+  expect(filterBox && blocksBox && filterBox.x - blocksBox.x < 40, "the filter starts near the blocks' left edge").toBe(true);
+
+  await filter.click();
+  await page.getByRole("option", { name: "Chờ duyệt" }).click();
+  await expect(filter).toHaveText("Chờ duyệt");
+  await expect(page.getByText("Không tìm thấy giao dịch nào.").filter({ visible: true })).toBeVisible();
+  await expect(blocks).toHaveCount(0);
+  await filter.click();
+  await page.getByRole("option", { name: "Thành công" }).click();
+  await expect(blocks).toContainText("Thành công");
 });
 
 // The student is enrolled in course 2 with lesson 3 done and lesson 4 open.
@@ -175,4 +188,46 @@ test("[T8] more than four courses show four in two columns, in progress first, a
   await collapse.click();
   await expect(cards).toHaveCount(4);
   await expect(expand).toBeVisible();
+});
+
+const overflows = (page: Page, selector: string) => page.locator(selector).first().evaluate((el) => el.scrollWidth > el.clientWidth);
+
+test("[T9] at 375px the page and the history do not scroll sideways, the payment reads 199.000đ with a date without seconds and the courses start on the first screen", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/profile");
+  const blocks = page.getByRole("list", { name: "Danh sách giao dịch" });
+  await expect(blocks).toContainText("199.000đ");
+  await expect(blocks).toContainText("Thành công");
+  expect(await blocks.innerText()).toMatch(/\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}(?!:\d)/);
+
+  expect(await overflows(page, "html"), "the page scrolls sideways").toBe(false);
+  // The frame clips what overflows it, so check that every part of every block sits inside the list.
+  expect(await blocks.evaluate((list) => Array.from(list.querySelectorAll("*")).some((el) => el.getBoundingClientRect().right > list.getBoundingClientRect().right + 1)), "a block part sticks out of the history").toBe(false);
+
+  const heading = page.getByRole("heading", { name: "Khóa học của tôi" });
+  const box = await heading.boundingBox();
+  expect(box && box.y < 812, "the courses heading starts within the first 812px").toBe(true);
+});
+
+test("[T10] at 768px the name and the edit button do not wrap", async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await page.goto("/profile");
+  const button = page.getByRole("button", { name: "Chỉnh sửa hồ sơ" });
+  const name = page.getByRole("heading", { level: 2, name: "Lê Minh Học Viên" });
+  await expect(button).toBeVisible();
+  // One line of text each: the label is not split across lines (text nodes only, the icon sits at its own height).
+  const lines = (locator: Locator) => locator.evaluate((el) => {
+    const tops = new Set<number>();
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!node.textContent?.trim()) continue;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      for (const rect of Array.from(range.getClientRects())) tops.add(Math.round(rect.top));
+    }
+    return tops.size;
+  });
+  expect(await lines(button), "the button label wraps").toBeLessThanOrEqual(1);
+  expect(await lines(name), "the name wraps").toBe(1);
+  expect(await overflows(page, "html"), "the page scrolls sideways").toBe(false);
 });

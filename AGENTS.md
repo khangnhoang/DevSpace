@@ -20,7 +20,7 @@ Roadmap, in this order: (1) agent-workflow (rules, skills, docs system), (2) inf
 
 ## Code map
 
-- `components/ui/`: shadcn primitives (`button`, `alert-dialog`, `input`, `textarea`, `label`, `field`, `native-select`, `select`, `separator`) added with `npx shadcn add`; `lib/schemas/`: the Zod schemas of the server actions and of the learner forms; `app/components/ConfirmDialog.tsx` is the confirm dialog of the destructive and payment actions in app-foundation Appendix A. Edits to generated files: [frontend-design](.claude/skills/frontend-design/SKILL.md).
+- `components/ui/`: shadcn primitives (`button`, `alert-dialog`, `input`, `textarea`, `label`, `field`, `native-select`, `select`, `separator`) added with `npx shadcn add`; `lib/schemas/`: the Zod schemas of the server actions and of the learner and auth forms; `app/components/ConfirmDialog.tsx` is the confirm dialog of the destructive and payment actions in app-foundation Appendix A. Edits to generated files: [frontend-design](.claude/skills/frontend-design/SKILL.md).
 - `app/(main)`: learner and public pages (`course`, `learn`, `profile`, `try_it`, `login`). `app/admin`: admin pages.
 - `app/action/*.ts`: server actions. Each one is a public POST endpoint.
 - `lib/auth.server.ts`: `requireUser`, `requireAdmin` and course-access checks. `lib/supabase.server.ts` (caller session), `lib/supabase.admin.ts` (service role, server-only).

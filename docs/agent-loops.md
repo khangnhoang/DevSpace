@@ -47,7 +47,7 @@ If any condition fails, use the planned flow. Steps: size, implement, verify, se
 ## Loop 1: checkpoint
 
 - **Trigger:** an implementation task is done, before the turn ends. Owner: `git-pr-workflow` plus any domain skill touched.
-- **Universal minimum review**, for every actual change: only the intended scope changed, no unrelated formatting, no secrets, debug code or conflict markers, claims match behavior, verification fits the risk, staged, unstaged and untracked content is known.
+- **Universal minimum review**, for every actual change: only the intended scope changed, no unrelated formatting (Prettier on a touched file is related: `git-pr-workflow`, Format the changed files), no secrets, debug code or conflict markers, claims match behavior, verification fits the risk, staged, unstaged and untracked content is known.
 - **Report:** changed files and why, checks actually run with results, remaining risks, gaps and manual QA, a `Tự review` block, a proposed English Conventional Commit message, and the git and remote state.
 - **Stop:** do not stage, commit, push, open a PR, merge, deploy or touch a remote service unless the Owner granted that action.
 

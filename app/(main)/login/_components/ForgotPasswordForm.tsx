@@ -39,6 +39,7 @@ export default function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
           type="button"
           variant="ghost"
           onClick={onBack}
+          disabled={pending}
           className="mb-1 h-auto w-full cursor-pointer justify-start gap-1 rounded-none p-0 text-xs font-normal text-gray-500 hover:bg-transparent hover:text-blue-600"
         >
           <ArrowLeft className="size-3" /> Quay lại đăng nhập

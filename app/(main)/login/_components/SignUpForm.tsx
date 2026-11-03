@@ -22,12 +22,15 @@ import { submitSignUp, type AuthMessage } from "../_lib/auth-outcomes";
 
 type Props = { onSwitchView: (view: "login") => void };
 
-const SwitchToSignIn = ({ onSwitchView }: Props) => (
+// Disabled while a sign-up is pending: leaving the step then coming back would mount a fresh form with a fresh
+// in-flight flag and could send a second request while the first is still held.
+const SwitchToSignIn = ({ onSwitchView, disabled = false }: Props & { disabled?: boolean }) => (
   <div className="mt-6 text-center">
     <button
       type="button"
       onClick={() => onSwitchView("login")}
-      className="cursor-pointer text-sm text-gray-500 hover:text-blue-600 hover:underline"
+      disabled={disabled}
+      className="cursor-pointer text-sm text-gray-500 hover:text-blue-600 hover:underline disabled:cursor-default disabled:opacity-50"
     >
       Đã có tài khoản? Đăng nhập ngay
     </button>
@@ -161,6 +164,7 @@ function ProfileStep({
           type="button"
           variant="ghost"
           onClick={onBack}
+          disabled={pending}
           className="mb-1 h-auto w-full cursor-pointer justify-start gap-1 rounded-none p-0 text-xs font-normal text-gray-500 hover:bg-transparent hover:text-blue-600"
         >
           <ArrowLeft className="size-3" /> Quay lại bước trước
@@ -214,7 +218,7 @@ function ProfileStep({
         Hoàn tất đăng ký
       </AuthSubmitButton>
 
-      <SwitchToSignIn onSwitchView={onSwitchView} />
+      <SwitchToSignIn onSwitchView={onSwitchView} disabled={pending} />
     </form>
   );
 }

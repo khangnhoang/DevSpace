@@ -46,6 +46,38 @@ const submitTwice = (control: Locator) =>
     form.requestSubmit();
   });
 
+// The duplicate-submit guard (AC9), in two phases that each start from an idle form: a repeated Enter, then two
+// `requestSubmit()` calls in one task. The second phase is the one that proves the in-flight ref: both submit events
+// arrive before React renders the disabled button. Each phase must hold exactly one more request, disable the button
+// (and the controls that leave the form), and recover when the request is aborted.
+async function expectOneRequestPerSubmit(
+  page: Page,
+  held: Route[],
+  phases: {
+    button: Locator;
+    pressEnterTwice: () => Promise<unknown>;
+    requestSubmitTwice: () => Promise<unknown>;
+    whileHeld?: () => Promise<void>;
+    recovered: () => Promise<void>;
+  },
+) {
+  const sends = [phases.pressEnterTwice, phases.requestSubmitTwice];
+  for (const [index, send] of sends.entries()) {
+    await send();
+    await expect.poll(() => held.length).toBe(index + 1);
+    await expect(phases.button).toBeDisabled();
+    await phases.whileHeld?.();
+    // A second request of the same submit would have been sent by the next frame.
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve(null))));
+    expect(held, `one request for submit ${index + 1}`).toHaveLength(index + 1);
+
+    await held[index].abort("failed");
+    await phases.recovered();
+    await expect(phases.button).toBeEnabled();
+  }
+  expect(held, "two submits, two requests").toHaveLength(2);
+}
+
 test.describe("sign-in form", () => {
   test("[AU1] a wrong password shows the generic message, keeps the email and lets the right password sign in", async ({ page }) => {
     await page.goto("/login");
@@ -84,24 +116,26 @@ test.describe("sign-in form", () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
-  test("[AU9] sign in: a repeated Enter and a repeated submit send one request; an aborted request re-enables the form", async ({ page }) => {
+  test("[AU9] sign in: a repeated Enter and a repeated submit each send one request; the switch links are disabled while it is held", async ({ page }) => {
     await page.goto("/login");
     const held = await holdRequests(page, TOKEN);
     await emailBox(page).fill(ACCOUNTS.learner.email);
     await passwordBox(page).fill(ACCOUNTS.learner.password);
 
-    await Promise.all([passwordBox(page).press("Enter"), passwordBox(page).press("Enter")]);
-    await submitTwice(passwordBox(page));
-
-    await expect.poll(() => held.length).toBe(1);
-    await expect(signInButton(page)).toBeDisabled();
-    expect(held, "one request while the first is pending").toHaveLength(1);
-
-    await held[0].abort("failed");
-    await expect(page.getByText("Email hoặc mật khẩu không đúng")).toBeVisible();
-    await expect(signInButton(page)).toBeEnabled();
-    await expect(emailBox(page)).toHaveValue(ACCOUNTS.learner.email);
-    await expect(passwordBox(page)).toHaveValue(ACCOUNTS.learner.password);
+    await expectOneRequestPerSubmit(page, held, {
+      button: signInButton(page),
+      pressEnterTwice: () => Promise.all([passwordBox(page).press("Enter"), passwordBox(page).press("Enter")]),
+      requestSubmitTwice: () => submitTwice(passwordBox(page)),
+      whileHeld: async () => {
+        await expect(page.getByRole("button", { name: "Quên mật khẩu?" })).toBeDisabled();
+        await expect(page.getByRole("button", { name: "Chưa có tài khoản? Đăng ký miễn phí" })).toBeDisabled();
+      },
+      recovered: async () => {
+        await expect(page.getByText("Email hoặc mật khẩu không đúng")).toBeVisible();
+        await expect(emailBox(page)).toHaveValue(ACCOUNTS.learner.email);
+        await expect(passwordBox(page)).toHaveValue(ACCOUNTS.learner.password);
+      },
+    });
   });
 });
 
@@ -148,22 +182,21 @@ test.describe("forgot-password form", () => {
     await expect(sendButton(page)).toBeEnabled();
   });
 
-  test("[AU9] forgot password: a repeated Enter and a repeated submit send one request; an aborted request re-enables the form", async ({ page }) => {
+  test("[AU9] forgot password: a repeated Enter and a repeated submit each send one request; the back link is disabled while it is held", async ({ page }) => {
     await openForgot(page);
     const held = await holdRequests(page, RECOVER);
     await forgotBox(page).fill("someone@example.com");
 
-    await Promise.all([forgotBox(page).press("Enter"), forgotBox(page).press("Enter")]);
-    await submitTwice(forgotBox(page));
-
-    await expect.poll(() => held.length).toBe(1);
-    await expect(sendButton(page)).toBeDisabled();
-    expect(held, "one request while the first is pending").toHaveLength(1);
-
-    await held[0].abort("failed");
-    await expect(page.getByText("Gửi yêu cầu thất bại (Thử lại sau 1p)")).toBeVisible();
-    await expect(sendButton(page)).toBeEnabled();
-    await expect(forgotBox(page)).toHaveValue("someone@example.com");
+    await expectOneRequestPerSubmit(page, held, {
+      button: sendButton(page),
+      pressEnterTwice: () => Promise.all([forgotBox(page).press("Enter"), forgotBox(page).press("Enter")]),
+      requestSubmitTwice: () => submitTwice(forgotBox(page)),
+      whileHeld: () => expect(page.getByRole("button", { name: "Quay lại đăng nhập" })).toBeDisabled(),
+      recovered: async () => {
+        await expect(page.getByText("Gửi yêu cầu thất bại (Thử lại sau 1p)")).toBeVisible();
+        await expect(forgotBox(page)).toHaveValue("someone@example.com");
+      },
+    });
   });
 });
 
@@ -310,24 +343,27 @@ test.describe("sign-up form", () => {
     expect(new URL(sent!.url()).searchParams.get("redirect_to")).toBe(`${new URL(page.url()).origin}/auth/callback`);
   });
 
-  test("[AU9] sign up: a repeated Enter and a repeated submit send one request; an aborted request shows the generic message and keeps the values", async ({ page }) => {
+  test("[AU9] sign up: a repeated Enter and a repeated submit each send one request; the step and view links are disabled while it is held", async ({ page }) => {
     await openSignUp(page);
     const held = await holdRequests(page, SIGNUP);
     await fillAccountStep(page, "held@example.com");
     await fillProfileStep(page, { name: "E2E Giữ Yêu Cầu", phone: "0912345678" });
+    const nameBox = signUpField(page, "Họ và tên đầy đủ...");
 
-    await Promise.all([signUpField(page, "Họ và tên đầy đủ...").press("Enter"), signUpField(page, "Họ và tên đầy đủ...").press("Enter")]);
-    await submitTwice(signUpField(page, "Họ và tên đầy đủ..."));
-
-    await expect.poll(() => held.length).toBe(1);
-    await expect(FINISH(page)).toBeDisabled();
-    expect(held, "one request while the first is pending").toHaveLength(1);
-
-    await held[0].abort("failed");
-    await expect(page.getByText("Đăng ký thất bại, vui lòng thử lại")).toBeVisible();
-    await expect(FINISH(page)).toBeEnabled();
-    await expect(signUpField(page, "Họ và tên đầy đủ...")).toHaveValue("E2E Giữ Yêu Cầu");
-    await expect(signUpField(page, "Số điện thoại (10 số)...")).toHaveValue("0912345678");
+    await expectOneRequestPerSubmit(page, held, {
+      button: FINISH(page),
+      pressEnterTwice: () => Promise.all([nameBox.press("Enter"), nameBox.press("Enter")]),
+      requestSubmitTwice: () => submitTwice(nameBox),
+      whileHeld: async () => {
+        await expect(page.getByRole("button", { name: "Quay lại bước trước" })).toBeDisabled();
+        await expect(page.getByRole("button", { name: "Đã có tài khoản? Đăng nhập ngay" })).toBeDisabled();
+      },
+      recovered: async () => {
+        await expect(page.getByText("Đăng ký thất bại, vui lòng thử lại")).toBeVisible();
+        await expect(nameBox).toHaveValue("E2E Giữ Yêu Cầu");
+        await expect(signUpField(page, "Số điện thoại (10 số)...")).toHaveValue("0912345678");
+      },
+    });
   });
 });
 
@@ -384,23 +420,22 @@ test.describe("reset-password page", () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
-  test("[AU9] reset password: a repeated Enter and a repeated submit send one request; an aborted request toasts the failure and keeps the values", async ({ page }) => {
+  test("[AU9] reset password: a repeated Enter and a repeated submit each send one request", async ({ page }) => {
     await signInFixtureUser(page);
     const held = await holdRequests(page, USER, "PUT");
     await newBox(page).fill(NEW_PASSWORD);
     await confirmBox(page).fill(NEW_PASSWORD);
 
-    await Promise.all([confirmBox(page).press("Enter"), confirmBox(page).press("Enter")]);
-    await submitTwice(confirmBox(page));
-
-    await expect.poll(() => held.length).toBe(1);
-    await expect(changeButton(page)).toBeDisabled();
-    expect(held, "one request while the first is pending").toHaveLength(1);
-
-    await held[0].abort("failed");
-    await expect(page.getByText("Không đổi được mật khẩu, vui lòng thử lại")).toBeVisible();
-    await expect(changeButton(page)).toBeEnabled();
-    await expect(newBox(page)).toHaveValue(NEW_PASSWORD);
-    await expect(confirmBox(page)).toHaveValue(NEW_PASSWORD);
+    await expectOneRequestPerSubmit(page, held, {
+      button: changeButton(page),
+      pressEnterTwice: () => Promise.all([confirmBox(page).press("Enter"), confirmBox(page).press("Enter")]),
+      requestSubmitTwice: () => submitTwice(confirmBox(page)),
+      recovered: async () => {
+        // The toast of the first failure can still be on screen, so read the newest one.
+        await expect(page.getByText("Không đổi được mật khẩu, vui lòng thử lại").last()).toBeVisible();
+        await expect(newBox(page)).toHaveValue(NEW_PASSWORD);
+        await expect(confirmBox(page)).toHaveValue(NEW_PASSWORD);
+      },
+    });
   });
 });

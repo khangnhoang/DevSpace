@@ -1,7 +1,14 @@
-// What the reset page shows and does after `updateUser` answers. Like `app/(main)/login/_lib/auth-outcomes.ts` it imports no
-// Supabase client, React or Next module (AF-U4 plan, G7) and has its own result function and submit helper: the
-// reset page shows its outcome as a toast, not in the message box of the login page.
-import type { AuthErrorLike, AuthOutcome, SubmitControl } from "@/app/(main)/login/_lib/auth-outcomes";
+// What the reset page shows and does after `updateUser` answers. It imports no Supabase client, React or Next module
+// (AF-U4 plan, G7) and has its own result function and submit helper: the reset page shows its outcome as a toast, not
+// in the message box of the login page. The structural types below mirror the login route's on purpose, because a
+// route's `_lib` is private to it.
+type AuthErrorLike = { code?: string; status?: number } | null | undefined;
+type AuthOutcome = {
+  message: { text: string; type: "error" | "success" };
+  redirect: { refresh: boolean; delayMs: number } | null;
+  keepValues: boolean;
+};
+type SubmitControl = { inFlight: { current: boolean }; setPending: (pending: boolean) => void };
 
 export const RESET_SUCCESS_MESSAGE = "Khôi phục mật khẩu thành công!";
 export const RESET_SAME_PASSWORD_MESSAGE = "Mật khẩu mới phải khác mật khẩu cũ";

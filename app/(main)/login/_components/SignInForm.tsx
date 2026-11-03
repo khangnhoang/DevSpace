@@ -67,7 +67,8 @@ export default function SignInForm({ onSwitchView }: { onSwitchView: (view: "reg
           <button
             type="button"
             onClick={() => onSwitchView("forgot")}
-            className="cursor-pointer text-xs text-blue-600 hover:underline"
+            disabled={pending}
+            className="cursor-pointer text-xs text-blue-600 hover:underline disabled:cursor-default disabled:opacity-50"
           >
             Quên mật khẩu?
           </button>
@@ -82,7 +83,8 @@ export default function SignInForm({ onSwitchView }: { onSwitchView: (view: "reg
         <button
           type="button"
           onClick={() => onSwitchView("register")}
-          className="cursor-pointer text-sm text-gray-500 hover:text-blue-600 hover:underline"
+          disabled={pending}
+          className="cursor-pointer text-sm text-gray-500 hover:text-blue-600 hover:underline disabled:cursor-default disabled:opacity-50"
         >
           Chưa có tài khoản? Đăng ký miễn phí
         </button>

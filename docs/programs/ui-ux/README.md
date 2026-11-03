@@ -30,6 +30,7 @@ At most one initiative has an open plan at a time. A closed initiative keeps its
 
 | Initiative | Branch | Outcome | Dependencies | Gate to open |
 | --- | --- | --- | --- | --- |
+| UX-U1 [Upgrade the learner profile page](implementation-plans/ux-u1-profile-upgrade/plan.md) | `feat/ux-u1-profile-upgrade` | UX-F1: course cards lead back into learning, every enrolled course in order, a phone layout without sideways scrolling, empty fields hidden, Vietnamese dates and amounts | none | Owner approval of the plan |
 
 ## 5. Opening an initiative
 

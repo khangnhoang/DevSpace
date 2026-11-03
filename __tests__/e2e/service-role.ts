@@ -137,6 +137,18 @@ async function createFixture(table: string, labelColumn: string, label: string, 
   return { id: row.id, label: actual };
 }
 export const createCourseFixture = () => createFixture("courses", "name", "E2E Khóa học xóa", { slug: `e2e-course-${scope().tag}`, description: "E2E fixture", price: 0 });
+// Free courses without lessons, each with an enrollment of the seed student, so the profile lists more than four courses.
+// The scope deletes the enrollments before the courses.
+export async function createStudentCourseFixtures(count: number): Promise<Fixture[]> {
+  const fixtures: Fixture[] = [];
+  for (let i = 1; i <= count; i++) {
+    const course = await createFixture("courses", "name", `E2E Khóa học hồ sơ ${i}`, { slug: `e2e-profile-${i}-${scope().tag}`, description: "E2E fixture", price: 0 });
+    await scope().reserve("enrollments", { user_id: IDS.student, course_id: course.id });
+    must(await serviceRole().from("enrollments").insert({ user_id: IDS.student, course_id: course.id }).select("id"));
+    fixtures.push(course);
+  }
+  return fixtures;
+}
 export const createChapterFixture = () => createFixture("chapters", "title", "E2E Chương xóa", { course_id: 1, order_index: 99 });
 // The defaults are the course 1 lesson of the admin delete rows; a row that needs a lesson its student can open passes course 2 (the seed student is enrolled there).
 export type LessonFixtureOptions = { courseId?: number; chapterId?: number; content?: string };

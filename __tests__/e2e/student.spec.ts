@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { authFile } from "./accounts";
 import { backgroundOf, confirmDialogOf, expectDismissKeepsObject, expectFitsPhone, expectKeyboardFlow, expectOnTop, recordMutations } from "./confirm-dialog";
 import { expect, test } from "./fixtures";
-import { commentDeletedAt, createCommentFixture } from "./service-role";
+import { commentDeletedAt, createCommentFixture, createStudentCourseFixtures } from "./service-role";
 
 // The student is enrolled in the paid course with an approved payment.
 test.use({ storageState: authFile("student") });
@@ -130,4 +130,49 @@ test("[T6] the transaction history filter is labelled, filters by status from mo
   const [headingBox, filterBox, historyBox] = await Promise.all([heading.boundingBox(), filter.boundingBox(), history.boundingBox()]);
   expect(headingBox && historyBox && Math.abs(headingBox.x - historyBox.x) < 2, "the heading aligns with the table").toBe(true);
   expect(filterBox && historyBox && filterBox.x - historyBox.x < 40, "the filter starts near the table's left edge").toBe(true);
+});
+
+// The student is enrolled in course 2 with lesson 3 done and lesson 4 open.
+test("[T7] the course card leads back to the next unfinished lesson and its title is a card heading", async ({ page }) => {
+  await page.goto("/profile");
+  const card = page.getByRole("article").filter({ hasText: "JavaScript căn bản" });
+  await expect(card.getByRole("heading", { level: 3, name: "JavaScript căn bản" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(0);
+  await expect(card).toContainText("1/2 bài học");
+
+  const link = card.getByRole("link", { name: "Tiếp tục học" });
+  await expect(link).toHaveAttribute("href", "/learn/javascript-can-ban/ham-va-vong-lap");
+  // Four courses or fewer: no expand button.
+  await expect(page.getByRole("button", { name: /^Xem tất cả/ })).toHaveCount(0);
+
+  await link.click();
+  await expect(page).toHaveURL(/\/learn\/javascript-can-ban\/ham-va-vong-lap$/);
+  await expect(page.getByText("Viết hàm với function và lặp bằng for.")).toBeVisible();
+});
+
+test("[T8] more than four courses show four in two columns, in progress first, and expand and collapse in place", async ({ page }) => {
+  const extra = await createStudentCourseFixtures(4);
+  await page.goto("/profile");
+  const cards = page.getByRole("article");
+  const expand = page.getByRole("button", { name: "Xem tất cả (5)" });
+
+  await expect(cards).toHaveCount(4);
+  await expect(expand).toHaveAttribute("aria-expanded", "false");
+  // The started course leads the not-started ones.
+  await expect(cards.first()).toContainText("JavaScript căn bản");
+  await expect(cards.first().getByRole("link", { name: "Tiếp tục học" })).toBeVisible();
+  const [first, second] = await Promise.all([cards.nth(0).boundingBox(), cards.nth(1).boundingBox()]);
+  expect(first && second && second.x > first.x && Math.abs(second.y - first.y) < 2, "two columns from md").toBe(true);
+
+  const url = page.url();
+  await expand.click();
+  await expect(cards).toHaveCount(5);
+  const collapse = page.getByRole("button", { name: "Thu gọn" });
+  await expect(collapse).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("article").filter({ hasText: extra[3].label })).toBeVisible();
+  expect(page.url(), "the list expands in place").toBe(url);
+
+  await collapse.click();
+  await expect(cards).toHaveCount(4);
+  await expect(expand).toBeVisible();
 });

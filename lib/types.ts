@@ -73,6 +73,9 @@ export interface DashboardCourse {
   completed: number;
   percent: number;
   isStarted: boolean;
+  isEnrolled: boolean;
+  // Where the card leads: the next unfinished lesson, or the course page when the course has no lesson.
+  href: string;
 }
 
 // Dùng cho Trang chủ

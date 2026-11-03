@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import ProgressBar from "./ProgressBar";
+import CourseCard from "./CourseCard";
 import {
   getUserDashboardData,
   supabase,
@@ -34,6 +34,11 @@ import { format } from "date-fns";
 import { ProfileData } from "@/lib/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  COURSES_COLLAPSED_COUNT,
+  orderCoursesByProgress,
+  visibleCourses,
+} from "@/lib/profile-courses";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -321,6 +326,7 @@ export default function ProfilePage() {
   const ITEMS_PER_PAGE = 5;
 
   const [loading, setLoading] = useState(true);
+  const [showAllCourses, setShowAllCourses] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const router = useRouter();
@@ -339,7 +345,7 @@ export default function ProfilePage() {
 
       // 1. Fetch Profile & Courses
       const dashboardData = await getUserDashboardData(session.user.id);
-      setMyCourses(dashboardData);
+      setMyCourses(orderCoursesByProgress(dashboardData));
       const profileData = await getProfile(session.user.id);
       setUserProfile(profileData || null);
 
@@ -477,41 +483,31 @@ export default function ProfilePage() {
           <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
             <BookOpen className="text-blue-600" /> Khóa học của tôi
           </h2>
-          <div className="grid grid-cols-1 gap-4">
-            {myCourses.length > 0 ? (
-              myCourses.map((course) => (
-                <div
-                  key={course.id}
-                  className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <h1 className="text-lg font-bold text-gray-900">
-                      {course.title}
-                    </h1>
-                    <span
-                      className={`text-xs px-2 py-1 rounded font-bold ${
-                        course.percent === 100
-                          ? "bg-green-100 text-green-700"
-                          : "bg-blue-100 text-blue-800"
-                      }`}
-                    >
-                      {course.percent}%
-                    </span>
-                  </div>
-                  <div>
-                    <ProgressBar percent={course.percent} />
-                    <div className="mt-2 text-right text-xs text-gray-400">
-                      {course.completed}/{course.total} bài học
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-gray-500 text-center py-10 bg-white rounded-xl border border-dashed border-gray-300">
-                Bạn chưa tham gia khóa học nào.
+          {myCourses.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {visibleCourses(myCourses, showAllCourses).map((course) => (
+                  <CourseCard key={course.id} course={course} />
+                ))}
               </div>
-            )}
-          </div>
+              {myCourses.length > COURSES_COLLAPSED_COUNT && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllCourses((open) => !open)}
+                  aria-expanded={showAllCourses}
+                  className="cursor-pointer mt-4 w-full rounded-lg border border-gray-200 bg-white py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition md:w-auto md:px-6"
+                >
+                  {showAllCourses
+                    ? "Thu gọn"
+                    : `Xem tất cả (${myCourses.length})`}
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="text-gray-500 text-center py-10 bg-white rounded-xl border border-dashed border-gray-300">
+              Bạn chưa tham gia khóa học nào.
+            </div>
+          )}
         </div>
 
         {/* --- PHẦN 2: LỊCH SỬ GIAO DỊCH (ĐÃ LỌC & PHÂN TRANG) --- */}

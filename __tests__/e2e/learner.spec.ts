@@ -41,4 +41,25 @@ test.describe("enrolling in a free course", () => {
     await page.goto("/learn/lam-quen-voi-html/cau-truc-mot-trang-html");
     await expect(page.getByText("Một trang HTML gồm thẻ html, head và body.")).toBeVisible();
   });
+
+  test("[L6] an enrolled course with no lesson done shows on the profile at 0% and starts at its first lesson", async ({ page }) => {
+    expect(await learnerEnrollmentCount(FREE_COURSE_ID), "the learner must not be enrolled before the test").toBe(0);
+    // Neither enrolled nor started: the course is not listed.
+    await page.goto("/profile");
+    await expect(page.getByText("Bạn chưa tham gia khóa học nào.")).toBeVisible();
+
+    await page.goto("/course/lam-quen-voi-html");
+    await page.getByRole("button", { name: "Đăng ký học ngay" }).click();
+    await expect(page.getByText("Đăng ký thành công!")).toBeVisible();
+
+    await page.goto("/profile");
+    const card = page.getByRole("article").filter({ hasText: "Làm quen với HTML" });
+    await expect(card).toContainText("0%");
+    await expect(card).toContainText("0/2 bài học");
+    const link = card.getByRole("link", { name: "Bắt đầu học" });
+    await expect(link).toHaveAttribute("href", "/learn/lam-quen-voi-html/cau-truc-mot-trang-html");
+    await expect(page.getByRole("article")).toHaveCount(1);
+    await link.click();
+    await expect(page).toHaveURL(/\/learn\/lam-quen-voi-html\/cau-truc-mot-trang-html$/);
+  });
 });

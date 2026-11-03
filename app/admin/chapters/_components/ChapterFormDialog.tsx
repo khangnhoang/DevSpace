@@ -118,7 +118,8 @@ export default function ChapterFormDialog({
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-white hover:bg-white/10 p-2 rounded-full transition-colors"
+            aria-label="Đóng"
+            className="flex size-10 shrink-0 items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
           >
             <X size={20} />
           </button>

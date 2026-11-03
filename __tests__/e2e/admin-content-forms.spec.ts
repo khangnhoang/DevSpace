@@ -197,6 +197,36 @@ test.describe("course form", () => {
     expect(await coursesNamed(name)).toHaveLength(1);
   });
 
+  test("[C5] the close button is a named 40px control that closes the dialog, and at 375px the title bar sticks flush to the top while the form scrolls", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await openAdd(page);
+    const close = page.getByRole("button", { name: "Đóng", exact: true });
+    const box = await close.boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(40);
+    expect(box?.height).toBeGreaterThanOrEqual(40);
+
+    const form = page.locator("form").filter({ has: dialogTitle(page) });
+    await form.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    });
+    const formTop = (await form.boundingBox())!.y;
+    const titleTop = (await dialogTitle(page).boundingBox())!.y;
+    // The form's own border is 1px; nothing of the fields may show above the title bar.
+    expect(titleTop - formTop).toBeLessThan(40);
+    const above = await form.evaluate((element) => {
+      const header = element.firstElementChild as HTMLElement;
+      return (
+        header.getBoundingClientRect().top - element.getBoundingClientRect().top
+      );
+    });
+    expect(above).toBeLessThanOrEqual(1);
+
+    await close.click();
+    await expect(dialogTitle(page)).toBeHidden();
+  });
+
   test("[D1] a repeated Enter or a repeated submit event adds one course", async ({
     page,
   }) => {
@@ -385,6 +415,18 @@ test.describe("chapter form", () => {
     await expect(page.getByText("Thêm chương thành công!")).toBeVisible();
     await expect(dialogTitle(page)).toBeHidden();
     expect(await chaptersTitled(title)).toHaveLength(1);
+  });
+
+  test("[H5] the close button is a named 40px control that closes the dialog", async ({
+    page,
+  }) => {
+    await openAdd(page);
+    const close = page.getByRole("button", { name: "Đóng", exact: true });
+    const box = await close.boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(40);
+    expect(box?.height).toBeGreaterThanOrEqual(40);
+    await close.click();
+    await expect(dialogTitle(page)).toBeHidden();
   });
 
   test("[D1] a repeated Enter or a repeated submit event adds one chapter", async ({
@@ -794,6 +836,57 @@ test.describe("exercise form", () => {
       page.getByText("Thêm thành công", { exact: true }),
     ).toBeVisible();
     expect(await exercisesAsking(question)).toHaveLength(1);
+  });
+
+  test("[E5] a question being edited does not outlive the lesson panel: reopening starts the Thông tin tab and a blank add form", async ({
+    page,
+  }) => {
+    const lesson = await createLessonFixture();
+    const exercise = await createExerciseFixture(lesson.id);
+    await openExercises(page, lesson.label);
+    const mutations = recordMutations(page);
+    const close = page.getByRole("button", { name: "Đóng", exact: true });
+    const question = page.getByLabel("Nội dung câu hỏi", { exact: true });
+
+    await page
+      .locator("h1")
+      .filter({ hasText: exercise.label })
+      .getByRole("button")
+      .first()
+      .click();
+    await expect(question).toHaveValue(exercise.label);
+    await expect(update(page)).toBeVisible();
+
+    // The lesson panel's close is a named 40px button, not a bare icon.
+    const box = await close.boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(40);
+    expect(box?.height).toBeGreaterThanOrEqual(40);
+    await close.click();
+    await expect(page.locator("#lesson-form")).toBeHidden();
+
+    // The same lesson again, then the add form: both open on the first tab with the exercise form blank in add mode.
+    const reopenFrom = [
+      () =>
+        page
+          .getByRole("row")
+          .filter({ hasText: lesson.label })
+          .getByRole("button")
+          .first()
+          .click(),
+      // The page source spells this label with combining accents, so it is found by position (as in A9).
+      () => page.getByRole("main").getByRole("button").first().click(),
+    ];
+    for (const open of reopenFrom) {
+      await open();
+      await expect(page.locator("#lesson-form")).toBeVisible();
+      await page.getByRole("button", { name: "Trắc nghiệm" }).click();
+      await expect(question).toHaveValue("");
+      await expect(add(page)).toBeVisible();
+      await expect(update(page)).toHaveCount(0);
+      await close.click();
+      await expect(page.locator("#lesson-form")).toBeHidden();
+    }
+    expect(mutations, "nothing was sent").toEqual([]);
   });
 
   test("[D1] a repeated submit event adds one question", async ({ page }) => {

@@ -130,8 +130,9 @@ export default function LessonsManagerPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [refreshExerciseKey, setRefreshExerciseKey] = useState(0);
 
-  // Both forms live on the page, like the state they replace: the lesson values survive a switch of tab, and the
-  // exercise form keeps what it holds when the dialog closes and opens again.
+  // Both forms live on the page, like the state they replace, so the lesson values survive a switch of tab while the
+  // panel stays open. Every open and every close of the panel starts the exercise form blank in add mode: a question
+  // being edited belongs to the lesson it was opened from, and its id must not outlive that lesson.
   const {
     register: registerLesson,
     handleSubmit: handleLessonSubmit,
@@ -164,13 +165,27 @@ export default function LessonsManagerPage() {
   const savingLessonRef = useRef(false);
   const savingExerciseRef = useRef(false);
 
+  const resetExerciseEditing = () => {
+    setEditExerciseId(null);
+    resetExercise(BLANK_EXERCISE);
+  };
+
+  const closePanel = () => {
+    setIsOpenForm(false);
+    resetExerciseEditing();
+  };
+
   const handleOpenAddForm = () => {
     setEditLessonId(null);
     resetLesson(BLANK_LESSON);
+    resetExerciseEditing();
+    setActiveTab("infor");
     setIsOpenForm(true);
   };
 
   const handOpenEditForm = (lesson: LessonAdminRow) => {
+    resetExerciseEditing();
+    setActiveTab("infor");
     setEditLessonId(lesson.id);
     resetLesson({
       title: lesson.title,
@@ -219,7 +234,7 @@ export default function LessonsManagerPage() {
       toast.success(
         editLessonId ? "Cập nhật thành công" : "Lưu bài học thành công!",
       );
-      setIsOpenForm(false);
+      closePanel();
       router.refresh();
       setRefreshKey((prev) => prev + 1);
     } catch (error) {
@@ -657,11 +672,14 @@ export default function LessonsManagerPage() {
                   )}
                   {editLessonId ? "Lưu thay đổi" : "Thêm bài học"}
                 </button>
-                <X
-                  className="cursor-pointer"
-                  scale={20}
-                  onClick={() => setIsOpenForm(false)}
-                />
+                <button
+                  type="button"
+                  aria-label="Đóng"
+                  onClick={closePanel}
+                  className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-white/10"
+                >
+                  <X size={24} />
+                </button>
               </div>
             </div>
             {activeTab === "infor" && (

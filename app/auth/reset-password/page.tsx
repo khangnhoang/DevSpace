@@ -41,7 +41,8 @@ export default function ResetPasswordPage() {
         data: { session },
       } = await supabase.auth.getSession();
       if (!session) {
-        toast.error("Liên kết không hợp lệ hoặc đã hết hạn.");
+        // A fixed id: React StrictMode runs this effect twice in dev, and sonner shows one toast per id.
+        toast.error("Liên kết không hợp lệ hoặc đã hết hạn.", { id: "reset-link-invalid" });
         router.push("/login");
       } else {
         setVerifying(false);

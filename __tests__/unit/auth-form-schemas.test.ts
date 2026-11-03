@@ -57,6 +57,17 @@ describe("sign-up account schema (step 1)", () => {
     expect(issues(signUpAccountSchema.safeParse({ ...valid, email: "legacy@localhost" })).email).toBe(EMAIL_INVALID_MESSAGE);
   });
 
+  it.each(["sadasdasd@gmasdsdsd.e,a", "a@b.c", "a@b.c1", "a b@c.de", "a@@c.de", "a..b@c.de"])(
+    "refuses the email %j that the loose pattern accepted",
+    (email) => {
+      expect(issues(signUpAccountSchema.safeParse({ ...valid, email })).email).toBe(EMAIL_INVALID_MESSAGE);
+    },
+  );
+
+  it.each(["new@example.com", "first.last+tag@sub.example.co", "learner@devspace.test"])("accepts the email %j", (email) => {
+    expect(signUpAccountSchema.safeParse({ ...valid, email }).success).toBe(true);
+  });
+
   it("refuses a password under 8 characters", () => {
     expect(issues(signUpAccountSchema.safeParse({ ...valid, password: "1234567", confirmPassword: "1234567" })).password).toBe(
       PASSWORD_TOO_SHORT_MESSAGE,
@@ -113,6 +124,14 @@ describe("forgot-password schema", () => {
   it("refuses a blank email with the recovery message and a malformed one with the format message", () => {
     expect(issues(forgotPasswordSchema.safeParse({ email: "" }))).toEqual({ email: FORGOT_EMAIL_REQUIRED_MESSAGE });
     expect(issues(forgotPasswordSchema.safeParse({ email: "nope" }))).toEqual({ email: EMAIL_INVALID_MESSAGE });
+  });
+
+  it.each(["sadasdasd@gmasdsdsd.e,a", "a@b.c"])("refuses the email %j", (email) => {
+    expect(issues(forgotPasswordSchema.safeParse({ email }))).toEqual({ email: EMAIL_INVALID_MESSAGE });
+  });
+
+  it("accepts a normal address and one with a plus tag", () => {
+    expect(forgotPasswordSchema.safeParse({ email: "first.last+tag@example.com" }).success).toBe(true);
   });
 });
 

@@ -458,18 +458,21 @@ export type LessonFixtureOptions = {
   courseId?: number;
   chapterId?: number;
   content?: string;
+  // A lesson with no order, as an admin who left the field blank saved it (AF-U5).
+  orderIndex?: number | null;
 };
 export const createLessonFixture = async ({
   courseId = 1,
   chapterId = 1,
   content = "E2E fixture",
+  orderIndex = 99,
 }: LessonFixtureOptions = {}) => {
   const slug = `e2e-lesson-${scope().tag}`;
   const fixture = await createFixture("lessons", "title", "E2E Bài học xóa", {
     course_id: courseId,
     chapter_id: chapterId,
     slug,
-    order_index: 99,
+    order_index: orderIndex,
     content,
   });
   return { ...fixture, slug };
@@ -540,6 +543,73 @@ export async function chapterById(id: number): Promise<ChapterRow> {
     await serviceRole()
       .from("chapters")
       .select(CHAPTER_COLUMNS)
+      .eq("id", id)
+      .single(),
+  );
+}
+export type LessonRow = {
+  id: number;
+  title: string;
+  slug: string;
+  course_id: number;
+  chapter_id: number | null;
+  video_url: string | null;
+  order_index: number | null;
+  content: string | null;
+};
+const LESSON_COLUMNS =
+  "id,title,slug,course_id,chapter_id,video_url,order_index,content";
+export async function reserveLesson(title: string) {
+  await scope().reserve("lessons", { title });
+}
+export async function lessonsTitled(title: string): Promise<LessonRow[]> {
+  return must(
+    await serviceRole()
+      .from("lessons")
+      .select(LESSON_COLUMNS)
+      .eq("title", title),
+  );
+}
+export async function lessonById(id: number): Promise<LessonRow> {
+  return must(
+    await serviceRole()
+      .from("lessons")
+      .select(LESSON_COLUMNS)
+      .eq("id", id)
+      .single(),
+  );
+}
+export type ExerciseRow = {
+  id: number;
+  lesson_id: number;
+  question: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_answer: string;
+  explanation: string | null;
+};
+const EXERCISE_COLUMNS =
+  "id,lesson_id,question,option_a,option_b,option_c,option_d,correct_answer,explanation";
+export async function reserveExercise(question: string) {
+  await scope().reserve("exercises", { question });
+}
+export async function exercisesAsking(
+  question: string,
+): Promise<ExerciseRow[]> {
+  return must(
+    await serviceRole()
+      .from("exercises")
+      .select(EXERCISE_COLUMNS)
+      .eq("question", question),
+  );
+}
+export async function exerciseById(id: number): Promise<ExerciseRow> {
+  return must(
+    await serviceRole()
+      .from("exercises")
+      .select(EXERCISE_COLUMNS)
       .eq("id", id)
       .single(),
   );

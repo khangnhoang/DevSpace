@@ -9,15 +9,23 @@ import {
   coursesNamed,
   createChapterFixture,
   createCourseFixture,
+  createExerciseFixture,
+  createLessonFixture,
+  exerciseById,
+  exercisesAsking,
   fixtureCode,
   fixtureLabel,
+  lessonById,
+  lessonsTitled,
   reserveChapter,
   reserveCourse,
+  reserveExercise,
+  reserveLesson,
 } from "./service-role";
 
 // The admin content forms of AF-U5 (course, chapter, lesson and exercise add and edit) on the admin session. Every row
 // that creates through the UI reserves its exact name, title or question first; every edit row edits a fixture. No row
-// uploads a course image or calls the AI action.
+// uploads a course image or calls the AI action (the AI handlers are covered by the unit tests of ai-exercises).
 test.use({ storageState: authFile("admin") });
 
 // Two submit events in the same task, before React renders: only an in-flight flag set before the first await
@@ -418,5 +426,392 @@ test.describe("chapter form", () => {
       "a repeated submit event writes one row",
     ).toHaveLength(1);
     expect(writes()).toHaveLength(2);
+  });
+});
+
+test.describe("lesson form", () => {
+  const saveButton = (page: Page) => page.locator('button[form="lesson-form"]');
+  const form = (page: Page) => page.locator("#lesson-form");
+
+  async function openAdd(page: Page) {
+    await page.goto("/admin/lessons");
+    // The page source spells this label with combining accents, so it is found by position, not by name (as in A9).
+    await page.getByRole("main").getByRole("button").first().click();
+    await expect(form(page)).toBeVisible();
+  }
+
+  async function openEdit(page: Page, title: string) {
+    await page.goto("/admin/lessons");
+    await page
+      .getByRole("row")
+      .filter({ hasText: title })
+      .getByRole("button")
+      .first()
+      .click();
+    await expect(form(page)).toBeVisible();
+  }
+
+  // Picks the course, waits for its chapters, picks the first one and returns its id.
+  async function chooseCourseAndChapter(page: Page) {
+    await page
+      .getByLabel("Khóa học", { exact: true })
+      .selectOption({ label: HTML_COURSE });
+    const chapter = page.getByLabel("Chương", { exact: true });
+    await expect(chapter.locator("option")).not.toHaveCount(1);
+    await chapter.selectOption({ index: 1 });
+    return Number(await chapter.inputValue());
+  }
+
+  test("[L1] adds a lesson with a video and an order left blank, saved as null", async ({
+    page,
+  }) => {
+    const title = fixtureLabel("E2E bài học thêm");
+    const slug = fixtureCode("e2e-lesson-add");
+    await reserveLesson(title);
+    await openAdd(page);
+
+    await page.getByLabel("Tên bài", { exact: true }).fill(`  ${title}  `);
+    await page.getByLabel("Đường dẫn", { exact: true }).fill(` ${slug} `);
+    const chapterId = await chooseCourseAndChapter(page);
+    await saveButton(page).click();
+
+    await expect(page.getByText("Lưu bài học thành công!")).toBeVisible();
+    await expect(form(page)).toBeHidden();
+    await expect(
+      page.getByRole("row").filter({ hasText: title }),
+    ).toBeVisible();
+    expect(await lessonsTitled(title)).toMatchObject([
+      {
+        slug,
+        course_id: 1,
+        chapter_id: chapterId,
+        video_url: null,
+        order_index: null,
+      },
+    ]);
+  });
+
+  test("[L2] no course, no chapter, a blank slug and an order that is not a whole number show field errors and write nothing", async ({
+    page,
+  }) => {
+    const title = fixtureLabel("E2E bài học lỗi");
+    await reserveLesson(title);
+    await openAdd(page);
+    const mutations = recordMutations(page);
+
+    await page.getByLabel("Tên bài", { exact: true }).fill(title);
+    await page.getByLabel("Số thứ tự", { exact: true }).fill("1.5");
+    await saveButton(page).click();
+    await expect(page.getByText("Vui lòng nhập đường dẫn")).toBeVisible();
+    await expect(page.getByText("Vui lòng chọn khóa học")).toBeVisible();
+    await expect(page.getByText("Vui lòng chọn chương")).toBeVisible();
+    await expect(
+      page.getByText("Số thứ tự phải là một số nguyên"),
+    ).toBeVisible();
+    await expect(page.getByText("Vui lòng nhập tên bài")).toHaveCount(0);
+    await expect(page.getByLabel("Đường dẫn", { exact: true })).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+
+    // A course without a chapter is still refused.
+    await page
+      .getByLabel("Khóa học", { exact: true })
+      .selectOption({ label: HTML_COURSE });
+    await page.getByLabel("Số thứ tự", { exact: true }).fill("");
+    await page
+      .getByLabel("Đường dẫn", { exact: true })
+      .fill(fixtureCode("e2e-lesson-err"));
+    await saveButton(page).click();
+    await expect(page.getByText("Vui lòng chọn chương")).toBeVisible();
+    await expect(page.getByText("Vui lòng chọn khóa học")).toHaveCount(0);
+    expect(await lessonsTitled(title)).toEqual([]);
+    expect(mutations, "nothing was sent").toEqual([]);
+  });
+
+  test("[L3] edits a lesson whose order is null, shows the fields blank and saves them back as null", async ({
+    page,
+  }) => {
+    const lesson = await createLessonFixture({ orderIndex: null });
+    const edited = fixtureLabel("E2E bài học sửa");
+    await reserveLesson(edited);
+    await openEdit(page, lesson.label);
+    await expect(page.getByLabel("Tên bài", { exact: true })).toHaveValue(
+      lesson.label,
+    );
+    await expect(page.getByLabel("Số thứ tự", { exact: true })).toHaveValue("");
+    await expect(
+      page.getByLabel("Đường dẫn video", { exact: true }),
+    ).toHaveValue("");
+    // The chapters load after the form opens: the stored chapter is selected once its options exist.
+    await expect(page.getByLabel("Chương", { exact: true })).toHaveValue("1");
+
+    await page.getByLabel("Tên bài", { exact: true }).fill(`  ${edited}  `);
+    await saveButton(page).click();
+    await expect(page.getByText("Cập nhật thành công")).toBeVisible();
+    await expect(form(page)).toBeHidden();
+    expect(await lessonById(lesson.id)).toMatchObject({
+      title: edited,
+      slug: lesson.slug,
+      course_id: 1,
+      chapter_id: 1,
+      video_url: null,
+      order_index: null,
+    });
+    expect((await lessonById(lesson.id)).content?.trim()).toBe("E2E fixture");
+
+    // An order of 0 is a number the form shows and saves.
+    await openEdit(page, edited);
+    await page.getByLabel("Số thứ tự", { exact: true }).fill("0");
+    await saveButton(page).click();
+    await expect(form(page)).toBeHidden();
+    await expect
+      .poll(async () => (await lessonById(lesson.id)).order_index)
+      .toBe(0);
+    await openEdit(page, edited);
+    await expect(page.getByLabel("Số thứ tự", { exact: true })).toHaveValue(
+      "0",
+    );
+  });
+
+  test("[L4] a failed save keeps the form open with what was typed, toasts the failure and lets the retry save one row", async ({
+    page,
+  }) => {
+    const title = fixtureLabel("E2E bài học lỗi mạng");
+    await reserveLesson(title);
+    await openAdd(page);
+    // The aborted request never reaches the server, so the failed save writes nothing.
+    let blocking = true;
+    let aborted = 0;
+    await page.route("**/rest/v1/lessons*", (route) => {
+      if (!blocking || route.request().method() !== "POST")
+        return route.fallback();
+      aborted += 1;
+      return route.abort("failed");
+    });
+
+    await page.getByLabel("Tên bài", { exact: true }).fill(title);
+    await page
+      .getByLabel("Đường dẫn", { exact: true })
+      .fill(fixtureCode("e2e-lesson-fail"));
+    await chooseCourseAndChapter(page);
+    await saveButton(page).click();
+
+    await expect(page.getByText("Lưu bài học thất bại:")).toBeVisible();
+    await expect(form(page)).toBeVisible();
+    await expect(page.getByLabel("Tên bài", { exact: true })).toHaveValue(
+      title,
+    );
+    await expect(saveButton(page)).toBeEnabled();
+    expect(aborted).toBe(1);
+    expect(await lessonsTitled(title)).toEqual([]);
+
+    blocking = false;
+    await saveButton(page).click();
+    await expect(page.getByText("Lưu bài học thành công!")).toBeVisible();
+    await expect(form(page)).toBeHidden();
+    expect(await lessonsTitled(title)).toHaveLength(1);
+  });
+
+  test("[D1] a repeated submit event adds one lesson", async ({ page }) => {
+    const title = fixtureLabel("E2E bài học submit");
+    await reserveLesson(title);
+    const mutations = recordMutations(page);
+    await openAdd(page);
+    await page.getByLabel("Tên bài", { exact: true }).fill(title);
+    await page
+      .getByLabel("Đường dẫn", { exact: true })
+      .fill(fixtureCode("e2e-lesson-twice"));
+    await chooseCourseAndChapter(page);
+    await submitTwice(page.getByLabel("Tên bài", { exact: true }));
+    await expect(form(page)).toBeHidden();
+    expect(await lessonsTitled(title)).toHaveLength(1);
+    expect(
+      mutations.filter(
+        (request) =>
+          request.startsWith("POST ") && request.includes("/rest/v1/lessons"),
+      ),
+    ).toHaveLength(1);
+  });
+});
+
+test.describe("exercise form", () => {
+  const add = (page: Page) =>
+    page.getByRole("button", { name: "Thêm câu hỏi", exact: true });
+  const update = (page: Page) =>
+    page.getByRole("button", { name: "Cập nhật câu hỏi", exact: true });
+
+  async function openExercises(page: Page, lessonTitle: string) {
+    await page.goto("/admin/lessons");
+    await page
+      .getByRole("row")
+      .filter({ hasText: lessonTitle })
+      .getByRole("button")
+      .first()
+      .click();
+    await page.getByRole("button", { name: "Trắc nghiệm" }).click();
+    await expect(add(page)).toBeVisible();
+  }
+
+  async function fillQuestion(page: Page, question: string, answer = "b") {
+    await page.getByLabel("Nội dung câu hỏi", { exact: true }).fill(question);
+    for (const letter of ["A", "B", "C", "D"]) {
+      await page
+        .getByLabel(`Đáp án ${letter}`, { exact: true })
+        .fill(`Lựa chọn ${letter}`);
+    }
+    await page.getByLabel("Đáp án đúng", { exact: true }).selectOption(answer);
+  }
+
+  test("[E1] adds a question with no explanation, saved as null, and lists it", async ({
+    page,
+  }) => {
+    const lesson = await createLessonFixture();
+    const question = fixtureLabel("E2E câu hỏi thêm");
+    await reserveExercise(question);
+    await openExercises(page, lesson.label);
+
+    await fillQuestion(page, `  ${question}  `);
+    await add(page).click();
+
+    await expect(
+      page.getByText("Thêm thành công", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText(`: ${question}`)).toBeVisible();
+    expect(await exercisesAsking(question)).toMatchObject([
+      {
+        lesson_id: lesson.id,
+        option_a: "Lựa chọn A",
+        option_d: "Lựa chọn D",
+        correct_answer: "b",
+        explanation: null,
+      },
+    ]);
+  });
+
+  test("[E2] a blank question, a blank option and no correct answer show field errors and write nothing", async ({
+    page,
+  }) => {
+    const lesson = await createLessonFixture();
+    const question = fixtureLabel("E2E câu hỏi lỗi");
+    await reserveExercise(question);
+    await openExercises(page, lesson.label);
+    const mutations = recordMutations(page);
+
+    await page.getByLabel("Đáp án A", { exact: true }).fill("Lựa chọn A");
+    await add(page).click();
+    await expect(
+      page.getByText("Vui lòng nhập nội dung câu hỏi"),
+    ).toBeVisible();
+    await expect(page.getByText("Vui lòng nhập đáp án B")).toBeVisible();
+    await expect(page.getByText("Vui lòng nhập đáp án C")).toBeVisible();
+    await expect(page.getByText("Vui lòng nhập đáp án D")).toBeVisible();
+    await expect(page.getByText("Vui lòng chọn đáp án đúng")).toBeVisible();
+    await expect(page.getByText("Vui lòng nhập đáp án A")).toHaveCount(0);
+
+    await fillQuestion(page, question, "");
+    await add(page).click();
+    await expect(page.getByText("Vui lòng chọn đáp án đúng")).toBeVisible();
+    await expect(page.getByText("Vui lòng nhập nội dung câu hỏi")).toHaveCount(
+      0,
+    );
+    expect(await exercisesAsking(question)).toEqual([]);
+    expect(mutations, "nothing was sent").toEqual([]);
+  });
+
+  test("[E3] edits a question, clears its explanation and saves it back as null", async ({
+    page,
+  }) => {
+    const lesson = await createLessonFixture();
+    const exercise = await createExerciseFixture(lesson.id);
+    const edited = fixtureLabel("E2E câu hỏi sửa");
+    await reserveExercise(edited);
+    await openExercises(page, lesson.label);
+
+    await page
+      .locator("h1")
+      .filter({ hasText: exercise.label })
+      .getByRole("button")
+      .first()
+      .click();
+    await expect(
+      page.getByLabel("Nội dung câu hỏi", { exact: true }),
+    ).toHaveValue(exercise.label);
+    await expect(page.getByLabel("Giải thích", { exact: true })).toHaveValue(
+      "E2E fixture",
+    );
+    await expect(page.getByLabel("Đáp án đúng", { exact: true })).toHaveValue(
+      "a",
+    );
+
+    await page
+      .getByLabel("Nội dung câu hỏi", { exact: true })
+      .fill(`  ${edited}  `);
+    await page.getByLabel("Giải thích", { exact: true }).fill("   ");
+    await update(page).click();
+
+    await expect(page.getByText("Cập nhật thành công")).toBeVisible();
+    await expect(page.getByText(`: ${edited}`)).toBeVisible();
+    expect(await exerciseById(exercise.id)).toMatchObject({
+      lesson_id: lesson.id,
+      question: edited,
+      correct_answer: "a",
+      explanation: null,
+    });
+  });
+
+  test("[E4] a failed save keeps what was typed, toasts the failure and lets the retry save one row", async ({
+    page,
+  }) => {
+    const lesson = await createLessonFixture();
+    const question = fixtureLabel("E2E câu hỏi lỗi mạng");
+    await reserveExercise(question);
+    await openExercises(page, lesson.label);
+    // The aborted request never reaches the server, so the failed save writes nothing.
+    let blocking = true;
+    let aborted = 0;
+    await page.route("**/rest/v1/exercises*", (route) => {
+      if (!blocking || route.request().method() !== "POST")
+        return route.fallback();
+      aborted += 1;
+      return route.abort("failed");
+    });
+
+    await fillQuestion(page, question);
+    await add(page).click();
+
+    await expect(page.getByText("Đã có lỗi xảy ra:")).toBeVisible();
+    await expect(
+      page.getByLabel("Nội dung câu hỏi", { exact: true }),
+    ).toHaveValue(question);
+    await expect(add(page)).toBeEnabled();
+    expect(aborted).toBe(1);
+    expect(await exercisesAsking(question)).toEqual([]);
+
+    blocking = false;
+    await add(page).click();
+    await expect(
+      page.getByText("Thêm thành công", { exact: true }),
+    ).toBeVisible();
+    expect(await exercisesAsking(question)).toHaveLength(1);
+  });
+
+  test("[D1] a repeated submit event adds one question", async ({ page }) => {
+    const lesson = await createLessonFixture();
+    const question = fixtureLabel("E2E câu hỏi submit");
+    await reserveExercise(question);
+    await openExercises(page, lesson.label);
+    const mutations = recordMutations(page);
+
+    await fillQuestion(page, question);
+    await submitTwice(page.getByLabel("Nội dung câu hỏi", { exact: true }));
+    await expect(page.getByText(`: ${question}`)).toBeVisible();
+    expect(await exercisesAsking(question)).toHaveLength(1);
+    expect(
+      mutations.filter(
+        (request) =>
+          request.startsWith("POST ") && request.includes("/rest/v1/exercises"),
+      ),
+    ).toHaveLength(1);
   });
 });

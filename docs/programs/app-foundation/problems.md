@@ -6,7 +6,7 @@ Plan: [plan.md](plan.md). Progress: [progress.md](progress.md).
 
 ### AF-P2: the AI bulk-create on the lessons page does not await its saves
 
-- Status: Open (2026-10-29, found in the U1 plan review; outside U1, whose G4 keeps the handler as it is).
+- Status: Fixed locally, awaiting delivery (2026-11-04, AF-U5 CP2: `bulkCreateAiExercises` awaits every save and reports a partial save, both handlers clear the busy state in `finally`, covered by `__tests__/unit/ai-exercises.test.ts`). Found 2026-10-29 in the U1 plan review.
 - Problem: `handleAiBulkCreate` maps the generated questions with a block-bodied arrow that calls `addExercise` without `return` (`app/admin/lessons/page.tsx:285-295`), so `Promise.all` awaits nothing and the success path runs before the saves finish or fail; and when `generateQuizFromContent` returns nothing, both AI handlers return without `setIsGenerating(false)` (`page.tsx:247`, `:278`), leaving the button busy.
 - Evidence: read at `4179bf5`; not reproduced (it needs the AI key).
 - Direction: AF-U5, which converts this page's forms, returns the promises and resets the busy state on every path.

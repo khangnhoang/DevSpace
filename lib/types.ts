@@ -58,7 +58,7 @@ export interface DBExercise {
   option_c: string;
   option_d: string;
   correct_answer: string;
-  explanation: string;
+  explanation: string | null;
 }
 
 // --- 2. TYPE CHO GIAO DIỆN (UI) ---
@@ -159,7 +159,7 @@ export interface ExerciseData {
   option_c: string;
   option_d: string;
   correct_answer: string;
-  explanation: string | "";
+  explanation: string | null;
 }
 
 // Dùng cho trang profile

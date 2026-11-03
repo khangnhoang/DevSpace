@@ -61,6 +61,22 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Direction: escape every interpolated value in the mail template (and limit `full_name` where it is saved, if that fits the profile rules). Add a test with a name containing `<a>` and `&`. Severity is to be assessed before scheduling.
 - Exit condition: a name with HTML characters shows as plain text in the mail.
 
+### BL-P9: a signed-in user can open /login and sign in as another account
+
+- Status: Open (2026-11-03).
+- Problem: `/login` renders its forms for a visitor who already has a session, so a signed-in user can sign in again with another account without signing out first. Nothing redirects a signed-in visitor away from the page.
+- Evidence: Owner QA of AF-U4 on the dev stack, 2026-11-03. `proxy.ts` has no rule for `/login`, and the page at `186530e` (before AF-U4) did not check the session either, so the behavior predates AF-U4.
+- Direction: small fix: redirect a signed-in visitor from `/login` to `/` (or the safe `next` path) on the server, and add an e2e row for a signed-in actor. Decide whether "sign in as another account" should instead be offered through an explicit sign-out.
+- Exit condition: a signed-in user who opens `/login` is sent away, or the page offers a deliberate sign-out first; an e2e row asserts it.
+
+### BL-P10: any session can change the password on /auth/reset-password without a recovery mail or reauthentication
+
+- Status: Open (2026-11-03).
+- Problem: `/auth/reset-password` only checks that a session exists, then calls `supabase.auth.updateUser({ password })`. Any signed-in session, not only one opened from the recovery mail, can change the account password without the current password or a reauthentication step; an unattended or stolen session can take over the account.
+- Evidence: Owner QA of AF-U4 on the dev stack, 2026-11-03: a normal sign-in, then the page, changed the password. `supabase/config.toml` sets `secure_password_change = false`; the hosted Auth setting was not checked. The page's session check predates AF-U4 (`186530e`).
+- Direction: security change for the Codex gate: enable secure password change (recent sign-in or reauthentication nonce) on local and hosted, and/or let the page accept only a recovery session (the `PASSWORD_RECOVERY` event after `/auth/callback`). Severity is to be assessed before scheduling.
+- Exit condition: a session that did not come from the recovery link cannot change the password without reauthenticating, asserted by a test.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

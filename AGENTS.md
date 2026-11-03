@@ -20,7 +20,7 @@ Roadmap, in this order: (1) agent-workflow (rules, skills, docs system), (2) inf
 
 ## Code map
 
-- `components/ui/`: shadcn primitives (`button`, `alert-dialog`, `input`, `textarea`, `label`, `field`, `native-select`, `select`, `separator`) added with `npx shadcn add`; `lib/schemas/`: the Zod schemas of the server actions and of the learner forms; `app/components/ConfirmDialog.tsx` is the confirm dialog of the destructive and payment actions in app-foundation Appendix A. Edits to generated files: [frontend-design](.claude/skills/frontend-design/SKILL.md).
+- `components/ui/`: shadcn primitives (`button`, `alert-dialog`, `input`, `textarea`, `label`, `field`, `native-select`, `select`, `separator`) added with `npx shadcn add`; `lib/schemas/`: the Zod schemas of the server actions and of the learner and auth forms; `app/components/ConfirmDialog.tsx` is the confirm dialog of the destructive and payment actions in app-foundation Appendix A. Edits to generated files: [frontend-design](.claude/skills/frontend-design/SKILL.md).
 - `app/(main)`: learner and public pages (`course`, `learn`, `profile`, `try_it`, `login`). `app/admin`: admin pages.
 - `app/action/*.ts`: server actions. Each one is a public POST endpoint.
 - `lib/auth.server.ts`: `requireUser`, `requireAdmin` and course-access checks. `lib/supabase.server.ts` (caller session), `lib/supabase.admin.ts` (service role, server-only).
@@ -42,6 +42,7 @@ Roadmap, in this order: (1) agent-workflow (rules, skills, docs system), (2) inf
 11. **Match conventions.** Follow the nearby naming, placement, error handling and doc structure, even if you would choose differently. Keep one owner and one source of truth per fact.
 12. **Fail loud.** A blocked, failed, partial or unverified result stays visibly so. Report the exact failure and the smallest thing needed to resume. Do not hide it behind a mock, fallback or weaker check.
 13. **Comment the why.** Comment why, a boundary or a hidden constraint (RLS and auth assumptions, migration order, concurrency, external service limits, a workaround), never what the code plainly says; prefer a clearer name or simpler flow, one comment for adjacent code that shares a rule, and no JSDoc on routine code. A TODO states the missing work, why it waits and where it is tracked, and is removed when the condition ends. Update comments that your change makes false; report misleading ones elsewhere instead of cleaning up silently.
+14. **Separate concerns.** Keep validation, data access, business rules and presentation in units that can change and be tested on their own (for example a schema in `lib/schemas/`, a pure function for a rule a test must reach). Apply this to the code you change, at a size that fits the change. Add an abstraction only for a benefit you can name, such as testing a rule, isolating a side effect or holding a trust boundary; it never justifies refactoring outside the task (rule 3) or building a layer the roadmap at the top of this file will replace. When a recurring case is unclear under this rule, propose a specific rule for the owning skill to the Owner (section 8; `skill-authoring`, Choosing where an instruction goes).
 
 
 ## Working contract

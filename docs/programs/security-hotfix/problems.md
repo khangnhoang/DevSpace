@@ -38,14 +38,6 @@ The original 2026-10-21 discovery table is preserved in Git at ddcefd0. Legacy I
 - Direction: Retain the original migration follow-up; no new Auth implementation or claim of completion is made here.
 - Exit condition: The migration follow-up verifies the intended Auth flow and its compatibility.
 
-### SH-P9: Leaked password protection is disabled
-
-- Status: Open (Owner action).
-- Problem: Leaked password protection is off (Auth settings).
-- Evidence: Legacy P9; severity Low; discovery-era Planned: Owner turns it on in the dashboard; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: The Owner turns on leaked password protection in the Auth dashboard.
-- Exit condition: The Owner confirms leaked password protection is enabled.
-
 ### SH-P10: Avatar uploads do not enforce path ownership
 
 - Status: Deferred.
@@ -197,3 +189,4 @@ One line each: ID, status, historical problem and delivered outcome. Details sta
 - SH-P17 — Resolved 2026-10-21: H1 aligned password rules and handled reset feedback. Historical problem: Inconsistent password rules: admin-created users ≥ 8 characters, sign-up/reset only 6; resetting to the same password currently shows the English error `same_password`. Related to the rule H1 just set (A11) → fixed in H1. Legacy P17; severity Low; discovery-era Planned: H1 (PR 2, `5c842d4`).
 - SH-P21 — Resolved 2026-10-29: All nine native confirmations became ConfirmDialog in app-foundation U1; the Owner accepted the separate unverified real Gemini limit. Historical problem: Delete confirmation uses `window.confirm` (comments, admin CRUD of courses/chapters/lessons) — ugly, inconsistent with the UI — fixed in app-foundation U1: all 9 calls use `ConfirmDialog` (FEAT-006). Legacy P21; severity Low; discovery-era Planned: app-foundation U1 (PR 38, `572da83`).
 - SH-P16 — Resolved 2026-11-03: the app-foundation AF-U3 profile schema turns a blank date of birth into null, closing [AF-P4](../app-foundation/problems.md#resolved) with an e2e row; H2 production check 17g stays recorded as failed on the older code. Historical problem: Updating a profile with an empty date of birth → `invalid input syntax for type date: ""` (the form sent an empty string instead of `null`). Legacy P16; severity Low; discovery-era Planned: later (PR 53, `33db042`).
+- SH-P9 — Dropped 2026-11-03: leaked password protection needs the Supabase Pro plan and the project runs on Free; the Owner raised the hosted minimum password length to 8 instead. Historical problem: Leaked password protection is off (Auth settings). Legacy P9; severity Low.

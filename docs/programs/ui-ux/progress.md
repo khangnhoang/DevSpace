@@ -7,13 +7,13 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | [UX-U1](implementation-plans/ux-u1-profile-upgrade/plan.md) r2 (2026-11-03), self-reviewed, no Codex gate; approved by the Owner on 2026-11-03 (r1 approved earlier the same day). |
-| Current unit / checkpoint | UX-U1 CP1 to CP4 and the visual-review correction committed; awaiting delivery. |
-| Status | Main's review of CP4 passed with the dev stack's QA courses; the Owner's manual QA M1 passed on 2026-11-03. |
-| Completed evidence | CP1 `61f704f`, CP2 `9e8e955`, correction `fe7bcd2`, CP4 `ca8b8ca`. After the last change to writing rows (CP4): `npm run test:e2e` twice, 100 passed each; `npm test` once, 34 files and 508 tests passed; `npm run test:unit` 417 passed; `npx tsc --noEmit` and `npm run lint` clean. |
+| Current unit / checkpoint | None active. UX-U1 delivered in PR 57 (`186530e`). |
+| Status | UX-U1 merged after green CI (run 41617399458): UX-F1 closed; the Owner passed manual QA M1 on 2026-11-03. |
+| Completed evidence | UX-U1: PR 57 (`186530e`). CP1 `61f704f`, CP2 `9e8e955`, correction `fe7bcd2`, CP4 `ca8b8ca`. After the last change to writing rows (CP4): `npm run test:e2e` twice, 100 passed each; `npm test` once, 34 files and 508 tests passed; `npm run test:unit` 417 passed; `npx tsc --noEmit` and `npm run lint` clean. |
 | Accepted deviations | `getLastAccessedLessonId` also uses the shared lesson sort (it kept a third copy of it); its order is unchanged. |
 | Blockers / Owner decisions | none. |
-| Next action | Push, PR and merge of `feat/ux-u1-profile-upgrade`, each on its Owner grant; then UX-F1 closes with the PR. |
-| Current authority | Owner, 2026-11-03: local checkpoint commits only; no push, PR or merge. |
+| Next action | None in ui-ux; the next initiative opens from a new audit or Owner request (charter section 5). |
+| Current authority | None active; the UX-U1 grants ended with its merge. |
 
 ## Milestones
 
@@ -27,4 +27,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-03 UX-U1 correction after Main's visual review: one percent per course card, and the phone history sizes to its content (`fe7bcd2`).
 - 2026-11-03 UX-U1 r2 approved after the Owner's QA with five courses: a featured card plus compact rows with course images, ordered by latest activity (`b816171`).
 - 2026-11-03 UX-U1 CP4 implemented: featured card plus compact rows with course images, ordered by latest activity, with "Chưa có bài học" and "Hoàn thành" states (`ca8b8ca`).
-- 2026-11-03 UX-U1 Owner manual QA M1 passed at 375px, 768px and desktop (this commit).
+- 2026-11-03 UX-U1 Owner manual QA M1 passed at 375px, 768px and desktop (`8403105`).
+- 2026-11-03 UX-U1 merged after green CI (run 41617399458): the profile page upgrade, UX-F1 closed (PR 57, `186530e`).

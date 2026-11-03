@@ -1,19 +1,38 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import { Loader2, Eye, EyeOff, Lock, CheckCircle } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2, Lock, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Field, FieldError } from "@/components/ui/field";
+import {
+  AUTH_SUBMIT_CLASS,
+  AuthInput,
+  PasswordInput,
+  usePasswordVisibility,
+} from "@/app/components/AuthFields";
+import { resetPasswordSchema, type ResetPasswordValues } from "@/lib/schemas/auth-forms";
+import { submitResetPassword } from "./_lib/reset-outcome";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(true);
-
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPass, setShowPass] = useState(false);
+  const password = usePasswordVisibility();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ResetPasswordValues>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { password: "", confirmPassword: "" },
+  });
+  // Set before the first await (inside the submit helper): see the login forms.
+  const inFlight = useRef(false);
 
   // 1. Kiểm tra session
   useEffect(() => {
@@ -22,7 +41,8 @@ export default function ResetPasswordPage() {
         data: { session },
       } = await supabase.auth.getSession();
       if (!session) {
-        toast.error("Liên kết không hợp lệ hoặc đã hết hạn.");
+        // A fixed id: React StrictMode runs this effect twice in dev, and sonner shows one toast per id.
+        toast.error("Liên kết không hợp lệ hoặc đã hết hạn.", { id: "reset-link-invalid" });
         router.push("/login");
       } else {
         setVerifying(false);
@@ -32,43 +52,14 @@ export default function ResetPasswordPage() {
   }, [router]);
 
   // 2. Xử lý đổi mật khẩu
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (password.length < 8) {
-      toast.error("Mật khẩu phải có ít nhất 8 ký tự");
-      return;
-    }
-    if (password !== confirmPassword) {
-      toast.error("Mật khẩu xác nhận không khớp");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: password,
-      });
-
-      if (error) throw error;
-
-      toast.success("Khôi phục mật khẩu thành công!");
-
-      setTimeout(() => {
-        router.push("/");
-      }, 1500);
-    } catch (error: unknown) {
-      console.error("Lỗi đổi mật khẩu:", error);
-      if ((error as { code?: string } | null | undefined)?.code === "same_password") {
-        toast.error("Mật khẩu mới phải khác mật khẩu cũ");
-      } else if ((error as { code?: string } | null | undefined)?.code === "weak_password") {
-        toast.error("Mật khẩu quá yếu");
-      } else {
-        toast.error("Không đổi được mật khẩu, vui lòng thử lại");
-      }
-    } finally {
-      setLoading(false);
-    }
+  const handleResetPassword = async (values: ResetPasswordValues) => {
+    const outcome = await submitResetPassword({ inFlight, setPending: setLoading }, () =>
+      supabase.auth.updateUser({ password: values.password }),
+    );
+    if (!outcome) return;
+    if (outcome.message.type === "success") toast.success(outcome.message.text);
+    else toast.error(outcome.message.text);
+    if (outcome.redirect) setTimeout(() => router.push("/"), outcome.redirect.delayMs);
   };
 
   if (verifying) {
@@ -95,82 +86,39 @@ export default function ResetPasswordPage() {
           </p>
         </div>
 
-        <form onSubmit={handleResetPassword} className="p-8 space-y-5">
-          <div className="space-y-1">
-            <div className="relative">
-              {/* 👇 Áp dụng class input-field và thêm padding-right cho icon */}
-              <input
-                type={showPass ? "text" : "password"}
-                className="input-field pr-10"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Mật khẩu mới..."
-              />
-              <button
-                type="button"
-                tabIndex={-1}
-                onClick={() => setShowPass(!showPass)}
-                className="absolute right-3 top-4 text-gray-400 hover:text-blue-600"
-              >
-                {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            {/* 👇 Áp dụng class input-field */}
-            <input
-              type={showPass ? "text" : "password"}
-              className="input-field"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Nhập lại mật khẩu..."
+        <form onSubmit={(e) => handleSubmit(handleResetPassword)(e)} noValidate className="p-8 space-y-5">
+          <Field className="gap-1.5" data-invalid={!!errors.password}>
+            <PasswordInput
+              className="pr-10 placeholder:text-gray-400"
+              placeholder="Mật khẩu mới..."
+              aria-label="Mật khẩu mới"
+              aria-invalid={!!errors.password}
+              visible={password.visible}
+              onToggle={password.toggle}
+              toggleTabIndex={-1}
+              {...register("password")}
             />
-          </div>
+            <FieldError className="text-xs" errors={[errors.password]} />
+          </Field>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg shadow-blue-500/30 transition-all active:scale-[0.98] disabled:opacity-70 flex justify-center items-center gap-2"
-          >
-            {loading ? (
-              <Loader2 className="animate-spin" size={20} />
-            ) : (
-              <CheckCircle size={20} />
-            )}
+          <Field className="gap-1.5" data-invalid={!!errors.confirmPassword}>
+            <AuthInput
+              className="placeholder:text-gray-400"
+              type={password.visible ? "text" : "password"}
+              placeholder="Nhập lại mật khẩu..."
+              aria-label="Nhập lại mật khẩu"
+              aria-invalid={!!errors.confirmPassword}
+              {...register("confirmPassword")}
+            />
+            <FieldError className="text-xs" errors={[errors.confirmPassword]} />
+          </Field>
+
+          <Button type="submit" disabled={loading} className={AUTH_SUBMIT_CLASS}>
+            {loading ? <Loader2 className="size-5 animate-spin" /> : <CheckCircle className="size-5" />}
             Đổi mật khẩu
-          </button>
+          </Button>
         </form>
       </div>
-
-      {/* 👇 STYLE ĐỒNG BỘ VỚI TRANG LOGIN */}
-      <style jsx>{`
-        .input-field {
-          width: 100%;
-          padding: 12px 16px;
-          border: 1px solid #e5e7eb; /* Màu viền chuẩn login */
-          border-radius: 8px;
-          color: #374151; /* Màu chữ chuẩn login */
-          transition: all 0.2s;
-          outline: none;
-        }
-        .input-field:focus {
-          border-color: #2563eb;
-          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-        }
-        /* Fix màu placeholder nếu cần */
-        .input-field::placeholder {
-          color: #9ca3af;
-        }
-        .input-field::-ms-reveal,
-        .input-field::-ms-clear {
-          display: none;
-        }
-        .input-field::-webkit-password-reveal-button {
-          display: none;
-          -webkit-appearance: none;
-        }
-      `}</style>
     </div>
   );
 }

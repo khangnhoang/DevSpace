@@ -28,6 +28,14 @@ Plan: [plan.md](plan.md). Progress: [progress.md](progress.md).
 - Direction: when it fails again, keep the trace (`--trace on`) and check whether React Hook Form re-validated the emptied number input; fix the form if it did not, or the test if it raced, without raising the timeout.
 - Exit condition: the cause is named and fixed, or 10 consecutive full e2e runs pass C2.
 
+### AF-P7: the admin user form can save the role "Chọn vai trò"
+
+- Status: Open (2026-11-04, found by the Owner in AF-U5 manual QA; for AF-U6, which converts the admin user forms).
+- Problem: the role select in `app/admin/users/page.tsx` has a placeholder `<option>Chọn vai trò</option>` with no `value`, so its value is its text; the form sends it unchanged through `editUser` (and `createNewUser`), and `profiles.role` has no check constraint, so a user is saved with the role "Chọn vai trò". Such a user is neither `admin` nor `user` in the counters and filters.
+- Evidence: Owner screenshot on the dev stack: student@devspace.test shows the role "Chọn vai trò" after an edit; `supabase/migrations/20261021000000_baseline.sql` has no constraint on `profiles.role`.
+- Direction: AF-U6's user schema accepts only `user` or `admin` (the placeholder an empty value that fails) on client and server; a check constraint on `profiles.role` is a separate, Codex-gated migration (QE-F9 would catch its absence). The dev row is fixed by editing the user back to `user`.
+- Exit condition: neither the form nor the action can store a role other than `user` or `admin`.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

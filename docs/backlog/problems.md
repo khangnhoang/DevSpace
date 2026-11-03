@@ -79,8 +79,8 @@ Problems that no open program owns. This is not a program: it has no plan and no
 
 ### BL-P11: local Auth allows 6-character passwords while hosted requires 8
 
-- Status: Open (2026-11-03).
-- Problem: `supabase/config.toml` sets `minimum_password_length = 6`, while the Owner set the hosted minimum to 8 on 2026-11-03. Local tests and manual QA accept passwords that hosted Auth refuses, so a local pass does not prove the hosted rule.
+- Status: Fixed locally, awaiting delivery (2026-11-04): `minimum_password_length = 8`, and `[P13]` in `__tests__/rls/profiles.test.ts` proves a 7-character sign-up is refused and an 8-character one accepted (it fails with the old value 6). No fixture used a shorter password. The setting reaches a running stack only after a restart (QE-P4); the dev stack needs `npx supabase stop` and `npx supabase start` once.
+- Problem: `supabase/config.toml` set `minimum_password_length = 6`, while the Owner set the hosted minimum to 8 on 2026-11-03. Local tests and manual QA accept passwords that hosted Auth refuses, so a local pass does not prove the hosted rule.
 - Evidence: the Owner reported the hosted change on 2026-11-03; `supabase/config.toml:183` read at `250d0a0`. The seed users' password is longer than 8 characters.
 - Direction: small task after AF-U4 merges: set the local minimum to 8, run `npm test` and `npm run test:e2e` (the config change resets the test stack), and fix any fixture that creates a shorter password.
 - Exit condition: local and hosted Auth share the minimum password length of 8, and the test suites pass.

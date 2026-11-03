@@ -37,7 +37,7 @@ Direction the Owner has set that is outside the current scope. Work that is in s
 
 ## BL-F12: Prettier for the files a change touches
 
-- Status: Planned after AF-U4 merges (Owner decision, 2026-11-03).
+- Status: Fixed locally, awaiting delivery (Prettier 3.9.10 pinned, `npm run format` and `npm run format:check`, the format step in `git-pr-workflow`). Owner decision 2026-11-04: Markdown is not formatted (`*.md` in `.prettierignore`), because Prettier pads every table column to its longest cell and would double `progress.md`.
 - Direction: add Prettier as a pinned devDependency (dependency-updates) with a near-default config (`printWidth` 80, `endOfLine: "auto"` because the repo mixes CRLF and LF) and a `.prettierignore` for build output, `supabase/`, generated shadcn files and the vendored skill; add `npm run format` and `npm run format:check`; record the commands in `AGENTS.md` and add a format step to the delivery flow (implement, format the changed files, self-review, test, commit) in the owning skill. Existing code is not reformatted in bulk, and CI gets no format check (Owner decision: the goal is that the files the Owner reads are formatted, not history).
 - Target program: none yet (backlog; small task).
 

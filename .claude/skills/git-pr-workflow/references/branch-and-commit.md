@@ -22,7 +22,7 @@ Do not create, rename, switch, merge or delete branches just to silence a proble
 5. Look for conflict markers, debug code, unrelated formatting, accidental deletions or renames, and secrets or environment values in the actual staged content. Keyword search is only a supplement.
 6. Create one local commit for the checkpoint, in its own message after every edit has succeeded: an edit sent in parallel with `git commit` can fail while the commit still runs. Report the hash, message, scope, checks and that nothing was pushed.
 
-A commit may include the implementation plus the tests, types, migration files, comments and docs it directly needs. It must not include pre-existing work, unrelated cleanup, broad formatting, unneeded dependency changes, personal settings, `.env*`, build output or debug dumps. Do not commit `.claude/*.local.json` or `.claude/worktrees/`.
+A commit may include the implementation plus the tests, types, migration files, comments and docs it directly needs. It must not include pre-existing work, unrelated cleanup, broad formatting (Prettier on the files the change touches is not broad: [SKILL.md](../SKILL.md), Format the changed files), unneeded dependency changes, personal settings, `.env*`, build output or debug dumps. Do not commit `.claude/*.local.json` or `.claude/worktrees/`.
 
 A commit is not final approval. Manual QA may stay pending if reported; it still blocks merge when required.
 

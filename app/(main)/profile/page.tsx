@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import CourseCard from "./CourseCard";
+import { CourseRow, FeaturedCourseCard } from "./CourseCard";
 import {
   getUserDashboardData,
   supabase,
@@ -35,11 +35,7 @@ import { formatDateTime, formatVnd } from "@/lib/format-vi";
 import { ProfileData } from "@/lib/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import {
-  COURSES_COLLAPSED_COUNT,
-  orderCoursesByProgress,
-  visibleCourses,
-} from "@/lib/profile-courses";
+import { layoutCourses } from "@/lib/profile-courses";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -369,7 +365,7 @@ export default function ProfilePage() {
 
       // 1. Fetch Profile & Courses
       const dashboardData = await getUserDashboardData(session.user.id);
-      setMyCourses(orderCoursesByProgress(dashboardData));
+      setMyCourses(dashboardData);
       const profileData = await getProfile(session.user.id);
       setUserProfile(profileData || null);
 
@@ -446,6 +442,8 @@ export default function ProfilePage() {
   const displayAvatar =
     userProfile?.avatar_url || user?.user_metadata?.avatar_url;
 
+  const { featured, rows, canExpand } = layoutCourses(myCourses, showAllCourses);
+
   // A row shows only when the learner filled it in. A stored gender outside today's list shows as stored.
   const profileDetails = [
     {
@@ -521,12 +519,13 @@ export default function ProfilePage() {
           </h2>
           {myCourses.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {visibleCourses(myCourses, showAllCourses).map((course) => (
-                  <CourseCard key={course.id} course={course} />
+              <div className="flex flex-col gap-3">
+                {featured && <FeaturedCourseCard course={featured} />}
+                {rows.map((course) => (
+                  <CourseRow key={course.id} course={course} />
                 ))}
               </div>
-              {myCourses.length > COURSES_COLLAPSED_COUNT && (
+              {canExpand && (
                 <button
                   type="button"
                   onClick={() => setShowAllCourses((open) => !open)}

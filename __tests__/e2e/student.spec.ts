@@ -2,7 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { authFile } from "./accounts";
 import { backgroundOf, confirmDialogOf, expectDismissKeepsObject, expectFitsPhone, expectKeyboardFlow, expectOnTop, recordMutations } from "./confirm-dialog";
 import { expect, test } from "./fixtures";
-import { commentDeletedAt, createCommentFixture, createStudentCourseFixtures } from "./service-role";
+import { commentDeletedAt, createCommentFixture, createCompletedStudentCourseFixture, createStudentCourseFixtures } from "./service-role";
 
 // The student is enrolled in the paid course with an approved payment.
 test.use({ storageState: authFile("student") });
@@ -146,12 +146,16 @@ test("[T6] the transaction history filter is labelled, filters by status from mo
 });
 
 // The student is enrolled in course 2 with lesson 3 done and lesson 4 open.
-test("[T7] the course card leads back to the next unfinished lesson and its title is a card heading", async ({ page }) => {
+test("[T7] the course the student is on is a featured card that leads back to the next unfinished lesson", async ({ page }) => {
   await page.goto("/profile");
   const card = page.getByRole("article").filter({ hasText: "JavaScript căn bản" });
   await expect(card.getByRole("heading", { level: 3, name: "JavaScript căn bản" })).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(0);
   await expect(card).toContainText("1/2 bài học");
+  await expect(card.getByRole("progressbar", { name: "Tiến độ khóa JavaScript căn bản" })).toHaveAttribute("aria-valuenow", "50");
+  // The seed course has no image: the fallback renders, with an empty alt because the title is beside it.
+  await expect(card.locator("img")).toHaveAttribute("src", /no-course-image/);
+  await expect(card.locator("img")).toHaveAttribute("alt", "");
 
   const link = card.getByRole("link", { name: "Tiếp tục học" });
   await expect(link).toHaveAttribute("href", "/learn/javascript-can-ban/ham-va-vong-lap");
@@ -163,31 +167,61 @@ test("[T7] the course card leads back to the next unfinished lesson and its titl
   await expect(page.getByText("Viết hàm với function và lặp bằng for.")).toBeVisible();
 });
 
-test("[T8] more than four courses show four in two columns, in progress first, and expand and collapse in place", async ({ page }) => {
+test("[T8] with more than four courses the featured card and three rows show first, newest enrollment first, and the rest expand and collapse in place", async ({ page }) => {
   const extra = await createStudentCourseFixtures(4);
   await page.goto("/profile");
   const cards = page.getByRole("article");
   const expand = page.getByRole("button", { name: "Xem tất cả (5)" });
+  const shownExtras = async () => (await Promise.all(extra.map((fixture) => cards.filter({ hasText: fixture.label }).count()))).reduce((sum, count) => sum + count, 0);
 
   await expect(cards).toHaveCount(4);
   await expect(expand).toHaveAttribute("aria-expanded", "false");
-  // The started course leads the not-started ones.
+  // The only unfinished course with lessons is featured on top; the rows follow, the latest enrollment first.
   await expect(cards.first()).toContainText("JavaScript căn bản");
   await expect(cards.first().getByRole("link", { name: "Tiếp tục học" })).toBeVisible();
-  const [first, second] = await Promise.all([cards.nth(0).boundingBox(), cards.nth(1).boundingBox()]);
-  expect(first && second && second.x > first.x && Math.abs(second.y - first.y) < 2, "two columns from md").toBe(true);
+  await expect(cards.nth(1)).toContainText(extra[3].label);
+  expect(await shownExtras(), "three of the four other courses show").toBe(3);
 
   const url = page.url();
   await expand.click();
   await expect(cards).toHaveCount(5);
+  expect(await shownExtras(), "every course shows once expanded").toBe(4);
   const collapse = page.getByRole("button", { name: "Thu gọn" });
   await expect(collapse).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByRole("article").filter({ hasText: extra[3].label })).toBeVisible();
   expect(page.url(), "the list expands in place").toBe(url);
 
   await collapse.click();
   await expect(cards).toHaveCount(4);
   await expect(expand).toBeVisible();
+});
+
+test("[T11] a course without lessons reads \"Chưa có bài học\", a finished one \"Hoàn thành\" with its review link, and a row is at most 72px tall at 375px", async ({ page }) => {
+  const [empty] = await createStudentCourseFixtures(1);
+  const done = await createCompletedStudentCourseFixture();
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/profile");
+
+  const emptyRow = page.getByRole("article").filter({ hasText: empty.label });
+  await expect(emptyRow.getByRole("heading", { level: 3, name: empty.label })).toBeVisible();
+  await expect(emptyRow).toContainText("Chưa có bài học");
+  await expect(emptyRow).not.toContainText("0/0");
+  await expect(emptyRow.getByRole("progressbar")).toHaveCount(0);
+  await expect(emptyRow.getByRole("link", { name: "Xem khóa học" })).toHaveAttribute("href", `/course/${empty.slug}`);
+  await expect(emptyRow.locator("img")).toHaveAttribute("src", /no-course-image/);
+
+  const doneRow = page.getByRole("article").filter({ hasText: done.label });
+  await expect(doneRow).toContainText("Hoàn thành");
+  await expect(doneRow.locator("svg.lucide-circle-check-big")).toHaveCount(1);
+  await expect(doneRow.getByRole("link", { name: "Ôn lại" })).toHaveAttribute("href", `/learn/${done.slug}/${done.lessonSlug}`);
+
+  for (const row of [emptyRow, doneRow, page.getByRole("article").filter({ hasText: "JavaScript căn bản" })]) {
+    await expect(row).toBeVisible();
+  }
+  for (const row of [emptyRow, doneRow]) {
+    const box = await row.boundingBox();
+    expect(box && box.height <= 72, `a row is ${box?.height}px tall`).toBe(true);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), "the page scrolls sideways").toBe(true);
 });
 
 const overflows = (page: Page, selector: string) => page.locator(selector).first().evaluate((el) => el.scrollWidth > el.clientWidth);

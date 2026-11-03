@@ -9,7 +9,6 @@ export * from "@/lib/types";
 import type {
   DBCourse,
   DBLesson,
-  DBProgress,
   DBChapter,
   DBProfile,
   DashboardCourse,
@@ -22,7 +21,12 @@ import type {
   Instructor,
 } from "@/lib/types";
 import { pickContinueLessonSlug, sortLessonsInCourseOrder } from "@/lib/lesson-order";
-import { buildDashboardCourses, type DashboardLesson } from "@/lib/profile-courses";
+import {
+  buildDashboardCourses,
+  type DashboardEnrollment,
+  type DashboardLesson,
+  type DashboardProgress,
+} from "@/lib/profile-courses";
 
 // 2. Khởi tạo Client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -162,7 +166,7 @@ export async function getUserDashboardData(
   // 1. Lấy danh sách Khóa học
   const { data: allCoursesData } = await supabase
     .from("courses")
-    .select("id, name, slug"); // Lấy 'name' từ DB
+    .select("id, name, slug, image_url"); // Lấy 'name' từ DB
 
   const allCourses = (allCoursesData || []) as DBCourse[];
   if (allCourses.length === 0) return [];
@@ -176,23 +180,18 @@ export async function getUserDashboardData(
   // 3. Lấy Tiến độ và các khóa đã đăng ký của User (own rows only, under RLS)
   const { data: progressData } = await supabase
     .from("user_progress")
-    .select("lesson_id")
+    .select("lesson_id, completed_at")
     .eq("user_id", userId);
   const { data: enrollmentData } = await supabase
     .from("enrollments")
-    .select("course_id")
+    .select("course_id, created_at")
     .eq("user_id", userId);
-
-  const userProgress = (progressData || []) as DBProgress[];
-  const enrolledCourseIds = new Set(
-    (enrollmentData || []).map((e: { course_id: number }) => e.course_id),
-  );
 
   return buildDashboardCourses(
     allCourses,
     allLessons,
-    new Set(userProgress.map((p) => p.lesson_id)),
-    enrolledCourseIds,
+    (progressData || []) as DashboardProgress[],
+    (enrollmentData || []) as DashboardEnrollment[],
   );
 }
 

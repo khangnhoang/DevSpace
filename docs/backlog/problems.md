@@ -77,6 +77,14 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Direction: security change for the Codex gate: enable secure password change (recent sign-in or reauthentication nonce) on local and hosted, and/or let the page accept only a recovery session (the `PASSWORD_RECOVERY` event after `/auth/callback`). Severity is to be assessed before scheduling.
 - Exit condition: a session that did not come from the recovery link cannot change the password without reauthenticating, asserted by a test.
 
+### BL-P11: local Auth allows 6-character passwords while hosted requires 8
+
+- Status: Open (2026-11-03).
+- Problem: `supabase/config.toml` sets `minimum_password_length = 6`, while the Owner set the hosted minimum to 8 on 2026-11-03. Local tests and manual QA accept passwords that hosted Auth refuses, so a local pass does not prove the hosted rule.
+- Evidence: the Owner reported the hosted change on 2026-11-03; `supabase/config.toml:183` read at `250d0a0`. The seed users' password is longer than 8 characters.
+- Direction: small task after AF-U4 merges: set the local minimum to 8, run `npm test` and `npm run test:e2e` (the config change resets the test stack), and fix any fixture that creates a shorter password.
+- Exit condition: local and hosted Auth share the minimum password length of 8, and the test suites pass.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

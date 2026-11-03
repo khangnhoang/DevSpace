@@ -11,10 +11,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import { NO_COURSE_IMAGE } from "@/lib/constants";
-import CourseFormDialog, {
-  type InstructorData,
-} from "./_components/CourseFormDialog";
-import { formatCurrency } from "./_lib/format-currency";
+import CourseFormDialog, { type InstructorData } from "./CourseFormDialog";
+import { formatCurrency } from "../_lib/format-currency";
 
 interface CoursesClientProps {
   courses: AdminCourseData[];

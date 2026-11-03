@@ -9,7 +9,7 @@ import { Field, FieldError } from "@/components/ui/field";
 import { AuthInput, AuthSubmitButton, PasswordInput, usePasswordVisibility } from "@/app/components/AuthFields";
 import { signInSchema, type SignInValues } from "@/lib/schemas/auth-forms";
 import { AuthMessageBox } from "./AuthMessageBox";
-import { submitSignIn, type AuthMessage } from "./auth-outcomes";
+import { submitSignIn, type AuthMessage } from "../_lib/auth-outcomes";
 
 export default function SignInForm({ onSwitchView }: { onSwitchView: (view: "register" | "forgot") => void }) {
   const router = useRouter();

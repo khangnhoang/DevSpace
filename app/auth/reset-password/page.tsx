@@ -16,7 +16,7 @@ import {
   usePasswordVisibility,
 } from "@/app/components/AuthFields";
 import { resetPasswordSchema, type ResetPasswordValues } from "@/lib/schemas/auth-forms";
-import { submitResetPassword } from "./reset-outcome";
+import { submitResetPassword } from "./_lib/reset-outcome";
 
 export default function ResetPasswordPage() {
   const router = useRouter();

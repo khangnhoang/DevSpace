@@ -10,7 +10,7 @@ import { Field, FieldError } from "@/components/ui/field";
 import { AuthInput, AuthSubmitButton } from "@/app/components/AuthFields";
 import { forgotPasswordSchema, type ForgotPasswordValues } from "@/lib/schemas/auth-forms";
 import { AuthMessageBox } from "./AuthMessageBox";
-import { submitForgotPassword, type AuthMessage } from "./auth-outcomes";
+import { submitForgotPassword, type AuthMessage } from "../_lib/auth-outcomes";
 
 export default function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
   const [pending, setPending] = useState(false);

@@ -1,7 +1,7 @@
-// What the reset page shows and does after `updateUser` answers. Like `app/(main)/login/auth-outcomes.ts` it imports no
+// What the reset page shows and does after `updateUser` answers. Like `app/(main)/login/_lib/auth-outcomes.ts` it imports no
 // Supabase client, React or Next module (AF-U4 plan, G7) and has its own result function and submit helper: the
 // reset page shows its outcome as a toast, not in the message box of the login page.
-import type { AuthErrorLike, AuthOutcome, SubmitControl } from "@/app/(main)/login/auth-outcomes";
+import type { AuthErrorLike, AuthOutcome, SubmitControl } from "@/app/(main)/login/_lib/auth-outcomes";
 
 export const RESET_SUCCESS_MESSAGE = "Khôi phục mật khẩu thành công!";
 export const RESET_SAME_PASSWORD_MESSAGE = "Mật khẩu mới phải khác mật khẩu cũ";

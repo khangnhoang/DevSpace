@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
-import ForgotPasswordForm from "./ForgotPasswordForm";
-import SignInForm from "./SignInForm";
-import SignUpForm from "./SignUpForm";
+import ForgotPasswordForm from "./_components/ForgotPasswordForm";
+import SignInForm from "./_components/SignInForm";
+import SignUpForm from "./_components/SignUpForm";
 
 type ViewState = "login" | "register" | "forgot";
 

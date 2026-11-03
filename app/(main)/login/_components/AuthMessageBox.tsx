@@ -1,4 +1,4 @@
-import type { AuthMessage } from "./auth-outcomes";
+import type { AuthMessage } from "../_lib/auth-outcomes";
 
 export function AuthMessageBox({ message }: { message: AuthMessage | null }) {
   if (!message) return null;

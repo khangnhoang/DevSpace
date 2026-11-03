@@ -18,7 +18,7 @@ import {
   type SignUpProfileValues,
 } from "@/lib/schemas/auth-forms";
 import { AuthMessageBox } from "./AuthMessageBox";
-import { submitSignUp, type AuthMessage } from "./auth-outcomes";
+import { submitSignUp, type AuthMessage } from "../_lib/auth-outcomes";
 
 type Props = { onSwitchView: (view: "login") => void };
 

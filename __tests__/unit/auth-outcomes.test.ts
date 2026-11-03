@@ -19,7 +19,7 @@ import {
   submitSignIn,
   submitSignUp,
   type SubmitControl,
-} from "@/app/(main)/login/auth-outcomes";
+} from "@/app/(main)/login/_lib/auth-outcomes";
 import {
   RESET_FAILED_MESSAGE,
   RESET_SAME_PASSWORD_MESSAGE,
@@ -27,7 +27,7 @@ import {
   RESET_WEAK_PASSWORD_MESSAGE,
   resetPasswordOutcome,
   submitResetPassword,
-} from "@/app/auth/reset-password/reset-outcome";
+} from "@/app/auth/reset-password/_lib/reset-outcome";
 
 // The submit helpers take the auth call as a parameter (AF-U4 plan, G7), so a stub stands in for Supabase and the
 // mapping runs with no network.

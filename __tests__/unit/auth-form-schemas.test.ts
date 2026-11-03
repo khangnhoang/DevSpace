@@ -58,7 +58,7 @@ describe("sign-up account schema (step 1)", () => {
   });
 
   it.each(["sadasdasd@gmasdsdsd.e,a", "a@b.c", "a@b.c1", "a b@c.de", "a@@c.de", "a..b@c.de"])(
-    "refuses the email %j that the loose pattern accepted",
+    "refuses the malformed email %j",
     (email) => {
       expect(issues(signUpAccountSchema.safeParse({ ...valid, email })).email).toBe(EMAIL_INVALID_MESSAGE);
     },

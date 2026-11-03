@@ -1,6 +1,6 @@
 # UX-U1 detail plan — Upgrade the learner profile page
 
-Revision: r1, 2026-11-03. Owner approval: 2026-11-03. Master plan or charter: [README.md](../../README.md).
+Revision: r2, 2026-11-03 (r1 approved 2026-11-03; r2 reshapes the courses section after the Owner's QA with five courses: AC3, AC4, AC11 and AC12, CP4). Owner approval: r2 on 2026-11-03. Master plan or charter: [README.md](../../README.md).
 
 ## 1. Binding Spec
 
@@ -12,14 +12,16 @@ Outcome: the learner profile page (`/profile`) leads back into learning from eac
 | --- | --- |
 | AC1 | A learner with an unfinished started course sees a "Tiếp tục học" link on its card that opens the course's next unfinished lesson in chapter and lesson order, the lesson the course page's "Tiếp tục học ngay" opens; a completed course shows "Ôn lại" linking to its last lesson; a course with no lesson links to `/course/<slug>`. |
 | AC2 | A learner enrolled in a course with no completed lesson sees that course on the profile at 0% with a "Bắt đầu học" link to its first lesson; a course neither enrolled nor started does not appear, as today. |
-| AC3 | The course cards are ordered in progress (above 0% and below 100%) first, then not started, then completed; within a group the order is stable. |
-| AC4 | With more than four courses the section shows four cards and a "Xem tất cả (n)" button that shows every card in place and then reads "Thu gọn"; with four or fewer there is no button. Cards sit in two columns from `md`. |
-| AC5 | The course title on a card is a heading one level below the section heading "Khóa học của tôi" (not an `<h1>`). |
+| AC3 | The courses are ordered by the learner's latest activity in each course, most recent first: the latest `completed_at` of their progress in it, or the enrollment's `created_at` when no lesson is done; ties keep the courses query order. (r2, replaces the r1 group order.) |
+| AC4 | The most recently active unfinished course (it has lessons and not all are done) is a featured card with the course image, title, progress and its link as the primary action; when no course is unfinished there is no featured card. The other courses are compact rows (small image, title, a thin progress bar or status, link), at most 72px tall at 375px. Four courses show at first (the featured card and three rows, or four rows); with more, a "Xem tất cả (n)" button shows every row in place and then reads "Thu gọn"; with four or fewer there is no button. (r2, replaces the r1 two-column cards.) |
+| AC5 | The course title on the featured card and on each row is a heading one level below the section heading "Khóa học của tôi" (not an `<h1>`). |
 | AC6 | The profile card shows a gender, date of birth or province row only when it has a value, never "Trống"; when all three are empty it shows one line that invites the learner to add their details, and the existing "Chỉnh sửa hồ sơ" action opens the same dialog. |
 | AC7 | At 768px the name and the "Chỉnh sửa hồ sơ" button do not wrap mid-label; at 375px the profile card is a compact horizontal header (avatar beside name and email) and the "Khóa học của tôi" heading starts within the first 812px of the page; from `lg` the card is the side column as today. |
 | AC8 | At 375px the transaction history shows each transaction as a compact block (course, date, amount, status) with no horizontal scroll of the page or the history; from `md` it stays a table. The status filter, its accessible name and the pagination work at every width. |
 | AC9 | Dates in the history show day, month, year and hour:minute without seconds; amounts use the Vietnamese thousands separator ("199.000đ"). |
 | AC10 | No profile, payment or progress data is written by the page beyond what it wrote before; the edit dialog, its validation and the avatar upload behave as before. |
+| AC11 | Every course shows its `image_url`, or `/no-course-image.png` (`NO_COURSE_IMAGE`) when it has none, with an empty `alt` because the title is next to it. |
+| AC12 | A course with no lesson reads "Chưa có bài học" with no progress bar and no "0/0"; a completed course reads "Hoàn thành" with a check icon as well as its "Ôn lại" link. |
 
 ### 1.2 Scope and non-goals
 
@@ -42,6 +44,7 @@ Outcome: the learner profile page (`/profile`) leads back into learning from eac
 - (2026-11-03) "Tiếp tục học" opens the next unfinished lesson, as the course page does, falling back to the course page.
 - (2026-11-03) Enrolled courses with no completed lesson appear at 0% with "Bắt đầu học".
 - (2026-11-03) "Xem tất cả" expands the list in place; no new page.
+- (2026-11-03, r2) After seeing five courses on the dev stack, the Owner chose a featured card for the course being learned plus compact rows, with course images, ordered by latest activity (progress `completed_at`, else enrollment `created_at`), four courses shown at first.
 
 ## 2. Repository facts
 
@@ -50,6 +53,7 @@ Baseline: `1c689ba`, checked 2026-11-03.
 - `getUserDashboardData` (`lib/supabase.ts:157`) reads every course, every lesson (`id, course_id`) and the caller's `user_progress`, and returns only courses with a completed lesson (`isStarted`), in the order the courses query returns — justifies AC2 and AC3.
 - `getLastAccessedLessonSlug` (`lib/supabase.ts:718`) returns the first unfinished lesson in chapter and lesson order, the last lesson when all are done, `null` when the course has none; the course page builds `/learn/<course>/<lesson>` from it — justifies AC1 and G2.
 - `lessons` grants `authenticated` only `id, title, slug, course_id, chapter_id, order_index, created_at, has_video, word_count` (`20261021185249_h2_1b_restrict_reads.sql`), enough for the next-lesson rule without content — justifies G1 for AC1.
+- r2: `user_progress` has `completed_at` and `enrollments` has `created_at`, both readable under the own-row select policies; `lib/constants.ts` exports `NO_COURSE_IMAGE`, which the home and course pages use as the fallback — justify AC3 and AC11.
 - `enrollments` has the select policy "Users can view own enrollments" (`auth.uid() = user_id`, baseline migration) — justifies G1 for AC2.
 - The profile cards are `div`s with no link, the title is an `<h1>` and the list is one column with no limit (`page.tsx:480-514`) — findings 1, 6 and 8.
 - The profile card prints "Trống" for empty fields and sits in `md:w-1/4` with a 128px avatar (`page.tsx:422-470`) — findings 3, 4 and 5.
@@ -73,6 +77,7 @@ Baseline: `1c689ba`, checked 2026-11-03.
 | CP1 | Courses section: AC1 to AC5 (data read, order, links, four-card limit with "Xem tất cả", two columns, heading level). | `npx tsc --noEmit`; `npm run lint` (0 problems); `npm run test:unit` with new cases for the order, the slice and the next-lesson rule (in progress, completed, no lesson, null orders); `npm run test:e2e` with new rows: the student's card links to `/learn/javascript-can-ban/ham-va-vong-lap` and opens it; the learner, after the L5-style free enrollment of course 1 (existing `prepareLearnerEnrollment` cleanup), sees "Bắt đầu học" to `/learn/lam-quen-voi-html/cau-truc-mot-trang-html`. AC4's toggle gets an e2e row if a bounded fixture extension (extra course fixtures with owned enrollments) fits `test-quality-strategy`; otherwise unit coverage of the slice plus the visual review, with the reason reported. |
 | CP2 | Profile card and history: AC6 to AC9, with T6 updated under G4. | `tsc`; lint; `npm run test:unit` (formats); `npm run test:e2e` rows: the learner's card shows no "Trống" and shows the invitation; with `acquireStudentProfile` values set, the three rows show; at 375px the page and the history have no horizontal overflow, the student's payment shows "199.000đ" and a date without seconds, and the courses heading starts above 812px; at 768px the edit button's label does not wrap. Then `npm run test:e2e` a second time and `npm test` once. |
 | CP3 | Visual review and records: AC10 confirmed, UX-F1 `Fixed locally, awaiting delivery`, State updated. | Visual review per `frontend-design` at 375px, 768px and desktop on the dev stack signed in as the student and the learner (Owner signs in), at most three rounds, screenshots in the report; `npm run docs:check`. |
+| CP4 (r2) | Courses section reshaped: AC3, AC4, AC5, AC11, AC12 on top of CP1 (same data read plus `completed_at`, `created_at` and `image_url`, same links and G1 to G3). | `tsc`; lint; `npm run test:unit` for the activity order (progress beats enrollment date, ties stable) and the featured pick (none when all finished); `npm run test:e2e` with T7, T8 and L6 rewritten for the featured card and rows (G4: same guarantees), plus: a no-lesson course shows "Chưa có bài học", a completed course shows "Hoàn thành", the fallback image renders, and at 375px each row is at most 72px tall; `npm run test:e2e` twice and `npm test` once at the end. Main's visual review with the dev stack's five QA courses. |
 
 Manual QA (Owner): M1, the page at the three widths for perceptual judgement of the upgrade (spacing, hierarchy, the expanded list), which assertions cannot judge.
 

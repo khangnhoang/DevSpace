@@ -93,6 +93,14 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Direction: first read the hosted slugs (Owner-approved read) to see whether any existing slug breaks a kebab-case rule or is duplicated; then a migration with a unique constraint on `courses.slug` (Codex-gated, `supabase-migration`) and a slug rule in the admin schemas that new and edited slugs follow, with a plan for any existing slug that does not. Possibly with the techstack migration's schema review (BL-F11).
 - Exit condition: two courses cannot share a slug, and a slug the forms accept is a valid URL segment, or the Owner drops it.
 
+### BL-P13: the admin chapters page always names "HTML & CSS Cơ bản" as the current course
+
+- Status: Open (2026-11-04, found by Main during AF-U5 manual QA; outside AF-U5, which changed only the chapter form).
+- Problem: the "Khóa học hiện tại" card on `/admin/chapters` shows a hard-coded course name, so it disagrees with the course chosen in "Chuyển khóa học" and names a course even before one is chosen.
+- Evidence: `app/admin/chapters/page.tsx` renders the literal `HTML & CSS Cơ bản` (also at `1cab557`, before AF-U5); on the dev stack with course 1 ("Làm quen với HTML") selected, the card still read "HTML & CSS Cơ bản".
+- Direction: derive the card from the selected course (or an empty-state text when none is chosen); a small UI fix with one browser check.
+- Exit condition: the card names the selected course, or says none is chosen.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

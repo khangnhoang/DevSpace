@@ -322,6 +322,8 @@ export default function LessonsManagerPage() {
         toast.error(AI_INVALID_MESSAGE);
         return;
       }
+      // The result is a new question: filling it over an edited one must not leave the form updating that question.
+      setEditExerciseId(null);
       resetExercise(filled);
     } catch {
       toast.error("Lỗi lấy câu trả lời từ AI");

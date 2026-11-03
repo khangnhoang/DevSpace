@@ -889,6 +889,66 @@ test.describe("exercise form", () => {
     expect(mutations, "nothing was sent").toEqual([]);
   });
 
+  // The action's answer is faked in the browser, because the e2e server has a placeholder key and its guard refuses the
+  // call to Gemini; the row proves the page wiring around the answer, which the unit tests of ai-exercises cannot reach.
+  test("[E6] filling the form with an AI question while a question is being edited switches the form to add mode and writes nothing", async ({
+    page,
+  }) => {
+    const lesson = await createLessonFixture();
+    const exercise = await createExerciseFixture(lesson.id);
+    await openExercises(page, lesson.label);
+    const aiQuestion = fixtureLabel("E2E câu hỏi AI");
+    let asked = 0;
+    await page.route("**/admin/lessons", async (route) => {
+      const request = route.request();
+      if (request.method() !== "POST" || !request.headers()["next-action"])
+        return route.fallback();
+      asked += 1;
+      const data = [
+        {
+          question: aiQuestion,
+          option_a: "AI A",
+          option_b: "AI B",
+          option_c: "AI C",
+          option_d: "AI D",
+          correct_answer: "C",
+          explanation: "AI giải thích",
+        },
+      ];
+      return route.fulfill({
+        status: 200,
+        contentType: "text/x-component",
+        body: `0:{"a":"$@1","f":"","q":"","i":false}\n1:${JSON.stringify({ data })}\n`,
+      });
+    });
+    const mutations = recordMutations(page);
+
+    await page
+      .locator("h1")
+      .filter({ hasText: exercise.label })
+      .getByRole("button")
+      .first()
+      .click();
+    await expect(update(page)).toBeVisible();
+
+    await page.getByRole("button", { name: /AI Magic/ }).click();
+    await page.getByRole("button", { name: /Điền vào form/ }).click();
+
+    await expect(
+      page.getByLabel("Nội dung câu hỏi", { exact: true }),
+    ).toHaveValue(aiQuestion);
+    await expect(page.getByLabel("Đáp án đúng", { exact: true })).toHaveValue(
+      "c",
+    );
+    await expect(add(page)).toBeVisible();
+    await expect(update(page)).toHaveCount(0);
+    expect(asked).toBe(1);
+    expect(
+      mutations.filter((request) => !request.endsWith("/admin/lessons")),
+      "nothing was written",
+    ).toEqual([]);
+  });
+
   test("[D1] a repeated submit event adds one question", async ({ page }) => {
     const lesson = await createLessonFixture();
     const question = fixtureLabel("E2E câu hỏi submit");

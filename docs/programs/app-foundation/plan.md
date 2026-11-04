@@ -20,6 +20,7 @@ Progress: [progress.md](progress.md). Problems: [problems.md](problems.md). Futu
 2. (2026-10-28) The payment and coupon actions (`createPendingPayment`, `updatePaymentWithCoupon`, `cancelPayment`, `approvePayment`, `rejectPayment`, `getAllPayments`) and the coupon form of `CoursePaymentModal` stay out; security-hotfix H2-2b rewrites them and may use Zod then.
 3. (2026-10-28) The sign-in, sign-up, forgot-password and reset-password forms move to React Hook Form, Zod and shadcn; their `supabase.auth` calls stay unchanged.
 4. (2026-10-28) The program is complete when every form in Appendix A is converted, no `window.confirm` remains, and the skills are updated. Nothing outside forms and dialogs is restyled.
+5. (2026-11-04) A form keeps a successful e2e row and an e2e row for each integration boundary it has; an assertion that is only client logic goes to a component test and the e2e row is deleted once its replacement fails under a mutation (quality-engineering QE-U4; supersedes the "one rejected field" e2e row per form of the invariants).
 
 ## 3. Shared invariants
 
@@ -30,7 +31,7 @@ Progress: [progress.md](progress.md). Problems: [problems.md](problems.md). Futu
 - A schema accepts every value the current UI legitimately sends (read from the callers, not guessed), and normalizes blank optional text to `null` — prevents a stricter schema from breaking a working flow, and keeps P16 from coming back.
 - Screens keep their current look: shadcn tokens are mapped to the existing palette, and only form controls and dialogs change — prevents a hidden redesign shipped to production on merge.
 - Text and placeholders the e2e suite selects on (`Email...` and `Mật khẩu...` on the sign-in form, the `/admin/transactions` confirm handled in `__tests__/e2e/payment-helpers.ts:76-78`) stay, or the test changes in the same PR — prevents a red smoke or a silently weaker test.
-- Each converted form gets an e2e row for a successful submit and one rejected field, and the confirm dialog gets cancel and confirm rows, or the detail plan states why one is not practical (`test-quality-strategy`); each shared schema gets unit tests — ADR 0003 asks every unit to add tests where it changes a form or a validation contract.
+- Each converted form gets an e2e row for a successful submit and one for each integration boundary it has (persistence, a refusal by the server, the database or Auth, a failed real request, permission, upload, redirect); a rejected field that is only client logic gets a component test instead, and an existing e2e row is deleted only after its replacement fails under a mutation and the mapping is recorded (decision 5, `test-quality-strategy`). The confirm dialog gets cancel and confirm rows, or the detail plan states why one is not practical; each shared schema gets unit tests — ADR 0003 asks every unit to add tests where it changes a form or a validation contract.
 - A skill line states only what exists on `main` after the unit merges — prevents agents following instructions for code that is not there.
 
 ## 4. Units

@@ -85,44 +85,6 @@ test.describe("course form", () => {
     ]);
   });
 
-  test("[C2] a blank slug, a price that is not a whole number and a blank name show field errors and write nothing", async ({
-    page,
-  }) => {
-    const name = fixtureLabel("E2E khóa học lỗi");
-    await reserveCourse(name);
-    await openAdd(page);
-    const mutations = recordMutations(page);
-
-    await page.getByLabel("Tên khóa học").fill(name);
-    await page.getByLabel("Giá khóa học (VND)").fill("1.5");
-    await page.getByRole("button", { name: "Thêm mới" }).click();
-    await expect(page.getByText("Vui lòng nhập slug")).toBeVisible();
-    await expect(
-      page.getByText("Giá phải là số nguyên từ 0 trở lên"),
-    ).toBeVisible();
-    await expect(page.getByText("Vui lòng nhập tên khóa học")).toHaveCount(0);
-    await expect(page.getByLabel("Slug (URL)")).toHaveAttribute(
-      "aria-invalid",
-      "true",
-    );
-
-    await page.getByLabel("Giá khóa học (VND)").fill("-5");
-    await page.getByLabel("Tên khóa học").fill("   ");
-    await page.getByRole("button", { name: "Thêm mới" }).click();
-    await expect(page.getByText("Vui lòng nhập tên khóa học")).toBeVisible();
-    await expect(
-      page.getByText("Giá phải là số nguyên từ 0 trở lên"),
-    ).toBeVisible();
-
-    // A blank price is accepted and saved as 0, as the form always did: only the errors of the other fields remain.
-    await page.getByLabel("Giá khóa học (VND)").fill("");
-    await expect(
-      page.getByText("Giá phải là số nguyên từ 0 trở lên"),
-    ).toHaveCount(0);
-    expect(await coursesNamed(name)).toEqual([]);
-    expect(mutations, "nothing was sent").toEqual([]);
-  });
-
   test("[C3] edits a course whose price is 0, shows the 0 and saves it back unchanged", async ({
     page,
   }) => {

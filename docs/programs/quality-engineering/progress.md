@@ -6,14 +6,14 @@ Charter: [README.md](README.md). Problems: [problems.md](problems.md). Git histo
 
 | Field | Value |
 | --- | --- |
-| Spec revision | QE-U3 `implementation-plans/qe-u3-test-stack/plan.md` r4 (2026-11-01); r1 to r3 failed the Codex plan gate, r4 passed it and was approved by the Owner on 2026-11-01. QE-U2 r1 closed. |
-| Current unit / checkpoint | None active. QE-U3 merged in PR #50 (`60c369a`) on 2026-11-02. |
-| Status | QE-U3 delivered in PR #50 (`60c369a`) after green CI, its first run of the Linux paths; QE-P2 resolved and QE-F5 done. QE-F2, QE-F3 and QE-F4 stay deferred until their own initiatives are approved. |
+| Spec revision | QE-U4 [`implementation-plans/qe-u4-component-tests/plan.md`](implementation-plans/qe-u4-component-tests/plan.md) r2 (2026-11-04; r1 kept every e2e row), self-reviewed, no Codex gate (dev dependencies and tests only; no auth, permission, schema or CI change); approved by the Owner on 2026-11-04. QE-U3 r4 closed. |
+| Current unit / checkpoint | QE-U4 (component tests) on `test/qe-component-tests`: plan r2 approved; CP1 done locally (packages, `components` project, `CourseFormDialog` tests), CP2 done locally (C2 deleted in `45ad9f0`), CP3 docs done locally; delivery (push, PR) not granted. QE-U3 merged in PR #50 (`60c369a`) on 2026-11-02. |
+| Status | QE-U4 CP1 to CP3 done locally, delivery (push, PR) not granted. The `components` Vitest project (jsdom, Testing Library) has 12 `CourseFormDialog` tests (AC2 to AC7); the project alone runs in about 6 s wall. After C2 was deleted: `npm run test:unit` 585 passed, `npm test` 677 passed, `npm run test:e2e` 137 passed (138 before C2), `tsc`, lint (0), build clean, `npm audit` 18 (baseline 18). AC8 and AC12 mutations all fail at least one test and were reverted: removing the `savingRef` guard, the slug, name and price rules (whole number and sign separately), the price-error clearing, the `aria-invalid` bindings and the failed-save branch; the slug rule, the price rule and the price-error clearing each fail focused tests (3, 3 and 2 of the 12). The test that replayed C2 was dropped (correction 2); `test-quality-strategy` now prefers reusing focused tests by behavior over replaying an e2e row. C2 moved (`C2 -> __tests__/unit/components/CourseFormDialog.test.tsx`, deleted in `45ad9f0`); AF-P6 resolved. QE-F8 stays open after QE-U4 for the audit of every e2e row (Owner, 2026-11-04). QE-F2, QE-F3, QE-F4, QE-F7 and QE-F9 stay deferred. |
 | Completed evidence | QE-U1: PR #42 (`ddcefd0`). QE-U2: PR #46 (`3e4b941`). QE-U3: PR #50 (`60c369a`), CI run 41430597719 green on head `b44ff15`; see milestones. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | None until the Owner opens the next initiative. After the merge the Owner deletes the obsolete `C:\ProgramData\devspace-fixture-ownership-v1\` by hand. |
-| Current authority | None open; the QE-U3 grants ended with the merge of PR #50. |
+| Next action | Main reviews the report and the real diff of CP1 to CP3 (`b2d5b8b`, `b8e0c3c`, `45ad9f0` and the CP3 commit); then the Owner decides push and PR. After QE-U4, the e2e audit of QE-F8 is the next quality-engineering item. |
+| Current authority | Owner, 2026-11-04: QE-U4 r2 approved; commit of the PR 60 catch-up and the plan; implementation by one separate implementor session with local checkpoint commits, installing the five dev packages and running the test commands on the test stack. Push, PR and merge are not granted. |
 
 ## Milestones
 
@@ -36,3 +36,10 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-01 QE-U3 r4 approved for QE-P2 and QE-F5: separate test stack, lock with writer records, end-of-run audit (`038e334`).
 - 2026-11-02 QE-U3 CP1 runs rls and e2e on a separate `devspace-test` stack beside the dev stack (`eba3051`); CP2 replaces the ownership journal with a machine-wide lock, writer records and an end-of-run audit (`02c89e2`); CP3 moves CI and the docs to the new commands; QE-P2 and QE-F5 fixed locally, awaiting delivery (`167646e`).
 - 2026-11-02 QE-U3 merged after green CI: tests run on a separate `devspace-test` stack with one machine-wide lock and an end-of-run audit; QE-P2 resolved, QE-F5 done (PR 50, `60c369a`).
+- 2026-11-04 QE-U4 r2 approved by the Owner: a `components` Vitest project in jsdom with Testing Library, `CourseFormDialog` tests, C2 moved on equivalent coverage, an e2e row kept only for an integration boundary; QE-F8 stays open for the e2e audit (`68fbde6`).
+- 2026-11-04 QE-U4 CP1 adds the `components` Vitest project in jsdom with Testing Library, `npm run test:unit` runs it, and 12 `CourseFormDialog` tests cover AC2 to AC7 with the AC8 mutations failing (`b2d5b8b`).
+- 2026-11-04 QE-U4 CP2 adds a component test that mirrors the steps of e2e row C2; mutating the slug rule, the price rule (whole number, sign) or the price-error clearing each fails it (`b8e0c3c`).
+- 2026-11-04 QE-U4 CP2 deletes e2e row C2 from `admin-content-forms.spec.ts` after its mutations failed the component test; `C2 -> __tests__/unit/components/CourseFormDialog.test.tsx` (`45ad9f0`).
+- 2026-11-04 QE-U4 CP3: `test-quality-strategy` gets the component layer and the e2e integration-boundary rule with the C2 mapping, the app-foundation invariant is replaced by decision 5, `dependency-updates` and `AGENTS.md` follow, AF-P6 resolved; QE-F8 stays open for the e2e audit (`35cc3c4`).
+- 2026-11-04 QE-U4 correction after Main review: State rewritten to the final counts and mutation results, and `AGENTS.md` says `npm test` runs every project (`334ba8a`).
+- 2026-11-04 QE-U4 correction 2 (Owner): the component test that replayed all of C2 is removed, C2 is mapped per assertion to the focused tests, and `test-quality-strategy` says to reuse focused tests when an e2e row moves; the three AC12 mutations still fail focused tests (this commit).

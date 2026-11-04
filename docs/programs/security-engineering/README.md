@@ -13,7 +13,7 @@ One line each: number, date, decision. The decisions of each initiative stay in 
 
 1. (2026-11-05) `security-engineering` is an evergreen program with code `SE` (ADR 0007); `security-hotfix` closes and hands over its open security entries and the backlog security entries, and H2-2b becomes initiative SE-U1.
 2. (2026-11-05) Before the techstack migration only production exposures are fixed (data readable or writable by the wrong actor on production today); the other entries become acceptance criteria of the techstack migration.
-3. (2026-11-05) The program opens in a docs-only PR; each initiative is its own PR.
+3. (2026-11-05) The program opens in a docs-only PR.
 
 ## 3. Invariants
 

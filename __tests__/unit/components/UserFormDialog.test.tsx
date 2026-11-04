@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { StrictMode, useState } from "react";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -601,6 +601,40 @@ describe("UserFormDialog (keyboard and target)", () => {
     }
     const user = userEvent.setup();
     render(<Page />);
+
+    await user.click(button("Mở"));
+    expect(emailInput()).toHaveFocus();
+    await user.click(button("Đóng"));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(button("Mở")).toHaveFocus();
+  });
+
+  it("returns focus to the opener under StrictMode, where the effect runs twice and the opener cannot take focus while the dialog is open", async () => {
+    // jsdom has no `inert`: a disabled opener stands in for the inert page, where focus() does nothing.
+    function Page() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button disabled={open} onClick={() => setOpen(true)}>
+            Mở
+          </button>
+          {open && (
+            <UserFormDialog
+              user={null}
+              onClose={() => setOpen(false)}
+              onSaved={vi.fn()}
+            />
+          )}
+        </>
+      );
+    }
+    const user = userEvent.setup();
+    render(
+      <StrictMode>
+        <Page />
+      </StrictMode>,
+    );
 
     await user.click(button("Mở"));
     expect(emailInput()).toHaveFocus();

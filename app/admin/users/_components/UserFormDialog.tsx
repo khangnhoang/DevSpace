@@ -90,14 +90,16 @@ function UserForm({ user, onClose, onSaved }: UserFormDialogProps) {
   const cardRef = useRef<HTMLDivElement>(null);
 
   // The dialog is modal for the keyboard too: focus enters it on open and returns to the control that opened it.
+  // The opener is kept in a ref and read once: StrictMode (the dev build) mounts, cleans up and mounts again, and the
+  // second mount would otherwise take the field this effect focused as the opener.
+  const openerRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
-    const opener =
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
+    if (!openerRef.current && document.activeElement instanceof HTMLElement) {
+      openerRef.current = document.activeElement;
+    }
     cardRef.current?.querySelector<HTMLElement>(FIRST_FIELD)?.focus();
     return () => {
-      if (opener?.isConnected) opener.focus();
+      if (openerRef.current?.isConnected) openerRef.current.focus();
     };
   }, []);
 

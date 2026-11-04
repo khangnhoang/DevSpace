@@ -6,14 +6,14 @@ Charter: [README.md](README.md). Problems: [problems.md](problems.md). Git histo
 
 | Field | Value |
 | --- | --- |
-| Spec revision | QE-U3 `implementation-plans/qe-u3-test-stack/plan.md` r4 (2026-11-01); r1 to r3 failed the Codex plan gate, r4 passed it and was approved by the Owner on 2026-11-01. QE-U2 r1 closed. |
-| Current unit / checkpoint | None active. QE-U3 merged in PR #50 (`60c369a`) on 2026-11-02. |
-| Status | QE-U3 delivered in PR #50 (`60c369a`) after green CI, its first run of the Linux paths; QE-P2 resolved and QE-F5 done. QE-F2, QE-F3 and QE-F4 stay deferred until their own initiatives are approved. |
+| Spec revision | QE-U4 [`implementation-plans/qe-u4-component-tests/plan.md`](implementation-plans/qe-u4-component-tests/plan.md) r2 (2026-11-04; r1 kept every e2e row), self-reviewed, no Codex gate (dev dependencies and tests only; no auth, permission, schema or CI change); approved by the Owner on 2026-11-04. QE-U3 r4 closed. |
+| Current unit / checkpoint | QE-U4 (component tests) on `test/qe-component-tests`: plan r2 approved; CP1 not started. QE-U3 merged in PR #50 (`60c369a`) on 2026-11-02. |
+| Status | not started: QE-U4 r2 approved, the implementor starts at CP1. The trial install of the five dev packages passed `tsc`, `build` and the unit tests at `8384545`. QE-F8 stays open after QE-U4 for the audit of every e2e row (Owner, 2026-11-04). QE-F2, QE-F3, QE-F4, QE-F7 and QE-F9 stay deferred. |
 | Completed evidence | QE-U1: PR #42 (`ddcefd0`). QE-U2: PR #46 (`3e4b941`). QE-U3: PR #50 (`60c369a`), CI run 41430597719 green on head `b44ff15`; see milestones. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | None until the Owner opens the next initiative. After the merge the Owner deletes the obsolete `C:\ProgramData\devspace-fixture-ownership-v1\` by hand. |
-| Current authority | None open; the QE-U3 grants ended with the merge of PR #50. |
+| Next action | The implementor session implements CP1 to CP3 with a local commit per checkpoint (C2 deleted in its own commit); Main reviews each report and the real diff. |
+| Current authority | Owner, 2026-11-04: QE-U4 r2 approved; commit of the PR 60 catch-up and the plan; implementation by one separate implementor session with local checkpoint commits, installing the five dev packages and running the test commands on the test stack. Push, PR and merge are not granted. |
 
 ## Milestones
 
@@ -36,3 +36,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-01 QE-U3 r4 approved for QE-P2 and QE-F5: separate test stack, lock with writer records, end-of-run audit (`038e334`).
 - 2026-11-02 QE-U3 CP1 runs rls and e2e on a separate `devspace-test` stack beside the dev stack (`eba3051`); CP2 replaces the ownership journal with a machine-wide lock, writer records and an end-of-run audit (`02c89e2`); CP3 moves CI and the docs to the new commands; QE-P2 and QE-F5 fixed locally, awaiting delivery (`167646e`).
 - 2026-11-02 QE-U3 merged after green CI: tests run on a separate `devspace-test` stack with one machine-wide lock and an end-of-run audit; QE-P2 resolved, QE-F5 done (PR 50, `60c369a`).
+- 2026-11-04 QE-U4 r2 approved by the Owner: a `components` Vitest project in jsdom with Testing Library, `CourseFormDialog` tests, C2 moved on equivalent coverage, an e2e row kept only for an integration boundary; QE-F8 stays open for the e2e audit (this commit).

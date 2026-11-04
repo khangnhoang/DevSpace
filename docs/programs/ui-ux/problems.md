@@ -12,6 +12,22 @@ Charter: [README.md](README.md). Progress: [progress.md](progress.md).
 - Direction: an audit of the admin shell at 375, 768 and desktop (`frontend-design`, Upgrade an existing screen): collapse the sidebar below `lg`, a grid that fits the remaining width, and icon actions with an accessible name and a hit area of at least 40×40px on touch widths (as the AF-U5 dialog close buttons now have).
 - Exit condition: the admin pages show no clipped or overflowing content at 768px, and every icon-only action has a name and a touch-size target.
 
+### UX-P2: Course review avatars have an extra gradient
+
+- Status: Deferred (moved from SH-P22 on 2026-11-05, ADR 0007).
+- Problem: The avatar in the course review section has a strange extra gradient background.
+- Evidence: Legacy P22; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
+- Direction: Later UI work reviews the extra gradient in the course review avatar.
+- Exit condition: The unintended review-avatar gradient is removed and visually checked.
+
+### UX-P3: Notifications lack an explicit per-item read button
+
+- Status: Deferred (moved from SH-P23 on 2026-11-05, ADR 0007).
+- Problem: Notifications: there is no mark-as-read button per notification (you must click the notification itself), only a button for all.
+- Evidence: Legacy P23; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
+- Direction: Later work adds an explicit per-notification mark-as-read action alongside the existing interactions.
+- Exit condition: Each notification can be explicitly marked as read while existing all/read-on-click actions remain functional.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

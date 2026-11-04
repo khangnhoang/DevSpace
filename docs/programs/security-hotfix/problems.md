@@ -6,177 +6,33 @@ The original 2026-10-21 discovery table is preserved in Git at ddcefd0. Legacy I
 
 ## Open
 
-### SH-P5: Coupon usage RPC is missing
-
-- Status: Deferred.
-- Problem: The code calls the RPC `increment_coupon_usage` but the function does not exist in the DB → coupon usage never increases.
-- Evidence: Legacy P5; severity Medium; discovery-era Planned: H2 or later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Deferred to H2-2b; preserve the original H2-or-later scope and the H2 reservation design, together with SH-P6 and SH-P25.
-- Exit condition: The approved coupon reservation path exists and usage changes correctly through the supported actions.
-
-### SH-P6: Coupon usage is counted inconsistently
-
-- Status: Deferred.
-- Problem: A coupon is counted when the pending order is created, while `updatePaymentWithCoupon` does not count → inconsistent usage logic.
-- Evidence: Legacy P6; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Deferred to H2-2b under the approved H2 reservation design; original scheduling was later.
-- Exit condition: Coupon application, switch, cancellation, rejection and approval maintain the approved reservation invariant.
-
-### SH-P7: Server components use an anon client
-
-- Status: Deferred.
-- Problem: Server components read data with the anon client, not per user.
-- Evidence: Legacy P7; severity Low; discovery-era Planned: techstack-migration (out of scope for `infrastructure`, its plan section 7); preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Handle in techstack-migration, outside infrastructure (its historical plan section 7); H2-1 fixed only the learn/quiz/layout paths.
-- Exit condition: Remaining server reads use the intended caller context under the migration contract.
-
-### SH-P8: Auth flow migration follow-up
-
-- Status: Deferred.
-- Problem: Historical finding pending revalidation: Auth uses the implicit flow; should move to PKCE.
-- Evidence: Legacy P8; severity Low; discovery-era Planned: migration; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0. The historical H1 plan section 4.2 describes PKCE; this conversion does not revalidate Auth behavior or establish closure of the older record.
-- Direction: Retain the original migration follow-up; no new Auth implementation or claim of completion is made here.
-- Exit condition: The migration follow-up verifies the intended Auth flow and its compatibility.
-
-### SH-P10: Avatar uploads do not enforce path ownership
-
-- Status: Deferred.
-- Problem: Bucket `avatars`: any signed-in user can upload to any path.
-- Evidence: Legacy P10; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Later work must enforce caller ownership of avatar upload paths.
-- Exit condition: One signed-in user cannot write another user’s avatar path.
-
-### SH-P11: GraphQL exposes tables to anon and authenticated
-
-- Status: Deferred.
-- Problem: pg_graphql exposes every table to anon/authenticated (advisor 0026/0027).
-- Evidence: Legacy P11; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Later work must review the GraphQL exposure and advisor 0026/0027 findings.
-- Exit condition: GraphQL exposure and grants match the intended access model and the advisor findings are addressed.
-
-### SH-P14: Email links depend on the requesting browser
-
-- Status: Deferred.
-- Problem: Email links open only in the browser that requested them (PKCE); should move to `token_hash` + `verifyOtp` through a server route.
-- Evidence: Legacy P14; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Later work moves email links to token_hash plus verifyOtp through a server route; include SH-P18.
-- Exit condition: Confirmation/recovery links work through the intended server route without depending on the originating browser.
-
-### SH-P15: Transactions show anonymous learner names
-
-- Status: Deferred.
-- Problem: `/admin/transactions` shows every learner as "Ẩn danh": the page reads `p.profiles?.full_name` (`app/admin/transactions/page.tsx:148`) but `getAllPayments` returns `users`. The bug predates H1 (found during H1 QA).
-- Evidence: Legacy P15; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Later work reconciles the transactions page profile lookup with the users returned by getAllPayments.
-- Exit condition: Transactions display the correct learner name from the returned relation.
-
-### SH-P18: Confirmation without a code verifier shows an error
-
-- Status: Deferred.
-- Problem: Opening the signup confirmation link in a browser/tab without the code verifier → the `/auth/error` page, even though the email is confirmed and sign-in works. The root cause is P14.
-- Evidence: Legacy P18; severity Low; discovery-era Planned: with P14; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Handle with SH-P14, the recorded root cause.
-- Exit condition: A valid confirmation link opened without the original verifier completes with correct feedback.
-
-### SH-P19: Auth locks can stall multiple local tabs
-
-- Status: Open (monitor).
-- Problem: Several `localhost` tabs open: `supabase-js` shares `navigator.locks`, auth operations wait on the lock forever → one stuck tab makes the other tabs spin on sign-in. Closing all tabs fixes it. Library behavior, not caused by H1.
-- Evidence: Legacy P19; severity Low; discovery-era Planned: monitor; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Monitor the library behavior; closing all localhost tabs is the recorded workaround, not a permanent fix.
-- Exit condition: The multi-tab lock problem is resolved or the Owner accepts a documented library-level limitation.
-
-### SH-P20: Quiz results and completion are not stored
-
-- Status: Deferred.
-- Problem: Quiz results are not stored (no table), the UI does not mark a quiz as completed like a lesson; re-entering means starting over.
-- Evidence: Legacy P20; severity Medium; discovery-era Planned: future-features; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Retain as future-feature work for quiz persistence/completion; handle server grading with SH-P26.
-- Exit condition: Quiz results persist and completion remains visible on re-entry.
-
-### SH-P22: Course review avatars have an extra gradient
-
-- Status: Deferred.
-- Problem: The avatar in the course review section has a strange extra gradient background.
-- Evidence: Legacy P22; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Later UI work reviews the extra gradient in the course review avatar.
-- Exit condition: The unintended review-avatar gradient is removed and visually checked.
-
-### SH-P23: Notifications lack an explicit per-item read button
-
-- Status: Deferred.
-- Problem: Notifications: there is no mark-as-read button per notification (you must click the notification itself), only a button for all.
-- Evidence: Legacy P23; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Later work adds an explicit per-notification mark-as-read action alongside the existing interactions.
-- Exit condition: Each notification can be explicitly marked as read while existing all/read-on-click actions remain functional.
-
-### SH-P24: AI quiz creation needs a valid Gemini key
-
-- Status: Open (Owner action).
-- Problem: AI quiz creation does not run: `GEMINI_API_KEY` has expired. The Owner's job (issue a new key); includes the audit item of merging the 2 Gemini SDKs.
-- Evidence: Legacy P24; severity Low; discovery-era Planned: Owner; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: The Owner supplies a renewed key; retain the related audit work to consolidate the two Gemini SDKs. Superseded 2026-11-01: the Owner will not renew the Gemini key, and AI quiz generation moves to DeepSeek in [backlog BL-F9](../../backlog/future-features.md); this entry closes when BL-F9 is delivered (one SDK remains today, `@google/genai`, which BL-F9 removes).
-- Exit condition: The Owner verifies real AI quiz generation with a valid key and the related SDK audit work is accounted for.
-
-### SH-P25: Order approval and rejection are not atomic
-
-- Status: Deferred.
-- Problem: `approvePayment`/`rejectPayment` UPDATE only by `id`, not filtering `status = 'pending'` → approving again an order that was already processed, sending the email again; the enrollment is created by a separate request and its error is ignored.
-- Evidence: Legacy P25; severity Low; discovery-era Planned: **H2-2**; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Deferred to H2-2b: atomic approval/rejection, enrollment creation and side effects under the existing plan.
-- Exit condition: Repeated approval/rejection is denied, enrollment persists atomically and email is sent only for the winning transition.
-
-### SH-P26: Quiz answers are sent to the client
-
-- Status: Deferred.
-- Problem: The quiz is graded on the client, an enrolled user receives `correct_answer` in the payload.
-- Evidence: Legacy P26; severity Low; discovery-era Planned: with P20 (grade on the server); preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Handle with SH-P20; grade on the server rather than exposing correct_answer to the enrolled client.
-- Exit condition: Grading happens on the server and the client payload does not disclose correct answers before grading.
-
-### SH-P27: Comments expose deleted content and lack enrollment checks
-
-- Status: Deferred.
-- Problem: The content of a soft-deleted comment is still readable through REST; a user who has not enrolled can still read/write comments on a paid lesson.
-- Evidence: Legacy P27; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Later work addresses both deleted-content visibility and enrollment checks; excluded from H2-2a.
-- Exit condition: Deleted comment content is protected and paid-lesson comment access enforces the approved enrollment rules.
-
-### SH-P28: Users can change their profile email
-
-- Status: Deferred.
-- Problem: A user can edit the `email` column in `profiles` themselves (system email is sent to this column).
-- Evidence: Legacy P28; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Later work protects the profile email used for system mail; excluded from H2-2a.
-- Exit condition: A client cannot independently change the profile email used for system mail.
-
-### SH-P29: Purchased courses without progress are hidden
-
-- Status: Deferred.
-- Problem: "Khóa học của tôi" at `/profile` shows only courses with ≥ 1 completed lesson (`getUserDashboardData` filters `isStarted`) → a user who bought a course but has not finished any lesson sees "Bạn chưa tham gia khóa học nào". The bug predates H2 (found during H2-1 QA).
-- Evidence: Legacy P29; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Later work shows purchased courses before the first completed lesson.
-- Exit condition: A newly purchased course appears in the profile before any completed lesson.
-
-### SH-P30: An enrolled user can create another pending order
-
-- Status: Deferred.
-- Problem: `createPendingPayment` (`app/action/payment.ts:72`) never checks for an existing enrollment, so a direct call by an enrolled user creates a pending order for a course they already own; the UI hides the buy button, but the action is a public POST endpoint. Found while planning infrastructure U5 (2026-10-24); U5 does not encode it.
-- Evidence: Legacy P30; severity Low; discovery-era Planned: with H2-2b; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Handle with H2-2b; infrastructure U5 did not encode this case.
-- Exit condition: A direct createPendingPayment call by an already enrolled user cannot create a redundant pending order.
-
-### SH-P31: Unlimited coupons fail in direct pending-order creation
-
-- Status: Deferred.
-- Problem: `createPendingPayment` applies a coupon only when `coupon.used_count < coupon.max_uses` (`app/action/payment.ts:122`), so a code without a use limit (`max_uses` null) gives no discount there, while `updatePaymentWithCoupon` treats null as unlimited and applies it (infrastructure U5 row PF7). The UI never sends a code to `createPendingPayment` (P5), so only a direct call sees it. Found while implementing infrastructure U5 (2026-10-24); U5 does not encode it.
-- Evidence: Legacy P31; severity Low; discovery-era Planned: with H2-2b; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Handle with H2-2b; retain the direct-call distinction and infrastructure U5 PF7 evidence (U5 did not encode this case).
-- Exit condition: An unlimited coupon is handled consistently in direct createPendingPayment and updatePaymentWithCoupon calls.
+None. The program closed on 2026-11-05 (Owner decision, [ADR 0007](../../adr/0007-security-engineering-program.md)); its open entries moved to [security-engineering](../security-engineering/problems.md) or another owner, as the lines under Resolved show.
 
 ## Resolved
 
 One line each: ID, status, historical problem and delivered outcome. Details stay in Git.
+
+- SH-P5 — Moved to [security-engineering](../security-engineering/problems.md) as SE-P8 (2026-11-05)
+- SH-P6 — Moved to [security-engineering](../security-engineering/problems.md) as SE-P9 (2026-11-05)
+- SH-P7 — Moved to [security-engineering](../security-engineering/problems.md) as SE-P13 (2026-11-05)
+- SH-P8 — Moved to [security-engineering](../security-engineering/problems.md) as SE-P14 (2026-11-05)
+- SH-P10 — Moved to [security-engineering](../security-engineering/problems.md) as SE-P5 (2026-11-05)
+- SH-P11 — Moved to [security-engineering](../security-engineering/problems.md) as SE-P6 (2026-11-05)
+- SH-P14 — Moved to [security-engineering](../security-engineering/problems.md) as SE-P15 (2026-11-05)
+- SH-P18 — Moved to [security-engineering](../security-engineering/problems.md) as SE-P16 (2026-11-05)
+- SH-P19 — Moved to [security-engineering](../security-engineering/problems.md) as SE-P17 (2026-11-05)
+- SH-P20 — Moved to [security-engineering](../security-engineering/problems.md) as SE-P18 (2026-11-05)
+- SH-P25 — Moved to [security-engineering](../security-engineering/problems.md) as SE-P10 (2026-11-05)
+- SH-P26 — Moved to [security-engineering](../security-engineering/problems.md) as SE-P19 (2026-11-05)
+- SH-P27 — Moved to [security-engineering](../security-engineering/problems.md) as SE-P4 (2026-11-05)
+- SH-P28 — Moved to [security-engineering](../security-engineering/problems.md) as SE-P3 (2026-11-05)
+- SH-P30 — Moved to [security-engineering](../security-engineering/problems.md) as SE-P11 (2026-11-05)
+- SH-P31 — Moved to [security-engineering](../security-engineering/problems.md) as SE-P12 (2026-11-05)
+- SH-P22 — Moved to [ui-ux](../ui-ux/problems.md) as UX-P2 (2026-11-05)
+- SH-P23 — Moved to [ui-ux](../ui-ux/problems.md) as UX-P3 (2026-11-05)
+- SH-P15 — Moved to [backlog](../../backlog/problems.md) as BL-P18 (2026-11-05)
+- SH-P29 — Moved to [backlog](../../backlog/problems.md) as BL-P19 (2026-11-05)
+- SH-P24 — Resolved 2026-11-05: superseded by [backlog BL-F9](../../backlog/future-features.md), because the Owner will not renew the Gemini key and AI quiz generation moves to DeepSeek, which also removes the last Gemini SDK. Legacy P24; severity Low.
 
 - SH-P3 — Resolved 2026-10-31: review INSERT authorship bound to the caller, delivered in PR #43 with local/CI behavior coverage and hosted metadata postflight; hosted mutation QA was not run at Owner direction. Legacy P3, Medium (PR 43, `dba66e5`).
 - SH-P4 — Resolved 2026-10-31: comment author/lesson immutability and explicit UPDATE checks delivered with owner/admin/service-role local coverage and hosted metadata postflight; hosted mutation QA was not run at Owner direction. Legacy P4, Low (PR 43, `dba66e5`).

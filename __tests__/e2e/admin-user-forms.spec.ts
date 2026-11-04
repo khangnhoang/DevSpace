@@ -124,7 +124,16 @@ test.describe("admin user forms", () => {
     page,
     owned,
   }) => {
+    // The admin surface is always dark: the title and the footer text set no colour of their own, so under a light OS scheme they keep the white of the dialog card, not the page's dark foreground.
+    await page.emulateMedia({ colorScheme: "light" });
     await openCreateDialog(page);
+    await expect(
+      page.getByRole("heading", { name: "Thêm Thành Viên Mới" }),
+    ).toHaveCSS("color", "rgb(255, 255, 255)");
+    await expect(page.getByRole("button", { name: "Hủy Bỏ" })).toHaveCSS(
+      "color",
+      "rgb(255, 255, 255)",
+    );
     const mutations = recordMutations(page);
     await fillCreate(page, "learner@devspace.test");
     await page.getByLabel("HỌ VÀ TÊN").fill("Tên đã gõ");

@@ -195,7 +195,7 @@ function UserForm({ user, onClose, onSaved }: UserFormDialogProps) {
         aria-modal="true"
         aria-labelledby="user-form-title"
         onKeyDown={keepTabInside}
-        className="w-full max-w-lg md:w-[600px] flex flex-col bg-[#191C24] rounded-lg shadow-2xl border border-gray-800 animate-in fade-in zoom-in duration-200"
+        className="w-full max-w-lg md:w-[600px] flex flex-col bg-[#191C24] text-white font-sans rounded-lg shadow-2xl border border-gray-800 animate-in fade-in zoom-in duration-200"
       >
         <form
           onSubmit={(e) => handleSubmit(save)(e)}

@@ -118,6 +118,36 @@ describe("CourseFormDialog", () => {
     },
   );
 
+  // Mirrors the steps of the former e2e row C2 (AC12), so each of its assertions has a counterpart here.
+  it("walks a blank slug, a price that is not a whole number, a negative price and a name of spaces through their field errors and saves nothing", async () => {
+    const { user } = renderAdd();
+
+    await user.type(nameInput(), "Khóa học lỗi");
+    await user.type(priceInput(), "1.5");
+    await user.click(submitButton("Thêm mới"));
+    expect(await screen.findByText(SLUG_ERROR)).toBeInTheDocument();
+    expect(screen.getByText(PRICE_ERROR)).toBeInTheDocument();
+    expect(screen.queryByText(NAME_ERROR)).not.toBeInTheDocument();
+    expect(slugInput()).toHaveAttribute("aria-invalid", "true");
+
+    await user.clear(priceInput());
+    await user.type(priceInput(), "-5");
+    await user.clear(nameInput());
+    await user.type(nameInput(), "   ");
+    await user.click(submitButton("Thêm mới"));
+    expect(await screen.findByText(NAME_ERROR)).toBeInTheDocument();
+    expect(screen.getByText(PRICE_ERROR)).toBeInTheDocument();
+
+    // A blank price is accepted and saved as 0: only the errors of the other fields remain.
+    await user.clear(priceInput());
+    await waitFor(() =>
+      expect(screen.queryByText(PRICE_ERROR)).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText(NAME_ERROR)).toBeInTheDocument();
+    expect(addCourse).not.toHaveBeenCalled();
+    expect(updateCourse).not.toHaveBeenCalled();
+  });
+
   it("clears a field's error and its aria-invalid when the admin types a valid value into it", async () => {
     const { user } = renderAdd();
 

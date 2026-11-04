@@ -20,7 +20,7 @@ One line each: number, date, decision. The decisions of each initiative stay in 
 Each initiative keeps these; the rule itself lives with its owner.
 
 - One owner per rule, with links elsewhere (`skill-authoring`, Choosing where an instruction goes) — prevents copies that drift apart.
-- A skill states only what DevSpace has today (`skill-authoring`, What a skill holds), and no skill widens a permission (`AGENTS.md` section 8) — prevents agents running tools that do not exist or reading a skill as a grant.
+- A skill holds no rollout or progress state and gives no steps for what is not on `main` (`skill-authoring`, What a skill holds), and no skill widens a permission (`AGENTS.md` section 8) — prevents agents running tools that do not exist, editing skills on every unit, or reading a skill as a grant.
 - Every Codex brief starts with a "Read first" list (`code-review`, Codex) — prevents Codex reviewing against its own defaults.
 - `npm run docs:check` enforces only what `program-docs` and its templates state (`program-docs`, Verify) and what `skill-authoring` states as required (`skill-authoring`, Shape and Choosing where an instruction goes, including the bounded import contract) — prevents the check and the skill disagreeing.
 
@@ -42,6 +42,7 @@ At most one initiative has an open plan at a time. A closed initiative keeps its
 | AW-U10 [Program-scoped work identifiers](implementation-plans/aw-u10-task-naming/plan.md) | `chore/task-naming` | Program/kind/number identifiers, migrated open records and strict validation with bounded historical exceptions. | U9 merged (PR #39) | Owner approved r2 on 2026-10-29 after self-review PASS; plan commit and separate-session implementation with local checkpoint/correction commits granted; Medium, no automatic Codex gate |
 | AW-U11 [Codex app callback and receipt handoffs](implementation-plans/aw-u11-codex-callbacks/plan.md) | `chore/aw-p4-callback-receipts` | AW-P4: app-chat result/receipt handoffs with verified feasibility; preserve Claude Code, OpenCode and Codex CLI execution paths. | AW-F4 delivered (PR #41) | Owner approved r2, plan commit and implementation 2026-11-01; CP0 feasibility and independent review precede operational rollout |
 | AW-U12 [CLI-first tooling and repository-controlled delivery](implementation-plans/aw-u12-cli-first/plan.md) | `chore/aw-p3-cli-first` | AW-P3: current machine CLI tooling, supported CLI-first selection and existing repository delivery authority; PR #44 docs catch-up. | AW-U11 delivered (PR #44) | Owner approved r2, plan commit and implementation 2026-11-01, with local checkpoint/correction commits; Medium, no automatic Codex gate |
+| AW-U13 [Skills hold no rollout state](implementation-plans/aw-u13-skills-hold-no-state/plan.md) | `chore/skills-hold-no-state` | Skills hold rules, procedures, pitfalls and stable example pointers, no rollout or progress state; `skill-authoring` and the two invariants say so. | none; lands before AF-U6 CP3 | Owner approved r1, its rule text and implementation 2026-11-04; Medium, docs only; Codex diff gate at the Owner's request |
 
 ## 5. Opening an initiative
 

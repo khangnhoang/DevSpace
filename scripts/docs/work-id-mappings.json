@@ -848,5 +848,25 @@
       "file": "docs/programs/ui-ux/future-features.md",
       "id": "UX-F1"
     }
+  },
+  {
+    "from": {
+      "file": "docs/programs/app-foundation/problems.md",
+      "id": "AF-P3"
+    },
+    "to": {
+      "file": "docs/backlog/problems.md",
+      "id": "BL-P17"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/app-foundation/future-features.md",
+      "id": "AF-F2"
+    },
+    "to": {
+      "file": "docs/programs/ui-ux/future-features.md",
+      "id": "UX-F3"
+    }
   }
 ]

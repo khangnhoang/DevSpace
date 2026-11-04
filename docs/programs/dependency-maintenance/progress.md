@@ -12,7 +12,7 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Completed evidence | DM-U3: PR 48 (`0666754`); DM-U4: PR 49 (`1bc9802`); DM-U5: PR 52 (`84d3def`); see milestones. |
 | Accepted deviations | none open. |
 | Blockers / Owner decisions | none. |
-| Next action | The next initiative starts only on the Owner's request; DM-P1 group B and DM-F2 stay open. |
+| Next action | The next initiative starts only on the Owner's request; DM-P1 group B, DM-F2 to DM-F5 and the patch updates of the 2026-11-05 dependency check stay open. |
 | Current authority | none. |
 
 ## Milestones
@@ -57,3 +57,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-02 DM-U5 CP2: `npm test` (407) and `npm run test:e2e` (76, run twice) pass on Node 26.13.0 with every run ending `clean`; the `dependency-updates` Node row names `.node-version` and the Node 26 install-script behavior, DM-F1 is `Fixed locally, awaiting delivery`; Gemini and the Gmail send are not verified (d670b9e).
 - 2026-11-02 DM-U5 Codex diff gate PASS in round 2 after round 1 found a stale DM-F1 Direction and a wrong `unrs-resolver` install-script claim, both corrected (caf0701).
 - 2026-11-02 DM-U5 merged: Node 26 for production, CI and `@types/node`, CI green with every job on `v26.13.0` (run 41478507353); the preview and the production deployment of the merge (`dpl_FBUnv2RqfqrJMgPerGNKZdEz9FWG`) built on Node 26.x, reached Ready and serve `/monaco/vs/loader.js` with 200 without cookies; CI on `main` green (run 41480632624); DM-F1 closed (PR 52, `84d3def`).
+- 2026-11-05 Closing dependency check of app-foundation on Node 26.13.0: `npm audit --omit=dev` still reports only DM-P1 group B (`monaco-editor` 0.57.0 is the latest release and bundles a vulnerable DOMPurify); `npm audit` adds 16 dev-only moderate findings of `minimatch` below 11.0.1 under the `eslint` chain, which npm fixes only with `--force`; patches waiting as one small task: `next` with `eslint-config-next` 16.4.5, `tailwindcss` with `@tailwindcss/postcss` 4.3.4, `@hookform/resolvers` 7.0.2; minors recorded as DM-F3 to DM-F5; the Supabase CLI 3.0.0 major added to DM-F2; `@playwright/test`, `prettier` and Node 26 are current; nothing installed (this commit).

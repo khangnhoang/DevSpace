@@ -117,6 +117,14 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Direction: upload after the user exists and then set the avatar, or remove the object when the create fails; either changes the write path of the form or the action, so it gets its own plan.
 - Exit condition: a failed create leaves no new object in `avatars`, or the Owner drops it.
 
+### BL-P17: the transactions page reloads its orders without handling a failure
+
+- Status: Open (2026-10-29, found in the app-foundation U1 Codex diff review as AF-P3; moved here on 2026-11-05 when app-foundation closed, Owner decision).
+- Problem: `fetchPayments()` is called without `await` or a catch after an approve or reject (`app/admin/transactions/page.tsx`, the `toast.promise` success callback and `handleReject`), and it sets `isLoading` true before `getAllPayments()`; if that call rejects, the rejection is unhandled and the table stays on "Đang tải dữ liệu...".
+- Evidence: read at `e44489f`; the same calls exist at `4179bf5`. Not reproduced.
+- Direction: a small task, or security-hotfix H2-2b when it rewrites the payment actions: catch the reload, clear `isLoading` in `finally`, and show an error with a retry.
+- Exit condition: a failed reload shows an error state instead of a stuck loader, with no unhandled rejection.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

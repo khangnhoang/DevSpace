@@ -45,7 +45,7 @@ Detail that only one skill uses goes in that skill's `references/`, never in a n
 
 A skill holds the process, the project's choices and boundaries, and the repo-specific pitfalls that the tool cannot describe itself (for example "never `strict` a schema for a payload that carries whole rows" in `server-actions`). It does not hold syntax or API behavior the agent can read from types, docs or a run. The test for a line is whether removing it would change what the agent does. Two exceptions: version-specific behavior the agent is likely to get wrong on the version in `package.json` (state the pitfall and where to check it, not the docs), and a tool agents do not know (the vendored `playwright-cli`).
 
-A skill states only what DevSpace has today. Tooling that does not exist yet is named once as deferred, with no steps, and the steps arrive in the PR that adds the tooling.
+A skill holds rules, procedures, pitfalls and pointers to stable example files, worded so they stay true as work lands. It holds no rollout or progress state: which units, forms, screens or test rows are done or still pending, unit or PR history, or the next free identifier. That state lives in the owning program's docs, and a test inventory lives in the test files (Choosing where an instruction goes). A unit edits a skill only when it changes a rule, a procedure, a pitfall or a path the skill names. A pitfall about a known defect names its problem ID, and the change that fixes the defect removes it. A skill gives no steps for tooling or code that is not on `main`: tooling that does not exist yet is named once as deferred, with no steps, and the steps arrive in the PR that adds the tooling.
 
 ## Shape
 

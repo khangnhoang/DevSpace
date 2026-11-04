@@ -7,7 +7,7 @@ Read this before running or reporting an audit of the agent instructions. The au
 1. **Scope.** `AGENTS.md`, `CLAUDE.md`, `.claude/rules.md`, `docs/agent-loops.md`, every project `SKILL.md` and every file under a project `references/`. For the vendored `playwright-cli`, only its DevSpace block under the H1.
 2. **Classify each instruction** (a rule, a step or a fact a reader would act on) with exactly one of:
    - **in place**: its owner is right under "Choosing where an instruction goes" in `SKILL.md`;
-   - **belongs elsewhere**: the load-time placement rule or the owner table puts it elsewhere; name the owner;
+   - **belongs elsewhere**: the load-time placement rule or the owner table puts it elsewhere; name the owner (rollout or progress state in a skill belongs to the program's docs or the test files);
    - **duplicate or restatement**: another owner states it; name that owner;
    - **tooling that does not exist**: it describes a command, file or service the repo does not have;
    - **shape break**: it breaks a required rule of `npm run docs:check`; report the rule ID, subject to the allowlist in `scripts/docs/check-skills.mjs` (a recommended convention is never a shape break);

@@ -32,7 +32,7 @@ Progress: [progress.md](progress.md). Problems: [problems.md](problems.md). Futu
 - Screens keep their current look: shadcn tokens are mapped to the existing palette, and only form controls and dialogs change — prevents a hidden redesign shipped to production on merge.
 - Text and placeholders the e2e suite selects on (`Email...` and `Mật khẩu...` on the sign-in form, the `/admin/transactions` confirm handled in `__tests__/e2e/payment-helpers.ts:76-78`) stay, or the test changes in the same PR — prevents a red smoke or a silently weaker test.
 - Each converted form gets an e2e row for a successful submit and one for each integration boundary it has (persistence, a refusal by the server, the database or Auth, a failed real request, permission, upload, redirect); a rejected field that is only client logic gets a component test instead, and an existing e2e row is deleted only after its replacement fails under a mutation and the mapping is recorded (decision 5, `test-quality-strategy`). The confirm dialog gets cancel and confirm rows, or the detail plan states why one is not practical; each shared schema gets unit tests — ADR 0003 asks every unit to add tests where it changes a form or a validation contract.
-- A skill line states only what exists on `main` after the unit merges — prevents agents following instructions for code that is not there.
+- A skill line stays true after the unit merges and records no unit progress; a unit edits a skill only for a rule, procedure, pitfall or path it changes (`skill-authoring`, What a skill holds) — prevents agents following instructions for code that is not there, and skill edits made only to keep progress current.
 
 ## 4. Units
 

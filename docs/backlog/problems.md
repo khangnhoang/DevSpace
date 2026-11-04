@@ -47,7 +47,7 @@ Problems that no open program owns. This is not a program: it has no plan and no
 
 ### BL-P6: the activation mail links to a 404 when the course has no lesson
 
-- Status: Open (2026-11-01).
+- Status: Fixed locally, awaiting delivery (2026-11-05, with security-engineering SE-P2: the fallback link is `/course/<slug>`, and the home page when the slug is empty, covered by `__tests__/unit/activation-email.test.ts`; not checked in a browser). Open (2026-11-01).
 - Problem: the course activation mail sends the learner to `${baseUrl}/courses/${courseSlug}` when no first lesson is found (`lib/email.server.ts:60`). The course page route is `/course/<slug>` (`app/(main)/course`), so the button opens a 404. With an empty slug, the link is `/courses/`.
 - Evidence: read from the code on 2026-11-01 at `1bc9802`. `sendSuccessEmail` is called from `app/action/payment.ts:293` with `payment.courses?.slug || ""` and an optional `firstLessonSlug`. The 404 has not been reproduced in a browser.
 - Direction: small fix: build the fallback link from the real course route, and cover it with a content check (see quality-engineering QE-F4) or a unit test of the template.

@@ -16,7 +16,7 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 
 ### SE-P2: a learner's display name is inserted unescaped into the activation mail HTML
 
-- Status: Open, before migration (2026-11-01; moved from BL-P7 on 2026-11-05, Owner decisions 1 and 2).
+- Status: Fixed locally, awaiting delivery (2026-11-05: `lib/activation-email.ts` escapes every value put into the mail HTML, covered by `__tests__/unit/activation-email.test.ts`; `full_name` is not limited where it is saved). Open, before migration (2026-11-01; moved from BL-P7 on 2026-11-05, Owner decisions 1 and 2).
 - Problem: `getEmailTemplate` interpolates `userName` and `courseName` straight into HTML (`lib/email.server.ts`). `userName` is `profile.full_name` (`app/action/payment.ts:295`), which the learner sets. A name containing markup, such as a link, renders inside a mail sent from DevSpace's own Gmail account.
 - Evidence: read from the code on 2026-11-01 at `1bc9802`. Not reproduced. Whether profile updates restrict `full_name` was not checked.
 - Direction: escape every interpolated value in the mail template (and limit `full_name` where it is saved, if that fits the profile rules). Add a test with a name containing `<a>` and `&`. Severity is to be assessed before scheduling.

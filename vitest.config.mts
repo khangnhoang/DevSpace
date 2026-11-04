@@ -21,6 +21,16 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: "components",
+          // Client components render in jsdom; the files stay apart from the node-only `unit` files (a .tsx suffix).
+          environment: "jsdom",
+          include: ["__tests__/unit/components/**/*.test.tsx"],
+          setupFiles: ["__tests__/unit/components/setup.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: "rls",
           environment: "node",
           include: ["__tests__/rls/**/*.test.ts"],

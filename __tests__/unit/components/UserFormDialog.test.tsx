@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -538,5 +539,116 @@ describe("UserFormDialog (edit)", () => {
     });
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
     expect(editUser).toHaveBeenCalledTimes(1);
+  });
+});
+
+const otherUser: UserProfile = {
+  ...storedUser,
+  id: "7c1f2f0e-0000-4000-8000-000000000002",
+  email: "other@devspace.test",
+  full_name: "Người Khác",
+  avatar_url: null,
+};
+
+describe("UserFormDialog (keyboard and target)", () => {
+  it("moves focus to the first enabled field on open, the email on create and the name on edit", () => {
+    const { unmount } = render(
+      <UserFormDialog user={null} onClose={vi.fn()} onSaved={vi.fn()} />,
+    );
+    expect(emailInput()).toHaveFocus();
+    unmount();
+
+    renderEdit();
+    expect(nameInput()).toHaveFocus();
+  });
+
+  it("keeps Tab and Shift+Tab inside the dialog instead of reaching the page behind it", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <button>before</button>
+        <UserFormDialog user={storedUser} onClose={vi.fn()} onSaved={vi.fn()} />
+        <button>after</button>
+      </>,
+    );
+    const dialog = screen.getByRole("dialog");
+
+    for (let i = 0; i < 12; i++) {
+      await user.tab();
+      expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    }
+    for (let i = 0; i < 12; i++) {
+      await user.tab({ shift: true });
+      expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    }
+  });
+
+  it("returns focus to the control that opened the dialog when it closes", async () => {
+    function Page() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button onClick={() => setOpen(true)}>Mở</button>
+          {open && (
+            <UserFormDialog
+              user={null}
+              onClose={() => setOpen(false)}
+              onSaved={vi.fn()}
+            />
+          )}
+        </>
+      );
+    }
+    const user = userEvent.setup();
+    render(<Page />);
+
+    await user.click(button("Mở"));
+    expect(emailInput()).toHaveFocus();
+    await user.click(button("Đóng"));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(button("Mở")).toHaveFocus();
+  });
+
+  it("opens the other user's values and saves to the other user's id when the target changes under an open dialog", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const { rerender } = render(
+      <UserFormDialog user={storedUser} onClose={onClose} onSaved={vi.fn()} />,
+    );
+    await user.clear(nameInput());
+    await user.type(nameInput(), "Gõ dở cho người A");
+    await user.upload(fileInput(), avatarFile());
+
+    rerender(
+      <UserFormDialog user={otherUser} onClose={onClose} onSaved={vi.fn()} />,
+    );
+
+    expect(emailInput()).toHaveValue(otherUser.email);
+    expect(nameInput()).toHaveValue(otherUser.full_name);
+    await user.click(button("Lưu Thay Đổi"));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(uploadUserAvatar).not.toHaveBeenCalled();
+    expect(editUser).toHaveBeenCalledWith(
+      otherUser.id,
+      { full_name: otherUser.full_name, avatar_url: null, role: "user" },
+      null,
+    );
+  });
+
+  it("reaches the avatar picker by keyboard and opens the file chooser with Enter and with Space", async () => {
+    const user = userEvent.setup();
+    renderCreate();
+    const chooser = vi.spyOn(fileInput(), "click");
+    const picker = button("Chọn ảnh đại diện");
+
+    await user.tab();
+    await user.tab();
+    await user.tab();
+    expect(picker).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect(chooser).toHaveBeenCalledTimes(1);
+    await user.keyboard(" ");
+    expect(chooser).toHaveBeenCalledTimes(2);
   });
 });

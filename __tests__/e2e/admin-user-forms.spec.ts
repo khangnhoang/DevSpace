@@ -88,10 +88,26 @@ test.describe("admin user forms", () => {
     await openEditDialog(page, fixture);
     await expect(page.getByLabel("EMAIL")).toBeDisabled();
     await expect(page.getByLabel("MẬT KHẨU")).toHaveCount(0);
+    // The dialog is modal for the keyboard: focus starts in it and Tab, forwards and backwards, never reaches the page or the sidebar behind it.
+    await expect(page.getByLabel("HỌ VÀ TÊN")).toBeFocused();
+    for (const key of ["Tab", "Shift+Tab"]) {
+      for (let i = 0; i < 9; i++) {
+        await page.keyboard.press(key);
+        expect(
+          await page.evaluate(
+            () => !!document.activeElement?.closest('[role="dialog"]'),
+          ),
+          `${key} press ${i + 1} stays in the dialog`,
+        ).toBe(true);
+      }
+    }
+    await page.getByLabel("HỌ VÀ TÊN").focus();
 
     await page.getByLabel("HỌ VÀ TÊN").fill(`  ${fixture.label} sửa  `);
     await page.getByLabel("VAI TRÒ").selectOption("admin");
-    await page.getByLabel("Ảnh đại diện").setInputFiles(AVATAR_FILE);
+    await page
+      .getByLabel("Ảnh đại diện", { exact: true })
+      .setInputFiles(AVATAR_FILE);
     await page.getByRole("button", { name: "Lưu Thay Đổi" }).click();
 
     await expect(page.getByText("Sửa thành công")).toBeVisible();
@@ -147,7 +163,9 @@ test.describe("admin user forms", () => {
     const mutations = recordMutations(page);
 
     await fillCreate(page, email);
-    await page.getByLabel("Ảnh đại diện").setInputFiles(AVATAR_FILE);
+    await page
+      .getByLabel("Ảnh đại diện", { exact: true })
+      .setInputFiles(AVATAR_FILE);
     await page.getByRole("button", { name: "Thêm Tài Khoản" }).click();
 
     await expect(page.getByText("Lỗi khi upload avatar user")).toBeVisible();
@@ -245,7 +263,9 @@ test.describe("admin user forms", () => {
     await fillCreate(page, email);
     await page.getByLabel("HỌ VÀ TÊN").fill("  E2E Quản trị mới  ");
     await page.getByLabel("VAI TRÒ").selectOption("admin");
-    await page.getByLabel("Ảnh đại diện").setInputFiles(AVATAR_FILE);
+    await page
+      .getByLabel("Ảnh đại diện", { exact: true })
+      .setInputFiles(AVATAR_FILE);
     await page.getByRole("button", { name: "Thêm Tài Khoản" }).click();
 
     await expect(page.getByText("Thêm thành công")).toBeVisible();

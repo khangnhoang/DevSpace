@@ -142,7 +142,11 @@ export default function UsersManagerPage() {
 
   return (
     <div className="lg:ml-6 md:ml-2">
-      <div className="bg-[#0f1116] min-h-screen h-full p-3 md:p-3 flex flex-col gap-4 text-white font-sans rounded-md w-full">
+      {/* inert while the dialog is open: nothing behind it takes focus or clicks, so the dialog's user cannot change. */}
+      <div
+        inert={isOpenForm}
+        className="bg-[#0f1116] min-h-screen h-full p-3 md:p-3 flex flex-col gap-4 text-white font-sans rounded-md w-full"
+      >
         {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex flex-col gap-1">
@@ -351,15 +355,14 @@ export default function UsersManagerPage() {
             </div>
           </div>
         </div>
-
-        {isOpenForm && (
-          <UserFormDialog
-            user={editingUser}
-            onClose={() => setIsOpenForm(false)}
-            onSaved={() => setRefreshKey((prev) => prev + 1)}
-          />
-        )}
       </div>
+      {isOpenForm && (
+        <UserFormDialog
+          user={editingUser}
+          onClose={() => setIsOpenForm(false)}
+          onSaved={() => setRefreshKey((prev) => prev + 1)}
+        />
+      )}
       {deleteTarget && (
         <ConfirmDialog
           open

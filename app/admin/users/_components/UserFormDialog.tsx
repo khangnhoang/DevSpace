@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Save, SquarePen, Upload, X } from "lucide-react";
@@ -34,17 +34,24 @@ const editResolver = zodResolver(
   editUserFormSchema,
 ) as unknown as typeof createResolver;
 
-// Mounted only while the dialog is open, so `defaultValues` always come from the user being edited (or a blank
-// form with the role `user`) and the chosen file and its preview start empty each time.
-export default function UserFormDialog({
-  user,
-  onClose,
-  onSaved,
-}: {
+const FIRST_FIELD = 'input:not([disabled]):not([type="file"])';
+const TABBABLE =
+  'button:not([disabled]), input:not([disabled]):not([type="file"]), select:not([disabled])';
+
+type UserFormDialogProps = {
   user: UserProfile | null;
   onClose: () => void;
   onSaved: () => void;
-}) {
+};
+
+// Mounted only while the dialog is open, and keyed by the user being edited: `defaultValues` come from that user (or
+// a blank form with the role `user`) and the chosen file starts empty, so a dialog whose target changes can never
+// keep one user's values while saving to another's id.
+export default function UserFormDialog(props: UserFormDialogProps) {
+  return <UserForm key={props.user?.id ?? "new"} {...props} />;
+}
+
+function UserForm({ user, onClose, onSaved }: UserFormDialogProps) {
   const editing = user !== null;
   const {
     register,
@@ -80,6 +87,38 @@ export default function UserFormDialog({
   // click can pass a state-only check and upload or create twice.
   const savingRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // The dialog is modal for the keyboard too: focus enters it on open and returns to the control that opened it.
+  useEffect(() => {
+    const opener =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    cardRef.current?.querySelector<HTMLElement>(FIRST_FIELD)?.focus();
+    return () => {
+      if (opener?.isConnected) opener.focus();
+    };
+  }, []);
+
+  // Tab wraps inside the card, because the layout around the page (the sidebar) is not inert.
+  const keepTabInside = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "Tab") return;
+    const items = Array.from(
+      cardRef.current?.querySelectorAll<HTMLElement>(TABBABLE) ?? [],
+    );
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (!first) {
+      e.preventDefault();
+    } else if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -151,9 +190,11 @@ export default function UserFormDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       {/* The dialog role sits on the card: ARIA in HTML allows no dialog role on a <form>. */}
       <div
+        ref={cardRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="user-form-title"
+        onKeyDown={keepTabInside}
         className="w-full max-w-lg md:w-[600px] flex flex-col bg-[#191C24] rounded-lg shadow-2xl border border-gray-800 animate-in fade-in zoom-in duration-200"
       >
         <form
@@ -245,8 +286,10 @@ export default function UserFormDialog({
             </Field>
             {/* PHẦN UPLOAD */}
             <div className="flex ">
-              <div
-                className="relative group w-28 h-28 rounded-full border-2 border-dashed border-gray-600 flex items-center justify-center cursor-pointer overflow-hidden hover:border-[#3B81F4] transition-all bg-[#2C3039]"
+              <button
+                type="button"
+                aria-label="Chọn ảnh đại diện"
+                className="relative group w-28 h-28 rounded-full border-2 border-dashed border-gray-600 flex items-center justify-center cursor-pointer overflow-hidden hover:border-[#3B81F4] focus-visible:border-[#3B81F4] focus-visible:ring-2 focus-visible:ring-[#3B81F4] outline-none transition-all bg-[#2C3039]"
                 onClick={() => fileInputRef.current?.click()}
               >
                 {previewUrl ? (
@@ -257,16 +300,16 @@ export default function UserFormDialog({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="flex flex-col items-center justify-center text-gray-500 group-hover:text-[#3B81F4]">
+                  <span className="flex flex-col items-center justify-center text-gray-500 group-hover:text-[#3B81F4]">
                     <Upload size={32} />
                     <span className="text-xs mt-1">Upload</span>
-                  </div>
+                  </span>
                 )}
 
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
                   <SquarePen className="text-white" size={24} />
-                </div>
-              </div>
+                </span>
+              </button>
               <input
                 type="file"
                 aria-label="Ảnh đại diện"

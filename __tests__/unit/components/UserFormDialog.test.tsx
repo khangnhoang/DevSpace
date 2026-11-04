@@ -333,11 +333,17 @@ describe("UserFormDialog (create)", () => {
 });
 
 describe("UserFormDialog (edit)", () => {
-  it("shows the stored values, a disabled email and no password field", () => {
+  it("shows the stored values, the email as read-only text and no password field", () => {
     renderEdit();
 
-    expect(emailInput()).toHaveValue(storedUser.email);
-    expect(emailInput()).toBeDisabled();
+    // The email is plain text with the caption `EMAIL`: no input to type in, and nothing for Tab to stop at.
+    expect(screen.getByText("EMAIL")).toBeInTheDocument();
+    expect(screen.getByText(storedUser.email)).toBeVisible();
+    expect(screen.queryByLabelText("EMAIL")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: /email/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByRole("textbox")).toEqual([nameInput()]);
     expect(screen.queryByLabelText("MẬT KHẨU")).not.toBeInTheDocument();
     expect(nameInput()).toHaveValue(storedUser.full_name);
     expect(roleSelect()).toHaveValue("user");
@@ -658,7 +664,8 @@ describe("UserFormDialog (keyboard and target)", () => {
       <UserFormDialog user={otherUser} onClose={onClose} onSaved={vi.fn()} />,
     );
 
-    expect(emailInput()).toHaveValue(otherUser.email);
+    expect(screen.getByText(otherUser.email)).toBeVisible();
+    expect(screen.queryByText(storedUser.email)).not.toBeInTheDocument();
     expect(nameInput()).toHaveValue(otherUser.full_name);
     await user.click(button("Lưu Thay Đổi"));
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));

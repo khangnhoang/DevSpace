@@ -226,24 +226,20 @@ function UserForm({ user, onClose, onSaved }: UserFormDialogProps) {
             </button>
           </div>
           <div className="flex flex-col bg-[#191C24] w-full gap-2 p-3">
-            <Field className={USER_FIELD} data-invalid={!!errors.email}>
-              <FieldLabel htmlFor="user-email" className={USER_LABEL}>
-                EMAIL
-              </FieldLabel>
-              {editing ? (
-                // Not registered: a disabled registered input would submit undefined.
-                <Input
-                  id="user-email"
-                  type="text"
-                  className={cn(
-                    USER_CONTROL,
-                    "cursor-not-allowed disabled:opacity-35",
-                  )}
-                  value={user.email}
-                  disabled
-                  readOnly
-                />
-              ) : (
+            {editing ? (
+              // Shown, not editable (Owner decision 2026-11-04): plain text with normal contrast, no input box and not
+              // focusable. The email is never sent on save, so profiles.email keeps matching the Auth email.
+              <Field className={USER_FIELD}>
+                <span className={USER_LABEL}>EMAIL</span>
+                <p className="py-2 text-base break-all text-white">
+                  {user.email}
+                </p>
+              </Field>
+            ) : (
+              <Field className={USER_FIELD} data-invalid={!!errors.email}>
+                <FieldLabel htmlFor="user-email" className={USER_LABEL}>
+                  EMAIL
+                </FieldLabel>
                 <Input
                   id="user-email"
                   type="text"
@@ -252,9 +248,9 @@ function UserForm({ user, onClose, onSaved }: UserFormDialogProps) {
                   aria-invalid={!!errors.email}
                   {...register("email")}
                 />
-              )}
-              <FieldError className={USER_ERROR} errors={[errors.email]} />
-            </Field>
+                <FieldError className={USER_ERROR} errors={[errors.email]} />
+              </Field>
+            )}
             {!editing && (
               <Field className={USER_FIELD} data-invalid={!!errors.password}>
                 <FieldLabel htmlFor="user-password" className={USER_LABEL}>

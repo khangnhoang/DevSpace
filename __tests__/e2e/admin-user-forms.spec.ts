@@ -86,7 +86,13 @@ test.describe("admin user forms", () => {
     const fixture = await createUserFixture();
     const avatar = await fakeAvatarUpload(page);
     await openEditDialog(page, fixture);
-    await expect(page.getByLabel("EMAIL")).toBeDisabled();
+    // The email is read-only text (Owner decision 2026-11-04): shown with the caption, not an input.
+    const dialog = page.getByRole("dialog", { name: "Cập Nhật Thông Tin" });
+    await expect(
+      dialog.getByText(fixture.email, { exact: true }),
+    ).toBeVisible();
+    await expect(dialog.getByText("EMAIL", { exact: true })).toBeVisible();
+    await expect(dialog.getByRole("textbox")).toHaveCount(1);
     await expect(page.getByLabel("MẬT KHẨU")).toHaveCount(0);
     // The dialog is modal for the keyboard: focus starts in it and Tab, forwards and backwards, never reaches the page or the sidebar behind it.
     await expect(page.getByLabel("HỌ VÀ TÊN")).toBeFocused();

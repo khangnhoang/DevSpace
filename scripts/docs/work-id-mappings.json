@@ -1102,6 +1102,16 @@
   {
     "from": {
       "file": "docs/programs/security-hotfix/problems.md",
+      "id": "SH-P23"
+    },
+    "to": {
+      "file": "docs/programs/ui-ux/problems.md",
+      "id": "UX-P3"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-hotfix/problems.md",
       "id": "SH-P15"
     },
     "to": {

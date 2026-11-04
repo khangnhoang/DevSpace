@@ -79,7 +79,7 @@ Problems that no open program owns. This is not a program: it has no plan and no
 
 ### BL-P18: Transactions show anonymous learner names
 
-- Status: Deferred (moved from SH-P15 on 2026-11-05, Owner decision 1).
+- Status: Deferred (moved from SH-P15 on 2026-11-05, ADR 0007).
 - Problem: `/admin/transactions` shows every learner as "Ẩn danh": the page reads `p.profiles?.full_name` (`app/admin/transactions/page.tsx:148`) but `getAllPayments` returns `users`. The bug predates H1 (found during H1 QA).
 - Evidence: Legacy P15; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Later work reconciles the transactions page profile lookup with the users returned by getAllPayments.
@@ -87,7 +87,7 @@ Problems that no open program owns. This is not a program: it has no plan and no
 
 ### BL-P19: Purchased courses without progress are hidden
 
-- Status: Deferred (moved from SH-P29 on 2026-11-05, Owner decision 1).
+- Status: Deferred (moved from SH-P29 on 2026-11-05, ADR 0007).
 - Problem: "Khóa học của tôi" at `/profile` shows only courses with ≥ 1 completed lesson (`getUserDashboardData` filters `isStarted`) → a user who bought a course but has not finished any lesson sees "Bạn chưa tham gia khóa học nào". The bug predates H2 (found during H2-1 QA).
 - Evidence: Legacy P29; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Later work shows purchased courses before the first completed lesson.

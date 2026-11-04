@@ -24,7 +24,7 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 
 ### SE-P3: Users can change their profile email
 
-- Status: Deferred; Open, before migration (moved from SH-P28 on 2026-11-05, Owner decisions 1 and 2).
+- Status: Open, before migration (moved from SH-P28 on 2026-11-05, Owner decisions 1 and 2).
 - Problem: A user can edit the `email` column in `profiles` themselves (system email is sent to this column).
 - Evidence: Legacy P28; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Later work protects the profile email used for system mail; excluded from H2-2a.
@@ -32,7 +32,7 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 
 ### SE-P4: Comments expose deleted content and lack enrollment checks
 
-- Status: Deferred; Open, before migration (moved from SH-P27 on 2026-11-05, Owner decisions 1 and 2).
+- Status: Open, before migration (moved from SH-P27 on 2026-11-05, Owner decisions 1 and 2).
 - Problem: The content of a soft-deleted comment is still readable through REST; a user who has not enrolled can still read/write comments on a paid lesson.
 - Evidence: Legacy P27; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Later work addresses both deleted-content visibility and enrollment checks; excluded from H2-2a.
@@ -40,7 +40,7 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 
 ### SE-P5: Avatar uploads do not enforce path ownership
 
-- Status: Deferred; Open, before migration (moved from SH-P10 on 2026-11-05, Owner decisions 1 and 2).
+- Status: Open, before migration (moved from SH-P10 on 2026-11-05, Owner decisions 1 and 2).
 - Problem: Bucket `avatars`: any signed-in user can upload to any path.
 - Evidence: Legacy P10; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Later work must enforce caller ownership of avatar upload paths.
@@ -48,7 +48,7 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 
 ### SE-P6: GraphQL exposes tables to anon and authenticated
 
-- Status: Deferred; Open, before migration (moved from SH-P11 on 2026-11-05, Owner decisions 1 and 2).
+- Status: Open, before migration (moved from SH-P11 on 2026-11-05, Owner decisions 1 and 2).
 - Problem: pg_graphql exposes every table to anon/authenticated (advisor 0026/0027).
 - Evidence: Legacy P11; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Later work must review the GraphQL exposure and advisor 0026/0027 findings.
@@ -64,7 +64,7 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 
 ### SE-P8: Coupon usage RPC is missing
 
-- Status: Deferred; Open, before migration (moved from SH-P5 on 2026-11-05, Owner decisions 1 and 2).
+- Status: Open, before migration (moved from SH-P5 on 2026-11-05, Owner decisions 1 and 2).
 - Problem: The code calls the RPC `increment_coupon_usage` but the function does not exist in the DB → coupon usage never increases.
 - Evidence: Legacy P5; severity Medium; discovery-era Planned: H2 or later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Deferred to H2-2b (initiative SE-U1); preserve the original H2-or-later scope and the H2 reservation design in [plan-h2.md](../security-hotfix/plan-h2.md), together with SE-P9 and SE-P10.
@@ -72,7 +72,7 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 
 ### SE-P9: Coupon usage is counted inconsistently
 
-- Status: Deferred; Open, before migration (moved from SH-P6 on 2026-11-05, Owner decisions 1 and 2).
+- Status: Open, before migration (moved from SH-P6 on 2026-11-05, Owner decisions 1 and 2).
 - Problem: A coupon is counted when the pending order is created, while `updatePaymentWithCoupon` does not count → inconsistent usage logic.
 - Evidence: Legacy P6; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Deferred to H2-2b (initiative SE-U1) under the approved H2 reservation design in [plan-h2.md](../security-hotfix/plan-h2.md); original scheduling was later.
@@ -80,7 +80,7 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 
 ### SE-P10: Order approval and rejection are not atomic
 
-- Status: Deferred; Open, before migration (moved from SH-P25 on 2026-11-05, Owner decisions 1 and 2).
+- Status: Open, before migration (moved from SH-P25 on 2026-11-05, Owner decisions 1 and 2).
 - Problem: `approvePayment`/`rejectPayment` UPDATE only by `id`, not filtering `status = 'pending'` → approving again an order that was already processed, sending the email again; the enrollment is created by a separate request and its error is ignored.
 - Evidence: Legacy P25; severity Low; discovery-era Planned: **H2-2**; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Deferred to H2-2b (initiative SE-U1): atomic approval/rejection, enrollment creation and side effects under the existing plan ([plan-h2.md](../security-hotfix/plan-h2.md)).
@@ -88,7 +88,7 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 
 ### SE-P11: An enrolled user can create another pending order
 
-- Status: Deferred; Open, before migration (moved from SH-P30 on 2026-11-05, Owner decisions 1 and 2).
+- Status: Open, before migration (moved from SH-P30 on 2026-11-05, Owner decisions 1 and 2).
 - Problem: `createPendingPayment` (`app/action/payment.ts:72`) never checks for an existing enrollment, so a direct call by an enrolled user creates a pending order for a course they already own; the UI hides the buy button, but the action is a public POST endpoint. Found while planning infrastructure U5 (2026-10-24); U5 does not encode it.
 - Evidence: Legacy P30; severity Low; discovery-era Planned: with H2-2b; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Handle with H2-2b (initiative SE-U1, [plan-h2.md](../security-hotfix/plan-h2.md)); infrastructure U5 did not encode this case.
@@ -96,7 +96,7 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 
 ### SE-P12: Unlimited coupons fail in direct pending-order creation
 
-- Status: Deferred; Open, before migration (moved from SH-P31 on 2026-11-05, Owner decisions 1 and 2).
+- Status: Open, before migration (moved from SH-P31 on 2026-11-05, Owner decisions 1 and 2).
 - Problem: `createPendingPayment` applies a coupon only when `coupon.used_count < coupon.max_uses` (`app/action/payment.ts:122`), so a code without a use limit (`max_uses` null) gives no discount there, while `updatePaymentWithCoupon` treats null as unlimited and applies it (infrastructure U5 row PF7). The UI never sends a code to `createPendingPayment` (SE-P8), so only a direct call sees it. Found while implementing infrastructure U5 (2026-10-24); U5 does not encode it.
 - Evidence: Legacy P31; severity Low; discovery-era Planned: with H2-2b; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Handle with H2-2b (initiative SE-U1, [plan-h2.md](../security-hotfix/plan-h2.md)); retain the direct-call distinction and infrastructure U5 PF7 evidence (U5 did not encode this case).
@@ -136,7 +136,7 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 
 ### SE-P17: Auth locks can stall multiple local tabs
 
-- Status: Open (monitor), Deferred to techstack-migration (moved from SH-P19 on 2026-11-05, Owner decisions 1 and 2).
+- Status: Deferred to techstack-migration; monitored, the recorded workaround stays (moved from SH-P19 on 2026-11-05, Owner decisions 1 and 2).
 - Problem: Several `localhost` tabs open: `supabase-js` shares `navigator.locks`, auth operations wait on the lock forever → one stuck tab makes the other tabs spin on sign-in. Closing all tabs fixes it. Library behavior, not caused by H1.
 - Evidence: Legacy P19; severity Low; discovery-era Planned: monitor; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Monitor the library behavior; closing all localhost tabs is the recorded workaround, not a permanent fix.
@@ -160,7 +160,7 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 
 ### SE-P20: a signed-in user can open /login and sign in as another account
 
-- Status: Open, Deferred to techstack-migration (2026-11-03; moved from BL-P9 on 2026-11-05, Owner decisions 1 and 2).
+- Status: Deferred to techstack-migration (2026-11-03; moved from BL-P9 on 2026-11-05, Owner decisions 1 and 2).
 - Problem: `/login` renders its forms for a visitor who already has a session, so a signed-in user can sign in again with another account without signing out first. Nothing redirects a signed-in visitor away from the page.
 - Evidence: Owner QA of AF-U4 on the dev stack, 2026-11-03. `proxy.ts` has no rule for `/login`, and the page at `186530e` (before AF-U4) did not check the session either, so the behavior predates AF-U4.
 - Direction: small fix: redirect a signed-in visitor from `/login` to `/` (or the safe `next` path) on the server, and add an e2e row for a signed-in actor. Decide whether "sign in as another account" should instead be offered through an explicit sign-out.
@@ -168,7 +168,7 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 
 ### SE-P21: an admin can change their own role and lose admin access at once
 
-- Status: Open, Deferred to techstack-migration (2026-11-04, Owner decision while planning AF-U6: the edit form keeps this behavior; moved from BL-P15 on 2026-11-05, Owner decisions 1 and 2).
+- Status: Deferred to techstack-migration (2026-11-04, Owner decision while planning AF-U6: the edit form keeps this behavior; moved from BL-P15 on 2026-11-05, Owner decisions 1 and 2).
 - Problem: the edit form of `/admin/users` lets an admin set their own role to `user`; the save succeeds and the admin pages refuse them from the next request. The last admin can demote themselves, leaving no admin.
 - Evidence: `app/admin/users/page.tsx` sends the chosen role for any user through `editUser`; the policy "Users can update own profile or Admin" allows it (`supabase/migrations/20261021000000_baseline.sql`), read at `78c80ba`. Not reproduced.
 - Direction: decide the rule first (block self-demotion in the form only, or keep at least one admin in the database); a database rule is Codex-gated.
@@ -176,7 +176,7 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 
 ### SE-P22: a failed user create leaves its uploaded avatar in Storage
 
-- Status: Open, Deferred to techstack-migration (2026-11-04, Owner decision while planning AF-U6: the upload order stays; moved from BL-P16 on 2026-11-05, Owner decisions 1 and 2).
+- Status: Deferred to techstack-migration (2026-11-04, Owner decision while planning AF-U6: the upload order stays; moved from BL-P16 on 2026-11-05, Owner decisions 1 and 2).
 - Problem: the create form of `/admin/users` uploads the chosen avatar to the `avatars` bucket before it calls `createNewUser`; when the create fails (an email already in use, a refused field, a lost request), the uploaded object stays with no profile pointing to it.
 - Evidence: `app/admin/users/page.tsx` (`uploadUserAvatar` then `createNewUser`), `lib/supabase.ts` (`uploadUserAvatar`), read at `78c80ba`. Not reproduced.
 - Direction: upload after the user exists and then set the avatar, or remove the object when the create fails; either changes the write path of the form or the action, so it gets its own plan.

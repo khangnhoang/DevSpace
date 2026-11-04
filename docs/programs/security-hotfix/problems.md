@@ -29,7 +29,7 @@ One line each: ID, status, historical problem and delivered outcome. Details sta
 - SH-P30 — Moved to [security-engineering](../security-engineering/problems.md) as SE-P11 (2026-11-05)
 - SH-P31 — Moved to [security-engineering](../security-engineering/problems.md) as SE-P12 (2026-11-05)
 - SH-P22 — Moved to [ui-ux](../ui-ux/problems.md) as UX-P2 (2026-11-05)
-- SH-P23 — Resolved 2026-11-05: recorded unchanged as [UX-F4](../ui-ux/future-features.md) in ui-ux future features, because the docs checker forbids a mapping from a problem to a feature, so there is no mapping entry. Legacy P23; severity Low.
+- SH-P23 — Moved to [ui-ux](../ui-ux/problems.md) as UX-P3 (2026-11-05)
 - SH-P15 — Moved to [backlog](../../backlog/problems.md) as BL-P18 (2026-11-05)
 - SH-P29 — Moved to [backlog](../../backlog/problems.md) as BL-P19 (2026-11-05)
 - SH-P24 — Resolved 2026-11-05: superseded by [backlog BL-F9](../../backlog/future-features.md), because the Owner will not renew the Gemini key and AI quiz generation moves to DeepSeek, which also removes the last Gemini SDK. Legacy P24; severity Low.

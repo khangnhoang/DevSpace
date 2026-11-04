@@ -34,7 +34,7 @@ The delivery order is: implement, format the changed files, self-review, test, c
 
 Read [branch-and-commit.md](references/branch-and-commit.md) when you are about to stage or commit. The gate:
 
-- permission exists; the checkpoint's scope and acceptance are complete and its self-review passed (`docs/agent-loops.md`, Self-review); relevant checks ran after the last edit (`npx tsc --noEmit`, `npm run lint` with 0 problems, `npm run docs:check`, `npm run format:check -- <changed paths>`; a file it reports is formatted and its change reviewed again before the commit); no conflict marker, debug code or secret; no unresolved decision;
+- permission exists; the checkpoint's scope and acceptance are complete and its self-review passed (`docs/agent-loops.md`, Self-review); checks for this verification stage ran or have valid reused evidence under [test-quality-strategy, Verification stages](../test-quality-strategy/SKILL.md#verification-stages), and `npm run format:check -- <changed paths>` passed (a file it reports is formatted and its change reviewed again before the commit); no conflict marker, debug code or secret; no unresolved decision;
 - stage explicit paths (`git add path/a path/b`), not `git add .`, unless the tree began clean and everything is in scope; inspect `git diff --cached` and `git diff --check`;
 - one commit per checkpoint (a small task without checkpoints: as `docs/agent-loops.md` Sizing allows); split a checkpoint only for a reason you state in the report (for example a part that must revert alone). Commit in its own message after every edit succeeded, never in parallel with an edit. Message `<type>(<scope>): <imperative summary>`, language per `AGENTS.md` section 1, no trailing period, no vague words ("update files", "final fix").
 

@@ -32,5 +32,5 @@ Read this when you write or review an rls test, change the seed for one, or debu
 
 1. Name the actor, the command (select, insert, update, delete) and the USING and WITH CHECK predicate you expect.
 2. Add one allowed test and one denied test per changed command, including owner, enrolled, other-user, anon and admin where they differ.
-3. Choose stable invented seed data or temporary owned fixtures under Test data, then run `npm test` twice; the command resets the test stack when the migrations or seed changed.
+3. Choose stable invented seed data or temporary owned fixtures under Test data, then run the affected tests through `npm test` under [Verification stages](../SKILL.md#verification-stages). The command resets the test stack when the migrations or seed changed; select any repeated run under [Repeatability checks](../SKILL.md#repeatability-checks), not automatically because an rls test changed.
 4. Check the test fails when the policy is broken, for example by loosening it in the migration under test and restoring it afterwards; the changed migration hash makes the next `npm test` reset the test stack, so no manual SQL on a stack is needed.

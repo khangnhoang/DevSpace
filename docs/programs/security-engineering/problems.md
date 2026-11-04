@@ -14,14 +14,6 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 - Direction: security change for the Codex gate: enable secure password change (recent sign-in or reauthentication nonce) on local and hosted, and/or let the page accept only a recovery session (the `PASSWORD_RECOVERY` event after `/auth/callback`). Severity is to be assessed before scheduling.
 - Exit condition: a session that did not come from the recovery link cannot change the password without reauthenticating, asserted by a test.
 
-### SE-P2: a learner's display name is inserted unescaped into the activation mail HTML
-
-- Status: Open, before migration (2026-11-01; moved from BL-P7 on 2026-11-05, Owner decisions 1 and 2).
-- Problem: `getEmailTemplate` interpolates `userName` and `courseName` straight into HTML (`lib/email.server.ts`). `userName` is `profile.full_name` (`app/action/payment.ts:295`), which the learner sets. A name containing markup, such as a link, renders inside a mail sent from DevSpace's own Gmail account.
-- Evidence: read from the code on 2026-11-01 at `1bc9802`. Not reproduced. Whether profile updates restrict `full_name` was not checked.
-- Direction: escape every interpolated value in the mail template (and limit `full_name` where it is saved, if that fits the profile rules). Add a test with a name containing `<a>` and `&`. Severity is to be assessed before scheduling.
-- Exit condition: a name with HTML characters shows as plain text in the mail.
-
 ### SE-P3: Users can change their profile email
 
 - Status: Open, before migration (moved from SH-P28 on 2026-11-05, Owner decisions 1 and 2).
@@ -185,3 +177,5 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.
+
+- SE-P2 — Resolved 2026-11-05: the activation mail escapes the learner name, the course name and the link, so markup in a name shows as plain text (PR 66, `b6f1902`); `full_name` stays without a length limit where it is saved.

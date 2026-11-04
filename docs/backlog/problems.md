@@ -45,14 +45,6 @@ Problems that no open program owns. This is not a program: it has no plan and no
   - Removing the C++ tab.
 - Exit condition: C++ code runs and shows its output, or the C++ tab is removed; a failed run always shows an error.
 
-### BL-P6: the activation mail links to a 404 when the course has no lesson
-
-- Status: Open (2026-11-01).
-- Problem: the course activation mail sends the learner to `${baseUrl}/courses/${courseSlug}` when no first lesson is found (`lib/email.server.ts:60`). The course page route is `/course/<slug>` (`app/(main)/course`), so the button opens a 404. With an empty slug, the link is `/courses/`.
-- Evidence: read from the code on 2026-11-01 at `1bc9802`. `sendSuccessEmail` is called from `app/action/payment.ts:293` with `payment.courses?.slug || ""` and an optional `firstLessonSlug`. The 404 has not been reproduced in a browser.
-- Direction: small fix: build the fallback link from the real course route, and cover it with a content check (see quality-engineering QE-F4) or a unit test of the template.
-- Exit condition: the activation mail of a course with no lesson links to that course's page, and the page opens.
-
 ### BL-P12: course and lesson slugs have no format rule, and a course slug is not unique
 
 - Status: Open (2026-11-04, Owner decision while planning AF-U5: the AF-U5 forms add no slug rule, and this is recorded instead).
@@ -107,6 +99,7 @@ One line each: ID, status, one-line outcome. Details stay in Git.
 - BL-010 — Done: the quiz compares the selected option and the correct answer case-insensitively; hosted held no row outside `a` to `d` (PR #33)
 - BL-P4 — Done: "Thử ngay" opens a lesson example with its exact code in its own language (html, javascript or cpp), other languages get no button, and a crafted link stays text until "Chạy Code"; delivered by dependency-maintenance DM-U4 (PR #49)
 - BL-P8 — Done: confirming a payment shows one toast with a description instead of two stacked toasts, asserted by e2e PF9 (PR #55)
+- BL-P6 — Done: the activation mail of a course with no lesson links to `/course/<slug>`, and to the home page when the slug is empty, unit-tested; delivered with security-engineering SE-P2 (PR #66)
 - BL-P11 — Done: local Auth requires 8-character passwords like hosted (`minimum_password_length = 8`), and `[P13]` proves a 7-character sign-up is refused (PR #60)
 - BL-P7 — Moved to [security-engineering](../programs/security-engineering/problems.md)
 - BL-P9 — Moved to [security-engineering](../programs/security-engineering/problems.md)

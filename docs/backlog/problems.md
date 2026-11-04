@@ -77,14 +77,6 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Direction: security change for the Codex gate: enable secure password change (recent sign-in or reauthentication nonce) on local and hosted, and/or let the page accept only a recovery session (the `PASSWORD_RECOVERY` event after `/auth/callback`). Severity is to be assessed before scheduling.
 - Exit condition: a session that did not come from the recovery link cannot change the password without reauthenticating, asserted by a test.
 
-### BL-P11: local Auth allows 6-character passwords while hosted requires 8
-
-- Status: Fixed locally, awaiting delivery (2026-11-04): `minimum_password_length = 8`, and `[P13]` in `__tests__/rls/profiles.test.ts` proves a 7-character sign-up is refused and an 8-character one accepted (it fails with the old value 6). No fixture used a shorter password. The setting reaches a running stack only after a restart (QE-P4); the dev stack needs `npx supabase stop` and `npx supabase start` once.
-- Problem: `supabase/config.toml` set `minimum_password_length = 6`, while the Owner set the hosted minimum to 8 on 2026-11-03. Local tests and manual QA accept passwords that hosted Auth refuses, so a local pass does not prove the hosted rule.
-- Evidence: the Owner reported the hosted change on 2026-11-03; `supabase/config.toml:183` read at `250d0a0`. The seed users' password is longer than 8 characters.
-- Direction: small task after AF-U4 merges: set the local minimum to 8, run `npm test` and `npm run test:e2e` (the config change resets the test stack), and fix any fixture that creates a shorter password.
-- Exit condition: local and hosted Auth share the minimum password length of 8, and the test suites pass.
-
 ### BL-P12: course and lesson slugs have no format rule, and a course slug is not unique
 
 - Status: Open (2026-11-04, Owner decision while planning AF-U5: the AF-U5 forms add no slug rule, and this is recorded instead).
@@ -115,3 +107,4 @@ One line each: ID, status, one-line outcome. Details stay in Git.
 - BL-010 — Done: the quiz compares the selected option and the correct answer case-insensitively; hosted held no row outside `a` to `d` (PR #33)
 - BL-P4 — Done: "Thử ngay" opens a lesson example with its exact code in its own language (html, javascript or cpp), other languages get no button, and a crafted link stays text until "Chạy Code"; delivered by dependency-maintenance DM-U4 (PR #49)
 - BL-P8 — Done: confirming a payment shows one toast with a description instead of two stacked toasts, asserted by e2e PF9 (PR #55)
+- BL-P11 — Done: local Auth requires 8-character passwords like hosted (`minimum_password_length = 8`), and `[P13]` proves a 7-character sign-up is refused (PR #60)

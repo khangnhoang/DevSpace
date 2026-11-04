@@ -5,14 +5,14 @@ Progress: [progress.md](progress.md). Problems: [problems.md](problems.md). Futu
 ## 1. Capability and boundary
 
 - Capability: the security and data integrity of DevSpace's current stack (Next.js, server actions, Supabase Auth, RLS, grants, Storage) hold until and through the techstack migration. The program records findings, fixes the ones that expose production data to the wrong actor today, and hands the rest to the migration as acceptance criteria.
-- Boundary: a UI-only defect goes to `ui-ux` or the backlog; test tooling goes to `quality-engineering`; dependency audits stay with `dependency-maintenance`; the techstack migration itself is its own program. A problem is "Open, before migration" only if data is readable or writable by the wrong actor on production today; a gap that the migration rewrites is "Deferred to techstack-migration" and becomes an acceptance criterion there. The `security-hotfix` program is closed; its plans stay at `../security-hotfix/` as historical contracts.
+- Boundary: a UI-only defect goes to `ui-ux` or the backlog; test tooling goes to `quality-engineering`; dependency audits stay with `dependency-maintenance`; the techstack migration itself is its own program. A problem is "Open, before migration" only if data readable or writable by the wrong actor on production today, or a write that corrupts payment, coupon or permission state on production today (the H2-2b entries SE-P8 to SE-P12 and the role constraint SE-P7); a gap that the migration rewrites is "Deferred to techstack-migration" and becomes an acceptance criterion there. The `security-hotfix` program is closed; its plans stay at `../security-hotfix/` as historical contracts.
 
 ## 2. Owner decisions
 
 One line each: number, date, decision. The decisions of each initiative stay in its plan.
 
 1. (2026-11-05) `security-engineering` is an evergreen program with code `SE` (ADR 0007); `security-hotfix` closes and hands over its open security entries and the backlog security entries, and H2-2b becomes initiative SE-U1.
-2. (2026-11-05) Before the techstack migration only production exposures are fixed (data readable or writable by the wrong actor on production today); the other entries become acceptance criteria of the techstack migration.
+2. (2026-11-05) Before the techstack migration only production exposures are fixed (data readable or writable by the wrong actor on production today, or a write that corrupts payment, coupon or permission state on production today); the other entries become acceptance criteria of the techstack migration.
 3. (2026-11-05) The program opens in a docs-only PR.
 
 ## 3. Invariants

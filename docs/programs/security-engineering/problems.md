@@ -2,7 +2,7 @@
 
 Charter: [README.md](README.md). Progress: [progress.md](progress.md).
 
-Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the closed `security-hotfix` program or from the backlog, with its fields kept; the old homes keep a `Moved to` line and `scripts/docs/work-id-mappings.json` maps each old ID. Evidence lines that cite "Legacy P<n>" and baseline ddcefd0 are provenance of the 2026-10-21 discovery. The label "Open, before migration" means a production exposure to fix before the techstack migration; "Deferred to techstack-migration" means an acceptance criterion of that migration.
+Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the closed `security-hotfix` program or from the backlog, with its fields kept; the old homes keep a `Moved to` line and `scripts/docs/work-id-mappings.json` maps each old ID. Evidence lines that cite "Legacy P<n>" and baseline ddcefd0 are provenance of the 2026-10-21 discovery. The label "Open, before migration" means a production exposure to fix before the techstack migration: data readable or writable by the wrong actor on production today, or a write that corrupts payment, coupon or permission state on production today (the H2-2b entries SE-P8 to SE-P12 and the role constraint SE-P7); "Deferred to techstack-migration" means an acceptance criterion of that migration.
 
 ## Open
 
@@ -152,7 +152,7 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 
 ### SE-P19: Quiz answers are sent to the client
 
-- Status: Deferred to techstack-migration (moved from SH-P26 on 2026-11-05, Owner decisions 1 and 2).
+- Status: Deferred to techstack-migration (moved from SH-P26 on 2026-11-05, Owner decisions 1 and 2; the answers reach only an enrolled learner, and the migration moves grading to the server).
 - Problem: The quiz is graded on the client, an enrolled user receives `correct_answer` in the payload.
 - Evidence: Legacy P26; severity Low; discovery-era Planned: with P20 (grade on the server); preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Handle with SE-P18; grade on the server rather than exposing correct_answer to the enrolled client.

@@ -146,6 +146,13 @@ test.describe("admin user forms", () => {
     ).toHaveLength(1);
     // The email still belongs to the seed learner alone.
     expect(await owned.authIds("learner@devspace.test")).toEqual([IDS.learner]);
+
+    // Cancelling returns focus to the button that opened the create dialog.
+    await page.getByRole("button", { name: "Hủy Bỏ" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect(
+      page.getByRole("button", { name: "Thêm thành viên" }),
+    ).toBeFocused();
   });
 
   test("[U3] a failed avatar upload toasts, keeps the dialog open and creates no user", async ({
@@ -249,6 +256,13 @@ test.describe("admin user forms", () => {
     ).toBeEnabled();
     expect(aborted, "the PATCH was attempted and aborted").toBeGreaterThan(0);
     expect(await profileOf(fixture.id)).toEqual(before);
+
+    // Cancelling returns focus to the edit button that opened the dialog, which was made inert behind it. Escape closes nothing here.
+    await page.getByRole("button", { name: "Hủy Bỏ" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect(
+      page.getByRole("button", { name: `Sửa người dùng ${fixture.label}` }),
+    ).toBeFocused();
   });
 
   test("[U6] an admin creates an admin user with a name and an avatar and the profile holds them", async ({

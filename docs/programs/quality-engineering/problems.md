@@ -36,6 +36,14 @@ Charter: [README.md](README.md). Progress: [progress.md](progress.md).
 - Direction: verify that list, then narrow the rule (for example one run by default, a second only when the first run reset the stack) in `test-quality-strategy` with the Owner's approval.
 - Exit condition: the skill states a rule whose second run catches something the audit does not, or the Owner keeps the current rule with a reason.
 
+### QE-P7: e2e row `[T8]` failed once in a full run with the student signed out
+
+- Status: Open (2026-11-05, found by Main while verifying security-engineering SE-P2; outside that change, which touched only the activation mail).
+- Problem: in a full `npm run test:e2e` run, `[T8]` (`__tests__/e2e/student.spec.ts`) found no course card on `/profile` (`getByRole('article')` expected 4, received 0 after 10 s); the page snapshot showed the signed-out header ("Đăng nhập"), so the saved student session was not recognised for that page load.
+- Evidence: branch `fix/se-p2-mail-template` from `7c7d74e`, uncommitted change to `lib/email.server.ts` and the new `lib/activation-email.ts` only: 142 passed, 1 failed (`test-results/.../error-context.md`). Rerunning `npm run test:e2e -- --grep "\[T8\]"` right after passed (no reset, nothing changed). Whether the run ended clean was not kept, and the cause (session refresh, a cookie race with another student row, fixture timing) is not known.
+- Direction: reproduce with repeated full runs keeping the Playwright trace of a failure, then fix the cause in the test, its fixtures or the session setup; do not add a retry or a longer timeout without a named cause.
+- Exit condition: the cause is named and fixed, and 5 consecutive full `npm run test:e2e` runs pass `[T8]`.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

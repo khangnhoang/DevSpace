@@ -93,6 +93,30 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Direction: derive the card from the selected course (or an empty-state text when none is chosen); a small UI fix with one browser check.
 - Exit condition: the card names the selected course, or says none is chosen.
 
+### BL-P14: `profiles.role` accepts any text
+
+- Status: Open (2026-11-04, Owner decision while planning AF-U6: the forms refuse a role other than `user` or `admin`, and the database rule waits for its own migration).
+- Problem: `profiles.role` is `text` with no check constraint, so an admin writing through the browser client (or a future code path) can store a role other than `user` or `admin`; such a user is neither in the counters nor in the filters (AF-P7 stored "Chọn vai trò" this way).
+- Evidence: `supabase/migrations/20261021000000_baseline.sql` (no constraint on `profiles.role`, read at `78c80ba`); AF-P7 in `docs/programs/app-foundation/problems.md`. Hosted roles were not read (reading data rows needs the Owner's approval).
+- Direction: an Owner-approved read of the distinct hosted roles, a fix of any bad row, then a migration adding `check (role in ('user', 'admin'))` with its rollback (Codex-gated, `supabase-migration`); QE-F9 can assert the constraint exists.
+- Exit condition: the database refuses a role other than `user` or `admin`, or the Owner drops it.
+
+### BL-P15: an admin can change their own role and lose admin access at once
+
+- Status: Open (2026-11-04, Owner decision while planning AF-U6: the edit form keeps this behavior).
+- Problem: the edit form of `/admin/users` lets an admin set their own role to `user`; the save succeeds and the admin pages refuse them from the next request. The last admin can demote themselves, leaving no admin.
+- Evidence: `app/admin/users/page.tsx` sends the chosen role for any user through `editUser`; the policy "Users can update own profile or Admin" allows it (`supabase/migrations/20261021000000_baseline.sql`), read at `78c80ba`. Not reproduced.
+- Direction: decide the rule first (block self-demotion in the form only, or keep at least one admin in the database); a database rule is Codex-gated.
+- Exit condition: the Owner's rule is enforced where the Owner chose, or the Owner drops it.
+
+### BL-P16: a failed user create leaves its uploaded avatar in Storage
+
+- Status: Open (2026-11-04, Owner decision while planning AF-U6: the upload order stays).
+- Problem: the create form of `/admin/users` uploads the chosen avatar to the `avatars` bucket before it calls `createNewUser`; when the create fails (an email already in use, a refused field, a lost request), the uploaded object stays with no profile pointing to it.
+- Evidence: `app/admin/users/page.tsx` (`uploadUserAvatar` then `createNewUser`), `lib/supabase.ts` (`uploadUserAvatar`), read at `78c80ba`. Not reproduced.
+- Direction: upload after the user exists and then set the avatar, or remove the object when the create fails; either changes the write path of the form or the action, so it gets its own plan.
+- Exit condition: a failed create leaves no new object in `avatars`, or the Owner drops it.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

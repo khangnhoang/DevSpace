@@ -1,0 +1,322 @@
+"use client";
+import { useRef, useState } from "react";
+import { useForm, type Resolver } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Plus, Save, SquarePen, Upload, X } from "lucide-react";
+import { toast } from "sonner";
+import { createNewUser } from "@/app/action/user";
+import { editUser, uploadUserAvatar, type UserProfile } from "@/lib/supabase";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+import { cn } from "@/lib/utils";
+import {
+  createUserFormSchema,
+  editUserFormSchema,
+  type CreateUserFormInput,
+  type CreateUserFormValues,
+} from "@/lib/schemas/user";
+
+// The shadcn controls are restyled here to keep the look this form always had on the always-dark admin surface; the
+// generated files stay generic and their tokens would follow the OS colour scheme.
+const USER_CONTROL =
+  "h-auto rounded-md border-0 bg-[#2C3039] p-2 text-base text-white shadow-none placeholder:text-gray-500 focus-visible:ring-1 focus-visible:ring-[#3B81F4] aria-invalid:ring-1 aria-invalid:ring-red-500 md:text-base";
+const USER_LABEL = "text-base leading-normal font-normal text-white";
+const USER_FIELD = "gap-2 [&_[data-slot=native-select-wrapper]]:w-full";
+const USER_ERROR = "text-red-400";
+
+const SAVE_FAILED = "Lưu người dùng thất bại. Vui lòng thử lại.";
+
+const createResolver = zodResolver(createUserFormSchema);
+// The edit form shares the create form's value shape (its email and password are never rendered or read), so its
+// resolver is typed like the create one; the schema it runs only reads the name and the role.
+const editResolver = zodResolver(
+  editUserFormSchema,
+) as unknown as typeof createResolver;
+
+// Mounted only while the dialog is open, so `defaultValues` always come from the user being edited (or a blank
+// form with the role `user`) and the chosen file and its preview start empty each time.
+export default function UserFormDialog({
+  user,
+  onClose,
+  onSaved,
+}: {
+  user: UserProfile | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const editing = user !== null;
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<CreateUserFormInput, unknown, CreateUserFormValues>({
+    resolver: (editing ? editResolver : createResolver) as Resolver<
+      CreateUserFormInput,
+      unknown,
+      CreateUserFormValues
+    >,
+    defaultValues: {
+      email: user?.email ?? "",
+      password: "",
+      fullName: user?.full_name ?? "",
+      // A stored role outside the two (AF-P7) loads as the placeholder, so the admin must pick one to save; the
+      // select's value is a plain string at runtime.
+      role: (editing
+        ? user.role === "user" || user.role === "admin"
+          ? user.role
+          : ""
+        : "user") as CreateUserFormInput["role"],
+    },
+  });
+
+  // The chosen file is not a text field, so it stays out of the schema.
+  const [previewUrl, setPreviewUrl] = useState<string | null>(
+    user?.avatar_url || null,
+  );
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  // Set before the first await: the resolver runs before React Hook Form sets isSubmitting, so a second Enter or
+  // click can pass a state-only check and upload or create twice.
+  const savingRef = useRef(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const save = async (values: CreateUserFormValues) => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setIsSaving(true);
+
+    try {
+      // Create sends "" when there is no file (the action turns it into null); edit keeps the stored URL.
+      let avatarUrl = user?.avatar_url ?? "";
+      if (selectedFile) {
+        const uploadedUrl = await uploadUserAvatar(selectedFile);
+        if (!uploadedUrl) {
+          toast.error("Lỗi khi upload avatar user");
+          return;
+        }
+        avatarUrl = uploadedUrl;
+      }
+
+      if (user) {
+        // The email is never sent: profiles.email must keep matching the Auth email.
+        const { error } = await editUser(
+          user.id,
+          {
+            full_name: values.fullName,
+            avatar_url: avatarUrl || null,
+            role: values.role,
+          },
+          null,
+        );
+        if (error) {
+          toast.error(SAVE_FAILED);
+          return;
+        }
+      } else {
+        // The action's input shape, not the parsed output: it takes a string and turns a blank into null itself.
+        const result = await createNewUser({
+          email: values.email,
+          fullName: values.fullName ?? "",
+          role: values.role,
+          avatarUrl,
+          password: values.password,
+        });
+        if ("error" in result) {
+          toast.error("Lưu người dùng thất bại: " + result.error);
+          return;
+        }
+      }
+
+      toast.success(editing ? "Sửa thành công" : "Thêm thành công");
+      onSaved();
+      onClose();
+    } catch {
+      toast.error(SAVE_FAILED);
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <form
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="user-form-title"
+        onSubmit={(e) => handleSubmit(save)(e)}
+        noValidate
+        className="w-full max-w-lg md:w-[600px] flex flex-col bg-[#191C24] rounded-lg shadow-2xl border border-gray-800 animate-in fade-in zoom-in duration-200"
+      >
+        <div className="flex justify-between items-center p-4 border-b border-gray-800 bg-[#222732] rounded-t-lg">
+          <div className="text-lg md:text-xl flex items-center gap-2 font-semibold">
+            {editing ? (
+              <SquarePen size={20} className="text-[#3B81F4]" />
+            ) : (
+              <Plus size={20} className="text-[#3B81F4]" />
+            )}
+            <h1 id="user-form-title">
+              {editing ? "Cập Nhật Thông Tin" : "Thêm Thành Viên Mới"}
+            </h1>
+          </div>
+          <button
+            type="button"
+            aria-label="Đóng"
+            onClick={onClose}
+            disabled={isSaving}
+            className="hover:bg-[#374151] cursor-pointer rounded-md p-1 transition-colors text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <X size={35} />
+          </button>
+        </div>
+        <div className="flex flex-col bg-[#191C24] w-full gap-2 p-3">
+          <Field className={USER_FIELD} data-invalid={!!errors.email}>
+            <FieldLabel htmlFor="user-email" className={USER_LABEL}>
+              EMAIL
+            </FieldLabel>
+            {editing ? (
+              // Not registered: a disabled registered input would submit undefined.
+              <Input
+                id="user-email"
+                type="text"
+                className={cn(
+                  USER_CONTROL,
+                  "cursor-not-allowed disabled:opacity-35",
+                )}
+                value={user.email}
+                disabled
+                readOnly
+              />
+            ) : (
+              <Input
+                id="user-email"
+                type="text"
+                className={USER_CONTROL}
+                placeholder="helo@gmail.com"
+                aria-invalid={!!errors.email}
+                {...register("email")}
+              />
+            )}
+            <FieldError className={USER_ERROR} errors={[errors.email]} />
+          </Field>
+          {!editing && (
+            <Field className={USER_FIELD} data-invalid={!!errors.password}>
+              <FieldLabel htmlFor="user-password" className={USER_LABEL}>
+                MẬT KHẨU
+              </FieldLabel>
+              <Input
+                id="user-password"
+                type="password"
+                autoComplete="new-password"
+                className={USER_CONTROL}
+                placeholder="Tối thiểu 8 ký tự"
+                aria-invalid={!!errors.password}
+                {...register("password")}
+              />
+              <FieldError className={USER_ERROR} errors={[errors.password]} />
+            </Field>
+          )}
+          <Field className={USER_FIELD} data-invalid={!!errors.fullName}>
+            <FieldLabel htmlFor="user-name" className={USER_LABEL}>
+              HỌ VÀ TÊN
+            </FieldLabel>
+            <Input
+              id="user-name"
+              type="text"
+              className={USER_CONTROL}
+              placeholder="Nguyen Van A"
+              aria-invalid={!!errors.fullName}
+              {...register("fullName")}
+            />
+            <FieldError className={USER_ERROR} errors={[errors.fullName]} />
+          </Field>
+          {/* PHẦN UPLOAD */}
+          <div className="flex ">
+            <div
+              className="relative group w-28 h-28 rounded-full border-2 border-dashed border-gray-600 flex items-center justify-center cursor-pointer overflow-hidden hover:border-[#3B81F4] transition-all bg-[#2C3039]"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {previewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- blob: preview URL that next/image does not optimize, tracked in BL-003
+                <img
+                  src={previewUrl}
+                  alt="Avatar Preview"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-gray-500 group-hover:text-[#3B81F4]">
+                  <Upload size={32} />
+                  <span className="text-xs mt-1">Upload</span>
+                </div>
+              )}
+
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <SquarePen className="text-white" size={24} />
+              </div>
+            </div>
+            <input
+              type="file"
+              aria-label="Ảnh đại diện"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              className="hidden"
+              accept="image/*"
+            />
+          </div>
+          <Field className={USER_FIELD} data-invalid={!!errors.role}>
+            <FieldLabel htmlFor="user-role" className={USER_LABEL}>
+              VAI TRÒ
+            </FieldLabel>
+            <NativeSelect
+              id="user-role"
+              className={cn(USER_CONTROL, "pr-9")}
+              aria-invalid={!!errors.role}
+              {...register("role")}
+            >
+              <option value="">Chọn vai trò</option>
+              <option value="user">user</option>
+              <option value="admin">admin</option>
+            </NativeSelect>
+            <FieldError className={USER_ERROR} errors={[errors.role]} />
+          </Field>
+        </div>
+        <div className="w-full bg-[#222732] flex justify-end items-center p-4 rounded-b-md gap-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSaving}
+            className="hover:bg-[#374151] cursor-pointer p-2 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Hủy Bỏ
+          </button>
+          <button
+            type="submit"
+            disabled={isSaving}
+            className="hover:bg-[#2563eb] cursor-pointer p-2 rounded-md text-sm bg-blue-400 flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait"
+          >
+            {isSaving ? (
+              "Đang xử lý..."
+            ) : editing ? (
+              <>
+                <Save size={16} /> Lưu Thay Đổi
+              </>
+            ) : (
+              <>
+                <Plus size={16} /> Thêm Tài Khoản
+              </>
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}

@@ -7,13 +7,13 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | [AW-U13 r1](implementation-plans/aw-u13-skills-hold-no-state/plan.md), approved 2026-11-04. |
-| Current unit / checkpoint | AW-U13 CP1 on `chore/skills-hold-no-state`: committed after the Codex diff gate PASS; delivery (PR) in progress. |
-| Status | AW-U13 CP1: `skill-authoring` says a skill holds no rollout or progress state, the agent-workflow and app-foundation invariants point to it, and S1–S14 are reworded or removed. Codex (`gpt-6.1-sol`, high, read-only, session 01a1a697-a9d9-7c80-97a1-83c76c7d3d24) round 1 found 2 Required issues in S9 (seed-user scope, AI action rows), round 2 PASS; the AF-U6 session's refusal-row finding is fixed too; `npm run docs:check` 0 violations. AW-U12 delivered in PR #45 (`29ad22e`): CLI-first tool selection and the section 4 delivery boundary; AW-P3 resolved. AW-U11 delivered in PR #44, AW-P4 resolved with bounded evidence limits. Static decision cases are not live agent-compliance proof. |
-| Completed evidence | AW-U11: PR 44 (`f16ed1e`); AW-U12: PR 45 (`29ad22e`), with its machine setup evidence (gh 2.103.3, Vercel CLI 65.9.0, read-only probes) in this file's State at `69b66cb`; see milestones. |
+| Current unit / checkpoint | None active: no initiative plan is open. AW-U13 delivered in PR 62 (`c58839b`) on 2026-11-04. |
+| Status | merged: AW-U13 after green CI (PR 62, `c58839b`): `skill-authoring` says a skill holds no rollout or progress state, the agent-workflow and app-foundation invariants point to it, and S1–S14 are reworded or removed. Codex (`gpt-6.1-sol`, high, read-only, session 01a1a697-a9d9-7c80-97a1-83c76c7d3d24) round 1 found 2 Required issues in S9 (seed-user scope, AI action rows), round 2 PASS; the AF-U6 session's refusal-row finding is fixed too; `npm run docs:check` 0 violations. AW-U12 delivered in PR #45 (`29ad22e`): CLI-first tool selection and the section 4 delivery boundary; AW-P3 resolved. AW-U11 delivered in PR #44, AW-P4 resolved with bounded evidence limits. Static decision cases are not live agent-compliance proof. |
+| Completed evidence | AW-U11: PR 44 (`f16ed1e`); AW-U12: PR 45 (`29ad22e`), with its machine setup evidence (gh 2.103.3, Vercel CLI 65.9.0, read-only probes) in this file's State at `69b66cb`; AW-U13: PR 62 (`c58839b`), CI green on head `9e30dd9` (db and e2e skipped, docs-only); see milestones. |
 | Accepted deviations | None. AW-U11's frozen plan and operational binding remain unchanged. |
 | Blockers / Owner decisions | none. |
-| Next action | Push, PR and merge on green CI; then the AF-U6 branch merges `origin/main` and drops the AC10 skill edits this unit makes unnecessary. |
-| Current authority | Owner 2026-11-04: plan r1, its rule text, an own branch from `main`, implementation, a Codex diff gate, then the plan and implementation commits, push, PR and merge on green CI. |
+| Next action | None planned in agent-workflow. App-foundation AF-U6 keeps only the skill rule it introduces (its AC10). |
+| Current authority | None: no agent-workflow plan, implementation or git action is granted. |
 
 ## Milestones
 
@@ -125,4 +125,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-01 Owner linked Vercel; subsequent project and production-deployment metadata reads passed with the expected devspace/khang-devs-projects target and READY alias. Owner granted push, PR/CI reporting and merge conditional on green CI; no direct deployment or database action (`69b66cb`).
 - 2026-11-01 AW-U12 merged: CLI-first tool selection and the section 4 delivery boundary; AW-P3 resolved (PR 45, `29ad22e`).
 - 2026-11-03 AW-P5 resolved in the post-AF-U3 small-task batch: `preview_start` serves the dev server on the fnm-selected Node 26 (PR 55, `9d6198c`).
-- 2026-11-04 AW-U13 r1 approved with its rule text, an own branch from `main` and implementation; CP1 makes skills hold no rollout or progress state (this commit).
+- 2026-11-04 AW-U13 r1 approved with its rule text, an own branch from `main` and implementation; CP1 makes skills hold no rollout or progress state (`9e30dd9`).
+- 2026-11-04 AW-U13 merged after green CI: skills hold rules, procedures, pitfalls and stable example pointers, no rollout or progress state (PR 62, `c58839b`).

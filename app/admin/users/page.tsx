@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Users,
   Search,
@@ -10,72 +10,37 @@ import {
   Calendar,
   SquarePen,
   Trash,
-  X,
-  Save,
-  Upload,
 } from "lucide-react";
-import {
-  type UserProfile,
-  getAllUsersForUsersManager,
-  editUser,
-  uploadUserAvatar,
-} from "@/lib/supabase";
-import { createNewUser, deleteUserAccount } from "@/app/action/user";
+import { type UserProfile, getAllUsersForUsersManager } from "@/lib/supabase";
+import { deleteUserAccount } from "@/app/action/user";
 import { toast } from "sonner";
 import CustomAvatar from "@/app/components/CustomAvatar";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
+import UserFormDialog from "./_components/UserFormDialog";
 
 // 1. ĐỊNH NGHĨA SỐ DÒNG TRÊN 1 TRANG
 const ITEMS_PER_PAGE = 7;
 
 export default function UsersManagerPage() {
   const [refreshKey, setRefreshKey] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState<UserProfile[] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [isOpenForm, setIsOpenForm] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserProfile | null>(null);
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [role, setRole] = useState("");
-  const [password, setPassword] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 2. THÊM STATE CHO TRANG HIỆN TẠI
   const [currentPage, setCurrentPage] = useState(1);
 
   const handleOpenForm = () => {
     setEditingUser(null);
-    setEmail("");
-    setName("");
-    setPassword("");
-    setRole("user");
-    setPreviewUrl(null);
-    setSelectedFile(null);
     setIsOpenForm(true);
   };
 
   const handleOpenEditForm = (u: UserProfile) => {
     setEditingUser(u);
-    setEmail(u.email);
-    setName(u.full_name || "");
-    setRole(u.role);
-    setPreviewUrl(u.avatar_url);
-    setSelectedFile(null);
     setIsOpenForm(true);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      const objectUrl = URL.createObjectURL(file);
-      setPreviewUrl(objectUrl);
-    }
   };
 
   const handleDelete = async (id: string) => {
@@ -85,7 +50,7 @@ export default function UsersManagerPage() {
       result = await deleteUserAccount(id);
     } catch {
       toast.error(
-        "Không nhận được kết quả từ máy chủ. Hãy tải lại trang để kiểm tra người dùng."
+        "Không nhận được kết quả từ máy chủ. Hãy tải lại trang để kiểm tra người dùng.",
       );
       return;
     }
@@ -96,61 +61,6 @@ export default function UsersManagerPage() {
       toast.success("Đã xóa vĩnh viễn người dùng khỏi hệ thống!");
       setRefreshKey((prev) => prev + 1);
     }
-  };
-
-  const handleSave = async () => {
-    if (!email) {
-      toast.warning("Vui lòng nhập email");
-      return;
-    }
-    if (!editingUser && password.length < 8) {
-      toast.warning("Mật khẩu phải có ít nhất 8 ký tự");
-      return;
-    }
-    setIsLoading(true);
-
-    let finalAvatarURL = previewUrl || "";
-    if (selectedFile) {
-      const uploadedURL = await uploadUserAvatar(selectedFile);
-      if (uploadedURL) {
-        finalAvatarURL = uploadedURL;
-      } else {
-        toast.error("Lỗi khi upload avatar user");
-        setIsLoading(false);
-        return;
-      }
-    }
-
-    let result;
-
-    if (editingUser) {
-      result = await editUser(
-        editingUser.id,
-        {
-          full_name: name,
-          avatar_url: finalAvatarURL,
-          role,
-        },
-        null
-      );
-    } else {
-      result = await createNewUser({
-        email: email,
-        fullName: name,
-        role: role,
-        avatarUrl: finalAvatarURL,
-        password: password,
-      });
-    }
-
-    if (result.error) {
-      toast.error("Lưu người dùng thất bại: " + result.error);
-    } else {
-      toast.success(editingUser ? "Sửa thành công" : "Thêm thành công");
-      setIsOpenForm(false);
-      setRefreshKey((prev) => prev + 1);
-    }
-    setIsLoading(false);
   };
 
   const formatDate = (dateString: string) => {
@@ -195,7 +105,7 @@ export default function UsersManagerPage() {
   const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
   const paginatedUsers = filteredUsers.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    currentPage * ITEMS_PER_PAGE,
   );
 
   const stats = useMemo(() => {
@@ -232,7 +142,11 @@ export default function UsersManagerPage() {
 
   return (
     <div className="lg:ml-6 md:ml-2">
-      <div className="bg-[#0f1116] min-h-screen h-full p-3 md:p-3 flex flex-col gap-4 text-white font-sans rounded-md w-full">
+      {/* inert while the dialog is open: nothing behind it takes focus or clicks, so the dialog's user cannot change. */}
+      <div
+        inert={isOpenForm}
+        className="bg-[#0f1116] min-h-screen h-full p-3 md:p-3 flex flex-col gap-4 text-white font-sans rounded-md w-full"
+      >
         {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex flex-col gap-1">
@@ -382,11 +296,12 @@ export default function UsersManagerPage() {
 
                       <td className="px-4 md:px-6 py-3 md:py-4 text-right">
                         <div className="flex justify-end gap-2">
-                          <button className="cursor-pointer hover:bg-blue-500/20 hover:text-blue-400 p-2 rounded-md text-[#979EAA] transition-colors">
-                            <SquarePen
-                              size={20}
-                              onClick={() => handleOpenEditForm(u)}
-                            />
+                          <button
+                            onClick={() => handleOpenEditForm(u)}
+                            aria-label={`Sửa người dùng ${u.full_name || u.email}`}
+                            className="cursor-pointer hover:bg-blue-500/20 hover:text-blue-400 p-2 rounded-md text-[#979EAA] transition-colors"
+                          >
+                            <SquarePen size={20} />
                           </button>
                           <button
                             onClick={() => setDeleteTarget(u)}
@@ -440,148 +355,14 @@ export default function UsersManagerPage() {
             </div>
           </div>
         </div>
-
-        {/* MODAL FORM (Giữ nguyên) */}
-        {isOpenForm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-            <div className="w-full max-w-lg md:w-[600px] flex flex-col bg-[#191C24] rounded-lg shadow-2xl border border-gray-800 animate-in fade-in zoom-in duration-200">
-              <div className="flex justify-between items-center p-4 border-b border-gray-800 bg-[#222732] rounded-t-lg">
-                <div className="text-lg md:text-xl flex items-center gap-2 font-semibold">
-                  {editingUser ? (
-                    <>
-                      <SquarePen size={20} className="text-[#3B81F4]" />
-                      <h1>Cập Nhật Thông Tin</h1>
-                    </>
-                  ) : (
-                    <>
-                      <Plus size={20} className="text-[#3B81F4]" />
-                      <h1>Thêm Thành Viên Mới</h1>
-                    </>
-                  )}
-                </div>
-                <X
-                  size={35}
-                  onClick={() => setIsOpenForm(false)}
-                  className="hover:bg-[#374151] cursor-pointer rounded-md p-1 transition-colors text-gray-400 hover:text-white"
-                />
-              </div>
-              <div className="flex flex-col bg-[#191C24] w-full gap-2 p-3">
-                <span>EMAIL</span>
-                <input
-                  type="text"
-                  name=""
-                  id=""
-                  className={`p-2 bg-[#2C3039] rounded-md ${
-                    editingUser ? "cursor-not-allowed opacity-35" : ""
-                  }`}
-                  placeholder="helo@gmail.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={!!editingUser}
-                />
-                {!editingUser && (
-                  <>
-                    <span>MẬT KHẨU</span>
-                    <input
-                      type="password"
-                      autoComplete="new-password"
-                      className="p-2 bg-[#2C3039] rounded-md"
-                      placeholder="Tối thiểu 8 ký tự"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                  </>
-                )}
-                <span>HỌ VÀ TÊN</span>
-                <input
-                  type="text"
-                  name=""
-                  id=""
-                  className="p-2 bg-[#2C3039] rounded-md"
-                  placeholder="Nguyen Van A"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-                {/* PHẦN UPLOAD */}
-                <div className="flex ">
-                  <div
-                    className="relative group w-28 h-28 rounded-full border-2 border-dashed border-gray-600 flex items-center justify-center cursor-pointer overflow-hidden hover:border-[#3B81F4] transition-all bg-[#2C3039]"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {previewUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- blob: preview URL that next/image does not optimize, tracked in BL-003
-                      <img
-                        src={previewUrl}
-                        alt="Avatar Preview"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center text-gray-500 group-hover:text-[#3B81F4]">
-                        <Upload size={32} />
-                        <span className="text-xs mt-1">Upload</span>
-                      </div>
-                    )}
-
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <SquarePen className="text-white" size={24} />
-                    </div>
-                  </div>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
-                    accept="image/*"
-                  />
-                </div>
-                <span>VAI TRÒ</span>
-                <select
-                  name=""
-                  id=""
-                  className="p-2 bg-[#2C3039] rounded-md"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                >
-                  <option>Chọn vai trò</option>
-                  {[
-                    { id: 1, role: "user" },
-                    { id: 2, role: "admin" },
-                  ].map((o) => (
-                    <option value={o.role} key={o.id}>
-                      {o.role}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="w-full bg-[#222732] flex justify-end items-center p-4 rounded-b-md gap-4">
-                <button
-                  onClick={() => setIsOpenForm(false)}
-                  className="hover:bg-[#374151] cursor-pointer p-2 rounded-md text-sm"
-                >
-                  Hủy Bỏ
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={isLoading}
-                  className="hover:bg-[#2563eb] cursor-pointer p-2 rounded-md text-sm bg-blue-400 flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait"
-                >
-                  {isLoading ? (
-                    "Đang xử lý..."
-                  ) : editingUser ? (
-                    <>
-                      <Save size={16} /> Lưu Thay Đổi
-                    </>
-                  ) : (
-                    <>
-                      <Plus size={16} /> Thêm Tài Khoản
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+      {isOpenForm && (
+        <UserFormDialog
+          user={editingUser}
+          onClose={() => setIsOpenForm(false)}
+          onSaved={() => setRefreshKey((prev) => prev + 1)}
+        />
+      )}
       {deleteTarget && (
         <ConfirmDialog
           open

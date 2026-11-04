@@ -14,7 +14,7 @@ Plan: [plan.md](plan.md). Progress: [progress.md](progress.md).
 
 ### AF-P7: the admin user form can save the role "Chọn vai trò"
 
-- Status: Open (2026-11-04, found by the Owner in AF-U5 manual QA; for AF-U6, which converts the admin user forms).
+- Status: Fixed locally, awaiting delivery (2026-11-04, found by the Owner in AF-U5 manual QA; fixed in AF-U6, whose forms and `createUserSchema`-derived schemas accept only `user` or `admin`).
 - Problem: the role select in `app/admin/users/page.tsx` has a placeholder `<option>Chọn vai trò</option>` with no `value`, so its value is its text; the form sends it unchanged through `editUser` (and `createNewUser`), and `profiles.role` has no check constraint, so a user is saved with the role "Chọn vai trò". Such a user is neither `admin` nor `user` in the counters and filters.
 - Evidence: Owner screenshot on the dev stack: student@devspace.test shows the role "Chọn vai trò" after an edit; `supabase/migrations/20261021000000_baseline.sql` has no constraint on `profiles.role`.
 - Direction: AF-U6's user schema accepts only `user` or `admin` (the placeholder an empty value that fails) on client and server; a check constraint on `profiles.role` is a separate, Codex-gated migration (QE-F9 would catch its absence). The dev row is fixed by editing the user back to `user`.

@@ -1,6 +1,8 @@
 import type { Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
 import { join } from "node:path";
+import { E2E_ORIGIN } from "../helpers/e2e-env";
 import {
   assertMailReady,
   createDocker,
@@ -22,7 +24,9 @@ const delay = () => new Promise((resolve) => setTimeout(resolve, 100));
 // screenshots and video so the PKCE URL and password cannot enter retained artifacts.
 export async function withRecoveryMail<T>(
   email: string,
-  body: (mail: { link(): Promise<string> }) => Promise<T>,
+  body: (mail: {
+    link(type?: "recovery" | "magiclink"): Promise<string>;
+  }) => Promise<T>,
 ) {
   requireActiveRun({ command: "npm run test:e2e" });
   assertMailReady(createDocker());
@@ -51,8 +55,8 @@ export async function withRecoveryMail<T>(
       "Recovery recipient has stale mail; nothing acquired or deleted",
     );
   }
-  reserved.add(email);
   const stack = readTestStack(join(__dirname, "../.."));
+  reserved.add(email);
   return withFixtureScope(
     {
       cleanup: async () => {
@@ -78,7 +82,7 @@ export async function withRecoveryMail<T>(
     },
     () =>
       body({
-        link: async () => {
+        link: async (type = "recovery") => {
           let found: Message[] = [];
           for (let attempt = 0; attempt < 100; attempt++) {
             found = await messages();
@@ -96,7 +100,7 @@ export async function withRecoveryMail<T>(
               (url) =>
                 url.origin === stack.apiUrl &&
                 url.pathname === "/auth/v1/verify" &&
-                url.searchParams.get("type") === "recovery",
+                url.searchParams.get("type") === type,
             );
           if (links.length !== 1)
             throw new Error(
@@ -106,7 +110,7 @@ export async function withRecoveryMail<T>(
             links[0].searchParams.get("redirect_to") ?? "",
           );
           if (
-            target.origin !== "http://127.0.0.1:3100" ||
+            target.origin !== E2E_ORIGIN ||
             target.pathname !== "/auth/callback" ||
             target.searchParams.get("next") !== "/auth/reset-password"
           )
@@ -131,7 +135,51 @@ export async function requestRecovery(page: Page, email: string) {
     throw new Error("Recovery request failed; body suppressed");
 }
 
-export async function verifiedRecovery(page: Page, userId: string) {
+export async function requestMagicLink(page: Page, email: string) {
+  requireActiveRun({ command: "npm run test:e2e" });
+  assertOwnedAuthEmail(email);
+  const stack = readTestStack(join(__dirname, "../.."));
+  // Use the real PKCE client and transfer only its verifier cookies to the browser
+  // because the product has no magic-link sign-in form.
+  const cookies = new Map<string, string>();
+  const client = createServerClient(stack.apiUrl, stack.anonKey, {
+    cookies: {
+      getAll: () => Array.from(cookies, ([name, value]) => ({ name, value })),
+      setAll: (entries) => {
+        for (const { name, value } of entries) cookies.set(name, value);
+      },
+    },
+  });
+  const { error } = await client.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: `${E2E_ORIGIN}/auth/callback?next=/auth/reset-password`,
+    },
+  });
+  if (error || !cookies.size)
+    throw new Error("Could not request a real non-recovery PKCE link");
+  await page.context().addCookies(
+    Array.from(cookies, ([name, value]) => ({
+      name,
+      value,
+      url: E2E_ORIGIN,
+    })),
+  );
+}
+
+export async function followAuthMail(page: Page, link: string) {
+  // Keep the live link out of Playwright navigation logs and failure messages.
+  await page
+    .evaluate((target) => {
+      window.location.href = target;
+    }, link)
+    .catch(() => {
+      throw new Error("Could not follow the verified local mail link");
+    });
+}
+
+export async function verifiedSessionClaims(page: Page, userId: string) {
   const stack = readTestStack(join(__dirname, "../.."));
   const cookies = await page.context().cookies();
   const key = `sb-${new URL(stack.apiUrl).hostname.split(".")[0]}-auth-token`;
@@ -142,10 +190,17 @@ export async function verifiedRecovery(page: Page, userId: string) {
     .sort((a, b) => a.name.localeCompare(b.name));
   const encoded = chunks.map((cookie) => cookie.value).join("");
   if (!encoded.startsWith("base64-"))
-    throw new Error("Recovery session cookie missing");
-  const session = JSON.parse(
-    Buffer.from(encoded.slice(7), "base64url").toString(),
-  );
+    throw new Error("Auth session cookie missing");
+  let accessToken: unknown;
+  try {
+    accessToken = JSON.parse(
+      Buffer.from(encoded.slice(7), "base64url").toString(),
+    ).access_token;
+  } catch {
+    throw new Error("Auth session cookie could not be decoded");
+  }
+  if (typeof accessToken !== "string" || !accessToken)
+    throw new Error("Auth session access token missing");
   const client = createClient(stack.apiUrl, stack.anonKey, {
     auth: {
       persistSession: false,
@@ -153,13 +208,40 @@ export async function verifiedRecovery(page: Page, userId: string) {
       detectSessionInUrl: false,
     },
   });
-  const { data, error } = await client.auth.getClaims(session.access_token);
+  const { data, error } = await client.auth.getClaims(accessToken);
+  if (error || data?.claims.sub !== userId || !data.claims.session_id)
+    throw new Error("Verified session/subject mismatch");
+  return data.claims;
+}
+
+export async function verifiedRecovery(page: Page, userId: string) {
+  const claims = await verifiedSessionClaims(page, userId);
   if (
-    error ||
-    data?.claims.sub !== userId ||
-    !data.claims.amr?.some(
+    !claims.amr?.some(
       (entry) => typeof entry !== "string" && entry.method === "recovery",
     )
   )
-    throw new Error("Verified recovery claims/subject mismatch");
+    throw new Error("Verified recovery method missing");
+  return claims.session_id;
+}
+
+export async function acceptsFixturePassword(email: string, password: string) {
+  requireActiveRun({ command: "npm run test:e2e" });
+  assertOwnedAuthEmail(email);
+  const stack = readTestStack(join(__dirname, "../.."));
+  const client = createClient(stack.apiUrl, stack.anonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
+  const { data, error } = await client.auth.signInWithPassword({
+    email,
+    password,
+  });
+  if (error?.code === "invalid_credentials") return false;
+  if (error || !data.session)
+    throw new Error("Fixture password probe could not complete");
+  return true;
 }

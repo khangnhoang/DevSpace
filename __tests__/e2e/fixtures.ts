@@ -1,10 +1,20 @@
 import { test as base, expect } from "@playwright/test";
 import { join } from "node:path";
 import { classifyRequest } from "../helpers/e2e-network";
-import { recordSize, recordsSince, serverRecordPaths, type GuardRecord, type MailRecord } from "../helpers/e2e-server";
+import {
+  recordSize,
+  recordsSince,
+  serverRecordPaths,
+  type GuardRecord,
+  type MailRecord,
+} from "../helpers/e2e-server";
 import { openActionCaller, type ActionCaller } from "./server-action";
 import { beginFixtureScope } from "./service-role";
-import { noteTimeout, withFixtureScope, type FixtureScope } from "../helpers/fixture-ownership";
+import {
+  noteTimeout,
+  withFixtureScope,
+  type FixtureScope,
+} from "../helpers/fixture-ownership";
 
 export { expect };
 
@@ -24,12 +34,31 @@ declare global {
 // recorded since this test began; a test during which the server tried to resolve or reach a non-local host fails.
 export type ServerRecords = { mailsSent: () => MailRecord[] };
 
-export const test = base.extend<{ owned: FixtureScope; serverRecords: ServerRecords; callAction: ActionCaller }>({
-  owned: [async ({}, provide, testInfo) => {
-    const scope = beginFixtureScope();
-    // A timed-out test may leave a request in flight, so it makes the run unclean even when the cleanup succeeds.
-    await withFixtureScope(scope, () => provide(scope).finally(() => { if (testInfo.status === "timedOut") noteTimeout(testInfo.title); }));
-  }, { auto: true }],
+function reportableUrl(value: string) {
+  const url = new URL(value);
+  // Auth verification/callback requests carry one-time secrets in the URL.
+  if (url.pathname === "/auth/v1/verify" || url.pathname === "/auth/callback")
+    return `${url.origin}${url.pathname}`;
+  return value;
+}
+
+export const test = base.extend<{
+  owned: FixtureScope;
+  serverRecords: ServerRecords;
+  callAction: ActionCaller;
+}>({
+  owned: [
+    async ({}, provide, testInfo) => {
+      const scope = beginFixtureScope();
+      // A timed-out test may leave a request in flight, so it makes the run unclean even when the cleanup succeeds.
+      await withFixtureScope(scope, () =>
+        provide(scope).finally(() => {
+          if (testInfo.status === "timedOut") noteTimeout(testInfo.title);
+        }),
+      );
+    },
+    { auto: true },
+  ],
 
   // Posts to a server action endpoint as an actor (server-action.ts). Its contexts are closed after the test.
   callAction: async ({}, provide) => {
@@ -44,7 +73,9 @@ export const test = base.extend<{ owned: FixtureScope; serverRecords: ServerReco
       const guardStart = recordSize(paths.guard);
       const mailStart = recordSize(paths.mail);
 
-      await provide({ mailsSent: () => recordsSince<MailRecord>(paths.mail, mailStart) });
+      await provide({
+        mailsSent: () => recordsSince<MailRecord>(paths.mail, mailStart),
+      });
       await owned.cleanup();
 
       expect(
@@ -64,20 +95,32 @@ export const test = base.extend<{ owned: FixtureScope; serverRecords: ServerReco
       const url = route.request().url();
       const verdict = classifyRequest(url);
       if (verdict === "allow") return route.continue();
-      if (verdict === "hosted") problems.add(`request to a hosted host: ${url}`);
+      if (verdict === "hosted")
+        problems.add(`request to a hosted host: ${reportableUrl(url)}`);
       return route.abort("blockedbyclient");
     });
     // Playwright continues a redirect hop itself, without calling the route handler, so classify every request here too.
     context.on("request", (request) => {
-      if (classifyRequest(request.url()) === "hosted") problems.add(`request to a hosted host: ${request.url()}`);
+      if (classifyRequest(request.url()) === "hosted")
+        problems.add(
+          `request to a hosted host: ${reportableUrl(request.url())}`,
+        );
     });
-    context.on("weberror", (webError) => problems.add(`page error: ${webError.error().message}`));
+    context.on("weberror", (webError) =>
+      problems.add(`page error: ${webError.error().message}`),
+    );
     context.on("response", (response) => {
-      if (response.status() >= 500) problems.add(`HTTP ${response.status()} from ${response.url()}`);
+      if (response.status() >= 500)
+        problems.add(
+          `HTTP ${response.status()} from ${reportableUrl(response.url())}`,
+        );
     });
 
-    try { await provide(context); }
-    finally { await context.close(); }
+    try {
+      await provide(context);
+    } finally {
+      await context.close();
+    }
 
     expect([...problems], "the network guard recorded problems").toEqual([]);
   },

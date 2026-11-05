@@ -1,5 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { join } from "node:path";
+import pg from "pg";
+import { requireActiveRun } from "../../scripts/test-stack/lock.mjs";
 import { type LocalStack } from "../helpers/local-stack";
 import { readTestStack } from "../../scripts/test-stack/read.mjs";
 import {
@@ -614,8 +616,8 @@ export async function exerciseById(id: number): Promise<ExerciseRow> {
       .single(),
   );
 }
-export async function createUserFixture() {
-  const email = `e2e-${scope().tag}@devspace.test`;
+export async function createUserFixture(variant?: "alternate") {
+  const email = `e2e-${scope().tag}${variant ? `-${variant}` : ""}@devspace.test`;
   const label = scope().label("E2E Người dùng xóa");
   await scope().reserveAuth(email);
   const password = "e2e-local-pass-1";
@@ -647,6 +649,35 @@ export function assertOwnedAuthEmail(email: string) {
     throw new Error(
       "Recovery mailbox requires an exactly reserved Auth recipient",
     );
+  }
+}
+
+export async function expireFixtureRecovery(user: {
+  id: string;
+  email: string;
+}) {
+  requireActiveRun({ command: "npm run test:e2e" });
+  assertOwnedAuthEmail(user.email);
+  const stack = readTestStack(join(__dirname, "../.."));
+  const ids = await scope().authIds(user.email);
+  if (ids.length !== 1 || ids[0] !== user.id)
+    throw new Error("Recovery fixture ownership mismatch");
+  const connection = new pg.Client({
+    connectionString: stack.dbUrl,
+    application_name: "devspace-recovery-fixture",
+  });
+  try {
+    await connection.connect();
+    // GoTrue checks recovery_sent_at against the configured OTP expiry. Age only
+    // the exact temporary account, keeping the genuine token and shared settings intact.
+    const result = await connection.query(
+      "update auth.users set recovery_sent_at = '2000-01-01T00:00:00Z' where id = $1 and email = $2 and recovery_sent_at is not null and recovery_token <> ''",
+      [user.id, user.email],
+    );
+    if (result.rowCount !== 1)
+      throw new Error("No issued fixture recovery token to expire");
+  } finally {
+    await connection.end();
   }
 }
 export async function profileOfEmail(email: string): Promise<{

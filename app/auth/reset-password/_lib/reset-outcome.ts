@@ -8,14 +8,21 @@ type AuthOutcome = {
   redirect: { refresh: boolean; delayMs: number } | null;
   keepValues: boolean;
 };
-type SubmitControl = { inFlight: { current: boolean }; setPending: (pending: boolean) => void };
+type SubmitControl = {
+  inFlight: { current: boolean };
+  setPending: (pending: boolean) => void;
+};
 
 export const RESET_SUCCESS_MESSAGE = "Khôi phục mật khẩu thành công!";
 export const RESET_SAME_PASSWORD_MESSAGE = "Mật khẩu mới phải khác mật khẩu cũ";
 export const RESET_WEAK_PASSWORD_MESSAGE = "Mật khẩu quá yếu";
 export const RESET_FAILED_MESSAGE = "Không đổi được mật khẩu, vui lòng thử lại";
 
-const resetError = (text: string): AuthOutcome => ({ message: { text, type: "error" }, redirect: null, keepValues: true });
+const resetError = (text: string): AuthOutcome => ({
+  message: { text, type: "error" },
+  redirect: null,
+  keepValues: true,
+});
 
 export function resetPasswordOutcome(error: AuthErrorLike): AuthOutcome {
   if (!error) {
@@ -26,8 +33,10 @@ export function resetPasswordOutcome(error: AuthErrorLike): AuthOutcome {
       keepValues: true,
     };
   }
-  if (error.code === "same_password") return resetError(RESET_SAME_PASSWORD_MESSAGE);
-  if (error.code === "weak_password") return resetError(RESET_WEAK_PASSWORD_MESSAGE);
+  if (error.code === "same_password")
+    return resetError(RESET_SAME_PASSWORD_MESSAGE);
+  if (error.code === "weak_password")
+    return resetError(RESET_WEAK_PASSWORD_MESSAGE);
   return resetError(RESET_FAILED_MESSAGE);
 }
 
@@ -40,10 +49,8 @@ export async function submitResetPassword(
   control.setPending(true);
   try {
     const { error } = await updatePassword();
-    if (error) console.error("Lỗi đổi mật khẩu:", error);
     return resetPasswordOutcome(error);
-  } catch (error) {
-    console.error("Lỗi đổi mật khẩu:", error);
+  } catch {
     return resetError(RESET_FAILED_MESSAGE);
   } finally {
     control.inFlight.current = false;

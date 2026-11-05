@@ -15,13 +15,75 @@ import {
   PasswordInput,
   usePasswordVisibility,
 } from "@/app/components/AuthFields";
-import { resetPasswordSchema, type ResetPasswordValues } from "@/lib/schemas/auth-forms";
+import {
+  resetPasswordSchema,
+  type ResetPasswordValues,
+} from "@/lib/schemas/auth-forms";
 import { submitResetPassword } from "./_lib/reset-outcome";
+
+function redirectToRecoveryEntry(
+  router: Pick<ReturnType<typeof useRouter>, "replace">,
+) {
+  toast.error(
+    "Liên kết không hợp lệ hoặc đã hết hạn. Hãy yêu cầu liên kết mới.",
+    { id: "reset-link-invalid" },
+  );
+  router.replace("/login");
+}
+
+async function verifiedRecoverySession() {
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+  if (sessionError || !session) return null;
+
+  const accessToken = session.access_token;
+  const { data, error } = await supabase.auth.getClaims(accessToken);
+  const claims = data?.claims;
+  if (
+    error ||
+    !claims?.sub ||
+    !claims.session_id ||
+    !claims.amr?.some(
+      (entry) => typeof entry !== "string" && entry.method === "recovery",
+    )
+  )
+    return null;
+
+  return { accessToken, userId: claims.sub, sessionId: claims.session_id };
+}
+
+async function updateRecoveryPassword(accessToken: string, password: string) {
+  // Sending the verified JWT explicitly prevents the SDK from picking up a
+  // replacement browser session between verification and the write.
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/user`,
+    {
+      method: "PUT",
+      redirect: "error",
+      credentials: "omit",
+      headers: {
+        apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ password }),
+    },
+  );
+  if (response.ok) return { error: null };
+
+  const { error_code: code } = await response.json().catch(() => ({}));
+  return { error: { code, status: response.status } };
+}
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [verifying, setVerifying] = useState(true);
+  const [recovery, setRecovery] = useState<{
+    userId: string;
+    sessionId: string;
+  } | null>(null);
   const password = usePasswordVisibility();
   const {
     register,
@@ -33,36 +95,58 @@ export default function ResetPasswordPage() {
   });
   // Set before the first await (inside the submit helper): see the login forms.
   const inFlight = useRef(false);
+  const redirectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 1. Kiểm tra session
   useEffect(() => {
-    const checkSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        // A fixed id: React StrictMode runs this effect twice in dev, and sonner shows one toast per id.
-        toast.error("Liên kết không hợp lệ hoặc đã hết hạn.", { id: "reset-link-invalid" });
-        router.push("/login");
-      } else {
-        setVerifying(false);
-      }
+    let active = true;
+    void verifiedRecoverySession()
+      .catch(() => null)
+      .then((session) => {
+        if (!active) return;
+        if (session)
+          setRecovery({ userId: session.userId, sessionId: session.sessionId });
+        else redirectToRecoveryEntry(router);
+      });
+    return () => {
+      active = false;
+      if (redirectTimer.current !== null) clearTimeout(redirectTimer.current);
     };
-    checkSession();
   }, [router]);
 
-  // 2. Xử lý đổi mật khẩu
   const handleResetPassword = async (values: ResetPasswordValues) => {
-    const outcome = await submitResetPassword({ inFlight, setPending: setLoading }, () =>
-      supabase.auth.updateUser({ password: values.password }),
+    if (!recovery || redirectTimer.current !== null) return;
+    let recoveryLost = false;
+    const outcome = await submitResetPassword(
+      { inFlight, setPending: setLoading },
+      async () => {
+        const session = await verifiedRecoverySession().catch(() => null);
+        if (
+          !session ||
+          session.sessionId !== recovery.sessionId ||
+          session.userId !== recovery.userId
+        ) {
+          recoveryLost = true;
+          return { error: { code: "session_not_found" } };
+        }
+        return updateRecoveryPassword(session.accessToken, values.password);
+      },
     );
     if (!outcome) return;
+    if (recoveryLost) {
+      setRecovery(null);
+      redirectToRecoveryEntry(router);
+      return;
+    }
     if (outcome.message.type === "success") toast.success(outcome.message.text);
     else toast.error(outcome.message.text);
-    if (outcome.redirect) setTimeout(() => router.push("/"), outcome.redirect.delayMs);
+    if (outcome.redirect)
+      redirectTimer.current = setTimeout(
+        () => router.push("/"),
+        outcome.redirect.delayMs,
+      );
   };
 
-  if (verifying) {
+  if (!recovery) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-2">
@@ -86,7 +170,11 @@ export default function ResetPasswordPage() {
           </p>
         </div>
 
-        <form onSubmit={(e) => handleSubmit(handleResetPassword)(e)} noValidate className="p-8 space-y-5">
+        <form
+          onSubmit={(e) => handleSubmit(handleResetPassword)(e)}
+          noValidate
+          className="p-8 space-y-5"
+        >
           <Field className="gap-1.5" data-invalid={!!errors.password}>
             <PasswordInput
               className="pr-10 placeholder:text-gray-400"
@@ -113,8 +201,16 @@ export default function ResetPasswordPage() {
             <FieldError className="text-xs" errors={[errors.confirmPassword]} />
           </Field>
 
-          <Button type="submit" disabled={loading} className={AUTH_SUBMIT_CLASS}>
-            {loading ? <Loader2 className="size-5 animate-spin" /> : <CheckCircle className="size-5" />}
+          <Button
+            type="submit"
+            disabled={loading}
+            className={AUTH_SUBMIT_CLASS}
+          >
+            {loading ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : (
+              <CheckCircle className="size-5" />
+            )}
             Đổi mật khẩu
           </Button>
         </form>

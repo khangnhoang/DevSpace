@@ -28,14 +28,6 @@ Charter: [README.md](README.md). Progress: [progress.md](progress.md).
 - Direction: reproduce under load (`npm test -- --reporter=default` in a loop, keeping the log), then fix the race in the test or in `scripts/test-stack` lock code, whichever the log shows; do not raise a timeout without a measured reason.
 - Exit condition: the cause is named and fixed, and 10 consecutive `npm test` runs pass that test.
 
-### QE-P6: the "run the tests twice" rule predates the end-of-run audit
-
-- Status: Fixed locally, awaiting delivery (2026-11-05, Owner-approved staged verification and conditional repeats on `chore/test-run-policy`; `docs:check` passed). Open (2026-11-04, raised by the Owner during AF-U5).
-- Problem: `test-quality-strategy` asks for `npm run test:e2e` twice after a change to a writing row, and `npm test` twice after writing rls tests (also `references/rls-test-design.md` step 3). A full e2e run is slow, and the second run now mostly repeats what the audit already checks.
-- Evidence: the rule landed in `5762f92` (2026-10-30). Reviewed at `a0e2d03`: `scripts/test-stack/audit.mjs` hashes each `public` base table, `auth.users` and `storage.objects`, excluding `auth.users.last_sign_in_at`, `auth.users.updated_at` and `storage.objects.last_accessed_at`; `scripts/test-stack/run.mjs` waits for writers before comparing with the reset snapshot. A repeat on retained state can expose reset-dependent setup/cleanup behavior, which a matching snapshot alone cannot prove. It does not automatically verify excluded columns or explain a flake; those need direct assertions or failure evidence.
-- Direction: implemented in `test-quality-strategy` and `references/rls-test-design.md`: focused checks during implementation, affected-area checks at checkpoints, final full regression once after whole-diff review, and retained-state repeats for changed fixture ownership/cleanup, seed/reset behavior or test-stack lifecycle. A writing test or automatic reset alone does not require another full run; flake investigation preserves the failure evidence.
-- Exit condition: the skill states a rule whose second run catches something the audit does not, or the Owner keeps the current rule with a reason.
-
 ### QE-P7: e2e row `[T8]` failed once in a full run with the student signed out
 
 - Status: Open (2026-11-05, found by Main while verifying security-engineering SE-P2; outside that change, which touched only the activation mail).
@@ -50,3 +42,4 @@ One line each: ID, status, one-line outcome. Details stay in Git.
 
 - QE-P1 — Resolved 2026-11-01: RLS teardown waits up to 10 s for registered writers before releasing ownership, and the `rls` project has a measured 15 s test timeout; guards stay fail-closed (PR 46, `3e4b941`).
 - QE-P2 — Resolved 2026-11-02: tests run on a separate `devspace-test` stack under one machine-wide lock with writer records and an end-of-run audit; the ownership journal and `recover.mjs` are gone, and an interrupted run is cleaned up by the next command (PR 50, `60c369a`).
+- QE-P6 — Resolved 2026-11-05: focused verification during implementation, one final full regression after whole-diff review, and retained-state repeats when the affected contract warrants them (PR 67, `3d21627`).

@@ -25,11 +25,12 @@ Each initiative keeps these; the rule itself lives with its owner.
 
 ## 4. Initiatives
 
-At most one initiative has an open plan at a time. A closed initiative keeps its row. No initiative is open.
+At most one initiative has an open plan at a time. A closed initiative keeps its row. Current activity is recorded in [progress.md](progress.md).
 
 | Initiative | Branch | Outcome | Dependencies | Gate to open |
 | --- | --- | --- | --- | --- |
 | SE-U1 [H2-2b coupon and payment write integrity](../security-hotfix/plan-h2.md) | `fix/se-u1-payment-write-integrity` | SE-P8, SE-P9, SE-P10, SE-P11 and SE-P12: coupon usage is reserved and counted consistently, order approval and rejection are atomic, and an enrolled user cannot create a redundant pending order | none | Owner approval of a detail plan; Codex gate |
+| SE-U2 [Protect password recovery](implementation-plans/se-u2-password-recovery/plan.md) | `fix/se-p1-password-recovery` | SE-P1: an ordinary session cannot change an existing password without fresh proof; legitimate email recovery still works | none | Owner approval of the detail plan; Codex gate |
 
 ## 5. Opening an initiative
 

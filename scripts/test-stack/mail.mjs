@@ -17,7 +17,11 @@ export async function mailRequest(path, options = {}) {
   const body = await response.text();
   // Mailpit acknowledges DELETE with plain text on some versions. Absence is verified by the caller's search.
   if (options.method === "DELETE") return null;
-  return body ? JSON.parse(body) : null;
+  try {
+    return body ? JSON.parse(body) : null;
+  } catch {
+    throw new Error("Invalid test mailbox JSON; body suppressed");
+  }
 }
 
 export async function assertTestMailboxEmpty(docker = createDocker()) {

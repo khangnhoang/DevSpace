@@ -12,6 +12,9 @@ import {
   requestRecovery,
   requestMagicLink,
   followAuthMail,
+  expectRecoveryRoute,
+  expectSensitiveValue,
+  fillSensitiveInput,
   verifiedSessionClaims,
   acceptsFixturePassword,
   verifiedRecovery,
@@ -35,17 +38,17 @@ test("[SE-U2 CP2] real PKCE recovery survives reload; a controlled failure clean
         (response) => new URL(response.url()).pathname === "/auth/callback",
       );
       await followAuthMail(page, link);
-      const callbackLocation = (await callback).headers()["location"];
-      expect(
-        callbackLocation
-          ? new URL(callbackLocation, requestingOrigin).origin
-          : null,
-        "callback preserves the requesting browser origin",
-      ).toBe(requestingOrigin);
-      expect(new URL(callbackLocation!, requestingOrigin).pathname).toBe(
-        "/auth/reset-password",
+      const callbackLocation = URL.parse(
+        (await callback).headers()["location"] ?? "",
+        requestingOrigin,
       );
+      expect(
+        callbackLocation?.origin === requestingOrigin,
+        "callback preserves the requesting browser origin",
+      ).toBe(true);
+      expect(callbackLocation?.pathname === "/auth/reset-password").toBe(true);
       await expect(page.getByPlaceholder("Mật khẩu mới...")).toBeVisible();
+      await expectRecoveryRoute(page, "/auth/reset-password");
       await verifiedRecovery(page, user.id);
       await page.reload();
       await expect(page.getByPlaceholder("Mật khẩu mới...")).toBeVisible();
@@ -601,10 +604,10 @@ test.describe("reset-password page", () => {
 
   async function signInFixtureUser(page: Page, user: FixtureUser) {
     await page.goto("/login");
-    await emailBox(page).fill(user.email);
-    await passwordBox(page).fill(user.password);
+    await fillSensitiveInput(emailBox(page), user.email);
+    await fillSensitiveInput(passwordBox(page), user.password);
     await signInButton(page).click();
-    await expect(page).toHaveURL(/\/$/);
+    await expectRecoveryRoute(page, "/");
     await verifiedSessionClaims(page, user.id);
   }
 
@@ -614,6 +617,7 @@ test.describe("reset-password page", () => {
       const link = await mail.link();
       await followAuthMail(page, link);
       await expect(newBox(page)).toBeVisible();
+      await expectRecoveryRoute(page, "/auth/reset-password");
       await verifiedRecovery(page, user.id);
       return link;
     });
@@ -635,27 +639,27 @@ test.describe("reset-password page", () => {
     ).toBeVisible();
     await expect(page.getByText("Vui lòng xác nhận mật khẩu")).toBeVisible();
 
-    await newBox(page).fill(NEW_PASSWORD);
-    await confirmBox(page).fill("something-else-1");
+    await fillSensitiveInput(newBox(page), NEW_PASSWORD);
+    await fillSensitiveInput(confirmBox(page), `${NEW_PASSWORD}-mismatch`);
     await changeButton(page).click();
     await expect(page.getByText("Mật khẩu xác nhận không khớp")).toBeVisible();
     expect(updatesSent(updates), "no update was sent").toBe(0);
 
-    await newBox(page).fill(user.password);
-    await confirmBox(page).fill(user.password);
+    await fillSensitiveInput(newBox(page), user.password);
+    await fillSensitiveInput(confirmBox(page), user.password);
     await changeButton(page).click();
     await expect(
       page.getByText("Mật khẩu mới phải khác mật khẩu cũ"),
     ).toBeVisible();
-    await expect(page).toHaveURL(/\/auth\/reset-password$/);
+    await expectRecoveryRoute(page, "/auth/reset-password");
 
-    await newBox(page).fill(NEW_PASSWORD);
-    await confirmBox(page).fill(NEW_PASSWORD);
+    await fillSensitiveInput(newBox(page), NEW_PASSWORD);
+    await fillSensitiveInput(confirmBox(page), NEW_PASSWORD);
     await changeButton(page).click();
     await expect(
       page.getByText("Khôi phục mật khẩu thành công!"),
     ).toBeVisible();
-    await expect(page).toHaveURL(/\/$/);
+    await expectRecoveryRoute(page, "/");
     expect(await acceptsFixturePassword(user.email, NEW_PASSWORD)).toBe(true);
     expect(await acceptsFixturePassword(user.email, user.password)).toBe(false);
   });
@@ -667,7 +671,7 @@ test.describe("reset-password page", () => {
     await page.goto("/auth/reset-password");
 
     await expect(invalidMessage(page)).toBeVisible();
-    await expect(page).toHaveURL(/\/login$/);
+    await expectRecoveryRoute(page, "/login");
     expect(updatesSent(updates)).toBe(0);
   });
 
@@ -676,8 +680,8 @@ test.describe("reset-password page", () => {
   }) => {
     await openFixtureRecovery(page, await createUserFixture());
     const held = await holdRequests(page, USER, "PUT");
-    await newBox(page).fill(NEW_PASSWORD);
-    await confirmBox(page).fill(NEW_PASSWORD);
+    await fillSensitiveInput(newBox(page), NEW_PASSWORD);
+    await fillSensitiveInput(confirmBox(page), NEW_PASSWORD);
 
     await expectOneRequestPerSubmit(page, held, {
       button: changeButton(page),
@@ -692,8 +696,8 @@ test.describe("reset-password page", () => {
         await expect(
           page.getByText("Không đổi được mật khẩu, vui lòng thử lại").last(),
         ).toBeVisible();
-        await expect(newBox(page)).toHaveValue(NEW_PASSWORD);
-        await expect(confirmBox(page)).toHaveValue(NEW_PASSWORD);
+        await expectSensitiveValue(newBox(page), NEW_PASSWORD);
+        await expectSensitiveValue(confirmBox(page), NEW_PASSWORD);
       },
     });
   });
@@ -709,7 +713,7 @@ test.describe("reset-password page", () => {
       "?type=recovery&next=/auth/reset-password#type=recovery",
     ]) {
       await page.goto(`/auth/reset-password${suffix}`);
-      await expect(page).toHaveURL(/\/login$/);
+      await expectRecoveryRoute(page, "/login");
       await expect(newBox(page)).toHaveCount(0);
     }
     expect(updatesSent(updates)).toBe(0);
@@ -725,7 +729,7 @@ test.describe("reset-password page", () => {
       await requestMagicLink(page, user.email);
       await followAuthMail(page, await mail.link("magiclink"));
       await expect(invalidMessage(page)).toBeVisible();
-      await expect(page).toHaveURL(/\/login$/);
+      await expectRecoveryRoute(page, "/login");
       const claims = await verifiedSessionClaims(page, user.id);
       expect(
         claims.amr?.some(
@@ -745,7 +749,7 @@ test.describe("reset-password page", () => {
     await signInFixtureUser(page, user);
     const updates = countRequests(page, /\/auth\/v1\/user/);
     await followAuthMail(page, link);
-    await expect(page).toHaveURL(/\/auth\/error(?:[?#]|$)/);
+    await expectRecoveryRoute(page, "/auth/error");
     await expect(newBox(page)).toHaveCount(0);
     expect(updatesSent(updates)).toBe(0);
   });
@@ -761,7 +765,7 @@ test.describe("reset-password page", () => {
       const link = await mail.link();
       await expireFixtureRecovery(user);
       await followAuthMail(page, link);
-      await expect(page).toHaveURL(/\/auth\/error(?:[?#]|$)/);
+      await expectRecoveryRoute(page, "/auth/error");
       await expect(newBox(page)).toHaveCount(0);
     });
     expect(updatesSent(updates)).toBe(0);
@@ -774,15 +778,15 @@ test.describe("reset-password page", () => {
     const original = await createUserFixture();
     const replacement = await createUserFixture("alternate");
     await openFixtureRecovery(page, original);
-    await newBox(page).fill(NEW_PASSWORD);
-    await confirmBox(page).fill(NEW_PASSWORD);
+    await fillSensitiveInput(newBox(page), NEW_PASSWORD);
+    await fillSensitiveInput(confirmBox(page), NEW_PASSWORD);
     const otherTab = await page.context().newPage();
     await openFixtureRecovery(otherTab, replacement);
     await verifiedRecovery(page, replacement.id);
     const updates = countRequests(page, /\/auth\/v1\/user/);
     await changeButton(page).click();
     await expect(invalidMessage(page)).toBeVisible();
-    await expect(page).toHaveURL(/\/login$/);
+    await expectRecoveryRoute(page, "/login");
     expect(updatesSent(updates)).toBe(0);
     expect(
       await acceptsFixturePassword(replacement.email, replacement.password),

@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { join } from "node:path";
@@ -95,7 +95,8 @@ export async function withRecoveryMail<T>(
           const urls =
             String(message.HTML).match(/https?:\/\/[^\s"<>]+/g) ?? [];
           const links = urls
-            .map((value) => new URL(value.replaceAll("&amp;", "&")))
+            .map((value) => URL.parse(value.replaceAll("&amp;", "&")))
+            .filter((url) => url !== null)
             .filter(
               (url) =>
                 url.origin === stack.apiUrl &&
@@ -106,11 +107,11 @@ export async function withRecoveryMail<T>(
             throw new Error(
               "Mail has no unique recovery link at the verified test Auth origin",
             );
-          const target = new URL(
+          const target = URL.parse(
             links[0].searchParams.get("redirect_to") ?? "",
           );
           if (
-            target.origin !== E2E_ORIGIN ||
+            target?.origin !== E2E_ORIGIN ||
             target.pathname !== "/auth/callback" ||
             target.searchParams.get("next") !== "/auth/reset-password"
           )
@@ -121,17 +122,70 @@ export async function withRecoveryMail<T>(
   );
 }
 
+export async function fillSensitiveInput(input: Locator, value: string) {
+  try {
+    // Playwright logs fill values and puts keyboard.insertText values in its
+    // HTML report. Chromium can insert text in the focused field from evaluate.
+    await expect(input).toBeEditable();
+    await input.click();
+    await input.press("ControlOrMeta+a");
+    const inserted = await input.evaluate(
+      (node, text) =>
+        document.activeElement === node &&
+        document.execCommand("insertText", false, text),
+      value,
+    );
+    if (!inserted) throw new Error();
+  } catch {
+    throw new Error("Could not fill the sensitive input");
+  }
+}
+
+export async function expectSensitiveValue(input: Locator, value: string) {
+  await expect
+    .poll(
+      () =>
+        input
+          .evaluate(
+            (node, expected) => (node as HTMLInputElement).value === expected,
+            value,
+            { timeout: 1000 },
+          )
+          .catch(() => false),
+      { message: "sensitive input retains its expected value" },
+    )
+    .toBe(true);
+}
+
+export async function expectRecoveryRoute(page: Page, path: string) {
+  await expect
+    .poll(
+      () => {
+        const url = URL.parse(page.url());
+        return (
+          url?.origin === E2E_ORIGIN &&
+          url.pathname === path &&
+          (path === "/auth/error" || (!url.search && !url.hash))
+        );
+      },
+      { message: `recovery reaches the local ${path} route` },
+    )
+    .toBe(true);
+}
+
 export async function requestRecovery(page: Page, email: string) {
   await page.goto("/login");
   await page.getByRole("button", { name: "Quên mật khẩu?" }).click();
-  await page.getByPlaceholder("Email của bạn...").fill(email);
-  const sent = page.waitForResponse(
-    (response) =>
-      new URL(response.url()).pathname === "/auth/v1/recover" &&
-      response.request().method() === "POST",
-  );
-  await page.getByRole("button", { name: "Gửi yêu cầu" }).click();
-  if ((await sent).status() !== 200)
+  await fillSensitiveInput(page.getByPlaceholder("Email của bạn..."), email);
+  const [sent] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        URL.parse(response.url())?.pathname === "/auth/v1/recover" &&
+        response.request().method() === "POST",
+    ),
+    page.getByRole("button", { name: "Gửi yêu cầu" }).click(),
+  ]);
+  if (sent.status() !== 200)
     throw new Error("Recovery request failed; body suppressed");
 }
 
@@ -159,13 +213,18 @@ export async function requestMagicLink(page: Page, email: string) {
   });
   if (error || !cookies.size)
     throw new Error("Could not request a real non-recovery PKCE link");
-  await page.context().addCookies(
-    Array.from(cookies, ([name, value]) => ({
-      name,
-      value,
-      url: E2E_ORIGIN,
-    })),
-  );
+  await page
+    .context()
+    .addCookies(
+      Array.from(cookies, ([name, value]) => ({
+        name,
+        value,
+        url: E2E_ORIGIN,
+      })),
+    )
+    .catch(() => {
+      throw new Error("Could not transfer the local PKCE verifier cookie");
+    });
 }
 
 export async function followAuthMail(page: Page, link: string) {

@@ -2,7 +2,7 @@
 // an earlier run left behind, mark the run dirty before any work, bring the stack up, run the suite, then wait for
 // every writer of the run to exit, audit the database and only then publish `clean`. The lock is released last.
 // A command killed anywhere in between leaves `dirty` and a stale lock; the next command takes it over, stops the
-// recorded writers and resets.
+// recorded writers and checks mailbox readiness before resetting.
 import { spawn } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -182,7 +182,7 @@ export async function runOnTestStack({
         dir,
       );
       console.error(
-        `test stack: the run is marked unclean and the next command resets the test database: ${causes.join(" | ")}`,
+        `test stack: the run is marked unclean: ${causes.join(" | ")}. The next test command resets the database after preflight. If the retained mailbox is nonempty, run npm run test:stack:stop, then retry.`,
       );
       return exitCode === 0 ? 1 : exitCode;
     }

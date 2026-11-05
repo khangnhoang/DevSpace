@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { cpSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, it, vi } from "vitest";
 import {
   TEST_PORTS,
   requiredContainerNames,
@@ -17,6 +20,7 @@ import {
   parseContainer,
   requiredProblems,
 } from "../../scripts/test-stack/docker.mjs";
+import { ensureTestStack } from "../../scripts/test-stack/ensure.mjs";
 
 type Fake = {
   name: string;
@@ -72,6 +76,13 @@ const test: Fake[] = [
 ];
 const ports = [TEST_PORTS.api, TEST_PORTS.db];
 const write = { dbPort: TEST_PORTS.db, apiPort: TEST_PORTS.api };
+const testNetwork = {
+  Id: "verified-test-network-id",
+  Labels: { "com.supabase.cli.project": "devspace-test" },
+  Driver: "bridge",
+  Internal: false,
+  Options: { "com.docker.network.bridge.host_binding_ipv4": "127.0.0.1" },
+};
 const mailbox = (
   ports: Record<string, unknown> = {
     "8025/tcp": [{ HostIp: "127.0.0.1", HostPort: "55324" }],
@@ -81,10 +92,19 @@ const mailbox = (
   owner: "v1",
   image: TEST_MAILPIT_IMAGE,
   network: TEST_NETWORK,
-  aliases: ["inbucket"],
+  networks: {
+    [TEST_NETWORK]: { NetworkID: testNetwork.Id, Aliases: ["inbucket"] },
+  },
   health: ["CMD-SHELL", "/mailpit readyz"],
   ports,
 });
+const retainedEngine = () =>
+  engine(
+    requiredContainerNames().map((name) => ({
+      name,
+      project: "devspace-test",
+    })),
+  );
 
 describe("test stack identity check", () => {
   it("reuses only the owned loopback mailbox and never replaces a foreign or wildcard mailbox", () => {
@@ -119,17 +139,14 @@ describe("test stack identity check", () => {
     expect(created).toBe(1);
   });
   it("Mailpit refuses a public web bind, published SMTP, external SMTP or a missing service", () => {
-    const all = requiredContainerNames().map((name) => ({
-      name,
-      project: "devspace-test",
-    }));
     const valid = {
       "8025/tcp": [{ HostIp: "127.0.0.1", HostPort: "55324" }],
       "1025/tcp": null,
     };
     const mail = (ports = valid, localSmtp = true) => ({
-      ...engine(all),
-      mailConfiguration: () => ({ ports, localSmtp }),
+      ...retainedEngine(),
+      network: () => testNetwork,
+      mailConfiguration: () => ({ localSmtp, authNetworkId: testNetwork.Id }),
       mailbox: () => mailbox(ports),
     });
     expect(() => assertMailReady(mail())).not.toThrow();
@@ -155,6 +172,8 @@ describe("test stack identity check", () => {
     expect(() =>
       assertMailReady({
         ...engine(test),
+        network: () => testNetwork,
+        mailbox: () => mailbox(),
         mailConfiguration: () => {
           throw new Error("must not inspect");
         },
@@ -162,13 +181,67 @@ describe("test stack identity check", () => {
     ).toThrow(/missing/);
   });
 
+  it.each([
+    {
+      name: "Mailpit on a second bridge",
+      extraNetwork: true,
+      authNetworkId: testNetwork.Id,
+      message: /mailbox identity/,
+    },
+    {
+      name: "Auth missing from the test network",
+      extraNetwork: false,
+      authNetworkId: "",
+      message: /must share the verified test network/,
+    },
+  ])(
+    "refuses a retained stack with $name before mailbox I/O or a forced reset",
+    async ({ extraNetwork, authNetworkId, message }) => {
+      const root = mkdtempSync(join(tmpdir(), "devspace-mail-readiness-"));
+      const fetch = vi.fn();
+      const onMutate = vi.fn(() => {
+        throw new Error("unexpected stack mutation");
+      });
+      vi.stubGlobal("fetch", fetch);
+      try {
+        const source = join(root, "supabase");
+        mkdirSync(join(source, "migrations"), { recursive: true });
+        for (const file of ["config.toml", "seed.sql"])
+          cpSync(join(process.cwd(), "supabase", file), join(source, file));
+        const retainedMailbox = mailbox();
+        const docker = {
+          ...retainedEngine(),
+          network: () => testNetwork,
+          createMailNetwork: vi.fn(),
+          createMailbox: vi.fn(),
+          mailbox: () =>
+            extraNetwork
+              ? {
+                  ...retainedMailbox,
+                  networks: {
+                    ...retainedMailbox.networks,
+                    other: { NetworkID: "other-network", Aliases: [] },
+                  },
+                }
+              : retainedMailbox,
+          mailConfiguration: () => ({ localSmtp: true, authNetworkId }),
+        };
+        await expect(
+          ensureTestStack({ root, reset: true, docker, onMutate }),
+        ).rejects.toThrow(message);
+        expect(fetch).not.toHaveBeenCalled();
+        expect(onMutate).not.toHaveBeenCalled();
+        expect(docker.createMailNetwork).not.toHaveBeenCalled();
+        expect(docker.createMailbox).not.toHaveBeenCalled();
+      } finally {
+        vi.unstubAllGlobals();
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+
   it("Mailpit network preflight refuses an old or foreign network without replacing it", () => {
-    const network = {
-      Labels: { "com.supabase.cli.project": "devspace-test" },
-      Driver: "bridge",
-      Internal: false,
-      Options: { "com.docker.network.bridge.host_binding_ipv4": "127.0.0.1" },
-    };
+    const network = testNetwork;
     const check = (value: typeof network) => ({
       ...engine([]),
       network: () => value,

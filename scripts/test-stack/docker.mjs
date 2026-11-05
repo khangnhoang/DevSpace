@@ -86,7 +86,15 @@ export function createDocker() {
         "{{.Name}}",
       ]).trim();
       if (!found) return null;
-      return JSON.parse(run(["network", "inspect", TEST_NETWORK]))[0];
+      return JSON.parse(
+        run([
+          "network",
+          "inspect",
+          TEST_NETWORK,
+          "--format",
+          '{"Id":{{json .Id}},"Labels":{{json .Labels}},"Driver":{{json .Driver}},"Internal":{{json .Internal}},"Options":{{json .Options}}}',
+        ]),
+      );
     },
     createMailNetwork: () =>
       run([
@@ -129,16 +137,16 @@ export function createDocker() {
           "--format",
           "{{.HostConfig.NetworkMode}}",
         ]).trim(),
-        ports: JSON.parse(
-          run(["inspect", name, "--format", "{{json .NetworkSettings.Ports}}"]),
-        ),
-        aliases: JSON.parse(
+        networks: JSON.parse(
           run([
             "inspect",
             name,
             "--format",
-            `{{json (index .NetworkSettings.Networks "${TEST_NETWORK}").Aliases}}`,
+            "{{json .NetworkSettings.Networks}}",
           ]),
+        ),
+        ports: JSON.parse(
+          run(["inspect", name, "--format", "{{json .NetworkSettings.Ports}}"]),
         ),
         health: JSON.parse(
           run([
@@ -184,24 +192,21 @@ export function createDocker() {
         TEST_MAILPIT_IMAGE,
       ]),
     mailConfiguration: () => {
-      const mailbox = `supabase_inbucket_${TEST_PROJECT_ID}`;
-      const ports = JSON.parse(
-        run([
-          "inspect",
-          mailbox,
-          "--format",
-          "{{json .NetworkSettings.Ports}}",
-        ]),
-      );
+      const auth = `supabase_auth_${TEST_PROJECT_ID}`;
       const smtp = run([
         "inspect",
-        `supabase_auth_${TEST_PROJECT_ID}`,
+        auth,
         "--format",
         '{{range .Config.Env}}{{if or (eq . "GOTRUE_SMTP_HOST=supabase_inbucket_devspace-test") (eq . "GOTRUE_SMTP_PORT=1025")}}{{println .}}{{end}}{{end}}',
       ]);
       return {
-        ports,
         localSmtp: smtp.trim().split(/\r?\n/).filter(Boolean).length === 2,
+        authNetworkId: run([
+          "inspect",
+          auth,
+          "--format",
+          `{{with index .NetworkSettings.Networks "${TEST_NETWORK}"}}{{.NetworkID}}{{end}}`,
+        ]).trim(),
       };
     },
   };
@@ -215,8 +220,13 @@ export function ensureMailNetwork(docker) {
     docker.createMailNetwork();
     network = docker.network();
   }
+  assertTestMailNetwork(network);
+}
+
+function assertTestMailNetwork(network) {
   if (
-    network?.Labels?.["com.supabase.cli.project"] !== TEST_PROJECT_ID ||
+    !network?.Id ||
+    network.Labels?.["com.supabase.cli.project"] !== TEST_PROJECT_ID ||
     network?.Driver !== "bridge" ||
     network?.Internal ||
     network?.Options?.["com.docker.network.bridge.host_binding_ipv4"] !==
@@ -229,19 +239,22 @@ export function ensureMailNetwork(docker) {
 }
 
 export function assertRunnerMailbox(mailbox) {
+  const attachment = mailbox?.networks?.[TEST_NETWORK];
   if (
     mailbox?.project !== TEST_PROJECT_ID ||
     mailbox?.owner !== "v1" ||
     mailbox?.image !== TEST_MAILPIT_IMAGE ||
     mailbox?.network !== TEST_NETWORK ||
-    !mailbox?.aliases?.includes("inbucket") ||
+    Object.keys(mailbox.networks ?? {}).length !== 1 ||
+    !attachment?.NetworkID ||
+    !attachment.Aliases?.includes("inbucket") ||
     ![
       JSON.stringify(["CMD", "/mailpit", "readyz"]),
       JSON.stringify(["CMD-SHELL", "/mailpit readyz"]),
     ].includes(JSON.stringify(mailbox?.health))
   ) {
     throw new Error(
-      "Test mailbox identity/configuration is not runner-owned; nothing was replaced. Run the managed test stop before retrying.",
+      "Test mailbox identity/configuration is incompatible with the runner-owned, single-network sink; nothing was replaced. Run npm run test:stack:stop, then retry.",
     );
   }
   assertMailboxPorts(mailbox.ports);
@@ -279,12 +292,18 @@ export function assertMailReady(docker) {
   assertLocalEngine(docker);
   const required = requiredProblems(docker);
   if (required.length) throw new Error(describeProblems(required));
-  const { ports, localSmtp } = docker.mailConfiguration();
-  assertMailboxPorts(ports);
-  assertRunnerMailbox(docker.mailbox());
-  if (!localSmtp)
+  const network = docker.network();
+  assertTestMailNetwork(network);
+  const mailbox = docker.mailbox();
+  assertRunnerMailbox(mailbox);
+  const { localSmtp, authNetworkId } = docker.mailConfiguration();
+  if (
+    mailbox.networks[TEST_NETWORK].NetworkID !== network.Id ||
+    authNetworkId !== network.Id ||
+    !localSmtp
+  )
     throw new Error(
-      "Mailpit readiness refused: require loopback-only HTTP, unpublished SMTP/POP3 and Auth SMTP pointing at the test sink. No mailbox request or reset ran.",
+      "Mailpit readiness refused: Auth and Mailpit must share the verified test network and Auth SMTP must point at the test sink. Run npm run test:stack:stop, then retry; no mailbox request or reset ran.",
     );
 }
 

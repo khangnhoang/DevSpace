@@ -12,7 +12,6 @@ import {
   prepareTestWorkdir,
 } from "./config.mjs";
 import {
-  assertMailReady,
   ensureMailNetwork,
   ensureRunnerMailbox,
   checkStart,
@@ -152,7 +151,6 @@ export async function ensureTestStack({
       if (problems.length) throw new Error(describeProblems(problems));
     }
 
-    assertMailReady(docker);
     await assertTestMailboxEmpty(docker);
   } catch (error) {
     // Only this attempt's new mailbox authorizes startup cleanup; a mismatched existing one is never adopted.

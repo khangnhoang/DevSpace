@@ -35,11 +35,11 @@ declare global {
 export type ServerRecords = { mailsSent: () => MailRecord[] };
 
 function reportableUrl(value: string) {
-  const url = new URL(value);
-  // Auth verification/callback requests carry one-time secrets in the URL.
-  if (url.pathname === "/auth/v1/verify" || url.pathname === "/auth/callback")
-    return `${url.origin}${url.pathname}`;
-  return value;
+  const url = URL.parse(value);
+  // A redirect can carry a one-time secret even when it reaches an unexpected route.
+  return url && (url.protocol === "http:" || url.protocol === "https:")
+    ? `${url.origin}${url.pathname}`
+    : "non-HTTP URL";
 }
 
 export const test = base.extend<{

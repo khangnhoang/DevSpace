@@ -47,3 +47,13 @@ it("reports a failed HTTP status without exposing its body", async () => {
     "Test mailbox HTTP 503; body suppressed",
   );
 });
+
+it("reports malformed JSON without exposing mail content", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(new Response("mail body canary")),
+  );
+  await expect(mailRequest("/api/v1/messages")).rejects.toThrow(
+    /^Invalid test mailbox JSON; body suppressed$/,
+  );
+});

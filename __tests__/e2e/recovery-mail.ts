@@ -126,7 +126,11 @@ export async function fillSensitiveInput(input: Locator, value: string) {
   try {
     // Playwright logs fill values and puts keyboard.insertText values in its
     // HTML report. Chromium can insert text in the focused field from evaluate.
-    await expect(input).toBeEditable();
+    await expect
+      .poll(() => input.isEditable({ timeout: 1000 }).catch(() => false), {
+        message: "sensitive input is editable",
+      })
+      .toBe(true);
     await input.click();
     await input.press("ControlOrMeta+a");
     const inserted = await input.evaluate(
@@ -139,6 +143,13 @@ export async function fillSensitiveInput(input: Locator, value: string) {
   } catch {
     throw new Error("Could not fill the sensitive input");
   }
+}
+
+// Locator matchers can attach a snapshot of the whole page on failure.
+export function expectRecoveryVisible(locator: Locator) {
+  return expect
+    .poll(() => locator.isVisible(), { message: `${locator} is visible` })
+    .toBe(true);
 }
 
 export async function expectSensitiveValue(input: Locator, value: string) {

@@ -1,4 +1,10 @@
-import type { Locator, Page, Request, Route } from "@playwright/test";
+import {
+  mergeTests,
+  type Locator,
+  type Page,
+  type Request,
+  type Route,
+} from "@playwright/test";
 import { ACCOUNTS } from "./accounts";
 import { expect, test } from "./fixtures";
 import {
@@ -13,6 +19,7 @@ import {
   requestMagicLink,
   followAuthMail,
   expectRecoveryRoute,
+  expectRecoveryVisible,
   expectSensitiveValue,
   fillSensitiveInput,
   verifiedSessionClaims,
@@ -20,53 +27,57 @@ import {
   verifiedRecovery,
   withRecoveryMail,
 } from "./recovery-mail";
+import { recoveryDiagnostics } from "./recovery-diagnostics";
 
 test.use({ trace: "off", screenshot: "off", video: "off" });
+const recoveryTest = mergeTests(test, recoveryDiagnostics);
 
-test("[SE-U2 CP2] real PKCE recovery survives reload; a controlled failure cleans the exact mailbox and user", async ({
-  page,
-  owned,
-}) => {
-  const user = await createUserFixture();
-  let controlledFailure = false;
-  try {
-    await withRecoveryMail(user.email, async (mail) => {
-      await requestRecovery(page, user.email);
-      const link = await mail.link();
-      const requestingOrigin = new URL(page.url()).origin;
-      const callback = page.waitForResponse(
-        (response) => new URL(response.url()).pathname === "/auth/callback",
-      );
-      await followAuthMail(page, link);
-      const callbackLocation = URL.parse(
-        (await callback).headers()["location"] ?? "",
-        requestingOrigin,
-      );
-      expect(
-        callbackLocation?.origin === requestingOrigin,
-        "callback preserves the requesting browser origin",
-      ).toBe(true);
-      expect(callbackLocation?.pathname === "/auth/reset-password").toBe(true);
-      await expect(page.getByPlaceholder("Mật khẩu mới...")).toBeVisible();
-      await expectRecoveryRoute(page, "/auth/reset-password");
-      await verifiedRecovery(page, user.id);
-      await page.reload();
-      await expect(page.getByPlaceholder("Mật khẩu mới...")).toBeVisible();
-      await verifiedRecovery(page, user.id);
-      controlledFailure = true;
-      throw new Error("controlled harness failure");
-    });
-  } catch (error) {
-    if (
-      !controlledFailure ||
-      !(error instanceof Error) ||
-      error.message !== "controlled harness failure"
-    )
-      throw error;
-  }
-  await owned.cleanup();
-  expect(await authUsersWithEmail(user.email)).toBe(0);
-});
+recoveryTest(
+  "[SE-U2 CP2] real PKCE recovery survives reload; a controlled failure cleans the exact mailbox and user",
+  async ({ page, owned }) => {
+    const user = await createUserFixture();
+    let controlledFailure = false;
+    try {
+      await withRecoveryMail(user.email, async (mail) => {
+        await requestRecovery(page, user.email);
+        const link = await mail.link();
+        const requestingOrigin = new URL(page.url()).origin;
+        const callback = page.waitForResponse(
+          (response) => new URL(response.url()).pathname === "/auth/callback",
+        );
+        await followAuthMail(page, link);
+        const callbackLocation = URL.parse(
+          (await callback).headers()["location"] ?? "",
+          requestingOrigin,
+        );
+        expect(
+          callbackLocation?.origin === requestingOrigin,
+          "callback preserves the requesting browser origin",
+        ).toBe(true);
+        expect(callbackLocation?.pathname === "/auth/reset-password").toBe(
+          true,
+        );
+        await expectRecoveryVisible(page.getByPlaceholder("Mật khẩu mới..."));
+        await expectRecoveryRoute(page, "/auth/reset-password");
+        await verifiedRecovery(page, user.id);
+        await page.reload();
+        await expectRecoveryVisible(page.getByPlaceholder("Mật khẩu mới..."));
+        await verifiedRecovery(page, user.id);
+        controlledFailure = true;
+        throw new Error("controlled harness failure");
+      });
+    } catch (error) {
+      if (
+        !controlledFailure ||
+        !(error instanceof Error) ||
+        error.message !== "controlled harness failure"
+      )
+        throw error;
+    }
+    await owned.cleanup();
+    expect(await authUsersWithEmail(user.email)).toBe(0);
+  },
+);
 
 // Request outcome rows control the mail boundary; recovery security rows use genuine
 // messages captured only by the managed test stack's loopback Mailpit.
@@ -133,20 +144,30 @@ async function expectOneRequestPerSubmit(
   for (const [index, send] of sends.entries()) {
     await send();
     await expect.poll(() => held.length).toBe(index + 1);
-    await expect(phases.button).toBeDisabled();
+    await expect
+      .poll(
+        () => phases.button.isDisabled({ timeout: 1000 }).catch(() => false),
+        { message: "submit is disabled while the request is held" },
+      )
+      .toBe(true);
     await phases.whileHeld?.();
     // A second request of the same submit would have been sent by the next frame.
     await page.evaluate(
       () =>
         new Promise((resolve) => requestAnimationFrame(() => resolve(null))),
     );
-    expect(held, `one request for submit ${index + 1}`).toHaveLength(index + 1);
+    expect(held.length, `one request for submit ${index + 1}`).toBe(index + 1);
 
     await held[index].abort("failed");
     await phases.recovered();
-    await expect(phases.button).toBeEnabled();
+    await expect
+      .poll(
+        () => phases.button.isEnabled({ timeout: 1000 }).catch(() => false),
+        { message: "submit is enabled after failure" },
+      )
+      .toBe(true);
   }
-  expect(held, "two submits, two requests").toHaveLength(2);
+  expect(held.length, "two submits, two requests").toBe(2);
 }
 
 test.describe("sign-in form", () => {
@@ -586,7 +607,7 @@ test.describe("sign-up form", () => {
   });
 });
 
-test.describe("reset-password page", () => {
+recoveryTest.describe("reset-password page", () => {
   const NEW_PASSWORD = "e2e-new-pass-2";
   const newBox = (page: Page) => page.getByPlaceholder("Mật khẩu mới...");
   const confirmBox = (page: Page) =>
@@ -616,183 +637,195 @@ test.describe("reset-password page", () => {
       await requestRecovery(page, user.email);
       const link = await mail.link();
       await followAuthMail(page, link);
-      await expect(newBox(page)).toBeVisible();
+      await expectRecoveryVisible(newBox(page));
       await expectRecoveryRoute(page, "/auth/reset-password");
       await verifiedRecovery(page, user.id);
       return link;
     });
   }
 
-  test("[AU7] a short or mismatched password shows a field error, the same password keeps its toast, a new one changes it and goes to /", async ({
-    page,
-  }) => {
-    const user = await createUserFixture();
-    await openFixtureRecovery(page, user);
-    await page.reload();
-    await expect(newBox(page)).toBeVisible();
-    await verifiedRecovery(page, user.id);
-    const updates = countRequests(page, /\/auth\/v1\/user/);
+  recoveryTest(
+    "[AU7] a short or mismatched password shows a field error, the same password keeps its toast, a new one changes it and goes to /",
+    async ({ page }) => {
+      const user = await createUserFixture();
+      await openFixtureRecovery(page, user);
+      await page.reload();
+      await expectRecoveryVisible(newBox(page));
+      await verifiedRecovery(page, user.id);
+      const updates = countRequests(page, /\/auth\/v1\/user/);
 
-    await changeButton(page).click();
-    await expect(
-      page.getByText("Mật khẩu phải có ít nhất 8 ký tự"),
-    ).toBeVisible();
-    await expect(page.getByText("Vui lòng xác nhận mật khẩu")).toBeVisible();
+      await changeButton(page).click();
+      await expectRecoveryVisible(
+        page.getByText("Mật khẩu phải có ít nhất 8 ký tự"),
+      );
+      await expectRecoveryVisible(page.getByText("Vui lòng xác nhận mật khẩu"));
 
-    await fillSensitiveInput(newBox(page), NEW_PASSWORD);
-    await fillSensitiveInput(confirmBox(page), `${NEW_PASSWORD}-mismatch`);
-    await changeButton(page).click();
-    await expect(page.getByText("Mật khẩu xác nhận không khớp")).toBeVisible();
-    expect(updatesSent(updates), "no update was sent").toBe(0);
+      await fillSensitiveInput(newBox(page), NEW_PASSWORD);
+      await fillSensitiveInput(confirmBox(page), `${NEW_PASSWORD}-mismatch`);
+      await changeButton(page).click();
+      await expectRecoveryVisible(
+        page.getByText("Mật khẩu xác nhận không khớp"),
+      );
+      expect(updatesSent(updates), "no update was sent").toBe(0);
 
-    await fillSensitiveInput(newBox(page), user.password);
-    await fillSensitiveInput(confirmBox(page), user.password);
-    await changeButton(page).click();
-    await expect(
-      page.getByText("Mật khẩu mới phải khác mật khẩu cũ"),
-    ).toBeVisible();
-    await expectRecoveryRoute(page, "/auth/reset-password");
+      await fillSensitiveInput(newBox(page), user.password);
+      await fillSensitiveInput(confirmBox(page), user.password);
+      await changeButton(page).click();
+      await expectRecoveryVisible(
+        page.getByText("Mật khẩu mới phải khác mật khẩu cũ"),
+      );
+      await expectRecoveryRoute(page, "/auth/reset-password");
 
-    await fillSensitiveInput(newBox(page), NEW_PASSWORD);
-    await fillSensitiveInput(confirmBox(page), NEW_PASSWORD);
-    await changeButton(page).click();
-    await expect(
-      page.getByText("Khôi phục mật khẩu thành công!"),
-    ).toBeVisible();
-    await expectRecoveryRoute(page, "/");
-    expect(await acceptsFixturePassword(user.email, NEW_PASSWORD)).toBe(true);
-    expect(await acceptsFixturePassword(user.email, user.password)).toBe(false);
-  });
+      await fillSensitiveInput(newBox(page), NEW_PASSWORD);
+      await fillSensitiveInput(confirmBox(page), NEW_PASSWORD);
+      await changeButton(page).click();
+      await expectRecoveryVisible(
+        page.getByText("Khôi phục mật khẩu thành công!"),
+      );
+      await expectRecoveryRoute(page, "/");
+      expect(await acceptsFixturePassword(user.email, NEW_PASSWORD)).toBe(true);
+      expect(await acceptsFixturePassword(user.email, user.password)).toBe(
+        false,
+      );
+    },
+  );
 
-  test("[AU8] without a session the page shows the expired-link toast and goes to /login", async ({
-    page,
-  }) => {
-    const updates = countRequests(page, /\/auth\/v1\/user/);
-    await page.goto("/auth/reset-password");
+  recoveryTest(
+    "[AU8] without a session the page shows the expired-link toast and goes to /login",
+    async ({ page }) => {
+      const updates = countRequests(page, /\/auth\/v1\/user/);
+      await page.goto("/auth/reset-password");
 
-    await expect(invalidMessage(page)).toBeVisible();
-    await expectRecoveryRoute(page, "/login");
-    expect(updatesSent(updates)).toBe(0);
-  });
-
-  test("[AU9] reset password: a repeated Enter and a repeated submit each send one request", async ({
-    page,
-  }) => {
-    await openFixtureRecovery(page, await createUserFixture());
-    const held = await holdRequests(page, USER, "PUT");
-    await fillSensitiveInput(newBox(page), NEW_PASSWORD);
-    await fillSensitiveInput(confirmBox(page), NEW_PASSWORD);
-
-    await expectOneRequestPerSubmit(page, held, {
-      button: changeButton(page),
-      pressEnterTwice: () =>
-        Promise.all([
-          confirmBox(page).press("Enter"),
-          confirmBox(page).press("Enter"),
-        ]),
-      requestSubmitTwice: () => submitTwice(confirmBox(page)),
-      recovered: async () => {
-        // The toast of the first failure can still be on screen, so read the newest one.
-        await expect(
-          page.getByText("Không đổi được mật khẩu, vui lòng thử lại").last(),
-        ).toBeVisible();
-        await expectSensitiveValue(newBox(page), NEW_PASSWORD);
-        await expectSensitiveValue(confirmBox(page), NEW_PASSWORD);
-      },
-    });
-  });
-
-  test("[AU8] a normal session and a spoofed reset URL cannot open the form", async ({
-    page,
-  }) => {
-    const user = await createUserFixture();
-    await signInFixtureUser(page, user);
-    const updates = countRequests(page, /\/auth\/v1\/user/);
-    for (const suffix of [
-      "",
-      "?type=recovery&next=/auth/reset-password#type=recovery",
-    ]) {
-      await page.goto(`/auth/reset-password${suffix}`);
+      await expectRecoveryVisible(invalidMessage(page));
       await expectRecoveryRoute(page, "/login");
-      await expect(newBox(page)).toHaveCount(0);
-    }
-    expect(updatesSent(updates)).toBe(0);
-  });
+      expect(updatesSent(updates)).toBe(0);
+    },
+  );
 
-  test("[AU8] a genuine non-recovery PKCE exchange cannot open the reset form", async ({
-    page,
-  }) => {
-    const user = await createUserFixture();
-    const updates = countRequests(page, /\/auth\/v1\/user/);
-    await page.goto("/login");
-    await withRecoveryMail(user.email, async (mail) => {
-      await requestMagicLink(page, user.email);
-      await followAuthMail(page, await mail.link("magiclink"));
-      await expect(invalidMessage(page)).toBeVisible();
-      await expectRecoveryRoute(page, "/login");
-      const claims = await verifiedSessionClaims(page, user.id);
-      expect(
-        claims.amr?.some(
-          (entry) => typeof entry !== "string" && entry.method === "recovery",
-        ),
-      ).toBe(false);
-      await expect(newBox(page)).toHaveCount(0);
-    });
-    expect(updatesSent(updates)).toBe(0);
-  });
+  recoveryTest(
+    "[AU9] reset password: a repeated Enter and a repeated submit each send one request",
+    async ({ page }) => {
+      await openFixtureRecovery(page, await createUserFixture());
+      const held = await holdRequests(page, USER, "PUT");
+      await fillSensitiveInput(newBox(page), NEW_PASSWORD);
+      await fillSensitiveInput(confirmBox(page), NEW_PASSWORD);
 
-  test("[AU8] a used recovery link is refused with a normal session present", async ({
-    page,
-  }) => {
-    const user = await createUserFixture();
-    const link = await openFixtureRecovery(page, user);
-    await signInFixtureUser(page, user);
-    const updates = countRequests(page, /\/auth\/v1\/user/);
-    await followAuthMail(page, link);
-    await expectRecoveryRoute(page, "/auth/error");
-    await expect(newBox(page)).toHaveCount(0);
-    expect(updatesSent(updates)).toBe(0);
-  });
+      await expectOneRequestPerSubmit(page, held, {
+        button: changeButton(page),
+        pressEnterTwice: () =>
+          Promise.all([
+            confirmBox(page).press("Enter"),
+            confirmBox(page).press("Enter"),
+          ]),
+        requestSubmitTwice: () => submitTwice(confirmBox(page)),
+        recovered: async () => {
+          // The toast of the first failure can still be on screen, so read the newest one.
+          await expectRecoveryVisible(
+            page.getByText("Không đổi được mật khẩu, vui lòng thử lại").last(),
+          );
+          await expectSensitiveValue(newBox(page), NEW_PASSWORD);
+          await expectSensitiveValue(confirmBox(page), NEW_PASSWORD);
+        },
+      });
+    },
+  );
 
-  test("[AU8] an expired genuine recovery link is refused with a normal session present", async ({
-    page,
-  }) => {
-    const user = await createUserFixture();
-    await signInFixtureUser(page, user);
-    const updates = countRequests(page, /\/auth\/v1\/user/);
-    await withRecoveryMail(user.email, async (mail) => {
-      await requestRecovery(page, user.email);
-      const link = await mail.link();
-      await expireFixtureRecovery(user);
+  recoveryTest(
+    "[AU8] a normal session and a spoofed reset URL cannot open the form",
+    async ({ page }) => {
+      const user = await createUserFixture();
+      await signInFixtureUser(page, user);
+      const updates = countRequests(page, /\/auth\/v1\/user/);
+      for (const suffix of [
+        "",
+        "?type=recovery&next=/auth/reset-password#type=recovery",
+      ]) {
+        await page.goto(`/auth/reset-password${suffix}`);
+        await expectRecoveryRoute(page, "/login");
+        await expect.poll(() => newBox(page).count()).toBe(0);
+      }
+      expect(updatesSent(updates)).toBe(0);
+    },
+  );
+
+  recoveryTest(
+    "[AU8] a genuine non-recovery PKCE exchange cannot open the reset form",
+    async ({ page }) => {
+      const user = await createUserFixture();
+      const updates = countRequests(page, /\/auth\/v1\/user/);
+      await page.goto("/login");
+      await withRecoveryMail(user.email, async (mail) => {
+        await requestMagicLink(page, user.email);
+        await followAuthMail(page, await mail.link("magiclink"));
+        await expectRecoveryVisible(invalidMessage(page));
+        await expectRecoveryRoute(page, "/login");
+        const claims = await verifiedSessionClaims(page, user.id);
+        expect(
+          claims.amr?.some(
+            (entry) => typeof entry !== "string" && entry.method === "recovery",
+          ),
+        ).toBe(false);
+        await expect.poll(() => newBox(page).count()).toBe(0);
+      });
+      expect(updatesSent(updates)).toBe(0);
+    },
+  );
+
+  recoveryTest(
+    "[AU8] a used recovery link is refused with a normal session present",
+    async ({ page }) => {
+      const user = await createUserFixture();
+      const link = await openFixtureRecovery(page, user);
+      await signInFixtureUser(page, user);
+      const updates = countRequests(page, /\/auth\/v1\/user/);
       await followAuthMail(page, link);
       await expectRecoveryRoute(page, "/auth/error");
-      await expect(newBox(page)).toHaveCount(0);
-    });
-    expect(updatesSent(updates)).toBe(0);
-  });
+      await expect.poll(() => newBox(page).count()).toBe(0);
+      expect(updatesSent(updates)).toBe(0);
+    },
+  );
 
-  test("[AU8] a stale reset form refuses to submit after another account's recovery replaces the session", async ({
-    page,
-  }) => {
-    test.setTimeout(60_000);
-    const original = await createUserFixture();
-    const replacement = await createUserFixture("alternate");
-    await openFixtureRecovery(page, original);
-    await fillSensitiveInput(newBox(page), NEW_PASSWORD);
-    await fillSensitiveInput(confirmBox(page), NEW_PASSWORD);
-    const otherTab = await page.context().newPage();
-    await openFixtureRecovery(otherTab, replacement);
-    await verifiedRecovery(page, replacement.id);
-    const updates = countRequests(page, /\/auth\/v1\/user/);
-    await changeButton(page).click();
-    await expect(invalidMessage(page)).toBeVisible();
-    await expectRecoveryRoute(page, "/login");
-    expect(updatesSent(updates)).toBe(0);
-    expect(
-      await acceptsFixturePassword(replacement.email, replacement.password),
-    ).toBe(true);
-    expect(await acceptsFixturePassword(replacement.email, NEW_PASSWORD)).toBe(
-      false,
-    );
-  });
+  recoveryTest(
+    "[AU8] an expired genuine recovery link is refused with a normal session present",
+    async ({ page }) => {
+      const user = await createUserFixture();
+      await signInFixtureUser(page, user);
+      const updates = countRequests(page, /\/auth\/v1\/user/);
+      await withRecoveryMail(user.email, async (mail) => {
+        await requestRecovery(page, user.email);
+        const link = await mail.link();
+        await expireFixtureRecovery(user);
+        await followAuthMail(page, link);
+        await expectRecoveryRoute(page, "/auth/error");
+        await expect.poll(() => newBox(page).count()).toBe(0);
+      });
+      expect(updatesSent(updates)).toBe(0);
+    },
+  );
+
+  recoveryTest(
+    "[AU8] a stale reset form refuses to submit after another account's recovery replaces the session",
+    async ({ page }) => {
+      test.setTimeout(60_000);
+      const original = await createUserFixture();
+      const replacement = await createUserFixture("alternate");
+      await openFixtureRecovery(page, original);
+      await fillSensitiveInput(newBox(page), NEW_PASSWORD);
+      await fillSensitiveInput(confirmBox(page), NEW_PASSWORD);
+      const otherTab = await page.context().newPage();
+      await openFixtureRecovery(otherTab, replacement);
+      await verifiedRecovery(page, replacement.id);
+      const updates = countRequests(page, /\/auth\/v1\/user/);
+      await changeButton(page).click();
+      await expectRecoveryVisible(invalidMessage(page));
+      await expectRecoveryRoute(page, "/login");
+      expect(updatesSent(updates)).toBe(0);
+      expect(
+        await acceptsFixturePassword(replacement.email, replacement.password),
+      ).toBe(true);
+      expect(
+        await acceptsFixturePassword(replacement.email, NEW_PASSWORD),
+      ).toBe(false);
+    },
+  );
 });

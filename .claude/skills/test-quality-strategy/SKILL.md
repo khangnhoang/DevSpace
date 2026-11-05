@@ -46,7 +46,7 @@ Allocate manual QA per remaining scenario, with a reason: perceptual/design judg
 - Assert seed values (course names, lesson text, URLs), not CSS classes. Wait with Playwright's auto-waiting, never a fixed sleep.
 - Data: rendering rows write no scenario data; `[L5]` enrolls and the delete rows create and delete fixtures. UI deletes target fixtures, never seed rows. The service role in `__tests__/e2e/service-role.ts` prepares, reads back and cleans up; it never sends the request under test. Each test has a scope; scoped labels/codes/emails and exact reserved selectors are recorded before writes. Payment setup has additional rules below.
 - A form row that writes through the browser client creates its rows through the UI, so it first reserves the exact selector of each row it expects (`reserveStudentReview`, `reserveStudentComment`, `reserveStudentNote`; a row that edits changes the selector, so the edited value is reserved too) or acquires the fields it changes (`acquireStudentProfile`), and the scope removes or restores them. A Storage upload is faked by default: `page.route` aborts it (the failure path) or fulfils it like Storage (the wiring path), so no object is written. One row, F12, uploads for real to the test stack: it records the exact object name from its own upload request, removes only that object in `finally` and verifies it is gone, and the end-of-run audit of `storage.objects` reports any residue. A name pattern shared with other rows never proves ownership.
-- After changing a row that writes, run `npm run test:e2e` twice and `npm test` once. The commands reset the test stack when it needs it (Test stack). A second run detects residue; the end-of-run audit reports a stray write either way.
+- Select affected rows during implementation and use the final regression check at completion; see Verification stages. A row that writes follows Repeatability checks rather than automatically requiring two full runs.
 
 ## Component tests (`components`)
 
@@ -125,26 +125,54 @@ Mock only boundaries outside the subject: email, Gemini, browser APIs, and in a 
 
 Reproduce the bug first when practical, then write a focused test tied to the observable behavior that was wrong, in the smallest sufficient layer. Plan bounded missing fixture/helper support with the fix under Select checks from the contract and Test data; existing seed/session/catalog limits are not automatic grounds for manual-only QA. Existing seed actors have saved E2E sessions; other actor needs must be planned. When no test is practical, the plan and report name the concrete blocker and resolution. A bug known but not fixed in this change uses the known-bug pattern; never encode unknown surprising behavior as expected, report it to Main so it is recorded as a problem.
 
+## Verification stages
+
+`docs/agent-loops.md` owns checkpoint and final-review timing. Select checks at those boundaries as follows:
+
+| Stage | Checks |
+| --- | --- |
+| Implementation | Add or extend regression tests with the behavior, and run the affected files/rows at the smallest sufficient layer. Include callers, shared dependencies, actors and persisted invariants affected by the change, not only files whose names match the diff. |
+| Checkpoint | Verify the whole affected area and the applicable static checks before reporting the checkpoint. Widen early for shared auth, schemas, fixtures, test-stack tooling or configuration whose impact is broad or uncertain. A checkpoint does not automatically require every suite. |
+| Final regression | After implementation and the whole-diff review corrections, run `npm test` and `npm run test:e2e` once without file, project or name filters for a code, test, dependency or executable-config change, except for Prettier-only updates below. Also run typecheck, lint and build, and `docs:check` when its inputs changed. This is the final regression check, not a command to repeat at every checkpoint. |
+| Correction after verification | Run the regression tests and checks the correction can invalidate. Reuse earlier passing evidence only with a concrete dependency-based reason; changes to shared behavior/tooling or uncertain impact require the relevant full suites again. Do not rerun application suites for a later prose-only correction. |
+| Docs-only | Run `npm run docs:check`; run `npm run docs:check:test` when the checker changed. Application suites, typecheck and build are not required locally for prose-only changes. CI still follows its own workflow. |
+
+A focused pass is checkpoint evidence, not evidence that the full suites passed. Final regression must have current passing evidence before reporting the implementation ready for review or delivery; a missing prerequisite or failed check remains pending or blocked. Preserve explicit Owner QA, approved plan minima and independent review gates.
+
+Use the existing npm entry points with file/name/project filters for focused runs; `npm test` and `npm run test:e2e` retain their lock, target checks, writer settlement and audit even with filters. Do not invoke database Vitest or Playwright directly to avoid startup work. Automatic import-based selection alone does not cover route wiring, database policies or fixtures; select those from the affected contract.
+
+### Prettier-only updates
+
+An update that changes only the `prettier` version and its lockfile resolution uses `npm run format:check -- <paths>` on a bounded set of representative tracked files, without reformatting the repository. This is a local exception: application test suites, typecheck, lint and build are not required solely for that version update. If other dependencies, application/test code or executable configuration also change, apply their normal verification requirements. CI still follows its own workflow.
+
+## Repeatability checks
+
+One passing final regression run per suite is the default. Neither a writing test nor an automatic reset alone requires a second full run. The end-of-run audit already detects residue in the tables and columns it includes (Test stack).
+
+- When changing fixture ownership/cleanup, seed/reset behavior or the test-stack lifecycle, verify the affected writing tests after a reset and again on the retained stack, without a forced reset between runs. Keep the commands' reset/no-reset and cleanup/audit outcomes. A second run that resets again does not prove retained-state repeatability; report that gap rather than claim it passed. Use focused repeats when the affected scope is bounded, and full repeats when it is shared or uncertain.
+- Repeat for any additional acceptance check only with a named risk, scope and expected evidence. Audit-excluded sign-in/access timestamps are not evidence of a defect by themselves; if a changed contract depends on state outside the audit, assert that state directly rather than rely on another green run.
+- To investigate an intermittent failure, preserve the first failure's log/trace and repeat the relevant scenario or suite under the suspected conditions. A rerun that passes does not erase the failure or establish its cause. Two green runs do not prove isolation or resolve a flake.
+
 ## Which command for which change
 
-Run the row for each kind of change, plus the static checks (`npx tsc --noEmit`, `npm run lint` with 0 problems) for any code change. "Docker" means Docker Desktop running (the test commands start and reset the test stack themselves); "Chromium" means `npx playwright install chromium`.
+The rows select behavior-specific coverage and commands; Verification stages determines their scope and timing, including the final regression across suites. Run the row for each kind of change, plus the static checks (`npx tsc --noEmit`, `npm run lint` with 0 problems) for any code change. "Docker" means Docker Desktop running (the test commands start and reset the test stack themselves); "Chromium" means `npx playwright install chromium`.
 
 | Change | Run | Needs |
 | --- | --- | --- |
 | Pure helper (`lib`, `__tests__/helpers`) | `npm run test:unit` | nothing |
 | Client component logic (`app/**/_components`, `app/components`) | component test under `__tests__/unit/components/`; `npm run test:unit` | nothing |
 | Server action (`app/action`) | unit tests for pure logic; add/extend actor endpoint tests for applicable validation, permission and persistence guarantees, using the existing Playwright action/API fixture with scoped extensions as needed; `npm run test:e2e`; add `npm test` for distinct database boundaries | Docker, Chromium for E2E |
-| RLS policy, grant or migration | `npm test` (twice after writing rls tests); the migration hash resets the test stack | Docker |
+| RLS policy, grant or migration | `npm test`; the migration hash resets the test stack; use Repeatability checks for any repeat | Docker |
 | Seed (`supabase/seed.sql`) | `npm test`, `npm run test:e2e` | Docker, Chromium |
 | Page or UI flow | select unit/integration/E2E assertions by the contract; add/extend browser rows for wiring/state that needs them and run `npm run test:e2e`; justify residual manual checks (`frontend-workflow`) and preserve approved minima | Docker, Chromium for E2E |
 | E2E helper, fixture or env map (`__tests__/e2e`, `__tests__/helpers/e2e-env.ts`, `scripts/e2e`) | `npm run test:unit`, `npm run test:e2e` | Docker, Chromium |
-| Dependency (`package.json`, `package-lock.json`); procedure per update type: [dependency-updates](../dependency-updates/SKILL.md) | static checks, `npm run build`, `npm test`, `npm run test:e2e` | Docker, Chromium |
+| Dependency (`package.json`, `package-lock.json`); procedure per update type: [dependency-updates](../dependency-updates/SKILL.md) | static checks, `npm run build`, `npm test`, `npm run test:e2e`; the local exception is Prettier-only updates above | Docker, Chromium unless the Prettier-only exception applies |
 | Docs only (`docs/`, `.claude/`, `AGENTS.md`, `CLAUDE.md`, `README.md`) | `npm run docs:check`; `npm run docs:check:test` when the checker changed | nothing |
 
 ## Running and reporting
 
-- Run the narrowest command that can detect the change, and say why when you run wider. A targeted run is never called a full-suite run.
-- Before an rls run: only Docker Desktop is needed; the command starts and resets the test stack, and an interrupted run is cleaned up by the next command. Run `npm test` twice in a row after writing rls tests: the second run checks repeatability, and the end-of-run audit reports residue either way.
+- During implementation run the narrowest command that can detect the change, and say why when you run wider; complete Verification stages before final delivery. A targeted run is never called a full-suite run.
+- Before an rls run: only Docker Desktop is needed; the command starts and resets the test stack, and an interrupted run is cleaned up by the next command. Select repeats under Repeatability checks; writing rls tests alone does not require two full runs.
 - The report separates automated results (command, files, test counts), static checks (`npx tsc --noEmit`, `npm run lint`, `npm run docs:check`), manual QA, and what is pending or limited by the environment. Never claim a check that did not run, and never report a skipped test as passed.
 - Test files are type-checked by `next build` and `tsc`: run `npx tsc --noEmit`. New files add no lint problems. A session file or report under `__tests__/e2e/.auth/`, `test-results/` or `playwright-report/` is never committed.
 
@@ -158,6 +186,7 @@ Run the row for each kind of change, plus the static checks (`npx tsc --noEmit`,
 ## Checklist
 
 - [ ] applicable guarantees map to assertions, layers, files and prerequisites; distinct boundaries covered without duplicate matrices
+- [ ] focused/checkpoint evidence is separate from final regression; reused results remain valid, and repeats name their risk and reset/no-reset evidence
 - [ ] allowed and denied paths covered; hidden rows proven to exist before an empty result
 - [ ] names state actor, condition and outcome; matrix IDs and known-bug IDs follow the naming rule
 - [ ] safe target (test stack, not dev), owned data, failure cleanup and the unclean/audit outcome verified; detection limits stated

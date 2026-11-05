@@ -6,14 +6,14 @@ Charter: [README.md](README.md). Problems: [problems.md](problems.md). Git histo
 
 | Field | Value |
 | --- | --- |
-| Spec revision | QE-U4 [`implementation-plans/qe-u4-component-tests/plan.md`](implementation-plans/qe-u4-component-tests/plan.md) r2 (2026-11-04; r1 kept every e2e row), self-reviewed, no Codex gate (dev dependencies and tests only; no auth, permission, schema or CI change); approved by the Owner on 2026-11-04. QE-U3 r4 closed. |
-| Current unit / checkpoint | None active. QE-U4 merged in PR 61 (`78c80ba`) on 2026-11-04; the next quality-engineering item is the e2e audit of QE-F8, not yet planned. |
-| Status | merged: QE-U4 after green CI (run 41818417236 on head `851ea37`). The `components` Vitest project (jsdom, Testing Library) runs with `unit` in `npm run test:unit`; `CourseFormDialog` has 12 component tests; e2e row C2 moved to them (`C2 -> __tests__/unit/components/CourseFormDialog.test.tsx`); `test-quality-strategy` keeps an e2e row only for an integration boundary; AF-P6 resolved. QE-F8 stays open for the audit of every e2e row (Owner, 2026-11-04). QE-P5 has new evidence (a `Get-Process` start-time read failure, `851ea37`). QE-F2, QE-F3, QE-F4, QE-F7 and QE-F9 stay deferred. |
-| Completed evidence | QE-U1: PR #42 (`ddcefd0`). QE-U2: PR #46 (`3e4b941`). QE-U3: PR #50 (`60c369a`), CI run 41430597719 green on head `b44ff15`. QE-U4: PR #61 (`78c80ba`), CI run 41818417236 green on head `851ea37`; see milestones. |
+| Spec revision | Owner-approved small task (2026-11-05): staged test execution and QE-P6, focused verification during implementation and final full regression after whole-diff review; conditional repeats instead of two full runs by default. No plan file. |
+| Current unit / checkpoint | Small task QE-P6 on `chore/test-run-policy`; no initiative active. QE-U4 merged in PR 61 (`78c80ba`); QE-F8's remaining e2e audit is not planned. |
+| Status | Fixed locally, awaiting delivery: QE-P6 and staged verification are in `f1d7ff5`; the validated audit correction keeps the Owner-confirmed Prettier-only local verification exception explicit. QE-P5, QE-P7 and QE-F8's remaining e2e audit stay outside this task. |
+| Completed evidence | `f1d7ff5`: staged verification and QE-P6; `docs:check`, formatting invocation and whitespace checks passed before that snapshot commit. The Prettier-only and mixed-change decision cases were checked against the corrected owner/consumer instructions; `docs:check` passed. Documentation-only evidence, no new application test run. Historical QE-U1 to QE-U4 delivery evidence stays in milestones. |
 | Accepted deviations | none. |
 | Blockers / Owner decisions | none. |
-| Next action | The Owner decides when to plan the QE-F8 e2e audit; app-foundation AF-U6 writes its tests under the e2e rule meanwhile. |
-| Current authority | None: no quality-engineering plan, implementation or git action is granted. |
+| Next action | The Owner reviews the uncommitted audit corrections; a correction commit and delivery await separate grants. |
+| Current authority | The Owner's grant to commit the existing change before correcting it was used for `f1d7ff5`. Audit corrections are authorized; another commit, push, PR and merge are not granted. |
 
 ## Milestones
 
@@ -44,3 +44,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-04 QE-U4 correction after Main review: State rewritten to the final counts and mutation results, and `AGENTS.md` says `npm test` runs every project (`334ba8a`).
 - 2026-11-04 QE-U4 correction 2 (Owner): the component test that replayed all of C2 is removed, C2 is mapped per assertion to the focused tests, and `test-quality-strategy` says to reuse focused tests when an e2e row moves; the three AC12 mutations still fail focused tests (`2a205b1`).
 - 2026-11-04 QE-U4 merged after green CI (run 41818417236): a `components` Vitest project in jsdom with Testing Library, `CourseFormDialog` component tests, e2e row C2 moved and the e2e integration-boundary rule; AF-P6 resolved, QE-F8 open for the e2e audit (PR 61, `78c80ba`).
+- 2026-11-05 Small task QE-P6: staged verification and risk-based repeatability checks replace automatic double full runs; lifecycle, review and commit guidance synchronized, fixed locally and awaiting delivery (`f1d7ff5`).
+- 2026-11-05 Audit follow-up makes the Owner-confirmed Prettier-only local verification exception explicit in the test-selection owner and its dependency consumer (this commit).

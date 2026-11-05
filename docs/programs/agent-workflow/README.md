@@ -14,6 +14,7 @@ One line each: number, date, decision. The decisions of each initiative stay in 
 1. (2026-10-23) `agent-workflow` is an evergreen program: its first plan is U1, PR 13's chat plan r3 is U2, and the program-kinds plan is U3 (U3 D6, ADR 0002).
 2. (2026-10-23) The evergreen candidates are recorded in AW-F2 with their opening conditions and are not opened; performance skills are a deferred future feature of this program, AW-F3 (U3 D9).
 3. (2026-10-25) A `skill-authoring` skill owns how skills and references are written and maintained, the procedural rules of `.claude/rules.md` section 8 move into it, and `npm run docs:check` checks skill shape; this replaces the D4 reason for dropping FEAT-009 (U5 D1 to D3).
+4. (2026-11-05) Instruction audits compare requirements under the same conditions; the audit follow-up allows Playwright CLI manual QA on the dev stack while E2E debugging stays inside the managed test run.
 
 ## 3. Invariants
 

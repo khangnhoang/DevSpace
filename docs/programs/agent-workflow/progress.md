@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | [AW-U13 r1](implementation-plans/aw-u13-skills-hold-no-state/plan.md), approved 2026-11-04. |
-| Current unit / checkpoint | None active: no initiative plan is open. AW-U13 delivered in PR 62 (`c58839b`) on 2026-11-04. |
-| Status | merged: AW-U13 after green CI (PR 62, `c58839b`): `skill-authoring` says a skill holds no rollout or progress state, the agent-workflow and app-foundation invariants point to it, and S1–S14 are reworded or removed. Codex (`gpt-6.1-sol`, high, read-only, session 01a1a697-a9d9-7c80-97a1-83c76c7d3d24) round 1 found 2 Required issues in S9 (seed-user scope, AI action rows), round 2 PASS; the AF-U6 session's refusal-row finding is fixed too; `npm run docs:check` 0 violations. AW-U12 delivered in PR #45 (`29ad22e`): CLI-first tool selection and the section 4 delivery boundary; AW-P3 resolved. AW-U11 delivered in PR #44, AW-P4 resolved with bounded evidence limits. Static decision cases are not live agent-compliance proof. |
-| Completed evidence | AW-U11: PR 44 (`f16ed1e`); AW-U12: PR 45 (`29ad22e`), with its machine setup evidence (gh 2.103.3, Vercel CLI 65.9.0, read-only probes) in this file's State at `69b66cb`; AW-U13: PR 62 (`c58839b`), CI green on head `9e30dd9` (db and e2e skipped, docs-only); see milestones. |
-| Accepted deviations | None. AW-U11's frozen plan and operational binding remain unchanged. |
+| Spec revision | Owner-assigned small task (2026-11-05), charter decision 4: correct the five instruction-audit findings and add same-condition comparison to the audit reference. No initiative plan. |
+| Current unit / checkpoint | Small audit follow-up on `chore/test-run-policy`; no initiative plan open. AW-U13 delivered in PR 62 (`c58839b`). |
+| Status | Fixed locally, awaiting delivery: all five audit items corrected and same-condition comparison added; self-review has 0 Critical and 0 Required. Review coverage follows the affected boundary, request payloads follow the action input contract, the problems template handles all program kinds and backlog, and CLI manual QA follows the dev-stack target. |
+| Completed evidence | `docs:check` passed with 0 violations; the five audit cases and skill-trigger examples were checked against the corrected instructions. Seven skill symlinks, 38 files and 66 relative references matched through both paths; the vendored body and 11 reference/license files matched `f1d7ff5`. Static evidence only, not live agent-compliance or browser verification. Historical initiative delivery remains in milestones. |
+| Accepted deviations | None. |
 | Blockers / Owner decisions | none. |
-| Next action | None planned in agent-workflow. App-foundation AF-U6 keeps only the skill rule it introduces (its AC10). |
-| Current authority | None: no agent-workflow plan, implementation or git action is granted. |
+| Next action | The Owner reviews the uncommitted corrections; a correction commit and delivery await separate grants. |
+| Current authority | The Owner authorized the audit corrections, adding the comparison procedure and CLI manual QA on the dev stack. The existing-change commit grant was used for `f1d7ff5`; no further commit or remote action is granted. |
 
 ## Milestones
 
@@ -127,3 +127,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-03 AW-P5 resolved in the post-AF-U3 small-task batch: `preview_start` serves the dev server on the fnm-selected Node 26 (PR 55, `9d6198c`).
 - 2026-11-04 AW-U13 r1 approved with its rule text, an own branch from `main` and implementation; CP1 makes skills hold no rollout or progress state (`9e30dd9`).
 - 2026-11-04 AW-U13 merged after green CI: skills hold rules, procedures, pitfalls and stable example pointers, no rollout or progress state (PR 62, `c58839b`).
+- 2026-11-05 Small audit follow-up corrects the instruction conflicts and template/input guidance, and adds same-condition comparison to the read-only audit procedure (this commit).

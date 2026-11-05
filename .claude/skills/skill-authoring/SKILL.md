@@ -1,6 +1,6 @@
 ---
 name: skill-authoring
-description: "How a DevSpace skill or reference under .claude/skills/ is created, changed, split, maintained, reviewed and audited, where an instruction belongs (skill, reference, rule, loop, ADR or program doc), the skill-shape check and the read-only instruction audit. Use when adding, editing, splitting, reviewing or maintaining a skill or reference, when deciding where a new rule goes, or when auditing the agent instructions."
+description: "How a DevSpace skill or reference under .claude/skills/ is created, changed, split, maintained, reviewed and audited, where an instruction belongs (skill, reference, rule, loop, ADR or program doc), the skill-shape check and the read-only instruction audit including conflicts under the same conditions. Use when adding, editing, splitting, reviewing or maintaining a skill or reference, when deciding where a new rule goes, or when auditing the agent instructions."
 ---
 
 # Skill authoring
@@ -109,7 +109,7 @@ The description decides whether a session loads the skill. After writing or chan
 
 ## Auditing the instructions
 
-A read-only audit classifies every instruction by owner and shape and proposes moves. Read [audit.md](references/audit.md) before running or reporting one. An audit edits nothing; moving what it flags is a separate task.
+A read-only audit classifies every instruction by owner and shape, compares requirements under the same conditions and proposes corrections. Read [audit.md](references/audit.md) before running or reporting one. An audit edits nothing; correcting what it flags is a separate task.
 
 ## Verify
 

@@ -133,13 +133,17 @@ Reproduce the bug first when practical, then write a focused test tied to the ob
 | --- | --- |
 | Implementation | Add or extend regression tests with the behavior, and run the affected files/rows at the smallest sufficient layer. Include callers, shared dependencies, actors and persisted invariants affected by the change, not only files whose names match the diff. |
 | Checkpoint | Verify the whole affected area and the applicable static checks before reporting the checkpoint. Widen early for shared auth, schemas, fixtures, test-stack tooling or configuration whose impact is broad or uncertain. A checkpoint does not automatically require every suite. |
-| Final regression | After implementation and the whole-diff review corrections, run `npm test` and `npm run test:e2e` once without file, project or name filters for a code, test, dependency or executable-config change. Also run typecheck, lint and build, and `docs:check` when its inputs changed. This is the final regression check, not a command to repeat at every checkpoint. |
+| Final regression | After implementation and the whole-diff review corrections, run `npm test` and `npm run test:e2e` once without file, project or name filters for a code, test, dependency or executable-config change, except for Prettier-only updates below. Also run typecheck, lint and build, and `docs:check` when its inputs changed. This is the final regression check, not a command to repeat at every checkpoint. |
 | Correction after verification | Run the regression tests and checks the correction can invalidate. Reuse earlier passing evidence only with a concrete dependency-based reason; changes to shared behavior/tooling or uncertain impact require the relevant full suites again. Do not rerun application suites for a later prose-only correction. |
 | Docs-only | Run `npm run docs:check`; run `npm run docs:check:test` when the checker changed. Application suites, typecheck and build are not required locally for prose-only changes. CI still follows its own workflow. |
 
 A focused pass is checkpoint evidence, not evidence that the full suites passed. Final regression must have current passing evidence before reporting the implementation ready for review or delivery; a missing prerequisite or failed check remains pending or blocked. Preserve explicit Owner QA, approved plan minima and independent review gates.
 
 Use the existing npm entry points with file/name/project filters for focused runs; `npm test` and `npm run test:e2e` retain their lock, target checks, writer settlement and audit even with filters. Do not invoke database Vitest or Playwright directly to avoid startup work. Automatic import-based selection alone does not cover route wiring, database policies or fixtures; select those from the affected contract.
+
+### Prettier-only updates
+
+An update that changes only the `prettier` version and its lockfile resolution uses `npm run format:check -- <paths>` on a bounded set of representative tracked files, without reformatting the repository. This is a local exception: application test suites, typecheck, lint and build are not required solely for that version update. If other dependencies, application/test code or executable configuration also change, apply their normal verification requirements. CI still follows its own workflow.
 
 ## Repeatability checks
 
@@ -162,7 +166,7 @@ The rows select behavior-specific coverage and commands; Verification stages det
 | Seed (`supabase/seed.sql`) | `npm test`, `npm run test:e2e` | Docker, Chromium |
 | Page or UI flow | select unit/integration/E2E assertions by the contract; add/extend browser rows for wiring/state that needs them and run `npm run test:e2e`; justify residual manual checks (`frontend-workflow`) and preserve approved minima | Docker, Chromium for E2E |
 | E2E helper, fixture or env map (`__tests__/e2e`, `__tests__/helpers/e2e-env.ts`, `scripts/e2e`) | `npm run test:unit`, `npm run test:e2e` | Docker, Chromium |
-| Dependency (`package.json`, `package-lock.json`); procedure per update type: [dependency-updates](../dependency-updates/SKILL.md) | static checks, `npm run build`, `npm test`, `npm run test:e2e` | Docker, Chromium |
+| Dependency (`package.json`, `package-lock.json`); procedure per update type: [dependency-updates](../dependency-updates/SKILL.md) | static checks, `npm run build`, `npm test`, `npm run test:e2e`; the local exception is Prettier-only updates above | Docker, Chromium unless the Prettier-only exception applies |
 | Docs only (`docs/`, `.claude/`, `AGENTS.md`, `CLAUDE.md`, `README.md`) | `npm run docs:check`; `npm run docs:check:test` when the checker changed | nothing |
 
 ## Running and reporting

@@ -638,6 +638,17 @@ export async function reserveSignUpEmail() {
 }
 export const authUsersWithEmail = async (email: string) =>
   (await scope().authIds(email)).length;
+export function assertOwnedAuthEmail(email: string) {
+  if (
+    !scope().entries.some(
+      (entry) => entry.kind === "auth" && entry.email === email,
+    )
+  ) {
+    throw new Error(
+      "Recovery mailbox requires an exactly reserved Auth recipient",
+    );
+  }
+}
 export async function profileOfEmail(email: string): Promise<{
   full_name: string | null;
   phone: string | null;

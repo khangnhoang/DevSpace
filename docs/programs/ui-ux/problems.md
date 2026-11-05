@@ -28,6 +28,22 @@ Charter: [README.md](README.md). Progress: [progress.md](progress.md).
 - Direction: Later work adds an explicit per-notification mark-as-read action alongside the existing interactions.
 - Exit condition: Each notification can be explicitly marked as read while existing all/read-on-click actions remain functional.
 
+### UX-P4: Forgot-password form shows the sign-up heading
+
+- Status: Open (2026-11-06, found during SE-U2 dev QA; existing login-card copy outside the recovery-session correction).
+- Problem: Selecting "Quên mật khẩu?" displays the recovery-request form under "Tạo tài khoản mới" and "Đăng ký chỉ với 2 bước đơn giản", misleading a user who needs a new recovery link.
+- Evidence: Main observed the mismatch at `http://127.0.0.1:3000/login` at mobile, tablet and desktop widths on `45fa3d96`. `app/(main)/login/page.tsx:20` and line 23 select sign-up copy for every view other than `login`, including `forgot`; the file is unchanged by SE-U2.
+- Direction: Give the existing `forgot` view its own recovery-request heading and supporting copy without redesigning the login card.
+- Exit condition: The forgot-password form has accurate recovery copy, while sign-in and sign-up retain their own headings.
+
+### UX-P5: Password visibility toggle is outside the keyboard order
+
+- Status: Open (2026-11-06, found during SE-U2 local QA; existing Auth control behavior outside the recovery-session correction).
+- Problem: The reset form's named "Hiện mật khẩu" button has `tabIndex=-1`, so Tab skips that action. The same opt-out is used by sign-up; the observed reset toggle is only 18 by 18 CSS pixels.
+- Evidence: Main's Owner-authorized managed E2E QA on `45fa3d96` recorded the toggle geometry and Tab order at four widths. `app/auth/reset-password/page.tsx:186` already passed `toggleTabIndex={-1}` at the implementation base `d6e8bcd`; `app/(main)/login/_components/SignUpForm.tsx:95` does too. `app/components/AuthFields.tsx:33` applies that value to the button, and the shared file is unchanged by SE-U2.
+- Direction: In a bounded Auth accessibility task, make the visibility action keyboard reachable and review its pointer target without changing the password flow.
+- Exit condition: Keyboard users can reach and activate the visibility action in reset and sign-up, with visible focus and a checked pointer target.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

@@ -7,13 +7,13 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | Owner-assigned small task (2026-11-05), charter decision 4: correct the five instruction-audit findings and add same-condition comparison to the audit reference. No initiative plan. |
-| Current unit / checkpoint | Small audit follow-up on `chore/test-run-policy`; no initiative plan open. AW-U13 delivered in PR 62 (`c58839b`). |
-| Status | Fixed locally, awaiting delivery: all five audit items corrected and same-condition comparison added; self-review has 0 Critical and 0 Required. Review coverage follows the affected boundary, request payloads follow the action input contract, the problems template handles all program kinds and backlog, and CLI manual QA follows the dev-stack target. |
-| Completed evidence | `docs:check` passed with 0 violations; the five audit cases and skill-trigger examples were checked against the corrected instructions. Seven skill symlinks, 38 files and 66 relative references matched through both paths; the vendored body and 11 reference/license files matched `f1d7ff5`. Static evidence only, not live agent-compliance or browser verification. Historical initiative delivery remains in milestones. |
+| Current unit / checkpoint | None active. |
+| Status | The instruction audit corrections and the same-condition comparison procedure merged in [PR 67](https://github.com/khangnhoang/DevSpace/pull/67). |
+| Completed evidence | Local docs checks and independent diff review passed; the CI docs, lint, typecheck and build jobs passed. CI skipped the database and e2e jobs for the docs-only diff. |
 | Accepted deviations | None. |
 | Blockers / Owner decisions | none. |
-| Next action | The Owner reviews the uncommitted corrections; a correction commit and delivery await separate grants. |
-| Current authority | The Owner authorized the audit corrections, adding the comparison procedure and CLI manual QA on the dev stack. The existing-change commit grant was used for `f1d7ff5`; no further commit or remote action is granted. |
+| Next action | The Owner selects the next Agent Workflow item. |
+| Current authority | None active. |
 
 ## Milestones
 
@@ -127,4 +127,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-03 AW-P5 resolved in the post-AF-U3 small-task batch: `preview_start` serves the dev server on the fnm-selected Node 26 (PR 55, `9d6198c`).
 - 2026-11-04 AW-U13 r1 approved with its rule text, an own branch from `main` and implementation; CP1 makes skills hold no rollout or progress state (`9e30dd9`).
 - 2026-11-04 AW-U13 merged after green CI: skills hold rules, procedures, pitfalls and stable example pointers, no rollout or progress state (PR 62, `c58839b`).
-- 2026-11-05 Small audit follow-up corrects the instruction conflicts and template/input guidance, and adds same-condition comparison to the read-only audit procedure (this commit).
+- 2026-11-05 Small audit follow-up corrects the instruction conflicts and template/input guidance, and adds same-condition comparison to the read-only audit procedure (`fd4e650`).
+- 2026-11-05 Instruction audit follow-up merged: five findings corrected and the audit reference now compares instructions that apply under the same conditions (PR 67, `3d21627`).

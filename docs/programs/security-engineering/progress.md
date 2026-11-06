@@ -7,13 +7,13 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | [SE-U4 plan](implementation-plans/se-u4-comment-avatar-integrity/plan.md) r3, approved by the Owner on 2026-11-07 after the independent Opus review of r1 and Codex PASS on r3. |
-| Current unit / checkpoint | SE-U4 implementation complete locally on `fix/se-u4-comment-avatar-integrity` (CP1 comment integrity `154fd67`, CP2 avatar path ownership); awaiting Main review. |
-| Status | CP1, CP2 and correction 1 implemented locally; correction checks passed; no push, PR or hosted step. |
+| Current unit / checkpoint | SE-U4 implementation complete locally on `fix/se-u4-comment-avatar-integrity`: CP1 comment integrity `154fd67`, CP2 avatar path ownership `2d0f42a`, correction 1 `937a7e7`. |
+| Status | Main review passed with no Critical or Required; the Codex implementation gate passed in round 3 (round 1 Required fixed in `937a7e7`; the round 2 timeout findings were withdrawn as pre-existing harness limits, recorded as quality-engineering QE-P8). No push, PR or hosted step. |
 | Completed evidence | SE-U4 final local regression: `npm test` 835/835, `npm run test:e2e` 149/149, `tsc`, lint, build, docs check; community 47/47 and storage 13/13 (storage also on the retained stack). Hosted untouched. SE-U3: milestones and PR #69. |
 | Accepted deviations | None. |
 | Hosted state | SE-U4 baseline (Main, read-only catalog, 2026-11-06/07): `comments` policies and triggers and the `avatars` bucket and policies match the repository; no view, function body or publication references `comments`; `storage.objects` is owned by `supabase_storage_admin`, and `supautils.policy_grants` lets `postgres` manage its policies. No user data was read and nothing was written. |
 | Blockers / Owner decisions | None for implementation. Delivery needs the separate push, PR, merge, hosted prepare/apply and D8 behavior-probe grants. |
-| Next action | Main reviews the checkpoints; delivery needs the separate push, PR, merge, hosted prepare/apply and D8 grants. |
+| Next action | Owner decides delivery: push and PR, then CI, merge, hosted prepare/apply and the D8 behavior-probe grant, each separately. |
 | Current authority | Owner approved r3 and granted the plan commit and implementation by one implementor session (2026-11-07): local checkpoint and correction commits, the managed test stack. No push, PR, merge, hosted read of user data or hosted write is granted. |
 
 ## Milestones

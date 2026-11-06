@@ -6,22 +6,13 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 
 ## Open
 
-### SE-P1: any session can change the password on /auth/reset-password without a recovery mail or reauthentication
-
-- Status: Open, before migration (2026-11-03; moved from BL-P10 on 2026-11-05, Owner decisions 1 and 2).
-- Problem: The original `/auth/reset-password` checked only that a session existed before calling `supabase.auth.updateUser({ password })`. An unattended or stolen ordinary session could replace the account password without fresh proof. The Auth API also permitted that request with native current-password enforcement disabled.
-- Evidence: Owner QA of AF-U4 on the dev stack, 2026-11-03: a normal sign-in, then the page, changed the password. `supabase/config.toml` sets `secure_password_change = false`; the hosted Auth setting was not checked. The page's session check predates AF-U4 (`186530e`).
-- Direction: [SE-U2 r2](implementation-plans/se-u2-password-recovery/plan.md) requires the native current-password control at the Auth API and binds the reset form to the verified recovery session. The local API probe and browser tests are separate evidence.
-- Hosted rollout: After independent implementation review and the separate preflight grant, Main confirms project `lkvxxrxojjlkchzzqidu`, active account types and providers, recovery redirects, password minimum greater than zero, and the current setting. Stop if first-password enrollment is relevant or the setting is unavailable. Under a separate change grant, record the previous setting, enable **Require current password when updating**, and read it back. With separate designated-account authorization, verify the deployed PKCE flow under the flag before delivering the form change, then verify recovery and sign-in on the delivered app. Keep the hosted result separate from local evidence. If recovery breaks, stop delivery and follow the approved plan's app or setting rollback; restoring the previous setting reopens the exposure.
-- Exit condition: A fresh ordinary session cannot replace an existing password without the correct current password, and a valid recovery session can still reset it. Close only after hosted enforcement and the approved rollout checks are recorded.
-
 ### SE-P3: Users can change their profile email
 
 - Status: Open, before migration (moved from SH-P28 on 2026-11-05, Owner decisions 1 and 2).
 - Problem: A user can edit the `email` column in `profiles` themselves (system email is sent to this column).
-- Evidence: Legacy P28; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Later work protects the profile email used for system mail; excluded from H2-2a.
-- Exit condition: A client cannot independently change the profile email used for system mail.
+- Evidence: Legacy P28 at baseline ddcefd0; `__tests__/rls/profiles.test.ts` still has the P28 [K3] known-bug reproduction at `749927b`. Hosted catalog on 2026-11-06 confirms no email guard, table-level client INSERT/UPDATE privileges and the existing self/admin policies; no hosted user rows were read.
+- Direction: [SE-U3 r2](implementation-plans/se-u3-profile-access-integrity/plan.md), CP1 in the Owner-selected single PR. Owner decision 2026-11-06: block ordinary user and admin clients. The plan covers alternate INSERT/UPSERT paths while preserving trusted provisioning and permitted profile edits. Implementation remains pending; current review/authority is recorded only in progress.md.
+- Exit condition: A client, including admin, cannot independently replace the profile email used for system mail; local regressions and the separately authorized hosted acceptance pass.
 
 ### SE-P4: Comments expose deleted content and lack enrollment checks
 
@@ -42,18 +33,18 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 ### SE-P6: GraphQL exposes tables to anon and authenticated
 
 - Status: Open, before migration (moved from SH-P11 on 2026-11-05, Owner decisions 1 and 2).
-- Problem: pg_graphql exposes every table to anon/authenticated (advisor 0026/0027).
-- Evidence: Legacy P11; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Later work must review the GraphQL exposure and advisor 0026/0027 findings.
-- Exit condition: GraphQL exposure and grants match the intended access model and the advisor findings are addressed.
+- Problem: The enabled pg_graphql API exposes a grant-derived schema surface to anon/authenticated (advisor 0026/0027), with no in-repo application caller found. Schema discoverability alone does not establish unauthorized row access; GraphQL also respects database grants and RLS.
+- Evidence: Legacy P11 at baseline ddcefd0. Hosted metadata on 2026-11-06: pg_graphql 1.5.11, owner supabase_admin; Advisor reports 15 anon and 15 authenticated table-visibility warnings. No GraphQL caller was found in app/lib at `749927b`; external consumers and external database dependencies remain unverified.
+- Direction: [SE-U3 r2](implementation-plans/se-u3-profile-access-integrity/plan.md), CP3 in the Owner-selected single PR. Owner decision 2026-11-06: check dependencies before migration, never use CASCADE to remove dependents blindly; stop on unexpected objects or consumers. Preserve managed hooks and prove exact rollback. A blocker holds the whole PR; no extension change has been applied.
+- Exit condition: Dependency-checked GraphQL removal passes local and separately authorized hosted postflight, REST contracts remain intact and advisor 0026/0027 findings are absent.
 
 ### SE-P7: `profiles.role` accepts any text
 
 - Status: Open, before migration (2026-11-04, Owner decision while planning AF-U6: the forms refuse a role other than `user` or `admin`, and the database rule waits for its own migration; moved from BL-P14 on 2026-11-05, Owner decisions 1 and 2).
 - Problem: `profiles.role` is `text` with no check constraint, so an admin writing through the browser client (or a future code path) can store a role other than `user` or `admin`; such a user is neither in the counters nor in the filters (AF-P7 stored "Chọn vai trò" this way).
-- Evidence: `supabase/migrations/20261021000000_baseline.sql` (no constraint on `profiles.role`, read at `78c80ba`); AF-P7 in `docs/programs/app-foundation/problems.md`. Hosted roles were not read (reading data rows needs the Owner's approval).
-- Direction: an Owner-approved read of the distinct hosted roles, a fix of any bad row, then a migration adding `check (role in ('user', 'admin'))` with its rollback (Codex-gated, `supabase-migration`); QE-F9 can assert the constraint exists.
-- Exit condition: the database refuses a role other than `user` or `admin`, or the Owner drops it.
+- Evidence: Baseline SQL and AF-P7; hosted catalog on 2026-11-06 confirms nullable text, default user and no role constraint. Hosted role values were not read; even an aggregate user-data read needs the Owner's approval.
+- Direction: [SE-U3 r2](implementation-plans/se-u3-profile-access-integrity/plan.md), CP2 in the Owner-selected single PR. Owner decision 2026-11-06: role must always be user or admin, never NULL. Obtain an approved distinct-role/null-count read, stop for an Owner-approved repair if needed, then add validated CHECK and NOT NULL enforcement with exact rollback. A blocker holds the whole PR; no automatic backfill. QE-F9 remains separate.
+- Exit condition: The database rejects every role outside user/admin, including NULL, existing rows satisfy the validated constraints, and local plus separately authorized hosted acceptance passes.
 
 ### SE-P8: Coupon usage RPC is missing
 
@@ -180,3 +171,4 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 One line each: ID, status, one-line outcome. Details stay in Git.
 
 - SE-P2 — Resolved 2026-11-05: the activation mail escapes the learner name, the course name and the link, so markup in a name shows as plain text (PR 66, `b6f1902`); `full_name` stays without a length limit where it is saved.
+- SE-P1 — Resolved 2026-11-06: PR #68 (749927bb) binds password reset to a verified recovery session; native current-password enforcement passed the local API proof, and the Owner reported the hosted control active and production recovery/sign-in passing before and after deployment.

@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { IDS, authFile } from "./accounts";
 import { recordMutations } from "./confirm-dialog";
 import { expect, test } from "./fixtures";
-import { createUserFixture, profileOf } from "./service-role";
+import { createUserFixture, profileEmailOf, profileOf } from "./service-role";
 
 // The admin user forms of AF-U6 (create and edit on /admin/users) on the admin session. The client-only rules (field
 // errors, the role placeholder, the duplicate-submit guard, the payloads) are component tests; the rows here are the
@@ -124,6 +124,7 @@ test.describe("admin user forms", () => {
       full_name: `${fixture.label} sửa`,
       avatar_url: avatar.publicUrl(),
     });
+    expect(await profileEmailOf(fixture.id)).toBe(fixture.email);
   });
 
   test("[U2] the action's refusal of an email already in use is shown in the form and creates no user", async ({
@@ -306,5 +307,6 @@ test.describe("admin user forms", () => {
       full_name: "E2E Quản trị mới",
       avatar_url: avatar.publicUrl(),
     });
+    expect(await profileEmailOf(ids[0])).toBe(email);
   });
 });

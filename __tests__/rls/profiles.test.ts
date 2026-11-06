@@ -1,19 +1,21 @@
 // Test plan
 // Goal: profiles are readable only by their owner or an admin, the public card exposes no private column,
-//   and a user cannot raise their own role.
+//   and clients cannot change email/identity or raise their own role.
 // Layer: rls (local Supabase stack, requests through the API as each actor).
 // Subject: policies and grants on public.profiles and public.profile_cards, prevent_role_escalation,
-//   public.is_admin(), and public.handle_new_user() (H1, H2-1a, H2-1b); Auth's minimum password length (BL-P11).
+//   public.is_admin(), public.handle_new_user() (H1, H2-1a, H2-1b), and the SE-U3 client identity guard;
+//   Auth's minimum password length (BL-P11).
 // Allowed paths: self and admin read profiles; anyone reads profile_cards; admin changes another user's role;
-//   a new sign-up becomes a plain user; a sign-up with an 8-character password.
+//   permitted profile edits retain email/identity; a new sign-up becomes a plain user; an 8-character password.
 // Denied paths: anon reads profiles; a learner reads another profile, writes through profile_cards, changes
 //   their own role, or updates another profile; anon and authenticated cannot execute handle_new_user;
-//   a sign-up with a 7-character password.
-// Known bugs: P28 (K3), a user can change their own profiles.email.
-// Invariants: every write is restored afterwards through the service role; the sign-up user is deleted.
+//   clients replace email/identity or INSERT/UPSERT profiles; a sign-up with a 7-character password.
+// Known bugs: none (legacy P28 [K3] is a denied-write regression for SE-P3).
+// Invariants: scoped fields are restored, owned Auth/profile fixtures deleted, SQL data probes rolled back,
+//   and the migration probe unconditionally restores/verifies the forward catalog or marks the run unclean.
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { knownBug } from "../helpers/known-bug";
+import { proveProfileEmailRollback } from "./profile-write-probe";
 import {
   admin,
   anon,
@@ -35,11 +37,7 @@ const signUpEmail = () => `signup-${fixtureScope().tag}@devspace.test`;
 
 async function profile(id: string) {
   return must(
-    await fixtures
-      .from("profiles")
-      .select("id, email, full_name, role")
-      .eq("id", id)
-      .single(),
+    await fixtures.from("profiles").select("*").eq("id", id).single(),
   );
 }
 
@@ -232,25 +230,195 @@ describe("functions", () => {
   });
 });
 
-describe("known bugs", () => {
-  knownBug(
-    "P28",
-    "[K3] a learner can change their own profiles.email",
-    async (bug) => {
-      await fixtureScope().acquire("profiles", IDS.learner, ["email"], {
-        email: SEED_EMAIL,
-      });
-      const before = await profile(IDS.learner);
-      expect(before.email).toBe(SEED_EMAIL);
+async function disposableAccount(label: string) {
+  const email = `${label}-${fixtureScope().tag}@devspace.test`;
+  await fixtureScope().reserveAuth(email);
+  const client = newAnonClient();
+  const result = await client.auth.signUp({
+    email,
+    password: "signup-local-pass-1",
+    options: { data: { role: "admin" } },
+  });
+  expect(result.error).toBeNull();
+  expect(result.data.user?.id).toBeTruthy();
+  const id = result.data.user!.id;
+  expect(await fixtureScope().authIds(email)).toEqual([id]);
+  expect(await profile(id)).toMatchObject({ email, role: "user" });
+  return { client, id, email };
+}
 
-      const { error } = await learner
+describe("client profile identity (SE-P3)", () => {
+  it.each([
+    ["learner", learner, IDS.learner, SEED_EMAIL],
+    ["admin", admin, IDS.admin, "admin@devspace.test"],
+  ] as const)(
+    "[K3] %s cannot replace email, including null and mixed-field retries",
+    async (_name, actor, id, email) => {
+      await fixtureScope().acquire("profiles", id, ["email", "full_name"]);
+      const before = await profile(id);
+      expect(before.email).toBe(email);
+      for (const replacement of ["changed@devspace.test", null]) {
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const { error } = await actor
+            .from("profiles")
+            .update({ email: replacement, full_name: "must not persist" })
+            .eq("id", id);
+          expectDenied(error);
+          expect(await profile(id)).toEqual(before);
+        }
+      }
+      // Trusted maintenance can still set NULL; null-safe comparison must reject a later client replacement.
+      must(
+        await fixtures.from("profiles").update({ email: null }).eq("id", id),
+      );
+      const withNull = await profile(id);
+      const { error } = await actor
         .from("profiles")
-        .update({ email: "changed@devspace.test" })
-        .eq("id", IDS.learner);
-      expect([null, "42501"]).toContain(error?.code ?? null);
-
-      const after = await profile(IDS.learner);
-      await bug(() => expect(after.email).toBe(SEED_EMAIL));
+        .update({ email, full_name: "must not persist" })
+        .eq("id", id);
+      expectDenied(error);
+      expect(await profile(id)).toEqual(withNull);
+      expect(
+        (
+          await actor
+            .from("profiles")
+            .update({ email: null, full_name: "same-null allowed" })
+            .eq("id", id)
+        ).error,
+      ).toBeNull();
+      expect(await profile(id)).toEqual({
+        ...withNull,
+        full_name: "same-null allowed",
+      });
     },
+  );
+
+  it.each([
+    ["learner", learner],
+    ["admin", admin],
+  ] as const)(
+    "[P14] %s can save permitted fields with unchanged email and id",
+    async (_name, actor) => {
+      const fields = ["full_name", "avatar_url", "gender", "dob", "province"];
+      await fixtureScope().acquire("profiles", IDS.learner, fields);
+      const before = await profile(IDS.learner);
+      const changes = {
+        full_name: "Allowed name",
+        avatar_url: null,
+        gender: "female",
+        dob: "2000-01-31",
+        province: "Hà Nội",
+      };
+      const { error } = await actor
+        .from("profiles")
+        .update({ ...changes, email: before.email, id: before.id })
+        .eq("id", IDS.learner);
+      expect(error).toBeNull();
+      expect(await profile(IDS.learner)).toEqual({ ...before, ...changes });
+    },
+  );
+
+  it("[P15] an admin cannot replace another user's email with a name/avatar/role update", async () => {
+    await fixtureScope().acquire("profiles", IDS.learner, [
+      "email",
+      "full_name",
+      "avatar_url",
+      "role",
+    ]);
+    const before = await profile(IDS.learner);
+    const { error } = await admin
+      .from("profiles")
+      .update({
+        email: "forged@devspace.test",
+        full_name: "forged",
+        avatar_url: "forged",
+        role: "admin",
+      })
+      .eq("id", IDS.learner);
+    expectDenied(error);
+    expect(await profile(IDS.learner)).toEqual(before);
+  });
+
+  it.each(["owner", "admin", "anon"] as const)(
+    "[P16] %s cannot INSERT or UPSERT a recreated profile with a chosen email",
+    async (name) => {
+      const account = await disposableAccount(`recreate-${name}`);
+      const actor =
+        name === "owner" ? account.client : name === "admin" ? admin : anon;
+      // Only this scope's disposable profile is removed; the Auth identity must still exist.
+      must(await fixtures.from("profiles").delete().eq("id", account.id));
+      await fixtureScope().reserve("profiles", { id: account.id });
+      const values = {
+        id: account.id,
+        email: "forged@devspace.test",
+        role: "user",
+      };
+      for (const method of ["insert", "upsert"] as const) {
+        expectDenied((await actor.from("profiles")[method](values)).error);
+        expect(
+          must(
+            await fixtures.from("profiles").select("*").eq("id", account.id),
+          ),
+        ).toEqual([]);
+        expect(await fixtureScope().authIds(account.email)).toEqual([
+          account.id,
+        ]);
+      }
+    },
+  );
+
+  it.each([
+    ["learner", learner],
+    ["admin", admin],
+  ] as const)(
+    "[P17] %s cannot use the UPSERT conflict-update branch",
+    async (_name, actor) => {
+      await fixtureScope().acquire("profiles", IDS.learner, [
+        "email",
+        "full_name",
+      ]);
+      const before = await profile(IDS.learner);
+      expectDenied(
+        (
+          await actor.from("profiles").upsert({
+            id: IDS.learner,
+            email: "forged@devspace.test",
+            full_name: "must not persist",
+          })
+        ).error,
+      );
+      expect(await profile(IDS.learner)).toEqual(before);
+    },
+  );
+
+  it.each(["owner", "admin"] as const)(
+    "[P18] %s cannot reassign a profile to another existing Auth identity",
+    async (name) => {
+      const source = await disposableAccount(`source-${name}`);
+      const target = await disposableAccount(`target-${name}`);
+      const actor = name === "owner" ? source.client : admin;
+      must(await fixtures.from("profiles").delete().eq("id", target.id));
+      await fixtureScope().reserve("profiles", { id: target.id });
+      const before = await profile(source.id);
+      expectDenied(
+        (
+          await actor
+            .from("profiles")
+            .update({ id: target.id, full_name: "must not persist" })
+            .eq("id", source.id)
+        ).error,
+      );
+      expect(await profile(source.id)).toEqual(before);
+      expect(
+        must(await fixtures.from("profiles").select("id").eq("id", target.id)),
+      ).toEqual([]);
+      expect(await fixtureScope().authIds(target.email)).toEqual([target.id]);
+    },
+  );
+
+  it(
+    "[P19] M1 rollback/reapply restores exact profile catalogs and preserves H1",
+    proveProfileEmailRollback,
+    60_000,
   );
 });

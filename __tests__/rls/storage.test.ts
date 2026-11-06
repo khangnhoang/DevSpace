@@ -7,12 +7,14 @@
 //   flat name; overwrite or move of an object another actor owns, even inside the caller's folder.
 // Known bugs: none.
 // Invariants: every object a test may create is recorded by exact name before the request (a move records source and
-//   destination), removed in afterEach and verified absent by exact name; a failed cleanup marks the run unclean.
+//   destination), removed in afterEach and verified absent by exact name; a failed cleanup or a timeout marks the run unclean and
+//   a marked run admits no further writer (OwnedObjects, unit-tested in storage-object-scope.test.ts).
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import type pg from "pg";
 import { afterEach, describe, expect, it } from "vitest";
 import { sharedRunMarker } from "../helpers/fixture-ownership";
+import { OwnedObjects } from "../helpers/storage-object-scope";
 import {
   admin,
   anon,
@@ -37,12 +39,18 @@ const bucket = (client: typeof admin) => client.storage.from("avatars");
 
 const MARKER = `rls-test-${randomUUID()}`;
 let counter = 0;
-const recorded = new Set<string>();
+const objects = new OwnedObjects({
+  run: sharedRunMarker(),
+  remove: async (name) => {
+    const { error } = await fixtures.storage.from("avatars").remove([name]);
+    if (error) throw new Error(error.message);
+  },
+  exists: async (name) => (await objectRow(name)).length > 0,
+});
 // Names are unique per run and recorded before any request, so cleanup never depends on a shared pattern.
 function owned(folder?: string): string {
   const name = `${folder ? `${folder}/` : ""}${MARKER}-${counter++}.png`;
-  recorded.add(name);
-  return name;
+  return objects.own(name);
 }
 
 async function objectRow(name: string) {
@@ -68,25 +76,7 @@ async function expectDeniedUpload(
   );
 }
 
-afterEach(async () => {
-  const names = [...recorded];
-  recorded.clear();
-  const failures: string[] = [];
-  if (names.length) {
-    const { error } = await fixtures.storage.from("avatars").remove(names);
-    if (error) failures.push(`remove failed: ${error.message}`);
-    for (const name of names) {
-      if ((await objectRow(name)).length)
-        failures.push(`object left in Storage: ${name}`);
-    }
-  }
-  if (failures.length) {
-    sharedRunMarker().mark(
-      `storage test cleanup failed: ${failures.join("; ")}`,
-    );
-    throw new Error(failures.join("; "));
-  }
-});
+afterEach((context) => objects.cleanup(context));
 
 describe("avatar uploads", () => {
   it("[S1] a learner uploads into their own folder", async () => {

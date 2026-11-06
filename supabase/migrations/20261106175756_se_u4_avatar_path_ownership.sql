@@ -19,8 +19,9 @@ create policy "avatars_insert_own_folder_or_admin" on storage.objects
     )
   );
 
--- WITH CHECK is explicit on the new path: otherwise a rename or move could carry an owned object into another
--- user's folder, since USING only inspects the old row.
+-- WITH CHECK is stated explicitly to pin the rule for the new path (a rename or move into another user's folder).
+-- PostgreSQL would reuse USING for the new row when it is omitted; the explicit form keeps that rule from depending
+-- on USING and keeps the policy readable in the catalog.
 drop policy "User tu sua avatar" on storage.objects;
 create policy "avatars_update_own_folder_or_admin" on storage.objects
   for update to public

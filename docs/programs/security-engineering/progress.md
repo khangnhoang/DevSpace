@@ -7,8 +7,8 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | [SE-U1 plan](implementation-plans/se-u1-payment-write-integrity/plan.md) r3, approved by the Owner on 2026-11-07 after the Codex plan gate passed in round 4. |
-| Current unit / checkpoint | SE-U1 CP2 (actions, schemas, modal and their tests) on `fix/se-u1-payment-write-integrity`, then CP3 on the stacked `fix/se-u1-payment-write-lock`. CP1 (M1 and `payments.test.ts`) is committed locally. |
-| Status | Plan approved; CP1 implemented locally and awaiting Main review. No push, PR or hosted step. |
+| Current unit / checkpoint | SE-U1 CP3 (M2 write lock and its tests) on the stacked `fix/se-u1-payment-write-lock`. CP1 and CP2 are committed locally on `fix/se-u1-payment-write-integrity`. |
+| Status | Plan approved; CP1 and CP2 implemented locally and awaiting Main review. No push, PR or hosted step. |
 | Completed evidence | SE-U1 hosted catalog snapshot (Main, read-only, 2026-11-07) in plan section 2; Codex plan gate PASS on r3. SE-U4: milestones and PR #70. |
 | Accepted deviations | None. |
 | Hosted state | Hosted migration history ends at `20261106175756_se_u4_avatar_path_ownership`; `payments`, `coupons` and `enrollments` match the baseline (no `coupon_id`, no trigger, no `increment_coupon_usage`). No user data was read and nothing was written. |
@@ -41,4 +41,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-07 SE-U4 correction 1 made Storage test fixtures follow the shared unclean-run rules (a marked run or a timeout refuses the next writer) and clarified the avatars WITH CHECK comment (`937a7e7`)
 - 2026-11-07 SE-U4 completed: deleted comments hidden from every API role, enrollment or admin required to comment, non-admin avatar writes limited to `<uid>/`; hosted migrations applied with catalog postflight, D8 behavior probes and Owner-confirmed production QA; SE-P4 and SE-P5 resolved (PR 70, b03a9b4)
 - 2026-11-07 Owner approved SE-U1 r3 (SE-P8 to SE-P12; D2–D6) after Codex PASS, and granted the plan commit and implementation (`49e5dbb`)
-- 2026-11-07 SE-U1 CP1 added M1 (`coupon_id`, one pending order per user and course, four payment functions, transition guard and delete release triggers) with its rollback; payments 37/37 and the full local suite 877/877 passed with a clean audit (this commit)
+- 2026-11-07 SE-U1 CP1 added M1 (`coupon_id`, one pending order per user and course, four payment functions, transition guard and delete release triggers) with its rollback; payments 37/37 and the full local suite 877/877 passed with a clean audit (`e7df5c0`)
+- 2026-11-07 SE-U1 CP2 moved the payment actions onto the database functions with Zod schemas, made the payment modal show a refused cancel, and turned K4 to K8 into normal rows; `npm test` 931/931 and E2E 160/160 passed with clean audits (this commit)

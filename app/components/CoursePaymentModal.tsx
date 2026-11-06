@@ -94,8 +94,14 @@ export default function CoursePaymentModal({
   };
 
   const handleCancelPayment = async () => {
-    await cancelPayment(paymentId);
-    toast.info("Đã hủy giao dịch");
+    try {
+      const res = await cancelPayment(paymentId);
+      // A cancel the server refused (the order is already processed, or not the caller's) must not read as done.
+      if (res.error) toast.error(res.error);
+      else toast.info("Đã hủy giao dịch");
+    } catch {
+      toast.error("Lỗi hủy giao dịch");
+    }
     onClose();
   };
 

@@ -9,6 +9,7 @@ import {
   PASSWORD_TOO_SHORT_MESSAGE,
   parseFailure,
 } from "@/lib/schemas/parse-failure";
+import { couponCodeSchema, paymentIdSchema } from "@/lib/schemas/payment";
 import { quizRequestSchema } from "@/lib/schemas/quiz";
 import {
   createUserFormSchema,
@@ -353,5 +354,41 @@ describe("parseFailure", () => {
     });
     expect(message).toBe(INVALID_INPUT_MESSAGE);
     expect(message).not.toMatch(/secret|email|expected|invalid_/i);
+  });
+});
+
+describe("paymentIdSchema and couponCodeSchema", () => {
+  it.each([1, 88])("accepts the positive integer order id %s", (id) => {
+    expect(paymentIdSchema.parse(id)).toBe(id);
+  });
+
+  it.each([
+    ["a string", "1"],
+    ["zero", 0],
+    ["a negative number", -1],
+    ["a fraction", 1.5],
+    ["null", null],
+    ["undefined", undefined],
+  ])("refuses %s as an order id with the generic message", (_label, id) => {
+    expect(failureOf(paymentIdSchema, id)).toBe(INVALID_INPUT_MESSAGE);
+  });
+
+  it.each([
+    ["LOCAL10", "LOCAL10"],
+    ["local10", "LOCAL10"],
+    ["  Sv2025  ", "SV2025"],
+    ["X".repeat(64), "X".repeat(64)],
+  ])("accepts the code %j and sends %j", (code, expected) => {
+    expect(couponCodeSchema.parse(code)).toBe(expected);
+  });
+
+  it.each([
+    ["an empty string", ""],
+    ["only spaces", "   "],
+    ["65 characters", "X".repeat(65)],
+    ["a number", 10],
+    ["null", null],
+  ])("refuses %s as a code with the generic message", (_label, code) => {
+    expect(failureOf(couponCodeSchema, code)).toBe(INVALID_INPUT_MESSAGE);
   });
 });

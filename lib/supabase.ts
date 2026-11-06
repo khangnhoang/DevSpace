@@ -1015,24 +1015,20 @@ export async function editComment(
   return error;
 }
 
-export async function deleteComment(commentId: number, userId: string) {
-  const { data, error } = await supabase
-    .from("comments")
-    .update({
-      deleted_at: new Date().toISOString(),
-    })
-    .eq("id", commentId)
-    .eq("user_id", userId)
-    .select("id"); // Cần Policy SELECT mới để dòng này chạy được
+// Soft delete runs through a database function: the row leaves the comments SELECT policy once deleted_at is set,
+// so a direct UPDATE from the browser is refused (SE-P4). The function checks the owner or admin itself.
+export async function deleteComment(commentId: number) {
+  const { data, error } = await supabase.rpc("soft_delete_comment", {
+    comment_id: commentId,
+  });
 
-  // Nếu có lỗi từ Supabase (VD: RLS chặn)
   if (error) {
     console.error("Supabase Error:", error);
     return error;
   }
 
-  // Nếu không tìm thấy comment (VD: Đã xóa rồi hoặc không phải chính chủ)
-  if (!data || data.length === 0) {
+  // false: already deleted, unknown id, or not the author.
+  if (!data) {
     return { message: "Không tìm thấy bình luận hoặc bạn không có quyền xóa." };
   }
 

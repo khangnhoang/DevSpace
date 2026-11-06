@@ -8,28 +8,29 @@ import { fixtureScope, IDS, withPg } from "./helpers";
 
 const migration = "20261106094309_se_u3_profile_email_integrity";
 
-export async function profileCatalog(client: pg.Client) {
-  const queries = {
-    relations: `select c.relname, pg_get_userbyid(c.relowner) as owner, c.relrowsecurity, c.relforcerowsecurity,
+export const profileCatalogQueries = {
+  relations: `select c.relname, pg_get_userbyid(c.relowner) as owner, c.relrowsecurity, c.relforcerowsecurity,
       (select array_agg(a::text order by a::text) from unnest(c.relacl) a) as acl
       from pg_class c where c.oid in ('public.profiles'::regclass, 'public.profile_cards'::regclass) order by c.relname`,
-    columns: `select attname, attnotnull, attacl::text, pg_get_expr(d.adbin, d.adrelid) as default_value
+  columns: `select attname, attnotnull, attacl::text, pg_get_expr(d.adbin, d.adrelid) as default_value
       from pg_attribute a left join pg_attrdef d on d.adrelid = a.attrelid and d.adnum = a.attnum
       where a.attrelid = 'public.profiles'::regclass and a.attnum > 0 and not a.attisdropped order by attname`,
-    constraints: `select conname, convalidated, pg_get_constraintdef(oid) as definition
+  constraints: `select conname, convalidated, pg_get_constraintdef(oid) as definition
       from pg_constraint where conrelid = 'public.profiles'::regclass order by conname`,
-    policies: `select policyname, permissive, roles, cmd, qual, with_check from pg_policies
+  policies: `select policyname, permissive, roles, cmd, qual, with_check from pg_policies
       where schemaname = 'public' and tablename = 'profiles' order by policyname`,
-    triggers: `select tgname, tgenabled, pg_get_triggerdef(oid) as definition from pg_trigger
+  triggers: `select tgname, tgenabled, pg_get_triggerdef(oid) as definition from pg_trigger
       where tgrelid in ('public.profiles'::regclass, 'auth.users'::regclass) and not tgisinternal order by tgname`,
-    functions: `select p.proname, pg_get_userbyid(p.proowner) as owner, p.prosecdef, p.proconfig,
+  functions: `select p.proname, pg_get_userbyid(p.proowner) as owner, p.prosecdef, p.proconfig,
       (select array_agg(a::text order by a::text) from unnest(p.proacl) a) as acl, pg_get_functiondef(p.oid) as definition
       from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public'
       and p.proname in ('handle_new_user', 'is_admin', 'prevent_role_escalation', 'prevent_profile_client_reassignment') order by p.proname`,
-    card: `select pg_get_viewdef('public.profile_cards'::regclass, true) as definition`,
-  };
+  card: `select pg_get_viewdef('public.profile_cards'::regclass, true) as definition`,
+};
+
+export async function profileCatalog(client: pg.Client) {
   const result: Record<string, unknown[]> = {};
-  for (const [name, sql] of Object.entries(queries))
+  for (const [name, sql] of Object.entries(profileCatalogQueries))
     result[name] = (await client.query(sql)).rows;
   return result;
 }

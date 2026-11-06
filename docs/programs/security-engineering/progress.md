@@ -6,15 +6,15 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | [SE-U4 plan](implementation-plans/se-u4-comment-avatar-integrity/plan.md) r3, approved by the Owner on 2026-11-07 after the independent Opus review of r1 and Codex PASS on r3. |
-| Current unit / checkpoint | SE-U4 implementation complete locally on `fix/se-u4-comment-avatar-integrity`: CP1 comment integrity `154fd67`, CP2 avatar path ownership `2d0f42a`, correction 1 `937a7e7`. |
-| Status | Main review passed with no Critical or Required; the Codex implementation gate passed in round 3 (round 1 Required fixed in `937a7e7`; the round 2 timeout findings were withdrawn as pre-existing harness limits, recorded as quality-engineering QE-P8). No push, PR or hosted step. |
-| Completed evidence | SE-U4 final local regression: `npm test` 835/835, `npm run test:e2e` 149/149, `tsc`, lint, build, docs check; community 47/47 and storage 13/13 (storage also on the retained stack). Hosted untouched. SE-U3: milestones and PR #69. |
+| Spec revision | [SE-U4 plan](implementation-plans/se-u4-comment-avatar-integrity/plan.md) r3, approved by the Owner on 2026-11-07; delivered. |
+| Current unit / checkpoint | None open. SE-U4 is complete (PR #70, `b03a9b4`). |
+| Status | SE-U4 delivered: merged, production deploy live, hosted migrations `20261106174213` and `20261106175756` applied, catalog postflight and D8 behavior probes passed, Owner confirmed production QA; SE-P4 and SE-P5 resolved. |
+| Completed evidence | PR #70 CI green on `38e212b` (typecheck, build, docs, lint, db, e2e, Vercel). Hosted postflight 2026-11-07: policy expressions, `soft_delete_comment` owner, `security definer`, `search_path` and execute grants match the migrations; 16 D8 probes passed inside one rolled-back block with no residue. Production QA on 2026-11-07 by Main in the Owner's signed-in browser (student and admin comment create and delete, student avatar under `<uid>/`) and by the Owner (admin uploads). |
 | Accepted deviations | None. |
-| Hosted state | SE-U4 baseline (Main, read-only catalog, 2026-11-06/07): `comments` policies and triggers and the `avatars` bucket and policies match the repository; no view, function body or publication references `comments`; `storage.objects` is owned by `supabase_storage_admin`, and `supautils.policy_grants` lets `postgres` manage its policies. No user data was read and nothing was written. |
-| Blockers / Owner decisions | None for implementation. Delivery needs the separate push, PR, merge, hosted prepare/apply and D8 behavior-probe grants. |
-| Next action | Owner decides delivery: push and PR, then CI, merge, hosted prepare/apply and the D8 behavior-probe grant, each separately. |
-| Current authority | Owner approved r3 and granted the plan commit and implementation by one implementor session (2026-11-07): local checkpoint and correction commits, the managed test stack. No push, PR, merge, hosted read of user data or hosted write is granted. |
+| Hosted state | Hosted migration history ends at `20261106175756_se_u4_avatar_path_ownership`. Two QA comments (ids 26 and 27) remain soft-deleted and hidden, as D3 intends; the probe inserts left only sequence gaps. |
+| Blockers / Owner decisions | None. |
+| Next action | The Owner selects the next security-engineering initiative or entry. Outstanding Owner-requested work not yet scheduled: SE-F2 (admins only reset another user's avatar) and SE-F3 (admin-created accounts get a password the admin never knows), in [future-features.md](future-features.md). |
+| Current authority | None open; the SE-U4 grants (merge, hosted prepare and apply, D8 probes, production QA) were used and end with the task. |
 
 ## Milestones
 
@@ -38,4 +38,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-07 Owner approved SE-U4 r3 (SE-P4, SE-P5) after an independent Opus review and Codex PASS, and granted the plan commit and implementation (`299a1b1`)
 - 2026-11-07 SE-U4 CP1 hid soft-deleted comments from every API role, required enrollment or admin for new comments, and moved soft delete to `soft_delete_comment`; community 47/47 with rollback/reapply and mutation checks (`154fd67`)
 - 2026-11-07 SE-U4 CP2 limited non-admin `avatars` writes to the user's own folder, kept admin writes anywhere, moved the learner avatar upload to `<uid>/`; storage 13/13 with rollback/reapply, and the full local suites passed (`2d0f42a`)
-- 2026-11-07 SE-U4 correction 1 made Storage test fixtures follow the shared unclean-run rules (a marked run or a timeout refuses the next writer) and clarified the avatars WITH CHECK comment (this commit)
+- 2026-11-07 SE-U4 correction 1 made Storage test fixtures follow the shared unclean-run rules (a marked run or a timeout refuses the next writer) and clarified the avatars WITH CHECK comment (`937a7e7`)
+- 2026-11-07 SE-U4 completed: deleted comments hidden from every API role, enrollment or admin required to comment, non-admin avatar writes limited to `<uid>/`; hosted migrations applied with catalog postflight, D8 behavior probes and Owner-confirmed production QA; SE-P4 and SE-P5 resolved (PR 70, b03a9b4)

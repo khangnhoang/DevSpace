@@ -175,10 +175,36 @@ export async function studentProfile(): Promise<StudentProfile> {
       .single(),
   ) as unknown as StudentProfile;
 }
+// The flat objects of the bucket root plus the student's own folder, where the learner profile uploads since SE-P5.
+// A folder entry in the root listing has no id and is not an object, so it is skipped.
 export async function avatarObjectNames(): Promise<string[]> {
-  return must(
-    await serviceRole().storage.from("avatars").list("", { limit: 1000 }),
-  ).map((object) => object.name);
+  const bucket = serviceRole().storage.from("avatars");
+  const root = must(await bucket.list("", { limit: 1000 }));
+  const folder = must(await bucket.list(IDS.student, { limit: 1000 }));
+  return [
+    ...root.filter((object) => object.id).map((object) => object.name),
+    ...folder
+      .filter((object) => object.id)
+      .map((object) => `${IDS.student}/${object.name}`),
+  ];
+}
+// An exact-name read: a root or folder listing cannot prove that one named object is absent from another folder.
+async function avatarObjectExists(name: string): Promise<boolean> {
+  const stack = readTestStack(join(__dirname, "../.."));
+  const connection = new pg.Client({
+    connectionString: stack.dbUrl,
+    application_name: "devspace-avatar-fixture",
+  });
+  try {
+    await connection.connect();
+    const result = await connection.query(
+      "select 1 from storage.objects where bucket_id = 'avatars' and name = $1",
+      [name],
+    );
+    return result.rowCount === 1;
+  } finally {
+    await connection.end();
+  }
 }
 // Removes the one Storage object a row uploaded, by the exact name it recorded from its own upload request, and checks
 // that it is gone. A shared name pattern would prove no ownership, so with no recorded name nothing is removed and the
@@ -187,8 +213,9 @@ export async function removeAvatarObject(
   name: string | undefined,
 ): Promise<void> {
   if (!name) return;
+  requireActiveRun({ command: "npm run test:e2e" });
   must(await serviceRole().storage.from("avatars").remove([name]));
-  if ((await avatarObjectNames()).includes(name))
+  if (await avatarObjectExists(name))
     throw new Error(`e2e avatar object left in Storage: ${name}`);
 }
 export const fixtureLabel = (value: string) => scope().label(value);

@@ -474,8 +474,11 @@ export async function deleteUser(id: string) {
   return { error };
 }
 
-export async function uploadUserAvatar(file: File) {
-  const fileName = `avatar_${Date.now()}_${file.name.replace(/\s/g, "_")}`;
+// A learner uploads under their own `<user id>/` folder, the only path the avatars policy lets a non-admin write
+// (SE-P5). Admin callers pass no folder and keep the flat name.
+export async function uploadUserAvatar(file: File, folder?: string) {
+  const baseName = `avatar_${Date.now()}_${file.name.replace(/\s/g, "_")}`;
+  const fileName = folder ? `${folder}/${baseName}` : baseName;
   const { error: uploadError } = await supabase.storage
     .from("avatars")
     .upload(fileName, file);
@@ -926,7 +929,7 @@ export async function updateProfile(
 ) {
   let finalImageUrl = dataUser.avatar_url;
   if (newImageFile) {
-    const uploadedUrl = await uploadUserAvatar(newImageFile);
+    const uploadedUrl = await uploadUserAvatar(newImageFile, userId);
     if (uploadedUrl) finalImageUrl = uploadedUrl;
     else return { error: { message: "Lỗi upload avatar" } };
   }

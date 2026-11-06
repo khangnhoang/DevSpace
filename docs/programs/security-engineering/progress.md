@@ -6,15 +6,15 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | SE-U3 r3 delivered in PR #69. No SE-U4 plan is committed yet. |
-| Current unit / checkpoint | SE-U3 completed. SE-U4 (SE-P4, SE-P5) is being planned on `fix/se-u4-comment-avatar-integrity`; its plan is not yet approved or committed. |
-| Status | SE-U3 is completed (PR #69, Owner-confirmed hosted acceptance and production QA on 2026-11-07); SE-P3, SE-P6 and SE-P7 are resolved. |
-| Completed evidence | SE-U3: milestones and PR #69. |
+| Spec revision | [SE-U4 plan](implementation-plans/se-u4-comment-avatar-integrity/plan.md) r3, approved by the Owner on 2026-11-07 after the independent Opus review of r1 and Codex PASS on r3. |
+| Current unit / checkpoint | SE-U4 CP1 (comment integrity) on `fix/se-u4-comment-avatar-integrity`; not started. |
+| Status | Plan approved and committed; implementation is being handed to one implementor session. |
+| Completed evidence | None yet for SE-U4. SE-U3: milestones and PR #69. |
 | Accepted deviations | None. |
-| Hosted state | Hosted migration history lists every repository migration through `20261106100209` (Main, read-only, 2026-11-06). No user data was read and nothing was written. |
-| Blockers / Owner decisions | SE-U4 plan approval, plan commit and implementation grant, each a separate Owner decision. |
-| Next action | Owner reviews the SE-U4 plan summary. |
-| Current authority | Owner granted this local docs commit only. No push, PR, merge, hosted user-data read or hosted write is granted. |
+| Hosted state | SE-U4 baseline (Main, read-only catalog, 2026-11-06/07): `comments` policies and triggers and the `avatars` bucket and policies match the repository; no view, function body or publication references `comments`; `storage.objects` is owned by `supabase_storage_admin`, and `supautils.policy_grants` lets `postgres` manage its policies. No user data was read and nothing was written. |
+| Blockers / Owner decisions | None for implementation. Delivery needs the separate push, PR, merge, hosted prepare/apply and D8 behavior-probe grants. |
+| Next action | The implementor delivers CP1, then CP2, each as a local commit; Main reviews each checkpoint. |
+| Current authority | Owner approved r3 and granted the plan commit and implementation by one implementor session (2026-11-07): local checkpoint and correction commits, the managed test stack. No push, PR, merge, hosted read of user data or hosted write is granted. |
 
 ## Milestones
 
@@ -35,3 +35,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-06 SE-U3 CP3 added dependency-checked GraphQL removal and exact 1.5.11 rollback proof; combined rollback/reapply and partial-prefix checks passed. Final local Vitest 779/779 and E2E 149/149 passed with clean audits; r3 and independent/hosted gates remained pending (`314ccdf`).
 - 2026-11-06 SE-U3 moved compatibility ownership to machine-wide shared recovery and stop/audit boundaries, with exact identity refusal and interruption regressions; Vitest 795/795 and E2E 149/149 passed with clean audits. Independently reviewed r3 is included; implementation re-review and hosted gates remained pending (`52c3556`).
 - 2026-11-07 SE-U3 completed: profile email/identity protection, non-null user/admin roles and unused GraphQL removal delivered with Owner-confirmed hosted acceptance and production QA; SE-P3, SE-P6 and SE-P7 resolved (PR 69, e76cc05)
+- 2026-11-07 Owner approved SE-U4 r3 (SE-P4, SE-P5) after an independent Opus review and Codex PASS, and granted the plan commit and implementation (this commit)

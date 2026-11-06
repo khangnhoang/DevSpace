@@ -6,14 +6,6 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 
 ## Open
 
-### SE-P3: Users can change their profile email
-
-- Status: Open, before migration (moved from SH-P28 on 2026-11-05, Owner decisions 1 and 2).
-- Problem: A user can edit the `email` column in `profiles` themselves (system email is sent to this column).
-- Evidence: Legacy P28 at baseline ddcefd0; CP1 replaces P28 [K3] with normal denied-write regressions. M1 `20261106094309_se_u3_profile_email_integrity` blocks client email/identity changes and client INSERT/UPSERT while preserving H1. Focused profiles passed 27/27 after reset and 27/27 retained, including exact rollback/reapply and signup; F1/U1/U6 browser compatibility passed with unchanged/correct email and clean managed audits. Main's 2026-11-06 metadata snapshot describes the pre-M1 hosted exposure; no hosted user rows were read or migrations applied.
-- Direction: [SE-U3](implementation-plans/se-u3-profile-access-integrity/plan.md), CP1 in the Owner-selected single PR. Local regression evidence does not close this production problem; combined review, delivery and separately authorized hosted acceptance remain required. Current authority/evidence lives in progress.md.
-- Exit condition: A client, including admin, cannot independently replace the profile email used for system mail; local regressions and the separately authorized hosted acceptance pass.
-
 ### SE-P4: Comments expose deleted content and lack enrollment checks
 
 - Status: Open, before migration (moved from SH-P27 on 2026-11-05, Owner decisions 1 and 2).
@@ -29,22 +21,6 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 - Evidence: Legacy P10; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Later work must enforce caller ownership of avatar upload paths.
 - Exit condition: One signed-in user cannot write another user’s avatar path.
-
-### SE-P6: GraphQL exposes tables to anon and authenticated
-
-- Status: Open, before migration (moved from SH-P11 on 2026-11-05, Owner decisions 1 and 2).
-- Problem: The enabled pg_graphql API exposes a grant-derived schema surface to anon/authenticated (advisor 0026/0027), with no in-repo application caller found. Schema discoverability alone does not establish unauthorized row access; GraphQL also respects database grants and RLS.
-- Evidence: CP3 adds M3 `20261106100209_se_u3_disable_unused_graphql`: plain DROP, exact member/reverse-dependency and ACL guards, unchanged managed hooks. Managed 1.6.2 API controls prove disabled anon/user/admin reads/mutations and unchanged profile data; a pinned native 1.5.11 container proves exact rollback, combined reverse/reapply, dependency refusal and the actual committed prefix on later failure. Hosted metadata on 2026-11-06 records 1.5.11, no external catalog dependents and no other GraphQL body references across non-system schemas; app/lib has no caller. Historical Advisor warnings are 15 anon/15 authenticated; external consumers remain unproven. No hosted extension change occurred.
-- Direction: [SE-U3](implementation-plans/se-u3-profile-access-integrity/plan.md), CP3 in the Owner-selected single PR. Refresh hosted dependencies/ACLs/version availability and known consumers before prepare/apply; stop on unexpected objects. Never remove schemas/hooks or use CASCADE. Exact 1.5.11 rollback and all hosted acceptance remain required; one blocker holds the whole PR.
-- Exit condition: Dependency-checked GraphQL removal passes local and separately authorized hosted postflight, REST contracts remain intact and advisor 0026/0027 findings are absent.
-
-### SE-P7: `profiles.role` accepts any text
-
-- Status: Open, before migration (2026-11-04, Owner decision while planning AF-U6: the forms refuse a role other than `user` or `admin`, and the database rule waits for its own migration; moved from BL-P14 on 2026-11-05, Owner decisions 1 and 2).
-- Problem: `profiles.role` is `text` with no check constraint, so an admin writing through the browser client (or a future code path) can store a role other than `user` or `admin`; such a user is neither in the counters nor in the filters (AF-P7 stored "Chọn vai trò" this way).
-- Evidence: CP2 adds M2 `20261106095706_se_u3_profile_role_constraint`, validated CHECK plus NOT NULL and unchanged user default. Profiles passed 36/36 after reset and 36/36 retained, including admin refusal, privileged INSERT/UPDATE/default, invalid-existing-data failure and exact rollback preserving M1/H1. Hosted remains nullable/unconstrained; role values were not read, and even an aggregate read needs approval.
-- Direction: [SE-U3](implementation-plans/se-u3-profile-access-integrity/plan.md), CP2 in the Owner-selected single PR. Before hosted prepare, obtain an approved distinct-role/null-count read and stop for an Owner-approved repair if needed. M2 enforces validated CHECK and NOT NULL with exact rollback; no automatic backfill. A blocker holds the whole PR; QE-F9 remains separate.
-- Exit condition: The database rejects every role outside user/admin, including NULL, existing rows satisfy the validated constraints, and local plus separately authorized hosted acceptance passes.
 
 ### SE-P8: Coupon usage RPC is missing
 
@@ -172,3 +148,6 @@ One line each: ID, status, one-line outcome. Details stay in Git.
 
 - SE-P2 — Resolved 2026-11-05: the activation mail escapes the learner name, the course name and the link, so markup in a name shows as plain text (PR 66, `b6f1902`); `full_name` stays without a length limit where it is saved.
 - SE-P1 — Resolved 2026-11-06: PR #68 (749927bb) binds password reset to a verified recovery session; native current-password enforcement passed the local API proof, and the Owner reported the hosted control active and production recovery/sign-in passing before and after deployment.
+- SE-P3 — Resolved 2026-11-07: PR #69 (`e76cc05`) blocks client email and identity changes and client profile INSERT/UPSERT; hosted migration `20261106094309` applied, and the Owner confirmed hosted acceptance and production QA.
+- SE-P7 — Resolved 2026-11-07: PR #69 (`e76cc05`) enforces a validated user/admin CHECK and NOT NULL on `profiles.role`; hosted migration `20261106095706` applied, and the Owner confirmed hosted acceptance and production QA.
+- SE-P6 — Resolved 2026-11-07: PR #69 (`e76cc05`) removes the unused `pg_graphql` extension after dependency checks, with an exact 1.5.11 rollback; hosted migration `20261106100209` applied, and the Owner confirmed the postflight, Advisor 0026/0027 and production QA.

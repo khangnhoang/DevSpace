@@ -36,6 +36,14 @@ Charter: [README.md](README.md). Progress: [progress.md](progress.md).
 - Direction: reproduce with repeated full runs keeping the Playwright trace of a failure, then fix the cause in the test, its fixtures or the session setup; do not add a retry or a longer timeout without a named cause.
 - Exit condition: the cause is named and fixed, and 5 consecutive full `npm run test:e2e` runs pass `[T8]`.
 
+### QE-P8: rls fixture guards do not stop a timed-out test's later writes or a timed-out cleanup hook
+
+- Status: Open (2026-11-07, found by the Codex implementation review of security-engineering SE-U4; pre-existing in the shared harness, outside that change).
+- Problem: `FixtureScope` and SE-U4's Storage `OwnedObjects` check the shared run state only when a scope opens or a name is recorded. A test body that times out keeps running in the background, so it can still send writes through selectors or names it already holds after cleanup ran. `finishFixtureScope` and `OwnedObjects.cleanup` mark a test-body timeout only on entry; a cleanup hook that itself exceeds `hookTimeout` is not marked, so the next scope can open while that cleanup is still pending.
+- Evidence: `__tests__/helpers/fixture-ownership.ts` (`FixtureScope` constructor check), `__tests__/rls/helpers.ts` (`ownedInsert`, `finishFixtureScope`), `__tests__/helpers/storage-object-scope.ts` at `937a7e7`. In the installed Vitest, a timeout rejects the wrapper without stopping the test function, and the hook timeout is wired to `context.signal`. The end-of-run audit, which covers `storage.objects` and runs after the writer wait, detects persisted residue and makes the run dirty, so the next command resets; nothing reproduced a residue.
+- Direction: check admission immediately before each actor write that uses an already-held selector or name, and mark the run when the cleanup hook's `context.signal` aborts; cover both with controlled pending-request unit tests, for `FixtureScope` and `OwnedObjects` together.
+- Exit condition: a resumed timed-out test can send no further fixture write, a cleanup-hook timeout marks the run before the pending operation settles, and both are proven by tests.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

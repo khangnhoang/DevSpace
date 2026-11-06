@@ -474,8 +474,11 @@ export async function deleteUser(id: string) {
   return { error };
 }
 
-export async function uploadUserAvatar(file: File) {
-  const fileName = `avatar_${Date.now()}_${file.name.replace(/\s/g, "_")}`;
+// A learner uploads under their own `<user id>/` folder, the only path the avatars policy lets a non-admin write
+// (SE-P5). Admin callers pass no folder and keep the flat name.
+export async function uploadUserAvatar(file: File, folder?: string) {
+  const baseName = `avatar_${Date.now()}_${file.name.replace(/\s/g, "_")}`;
+  const fileName = folder ? `${folder}/${baseName}` : baseName;
   const { error: uploadError } = await supabase.storage
     .from("avatars")
     .upload(fileName, file);
@@ -926,7 +929,7 @@ export async function updateProfile(
 ) {
   let finalImageUrl = dataUser.avatar_url;
   if (newImageFile) {
-    const uploadedUrl = await uploadUserAvatar(newImageFile);
+    const uploadedUrl = await uploadUserAvatar(newImageFile, userId);
     if (uploadedUrl) finalImageUrl = uploadedUrl;
     else return { error: { message: "Lỗi upload avatar" } };
   }
@@ -1015,24 +1018,20 @@ export async function editComment(
   return error;
 }
 
-export async function deleteComment(commentId: number, userId: string) {
-  const { data, error } = await supabase
-    .from("comments")
-    .update({
-      deleted_at: new Date().toISOString(),
-    })
-    .eq("id", commentId)
-    .eq("user_id", userId)
-    .select("id"); // Cần Policy SELECT mới để dòng này chạy được
+// Soft delete runs through a database function: the row leaves the comments SELECT policy once deleted_at is set,
+// so a direct UPDATE from the browser is refused (SE-P4). The function checks the owner or admin itself.
+export async function deleteComment(commentId: number) {
+  const { data, error } = await supabase.rpc("soft_delete_comment", {
+    comment_id: commentId,
+  });
 
-  // Nếu có lỗi từ Supabase (VD: RLS chặn)
   if (error) {
     console.error("Supabase Error:", error);
     return error;
   }
 
-  // Nếu không tìm thấy comment (VD: Đã xóa rồi hoặc không phải chính chủ)
-  if (!data || data.length === 0) {
+  // false: already deleted, unknown id, or not the author.
+  if (!data) {
     return { message: "Không tìm thấy bình luận hoặc bạn không có quyền xóa." };
   }
 

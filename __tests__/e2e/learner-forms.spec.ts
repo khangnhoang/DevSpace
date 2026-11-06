@@ -187,7 +187,9 @@ test.describe("profile form", () => {
     await expect(
       page.getByRole("heading", { name: "Cập nhật hồ sơ" }),
     ).toBeHidden();
-    expect(fileName).toMatch(/^avatar_\d+_avatar_e2e\.png$/);
+    expect(fileName).toMatch(
+      /^33333333-3333-4333-8333-333333333333\/avatar_\d+_avatar_e2e\.png$/,
+    );
     expect((await studentProfile()).avatar_url).toBe(
       `${origin}/storage/v1/object/public/avatars/${fileName}`,
     );
@@ -233,7 +235,9 @@ test.describe("profile form", () => {
       if (
         request.method() !== "OPTIONS" &&
         name &&
-        /^avatar_\d+_avatar_e2e\.png$/.test(name)
+        /^33333333-3333-4333-8333-333333333333\/avatar_\d+_avatar_e2e\.png$/.test(
+          name,
+        )
       )
         uploaded = name;
     });

@@ -89,11 +89,7 @@ function CommentEditForm({
   };
 
   return (
-    <form
-      onSubmit={(e) => handleSubmit(save)(e)}
-      noValidate
-      className="mt-2"
-    >
+    <form onSubmit={(e) => handleSubmit(save)(e)} noValidate className="mt-2">
       <Field className="gap-1" data-invalid={!!errors.content}>
         <Textarea
           rows={2}
@@ -182,7 +178,9 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
     }
   }, [isOpen, lessonId, refreshKey]);
 
-  const handleSend = async ({ content: contentToSubmit }: CommentFormValues) => {
+  const handleSend = async ({
+    content: contentToSubmit,
+  }: CommentFormValues) => {
     if (sendingRef.current || !currentUserId) return;
 
     // --- LOGIC CHỐNG SPAM ---
@@ -191,7 +189,7 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
     const isDuplicate = comments.some(
       (cmt) =>
         cmt.user_id === currentUserId &&
-        cmt.content.trim().toLowerCase() === contentToSubmit.toLowerCase()
+        cmt.content.trim().toLowerCase() === contentToSubmit.toLowerCase(),
     );
 
     if (isDuplicate) {
@@ -230,7 +228,7 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
   const handleDelete = async (commentId: number) => {
     if (!currentUserId) return;
 
-    const error = await deleteComment(commentId, currentUserId);
+    const error = await deleteComment(commentId);
     if (error) {
       toast.error("Xóa thất bại");
     } else {
@@ -307,15 +305,10 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
               const isOwner = currentUserId === cmt.user_id;
               const isEditing = editingId === cmt.id;
 
-              // Kiểm tra xem comment đã xóa chưa
-              const isDeleted = !!cmt.deleted_at;
-
               return (
                 <div
                   key={cmt.id}
-                  className={`flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300 group ${
-                    isDeleted ? "opacity-60" : ""
-                  }`}
+                  className="flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300 group"
                 >
                   <CustomAvatar
                     src={cmt.profiles?.avatar_url}
@@ -324,13 +317,7 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
                   />
 
                   <div className="flex-1 min-w-0">
-                    <div
-                      className={`p-3 rounded-2xl rounded-tl-none border relative ${
-                        isDeleted
-                          ? "bg-gray-100 border-gray-200"
-                          : "bg-gray-50 border-gray-100"
-                      }`}
-                    >
+                    <div className="p-3 rounded-2xl rounded-tl-none border relative bg-gray-50 border-gray-100">
                       {/* Header Comment */}
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
@@ -360,15 +347,14 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
 
                           {/* MENU 3 CHẤM 
     - Chỉ hiện nếu là chủ comment 
-    - Chỉ hiện khi chưa xóa (!isDeleted)
     - Không hiện khi đang sửa (!isEditing)
 */}
-                          {isOwner && !isEditing && !isDeleted && (
+                          {isOwner && !isEditing && (
                             <div className="relative">
                               <button
                                 onClick={() =>
                                   setOpenMenuId(
-                                    openMenuId === cmt.id ? null : cmt.id
+                                    openMenuId === cmt.id ? null : cmt.id,
                                   )
                                 }
                                 // 👇 FIX Ở ĐÂY:
@@ -405,28 +391,15 @@ export default function LessonComments({ lessonId, isOpen, onClose }: Props) {
                       </div>
 
                       {/* --- NỘI DUNG COMMENT --- */}
-                      {isDeleted ? (
-                        // 1. Trường hợp ĐÃ XÓA
-                        <p className="text-sm text-gray-500 italic flex items-center gap-2 py-1 select-none">
-                          <Trash2 size={14} />
-                          <span>
-                            Bình luận đã bị xóa{" "}
-                            {cmt.deleted_at &&
-                              formatDistanceToNow(new Date(cmt.deleted_at), {
-                                addSuffix: true,
-                                locale: vi,
-                              })}
-                          </span>
-                        </p>
-                      ) : isEditing ? (
-                        // 2. Trường hợp ĐANG SỬA
+                      {isEditing ? (
+                        // 1. Trường hợp ĐANG SỬA
                         <CommentEditForm
                           initialContent={cmt.content}
                           onSave={handleUpdate}
                           onCancel={() => setEditingId(null)}
                         />
                       ) : (
-                        // 3. Trường hợp BÌNH THƯỜNG
+                        // 2. Trường hợp BÌNH THƯỜNG
                         <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed wrap-break-word">
                           {cmt.content}
                         </p>

@@ -6,11 +6,19 @@ import {
   readFileSync,
   readdirSync,
   renameSync,
-  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
 import { sharedRunMarker } from "../helpers/fixture-ownership";
+import { runContext } from "../../scripts/test-stack/lock.mjs";
+import {
+  assertLocalCompatDocker,
+  GRAPHQL_COMPAT_IMAGE as image,
+  GRAPHQL_COMPAT_LABEL as label,
+  graphqlCompatJournal,
+  inspectGraphqlCompatibility as inspect,
+  removeGraphqlCompatibility,
+} from "../../scripts/test-stack/graphql-compat.mjs";
 import {
   graphCatalogSql,
   graphqlMigration,
@@ -19,9 +27,6 @@ import {
 } from "./graphql-probe";
 import { profileCatalogQueries } from "./profile-write-probe";
 
-const image =
-  "public.ecr.aws/supabase/postgres@sha256:95d92e9563121189086690a4b7f8f2b711a4809a2499f45592199aae68ebae5f";
-const label = "devspace.se-u3.compat.owner";
 const m1 = "20261106094309_se_u3_profile_email_integrity";
 const m2 = "20261106095706_se_u3_profile_role_constraint";
 const m3 = graphqlMigration;
@@ -37,70 +42,15 @@ function docker(args: string[], input?: string, env?: Record<string, string>) {
     maxBuffer: 8 * 1024 * 1024,
   });
 }
-function inspect(record: Journal) {
-  const result = spawnSync(
-    "docker",
-    ["inspect", "--type", "container", record.name],
-    { encoding: "utf8", timeout: 10_000 },
-  );
-  if (result.status !== 0) {
-    if (/No such (object|container)/i.test(result.stderr)) return null;
-    throw new Error(
-      "Cannot establish compatibility-container identity; no cleanup attempted",
-    );
-  }
-  const item = JSON.parse(result.stdout)[0];
-  assert.equal(item.Config.Labels[label], record.owner);
-  assert.equal(item.Config.Image, record.image);
-  assert.equal(item.HostConfig.NetworkMode, "none");
-  assert.equal(Object.keys(item.HostConfig.PortBindings ?? {}).length, 0);
-  assert.ok(
-    item.Mounts.every((mount: { Type: string }) => mount.Type === "tmpfs"),
-    "compatibility container must have no host/volume mounts",
-  );
-  if (record.id) assert.equal(item.Id, record.id);
-  return item;
-}
-function removeOwned(record: Journal, journalPath: string) {
-  const found = inspect(record);
-  if (found) docker(["rm", "-f", found.Id]);
-  assert.equal(
-    inspect(record),
-    null,
-    "compatibility container survived cleanup",
-  );
-  unlinkSync(journalPath);
-}
-
 export async function proveGraphql11511Compatibility() {
   verifyGraphTarget();
   const marker = sharedRunMarker();
-  // Docker gives an explicit context precedence over DOCKER_HOST.
-  const contextEndpoint = () =>
-    docker(["context", "inspect", "--format", "{{.Endpoints.docker.Host}}"]);
-  const endpoint = process.env.DOCKER_CONTEXT
-    ? contextEndpoint()
-    : process.env.DOCKER_HOST || contextEndpoint();
-  if (!/^(npipe:|unix:)/.test(endpoint.trim()))
-    throw new Error("Compatibility probe requires a local Docker engine");
+  const runDir = runContext()!.dir;
+  assertLocalCompatDocker();
   const evidence = join(process.cwd(), ".supabase-test", "se-u3-evidence");
   mkdirSync(evidence, { recursive: true });
-  const journalPath = join(evidence, "compat-owner.json");
-  // The runner settles prior Node writers before granting this lock. Recover only a recorded owner.
-  try {
-    const previous = JSON.parse(readFileSync(journalPath, "utf8")) as Journal;
-    assert.match(previous.owner, /^devspace-se-u3-[0-9a-f-]+$/);
-    assert.equal(previous.name, `${previous.owner}-db`);
-    assert.equal(previous.image, image);
-    removeOwned(previous, journalPath);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      marker.mark(
-        "SE-U3 prior compatibility ownership journal could not be reconciled",
-      );
-      throw error;
-    }
-  }
+  // A machine-wide journal lets every later test/stop command recover this resource, from any checkout.
+  const journalPath = graphqlCompatJournal(runDir);
   const owner = `devspace-se-u3-${randomUUID()}`;
   const record: Journal = { owner, name: `${owner}-db`, image };
   writeFileSync(journalPath, JSON.stringify(record), { flag: "wx" });
@@ -389,7 +339,7 @@ export async function proveGraphql11511Compatibility() {
     originalError = error;
   } finally {
     try {
-      removeOwned(record, journalPath);
+      removeGraphqlCompatibility(record, runDir);
     } catch (cleanup) {
       marker.mark(
         "SE-U3 compatibility cleanup failed; retain its exact ownership journal",

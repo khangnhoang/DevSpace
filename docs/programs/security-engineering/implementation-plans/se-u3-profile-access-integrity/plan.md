@@ -1,6 +1,6 @@
 # SE-U3 detail plan — Profile write integrity and unused GraphQL access
 
-Revision: r2, 2026-11-06. Owner approval and current authority: [progress.md](../../progress.md). Charter: [security-engineering](../../README.md).
+Revision: r3, 2026-11-06. Owner approval and current authority: [progress.md](../../progress.md). Charter: [security-engineering](../../README.md).
 
 ## 1. Binding Spec
 
@@ -35,7 +35,7 @@ Outcome: client requests cannot independently replace the profile email used for
 | G3. Add both role membership and NOT NULL enforcement; never silently coerce existing values or grant admin by a data repair. | A CHECK alone accepts NULL, or remediation changes permissions without an Owner decision. |
 | G4. Inspect external dependents of the extension AND its member objects, preserving expected platform hooks. Use a plain DROP EXTENSION without CASCADE; never remove schemas, hooks or unrelated objects to make it succeed. | A dependency is missed or unrelated database objects disappear with the extension. |
 | G5. Prove rollback against the observed extension version and platform wrapper/ACL behavior, not only successful reinstallation of the latest version. | Rollback changes the API contract, loses custom ACLs or fails because the old version is unavailable. |
-| G6. Use the managed test stack for all tests and rollback probes; verify its real Docker/database identity and hold its lock. Fixtures record intent before writes and verify exact cleanup/restoration. | A probe writes to hosted/dev or corrupts shared seed/fixture state. |
+| G6. Use the managed test runner and its machine-wide lock for all database tests/probes. D8 additionally permits one run-owned, network-none compatibility container with no ports or host mounts; verify its image digest/labels/ID before every write or cleanup. Journal intent before creation; settle and verify exact removal, including recovery of a prior owned journal. Keep normal dev/test container images/configuration unchanged. | A probe writes to hosted/dev, corrupts shared fixtures or leaves an unowned compatibility resource. |
 | G7. Main supplies hosted metadata to the implementor. Hosted user-data reads, repairs, migration prepare/apply and temporary write probes retain their separate grants. | Planning or a review verdict is mistaken for production authorization. |
 | G8. Gate the whole PR on all three items. Apply migrations in checkpoint order, each in its own transaction, and track the actual committed prefix on any failure. Stop without merging or blindly retrying/rolling back. | A later migration fails after earlier ones committed, but delivery is incorrectly reported as atomic or complete. |
 
@@ -45,8 +45,10 @@ Outcome: client requests cannot independently replace the profile email used for
 - D2 (2026-11-06): SE-P3 applies to both admin and ordinary user clients.
 - D3 (2026-11-06): before the SE-P6 migration, check extension dependencies; the Owner recalls none, but that recollection is not evidence. Never use CASCADE to delete dependents blindly. Removal of unused GraphQL is the selected direction, subject to this precondition.
 - D4 (2026-11-06): SE-P7 permits only `user` or `admin`, never NULL.
-- D5: charter decisions 1–2 and ADR 0007 own the pre-migration security boundary. This plan does not authorize implementation, commits, delivery or hosted writes. Independent plan and implementation reviews remain future gates.
+- D5: charter decisions 1–2 and ADR 0007 own the pre-migration security boundary. This plan does not itself authorize implementation, commits, delivery or hosted writes. Review requirements remain unchanged; current authority and gate results live in progress.md.
 - D6 (2026-11-06): the Owner explicitly selects one PR for this cluster and requests the revised plan be independently reviewed again. Keep three separate migrations/rollbacks and sequential checkpoints; accept that a blocker in any item holds the whole PR. This task-specific direction takes precedence over the planning skill's generic batch exclusion without changing the skill.
+- D7 (2026-11-06): after the already-running implementor commits CP1, stop that session; Main continues directly and opens no additional session. Independent implementation review is not claimed or waived by this execution change.
+- D8 (2026-11-06): when the managed test stack was found to offer only pg_graphql 1.6.2, the Owner selected a supplemental local environment compatible with hosted 1.5.11, authorized updating the plan and continuing. Preserve exact hosted-version rollback proof; do not upgrade hosted or replace the managed test stack.
 
 ## 2. Repository facts
 
@@ -86,6 +88,10 @@ Before any implementor dispatch, Main refreshes and supplies this snapshot with 
 - [Supabase extension documentation](https://github.com/supabase/supabase/blob/master/apps/docs/content/guides/database/extensions/pg_graphql.mdx) documents disabling via DROP EXTENSION; hosted ownership, dependencies and wrapper behavior still require environment-specific proof.
 - [PostgreSQL constraints](https://www.postgresql.org/docs/current/ddl-constraints.html) explains that a CHECK evaluating to NULL passes — hence AC4 requires explicit NOT NULL enforcement too.
 
+### 2.4 Compatibility evidence added for r3
+
+At CP2 commit `8ce57d0`, a metadata-only test under the managed runner observed installed/available pg_graphql 1.6.2 only on image `public.ecr.aws/supabase/postgres:17.11.0.004`; hosted still records 1.5.11 with 1.5.9/1.5.11 available. Existing cached image `public.ecr.aws/supabase/postgres:17.6.1.084`, digest `sha256:95d92e9563121189086690a4b7f8f2b711a4809a2499f45592199aae68ebae5f`, contains 1.5.11. Its native bootstrap includes the Supabase roles and GraphQL platform hooks. The supplemental environment is a real PostgreSQL/extension compatibility proof, not proof of hosted application data or HTTP behavior.
+
 ## 3. Bounded implementation hypotheses
 
 - SE-P3: a new SECURITY INVOKER BEFORE UPDATE trigger, with empty search_path, rejects changed email or identity for anon/authenticated without an admin exemption. It uses null-safe comparison, permits unchanged email, and bypasses only trusted database roles. Revoke direct client INSERT on profiles to close recreation/UPSERT insertion; Auth provisioning and server admin creation retain their trusted path. Revoke default execute access on the new trigger function. This may be replaced only if AC1–AC3 and exact rollback still hold; do not change the existing role helper or provisioning trigger.
@@ -93,12 +99,13 @@ Before any implementor dispatch, Main refreshes and supplies this snapshot with 
 - SE-P6: use a separate migration with plain `DROP EXTENSION pg_graphql` after dependency assertions. No CASCADE or DROP SCHEMA, and no removal/replacement of platform hooks. The disabled placeholder may remain. The rollback restores the recorded version/schema and effective privileges; unavailable version, unsupported ownership or a custom dependent blocks the whole PR rather than triggering a workaround.
 - Extend `profiles.test.ts` and add a bounded `graphql.test.ts` in the existing rls project. Use actor API requests and catalog queries through `withPg`; add a local-only GraphQL request helper using the verified injected stack URL/actor sessions. Never log credentials, bearer tokens or response data from hosted.
 - If rollback/reapply needs a harness extension, add a bounded rls verification test using a single verified test connection under the existing runner lock, with unconditional restoration and catalog comparison. It must restore the forward state before other tests run and leave the run visibly unclean if settlement fails. Do not operate the managed test stack manually or weaken its audit.
+- D8 mechanism: run a digest-pinned 1.5.11 image as a disposable compatibility database inside a managed rls test; use the cache when available and fetch only that public digest when absent (including CI). Bootstrap with the image's platform SQL and replay the actual published public baseline/migrations, adding only minimal invented fixtures and Storage dependency declarations. This is not a Storage API proof. Run the unchanged M1/M2/M3 statements with their transaction boundaries and a fresh owned history ledger, exact 1.5.11 rollback, combined reverse/reapply and controlled partial-apply proof there. Do not copy data or credentials from either existing stack. Never repair existing stack/hosted history. On the regular 1.6.2 stack, M3 may accept that explicitly tested version; a test-only version-native enable/control restores its original forward disabled state. The published rollback remains pinned to hosted 1.5.11 and is never relabeled as tested on 1.6.2.
 
 ## 4. Checkpoints
 
 ### 4.1 One PR and checkpoint order
 
-One PR contains SE-P3, SE-P7 and SE-P6, this plan and the PR #68 catch-up on the current branch. One implementor works sequentially; no parallel checkout writer. Each checkpoint has its own implementation, tests, rollback proof, author self-review and Main review. The independent implementation gate reviews the entire combined diff and all three migration/rollback pairs. Run final full regression once after CP3 and all whole-diff review corrections; run focused checks at intermediate checkpoints. Plan approval and implementation, commit, remote and hosted grants remain separate.
+One PR contains SE-P3, SE-P7 and SE-P6, this plan and the PR #68 catch-up on the current branch. One checkout writer works sequentially; D7 makes Main the writer after CP1. Each checkpoint has implementation, tests, rollback proof and author self-review; Main reviewed the separate implementor's CP1. The independent implementation gate remains pending under D7 and reviews the entire combined diff and all three migration/rollback pairs when authorized. Run final full regression once after CP3 and all whole-diff review corrections; focused checks at intermediate checkpoints. Plan approval and implementation, commit, remote and hosted grants remain separate.
 
 | Item | Outcome / acceptance | Order inside the same PR | Expected files and boundaries |
 | --- | --- | --- | --- |
@@ -156,12 +163,15 @@ No new visual/perceptual manual pass is required because no UI is changed; exist
 | Existing invalid or NULL roles make validation fail | Owner-approved aggregate before hosted prepare; migration precondition fails without modifying rows. No coercion to user/admin or disabling constraints; the whole PR waits. |
 | Extension dependencies, ownership or managed hooks differ between local and hosted | CP0 snapshot and local plain-drop/restore proof; repeat on hosted before prepare/apply. Unexpected objects block the whole PR. |
 | Rollback installs a different version or fails to restore API/ACL behavior | Confirm recorded version is available before forward migration, compare wrapper/ACL state and prove an allowed public query during local rollback. Stop if exact restoration is unsupported. |
+| Managed-stack extension version differs from hosted | D8 compatibility container proves unchanged migration/rollback SQL on 1.5.11; the regular stack verifies HTTP/REST on 1.6.2. Both proofs are mandatory and attributed separately; no fallback version or weakening of the hosted rollback. |
 | Constraint validation or DDL waits too long | Inspect table size/catalog estimates and use bounded lock/statement timeouts; schedule the apply appropriately. A timeout rolls back and is reported, never retried blindly. |
 | M2 or M3 fails after an earlier migration commits | Prove the partial-state case locally at CP3, complete all preflights before apply, then reconcile actual migration history/catalog on an error. No merge or automatic rollback/retry; the Owner decides recovery under fresh grants. |
 
 Rollout for the one PR, with three ordered migration transactions:
 
-1. The revised plan passes independent review and Owner approval before implementation starts. Under a separate implementation grant, complete CP1–CP3 and their local rollback proofs, Main review, one independent implementation gate over the complete diff, final full regression and green PR CI. This assignment authorizes plan revision/re-review only.
+Concrete version/readiness, prepare/apply, postflight and recovery steps: [section 7](#7-operational-runbook).
+
+1. The reviewed plan and Owner's explicit execution decisions define the work; current authority and gate results live in progress.md. Complete CP1–CP3 and their local rollback proofs, author/Main review, the independent implementation gate over the complete diff, final full regression and green PR CI before delivery. The plan/runbook itself grants no action; D7 keeps any unrun independent review visibly pending.
 2. Before any hosted prepare, Main refreshes metadata for all three migrations, obtains the distinct-role/null-count read grant and completes any separately approved repair. Verify GraphQL dependents/consumers and exact rollback-version availability before the set is prepared, not only after M1/M2 have applied. A blocker in any item holds the whole PR.
 3. These restrictions are compatible with the existing forms (email is not sent; roles are already constrained in forms) and the app has no GraphQL source caller. Apply M1, M2, M3 in timestamp/checkpoint order before merge, with separate prepare and apply grants naming project `lkvxxrxojjlkchzzqidu`, the clean reviewed commit and the complete ordered migration-version list. Follow `supabase-migration` Hosted apply: target ref check; dry run lists exactly those three migrations; repeat the metadata/dependency/data readiness and dry run at the same commit immediately before apply. Any changed readiness, unexpected migration or password prompt stops the operation. Each migration has its own transaction; the set is not atomic.
 4. If apply fails, stop delivery. Main reads migration history and touched catalog metadata to identify the committed prefix and the failed/pending versions; do not assume all three rolled back. Record the partial hosted state and preserve evidence. Do not retry, repair history, merge or automatically run rollbacks. The Owner decides whether to correct and prepare/apply the exact remaining versions at a newly reviewed clean commit or explicitly authorize rollback of the applied prefix in reverse order. After any recovery, restart prepare with fresh readiness checks and a dry run listing exactly the now-expected versions.
@@ -175,3 +185,81 @@ Rollback: each `.down.sql` restores only its migration's exact previous state in
 ## 6. Progress
 
 Current State and milestones: [progress.md](../../progress.md).
+
+## 7. Operational runbook
+
+### Ordered migration set
+
+| Order | Migration | Rollback |
+| --- | --- | --- |
+| M1 | `20261106094309_se_u3_profile_email_integrity.sql` | `20261106094309_se_u3_profile_email_integrity.down.sql` |
+| M2 | `20261106095706_se_u3_profile_role_constraint.sql` | `20261106095706_se_u3_profile_role_constraint.down.sql` |
+| M3 | `20261106100209_se_u3_disable_unused_graphql.sql` | `20261106100209_se_u3_disable_unused_graphql.down.sql` |
+
+Each migration commits separately. One CLI invocation does not make the set atomic. All readiness checks below must pass before preparing any of the set.
+
+### Readiness before prepare
+
+1. Main confirms the reviewed clean commit, current independent gates, final local regression and green PR CI. Push, PR and merge remain separate grants. Apply is before merge because the current production forms already omit email from edits, use user/admin roles, and have no GraphQL caller in the repository.
+2. Confirm `supabase/.temp/project-ref` is exactly `lkvxxrxojjlkchzzqidu`; compare hosted migration history with the committed published baseline. Stop on any unexpected pending version or definition drift.
+3. Refresh profile columns/defaults/constraints, policies, table and column ACLs, H1/provisioning functions and triggers. M1 expects direct client INSERT without grant option, no PUBLIC/column INSERT path; M2 expects nullable role with default `user` and no pre-existing `profiles_role_allowed`. Capture the exact prior state; a migration refusal is a stop, not a request to weaken its guard.
+4. Obtain the separate user-data-read grant for this aggregate only:
+
+   ```sql
+   select role, count(*) as profile_count
+   from public.profiles
+   group by role
+   order by role nulls first;
+   ```
+
+   The NULL group is the null count. Any value outside exactly `user`/`admin`, including NULL, blocks the whole set. Obtain an explicit repair decision/grant; never coerce values, inspect individual accounts or read email/Auth mismatches under this aggregate grant.
+5. Confirm hosted `pg_graphql` is **1.5.11**, owner `supabase_admin`, schema `graphql`, and that 1.5.11 is still available. The regular local stack's 1.6.2 allowance is not hosted readiness. Compare all ten extension members, schema/sequence/function ACLs, wrapper/resolver definitions, available-version metadata and both platform hooks with the recorded snapshot. The rollback restores 1.5.11 explicitly; no default-version substitution is allowed.
+6. Inspect reverse dependencies referencing the extension and every member, not just the extension OID:
+
+   ```sql
+   with ext as (
+     select oid from pg_extension where extname = 'pg_graphql'
+   ), members as (
+     select d.classid, d.objid
+     from pg_depend d join ext on d.refobjid = ext.oid
+     where d.refclassid = 'pg_extension'::regclass and d.deptype = 'e'
+   ), roots as (
+     select * from members
+     union all select 'pg_extension'::regclass, oid from ext
+   )
+   select pg_describe_object(d.classid, d.objid, d.objsubid) as dependent,
+          pg_describe_object(d.refclassid, d.refobjid, d.refobjsubid) as referenced,
+          d.deptype
+   from pg_depend d join roots r
+     on d.refclassid = r.classid and d.refobjid = r.objid
+   where not exists (
+     select 1 from members m where m.classid = d.classid and m.objid = d.objid
+   ) and not (
+     d.classid = 'pg_extension'::regclass and d.objid in (select oid from ext)
+   );
+   ```
+
+   Also inspect function-body/dynamic references across non-system schemas and known external consumers. Catalog/source searches cannot prove the absence of external consumers. Unexpected dependencies, custom grants, consumers or unavailable exact rollback stop the whole set; do not remove schemas/hooks or use CASCADE.
+
+### Prepare and apply
+
+Follow the `supabase-migration` skill's Hosted apply procedure, using Node through `fnm exec --` and `npx.cmd` on Windows.
+
+1. Under a separate **prepare** grant naming this project and all three files, run `supabase db push --linked --dry-run` at the clean reviewed commit. It must list exactly M1, M2 and M3 in order.
+2. Obtain a separate **apply** grant naming the same project, commit and versions. Immediately repeat target, clean-commit, metadata/dependency/data readiness and dry run. Changed readiness or any different version list invalidates prepare.
+3. Run `supabase db push --linked --yes`. Stop on any error or password prompt. Never use include-all/seed/roles flags, history repair, a hosted DB URL or an extra deployment command.
+4. Reconcile migration history and catalog independently. If apply failed, identify the actually committed prefix; do not assume earlier migrations rolled back. Record the partial state and stop delivery. The Owner chooses a newly reviewed correction with fresh prepare/apply grants for the remaining versions, or explicitly grants reverse rollback of the confirmed prefix. Do not retry or roll back automatically.
+
+### Postflight and acceptance
+
+- Main checks the new trigger's security mode/search_path/ACL, client INSERT privileges, unchanged H1/provisioning definitions, validated role CHECK, NOT NULL and unchanged default. Check the GraphQL extension/resolvers are absent, the disabled wrapper and managed hooks have their intended definitions, and REST metadata/grants have not widened.
+- Use read-only simulated-role/catalog probes for anon/authenticated, including the admin context. A rolled-back write is still a hosted write and requires a separate grant. Catalog checks alone do not establish live denied-write behavior.
+- A GraphQL disabled probe must inspect the response body, including errors inside HTTP 200. Use a metadata-only request; no real-user collection reads or test mutations without separate authorization. Check Security Advisor 0026/0027 are absent through a supported authorized interface; an unrun check stays pending.
+- Owner acceptance on designated production accounts covers normal profile save, admin role edit and intended account creation after the guards are active. Main does not enter Owner credentials or create hosted fixtures under the implementation grant.
+- Merge only under its own grant after all prerequisites pass; confirm the existing automatic production deployment and complete Owner QA. Close SE-P3/P7/P6 together only after delivery and all three hosted acceptance checks. Keep PR #68 acceptance attributed to its original Owner report.
+
+### Rollback and local evidence boundaries
+
+Under a new explicit hosted rollback grant, roll back only the confirmed applied prefix, in reverse order: M3, M2, M1. M3 restores exactly 1.5.11; M2 removes only its CHECK/NOT NULL and retains the user default; M1 restores prior INSERT access and removes only its guard, preserving H1. This reopens the relevant exposures. It cannot undo mail already sent or repair existing data.
+
+The managed 1.6.2 stack proves HTTP/RPC/native denial and REST/application compatibility. Its enabled control uses its own 1.6.2 and restores its disabled catalog. The digest-pinned 1.5.11 compatibility database separately proves native GraphQL controls, exact migration/rollback definitions/ACLs/ownership, combined reverse/reapply and an actual committed M1 prefix when M2 fails. Its fresh owned history ledger is not a test of the hosted CLI or a repair of existing history; minimal Storage declarations are bootstrap dependencies, not Storage API coverage. Both environments and their cleanup must pass; neither substitutes for hosted postflight.

@@ -9,7 +9,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { compareSnapshots, takeSnapshot } from "./audit.mjs";
 import { ensureTestStack, stopTestStack } from "./ensure.mjs";
 import {
-  LockError,
   acquireLock,
   awaitRunWriters,
   clearOldRunMarks,
@@ -22,6 +21,7 @@ import {
 } from "./lock.mjs";
 import { clearState, readState, stateDir, writeState } from "./state.mjs";
 import { assertTestMailboxEmpty } from "./mail.mjs";
+import { reconcileGraphqlCompatibility } from "./graphql-compat.mjs";
 
 const preload = pathToFileURL(
   join(dirname(fileURLToPath(import.meta.url)), "writer-preload.mjs"),
@@ -75,9 +75,10 @@ async function enter({ command, root, dir }) {
     }
     clearOldRunMarks({ dir, keep: lock.runId });
     await reapOrphans({ dir });
+    if (reconcileGraphqlCompatibility({ dir }))
+      markDirty(dir, "recovered an interrupted SE-U3 compatibility database");
   } catch (error) {
-    if (error instanceof LockError && error.code === "writer-alive")
-      markDirty(dir, error.message);
+    markDirty(dir, error instanceof Error ? error.message : String(error));
     releaseLock(lock);
     throw error;
   }
@@ -157,6 +158,7 @@ export async function runOnTestStack({
     } else {
       clearRunWriters({ dir, runId });
       try {
+        reconcileGraphqlCompatibility({ dir });
         // Mail can arrive after a browser failed; it must not be hidden by the database-only snapshot.
         if (ensure === ensureTestStack) await assertTestMailboxEmpty();
         const differences = audit.compareSnapshots(

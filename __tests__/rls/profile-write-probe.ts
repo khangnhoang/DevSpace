@@ -8,7 +8,7 @@ import { fixtureScope, IDS, withPg } from "./helpers";
 
 const migration = "20261106094309_se_u3_profile_email_integrity";
 
-async function profileCatalog(client: pg.Client) {
+export async function profileCatalog(client: pg.Client) {
   const queries = {
     relations: `select c.relname, pg_get_userbyid(c.relowner) as owner, c.relrowsecurity, c.relforcerowsecurity,
       (select array_agg(a::text order by a::text) from unnest(c.relacl) a) as acl

@@ -5,6 +5,7 @@
 // Subject: policies and grants on public.profiles and public.profile_cards, prevent_role_escalation,
 //   public.is_admin(), public.handle_new_user() (H1, H2-1a, H2-1b), and the SE-U3 client identity guard;
 //   Auth's minimum password length (BL-P11).
+//   SE-U3 also enforces validated user/admin membership and NOT NULL, including privileged writes.
 // Allowed paths: self and admin read profiles; anyone reads profile_cards; admin changes another user's role;
 //   permitted profile edits retain email/identity; a new sign-up becomes a plain user; an 8-character password.
 // Denied paths: anon reads profiles; a learner reads another profile, writes through profile_cards, changes
@@ -16,6 +17,10 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { proveProfileEmailRollback } from "./profile-write-probe";
+import {
+  proveProfileRoleConstraint,
+  proveProfileRoleRollback,
+} from "./profile-role-probe";
 import {
   admin,
   anon,
@@ -43,6 +48,36 @@ async function profile(id: string) {
 
 beforeEach(() => {
   startFixtureScope();
+});
+
+describe("profile role invariant (SE-P7)", () => {
+  it.each([null, "", " ", "Admin", "USER", "Chọn vai trò", "moderator"])(
+    "[P20] an admin cannot persist invalid role %j or accompanying fields",
+    async (role) => {
+      await fixtureScope().acquire("profiles", IDS.learner, [
+        "role",
+        "full_name",
+      ]);
+      const before = await profile(IDS.learner);
+      const result = await admin
+        .from("profiles")
+        .update({ role, full_name: "must not persist" })
+        .eq("id", IDS.learner);
+      expect(result.error?.code).toBe(role === null ? "23502" : "23514");
+      if (role !== null)
+        expect(result.error?.message).toContain("profiles_role_allowed");
+      expect(await profile(IDS.learner)).toEqual(before);
+    },
+  );
+  it(
+    "[P21] privileged INSERT/UPDATE enforce role membership, non-null and omitted-role default",
+    proveProfileRoleConstraint,
+  );
+  it(
+    "[P22] M2 refuses invalid existing data atomically and rollback/reapply preserves M1/H1",
+    proveProfileRoleRollback,
+    60_000,
+  );
 });
 afterEach(finishFixtureScope);
 

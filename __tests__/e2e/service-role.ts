@@ -136,6 +136,11 @@ export async function profileOf(id: string): Promise<{
       .single(),
   );
 }
+export async function profileEmailOf(id: string): Promise<string | null> {
+  return must(
+    await serviceRole().from("profiles").select("email").eq("id", id).single(),
+  ).email;
+}
 // The profile fields the learner-form rows change. The scope restores them on cleanup; the baseline is the seed student
 // (the on_auth_user_created trigger copies the name, nothing else is set).
 const STUDENT_PROFILE_FIELDS = [

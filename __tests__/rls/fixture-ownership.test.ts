@@ -292,14 +292,12 @@ describe("fixture ownership persistence", () => {
       const original = new Error("injected setup/assertion failure");
       await expect(
         withFixtureScope(owner, async () => {
-          const result = await admin
-            .from("notifications")
-            .insert({
-              receiver_id: IDS.learner,
-              actor_id: IDS.admin,
-              title,
-              type: "system",
-            });
+          const result = await admin.from("notifications").insert({
+            receiver_id: IDS.learner,
+            actor_id: IDS.admin,
+            title,
+            type: "system",
+          });
           expect(result.error).toBeNull();
           expect(result.data).toBeNull();
           const auth = await fixtures.auth.admin.createUser({

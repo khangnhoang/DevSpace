@@ -84,6 +84,10 @@ test.describe("admin pages", () => {
       .filter({ hasText: "JavaScript căn bản" });
     await expect(payment).toBeVisible();
     await expect(payment.getByText("199.000")).toBeVisible();
+    // The learner column shows the profile's name and email (BL-P18), not the "Ẩn danh" fallback.
+    await expect(payment.getByText("Lê Minh Học Viên")).toBeVisible();
+    await expect(payment.getByText(ACCOUNTS.student.email)).toBeVisible();
+    await expect(payment.getByText("Ẩn danh")).toHaveCount(0);
   });
 
   test("[A1] the user list shows the three seed users", async ({ page }) => {

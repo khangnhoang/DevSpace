@@ -15,7 +15,8 @@ interface PaymentRow {
   status: string;
   amount?: number;
   created_at: string;
-  profiles?: {
+  // getAllPayments joins the learner by hand and returns it as `users`.
+  users?: {
     full_name?: string | null;
     avatar_url?: string | null;
     email?: string | null;
@@ -23,9 +24,9 @@ interface PaymentRow {
   courses?: { name?: string } | null;
 }
 
-// The learner label is the one the table row shows (P15 keeps it "Ẩn danh" until the page reads the right relation).
+// The learner label is the one the table row shows.
 const orderSummary = (p: PaymentRow, consequence: string) =>
-  `Học viên: ${p.profiles?.full_name || "Ẩn danh"}. Khóa học: ${p.courses?.name || "Khóa học đã xóa"}. Số tiền: ${p.amount?.toLocaleString("vi-VN")} đ. ${consequence}`;
+  `Học viên: ${p.users?.full_name || "Ẩn danh"}. Khóa học: ${p.courses?.name || "Khóa học đã xóa"}. Số tiền: ${p.amount?.toLocaleString("vi-VN")} đ. ${consequence}`;
 
 export default function TransactionsPage() {
   const [payments, setPayments] = useState<PaymentRow[]>([]);
@@ -75,7 +76,7 @@ export default function TransactionsPage() {
       res = await rejectPayment(id);
     } catch {
       toast.error(
-        "Không nhận được kết quả từ máy chủ. Hãy tải lại trang để kiểm tra trạng thái đơn."
+        "Không nhận được kết quả từ máy chủ. Hãy tải lại trang để kiểm tra trạng thái đơn.",
       );
       return;
     }
@@ -88,7 +89,7 @@ export default function TransactionsPage() {
 
   // Logic lọc client-side
   const filteredPayments = payments.filter((p) =>
-    filter === "all" ? true : p.status === filter
+    filter === "all" ? true : p.status === filter,
   );
 
   return (
@@ -120,10 +121,10 @@ export default function TransactionsPage() {
                 {status === "all"
                   ? "Tất cả"
                   : status === "pending"
-                  ? "Chờ duyệt"
-                  : status === "success"
-                  ? "Thành công"
-                  : "Đã hủy"}
+                    ? "Chờ duyệt"
+                    : status === "success"
+                      ? "Thành công"
+                      : "Đã hủy"}
               </button>
             ))}
           </div>
@@ -169,15 +170,15 @@ export default function TransactionsPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <CustomAvatar
-                            src={p.profiles?.avatar_url}
+                            src={p.users?.avatar_url}
                             className="w-9 h-9 border border-gray-700"
                           />
                           <div>
                             <p className="font-semibold text-white text-sm">
-                              {p.profiles?.full_name || "Ẩn danh"}
+                              {p.users?.full_name || "Ẩn danh"}
                             </p>
                             <p className="text-xs text-gray-500">
-                              {p.profiles?.email}
+                              {p.users?.email}
                             </p>
                           </div>
                         </div>
@@ -259,7 +260,7 @@ export default function TransactionsPage() {
           title="Duyệt đơn thanh toán"
           description={orderSummary(
             approveTarget,
-            "Xác nhận đã nhận tiền? Hành động này sẽ kích hoạt khóa học cho học viên."
+            "Xác nhận đã nhận tiền? Hành động này sẽ kích hoạt khóa học cho học viên.",
           )}
           confirmLabel="Duyệt đơn"
           onConfirm={() => handleApprove(approveTarget.id)}
@@ -274,7 +275,7 @@ export default function TransactionsPage() {
           title="Hủy đơn hàng"
           description={orderSummary(
             rejectTarget,
-            "Hủy bỏ giao dịch này? Học viên sẽ không được kích hoạt khóa học."
+            "Hủy bỏ giao dịch này? Học viên sẽ không được kích hoạt khóa học.",
           )}
           confirmLabel="Hủy đơn hàng"
           cancelLabel="Giữ đơn hàng"

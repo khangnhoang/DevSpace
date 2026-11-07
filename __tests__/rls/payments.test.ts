@@ -1608,24 +1608,43 @@ describe("payment functions: concurrency", { timeout: 60000 }, () => {
     // which is the window; it waits on an advisory lock the test holds, and only for the connection that set the flag.
     const key = Number.parseInt(RUN.slice(0, 7), 16);
     const hook = `w_hook_${RUN}`;
-    await withPg(async (c) => {
-      await c.query(
-        `create function public.${hook}() returns trigger language plpgsql as $$
-         begin
-           if current_setting('se_u1.hook', true) = '1' then perform pg_advisory_xact_lock(${key}); end if;
-           return null;
-         end $$`,
-      );
-      await c.query(
-        `create trigger ${hook} after insert on public.payments for each statement execute function public.${hook}()`,
-      );
-    });
     const clients = [0, 1, 2].map(
       () => new pg.Client({ connectionString: stack.dbUrl }),
     );
     const [h, a, m] = clients;
-    await Promise.all(clients.map((c) => c.connect()));
+    // Only a client that connected is rolled back and ended: end() on one that never connected waits forever.
+    const connected = new Set<pg.Client>();
+    let failed = false;
+    let original: unknown;
     try {
+      // Function and trigger commit together or not at all, so a failed setup leaves neither behind.
+      await withPg(async (c) => {
+        await c.query("begin");
+        try {
+          await c.query(
+            `create function public.${hook}() returns trigger language plpgsql as $$
+             begin
+               if current_setting('se_u1.hook', true) = '1' then perform pg_advisory_xact_lock(${key}); end if;
+               return null;
+             end $$`,
+          );
+          await c.query(
+            `create trigger ${hook} after insert on public.payments for each statement execute function public.${hook}()`,
+          );
+          await c.query("commit");
+        } catch (error) {
+          await c.query("rollback").catch(() => undefined);
+          throw error;
+        }
+      });
+      const attempts = await Promise.allSettled(
+        clients.map(async (c) => {
+          await c.connect();
+          connected.add(c);
+        }),
+      );
+      const refused = attempts.find((r) => r.status === "rejected");
+      if (refused) throw refused.reason;
       await h.query("begin");
       await h.query("select pg_advisory_xact_lock($1)", [key]);
       await a.query("begin");
@@ -1683,18 +1702,58 @@ describe("payment functions: concurrency", { timeout: 60000 }, () => {
         { id: earlier, status: "failed" },
         { id: result.payment_id, status: "pending" },
       ]);
-    } finally {
-      await Promise.all(
-        [h, a].map((c) => c.query("rollback").catch(() => undefined)),
-      );
-      await Promise.all(clients.map((c) => c.end()));
-      // The scope's selector (user, course) must match one row at cleanup; the closed order goes first.
-      must(await fixtures.from("payments").delete().eq("id", earlier));
-      await withPg(async (c) => {
-        await c.query(`drop trigger if exists ${hook} on public.payments`);
-        await c.query(`drop function if exists public.${hook}()`);
-      });
+    } catch (error) {
+      failed = true;
+      original = error;
     }
+
+    // Every cleanup step runs whatever the others did; the original error and each cleanup error are all reported.
+    const cleanupErrors: unknown[] = [];
+    const step = async (run: () => Promise<unknown>) => {
+      try {
+        await run();
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    };
+    for (const c of [h, a])
+      if (connected.has(c)) await step(() => c.query("rollback"));
+    for (const c of connected) await step(() => c.end());
+    // The scope's selector (user, course) must match one row at cleanup; the closed order goes first.
+    await step(async () =>
+      must(await fixtures.from("payments").delete().eq("id", earlier)),
+    );
+    await step(() =>
+      withPg((c) =>
+        c.query(`drop trigger if exists ${hook} on public.payments`),
+      ),
+    );
+    await step(() =>
+      withPg((c) => c.query(`drop function if exists public.${hook}()`)),
+    );
+    await step(async () => {
+      const left = await withPg(
+        async (c) =>
+          (
+            await c.query(
+              `select (select count(*) from pg_proc where proname = $1)::int as fns,
+                      (select count(*) from pg_trigger where tgname = $1)::int as triggers`,
+              [hook],
+            )
+          ).rows[0],
+      );
+      if (left.fns !== 0 || left.triggers !== 0)
+        throw new Error(
+          `test hook ${hook} was not removed: ${left.fns} function(s), ${left.triggers} trigger(s) remain`,
+        );
+    });
+    if (failed && cleanupErrors.length === 0) throw original;
+    if (failed || cleanupErrors.length)
+      throw new AggregateError(
+        failed ? [original, ...cleanupErrors] : cleanupErrors,
+        "W6a failed or its cleanup failed",
+        failed ? { cause: original } : undefined,
+      );
   });
 
   it.each([

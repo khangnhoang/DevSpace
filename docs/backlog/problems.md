@@ -4,41 +4,6 @@ Problems that no open program owns. This is not a program: it has no plan and no
 
 ## Open
 
-### BL-P5: running C++ on Try It shows nothing, because the public Piston API now refuses it
-
-- Status: Open (2026-11-01).
-- Problem: the C++ tab of `/try_it` posts to `https://emkc.org/api/v2/piston/execute` (`app/(main)/try_it/page.tsx:117`). The public Piston API answers 401: since 2026-02-15 it accepts only whitelisted callers. The handler reads only `data.run` (`page.tsx:129`), so a 401 body shows no output, no toast and no error. The learner sees nothing happen.
-- Evidence:
-  - DM-U4 manual pass on the local dev server, 2026-11-01: a C++ link from `tryItHref` loaded the exact code, and "Chạy Code" left the console at its placeholder.
-  - The same request sent from the page returned status 401 with the message "Public Piston API is now whitelist only as of 2/15/2026".
-  - The behavior predates DM-U4, which did not change this request.
-- Direction: suggested only. These options come from a first look at public docs (2026-11-01); none was tried, so each needs research before a plan. The Owner picks the backend. Separately, any non-OK response or a body without `run` should show an error to the learner.
-  - The Piston whitelist is unlikely to fit: its README grants keys only to non-commercial educational projects and excludes individual, portfolio and university-assignment projects.
-  - Judge0 through a server-side call (free RapidAPI plan, or self-hosted later). It is the leading suggestion, but the key must stay on the server, so the call adds a public POST endpoint that needs rate limiting (`server-actions`). The free quota is unverified.
-  - Wandbox (`wandbox.org/api/compile.json`) needs no key and is the smallest change, but it is a community service with no guarantee. Browser CORS and its terms are unverified.
-  - Compiler Explorer (godbolt.org) can execute code, but its docs warn that rate limits and authentication may come later.
-  - Self-hosted Piston needs a privileged Docker host with cgroup v2, which Vercel cannot provide.
-  - Removing the C++ tab.
-- Update (2026-11-07, Owner decision): the error display is fixed locally and awaiting delivery: a non-OK answer or a body without `run` shows an error line in the console and an error toast. Choosing the backend moves to the techstack migration, so this entry stays open for it.
-- Exit condition: C++ code runs and shows its output, or the C++ tab is removed; a failed run always shows an error.
-
-### BL-P12: course and lesson slugs have no format rule, and a course slug is not unique
-
-- Status: Open (2026-11-04, Owner decision while planning AF-U5: the AF-U5 forms add no slug rule, and this is recorded instead).
-- Problem: the admin course and lesson forms accept any non-blank slug (spaces, capitals, Vietnamese accents, `/`), which then becomes the `/course/<slug>` or `/learn/<course>/<lesson>` URL. `lessons.slug` is unique (`lessons_slug_key`), but `courses.slug` has no unique constraint, and the course readers use `.eq("slug", …).single()` (`lib/supabase.ts:60-63`), so a second course with the same slug makes its page fail.
-- Evidence: `supabase/migrations/20261021000000_baseline.sql` (only `lessons_slug_key`, read at `cc2d5ff`); `app/admin/courses/coursesclient.tsx` and `app/admin/lessons/page.tsx` send the typed slug unchanged. Hosted slugs were not read (reading data rows needs the Owner's approval).
-- Direction: first read the hosted slugs (Owner-approved read) to see whether any existing slug breaks a kebab-case rule or is duplicated; then a migration with a unique constraint on `courses.slug` (Codex-gated, `supabase-migration`) and a slug rule in the admin schemas that new and edited slugs follow, with a plan for any existing slug that does not. Possibly with the techstack migration's schema review (BL-F11).
-- Update (2026-11-07, Owner decision): this will be done with BL-F11 in the techstack migration.
-- Exit condition: two courses cannot share a slug, and a slug the forms accept is a valid URL segment, or the Owner drops it.
-
-### BL-P20: the Header search puts the typed text into a PostgREST filter unescaped
-
-- Status: Open (2026-11-07, found by Main while planning QE-U6; outside it).
-- Problem: `searchLesson` (`lib/supabase.ts:228`) builds ``.or(`name.ilike.%${query}%`)`` from the search box, so a query containing `,`, `)` or a filter keyword can change or break the filter; it also runs the query before checking for blank input.
-- Evidence: read at `259f123`; not reproduced. The browser client runs as anon or the user under RLS, so the reach is limited to rows RLS already allows.
-- Direction: use ``.ilike("name", `%${escaped}%`)`` with `%`, `_` and `\` escaped, and return early on blank input; add a unit or e2e row with a query containing `,`.
-- Exit condition: a query with filter characters searches for the literal text and cannot add a filter.
-
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.
@@ -68,3 +33,6 @@ One line each: ID, status, one-line outcome. Details stay in Git.
 - BL-P17 — Done: a failed load or reload on the transactions page shows an error with "Thử lại", clears the loader and leaves no unhandled rejection (PR #73)
 - BL-P18 — Done: the transactions table and both confirm dialogs show the learner's name, email and avatar from the returned `users` relation (PR #73)
 - BL-P1 — Done: the five suppressed lint lines are fixed: the images use `next/image` (the QR and the `blob:` preview `unoptimized`, the Header search image with a component-tested fallback) and the review paging reset no longer sets state in the effect (PR #76)
+- BL-P5 — Moved to [techstack-migration](../programs/techstack-migration/problems.md)
+- BL-P12 — Moved to [techstack-migration](../programs/techstack-migration/problems.md)
+- BL-P20 — Moved to [techstack-migration](../programs/techstack-migration/problems.md)

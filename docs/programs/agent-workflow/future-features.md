@@ -20,16 +20,6 @@ Direction the Owner has set that is outside the scope of the current initiative.
 - Direction: skill rules and a way to verify that code is correct and performant, for example N+1 queries, unbounded queries and RLS policy patterns. The scope is decided when it is planned.
 - Target program: agent-workflow
 
-## AW-F5: Harness hook that blocks dangerous database commands
-
-- Status: Recorded 2026-11-01 by the Owner (QE-U3 planning); a later task after QE-U3.
-- Direction: a Claude `PreToolUse` hook in `.claude/settings.json` refuses, before it runs:
-  - a `supabase` command with `--linked`, `db push`, `link`, `--db-url` or `migration repair`;
-  - `db reset` without the test-stack `--workdir`;
-  - `psql` to a host other than `127.0.0.1`.
-  It complements the identity check in the QE-U3 test tooling. It matches command text only, so a script that calls `supabase` internally is not caught. The `AGENTS.md` section 4 rules stay the owner of permissions, and the hook enforces part of them. Settings changes need the Owner's approval (`update-config`).
-- Target program: agent-workflow
-
 ## Closed
 
 - AW-F4 — Done: shared execution boundaries and role-to-model/effort selection delivered; runtime agent compliance remains unverified (PR #41)
@@ -43,3 +33,4 @@ Direction the Owner has set that is outside the scope of the current initiative.
 - FEAT-006 — Moved to [app-foundation](../app-foundation/future-features.md)
 - FEAT-008 — Dropped: the `frontend-ui-review` skill; the Owner declined it (D4).
 - FEAT-009 — Dropped: the Codex multi-agent skill (`native-multi-agent-workflow`) and the skill governance skill (`maintain-repo-skills`); they exist for Codex-only governance, which DevSpace does not use (D4). A DevSpace skill-authoring skill is U5 (charter decision 3).
+- AW-F5 — Moved to [techstack-migration](../techstack-migration/future-features.md)

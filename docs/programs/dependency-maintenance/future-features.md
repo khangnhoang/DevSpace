@@ -5,7 +5,7 @@ Direction the Owner has set that is outside the current scope. Work that is in s
 ## DM-F2: major updates waiting
 
 - Status: Deferred (recorded by infrastructure U7 from `npm outdated`, 2026-10-27; unchanged at the first dependency check). Moved from `docs/backlog/` on 2026-10-27 (charter decision 2).
-- Direction: one initiative or task per major, each sized by `docs/agent-loops.md` Sizing and following `dependency-updates` (Major): `typescript` 5 to 7, `eslint` 9 to 10, `lucide-react` 0.x to 1, `@google/genai` 1 to 2, the Supabase CLI (`supabase`, exact pin) 2.121.0 to 3.0.0 (added at the app-foundation closing dependency check, 2026-11-05). `nodemailer` and `@types/nodemailer` are in DM-P1. `@supabase/ssr` 0.7 to 0.12 is an auth helper and waits for the techstack migration (ADR 0001). `recharts` deprecates `Cell` from 3.7.0 (used in `app/components/TransactionChart.tsx`) and removes it in its next major: move it to the `shape` prop of `Pie` when `recharts` 4 is planned (found in U1). The list is a snapshot: re-run `npm outdated` when a task starts.
+- Direction: one initiative or task per major, each sized by `docs/agent-loops.md` Sizing and following `dependency-updates` (Major): `typescript` 5 to 7, `eslint` 9 to 10, `lucide-react` 0.x to 1, `@google/genai` 1 to 3 (latest 3.0.0 at the techstack-migration opening check, 2026-11-08; the AI quiz action moves to NestJS in TM-U8, so plan the update with it or after it), `jsdom` 30 to 31 (dev only, added 2026-11-08), the Supabase CLI (`supabase`, exact pin) 2.121.0 to 3.0.0 (added at the app-foundation closing dependency check, 2026-11-05). `nodemailer` and `@types/nodemailer` are in DM-P1. `@supabase/ssr` 0.7 to 0.12 is an auth helper and waits for the techstack migration (ADR 0001) and is removed by techstack-migration TM-U9. `recharts` deprecates `Cell` from 3.7.0 (used in `app/components/TransactionChart.tsx`) and removes it in its next major: move it to the `shape` prop of `Pie` when `recharts` 4 is planned (found in U1). The list is a snapshot: re-run `npm outdated` when a task starts.
 - Target program: dependency-maintenance.
 
 ## DM-F3: `@supabase/supabase-js` minor update
@@ -24,6 +24,12 @@ Direction the Owner has set that is outside the current scope. Work that is in s
 
 - Status: Deferred (recorded at the app-foundation closing dependency check, 2026-11-05).
 - Direction: 5.0.5 to 5.1.0, in range (dev only). Follow `dependency-updates` (Minor): read the release notes for changes to projects, jsdom and the config, then run `npm run test:unit` and `npm test`. Starts on the Owner's request.
+- Target program: dependency-maintenance.
+
+## DM-F6: `@playwright/test` minor update
+
+- Status: Deferred (recorded at the techstack-migration opening dependency check, 2026-11-08).
+- Direction: 1.64.1 to 1.65.0, an exact pin. Follow `dependency-updates` (Minor) and the `@playwright/test` row: read the release notes, run `npm run test:e2e` locally, and the CI `e2e` job must pass with the browser install step unchanged. Starts on the Owner's request.
 - Target program: dependency-maintenance.
 
 ## Closed

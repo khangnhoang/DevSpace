@@ -14,17 +14,6 @@ Future initiatives retain their transferred scope and need separate approval. QE
 - Direction: inspect representative current CI runs before choosing optimizations; report measured setup/build/test time rather than inventing savings. Give Docker-free unit tests independent feedback when local-stack setup fails, preferably using an existing lightweight job before adding jobs or changing required-check names. Define how retry-passed/flaky tests are reported and whether they fail CI; retain evidence of the first failure rather than losing the HTML report when retry makes the job green (`playwright.config.ts:16`, `.github/workflows/ci.yml:146`). Record exact-head results and distinguish passed, flaky, failed and skipped; do not increase retries to hide regressions. Preserve the base-version docs-only classifier's fail-open behavior, per-job local-stack isolation, hosted-secret restrictions, network guards and the E2E build with its own local environment. Evaluate final configuration after fixture/test changes settle; no blind build-artifact reuse, premature sharding or worker increase. CI implementation needs its own plan/review gates and explicit delivery authority; this entry only records future work.
 - Target program: quality-engineering.
 
-## QE-F4: Assert mail content through a local Mailpit
-
-- Status: Recorded 2026-11-01 by the Owner; deferred until its own initiative is approved; absorbs QE-F6 (from BL-F5: local mail into the local stack's mail sink, Owner, agent-workflow U4, 2026-10-25), transferred on 2026-11-01.
-- Direction:
-  - Today the app sends one mail: the course activation mail from `app/action/payment.ts:293` through `lib/email.server.ts`, whose nodemailer transport is fixed to `service: "gmail"`. E2E replaces `sendMail` with a record of recipient and subject only (`__tests__/e2e/server-mail.cjs`), so no test reads the body or its link. Backlog BL-P6 and BL-P7 are both content defects that such a test would catch.
-  - Make the transport configurable by environment (SMTP host and port), then point the test stack at Supabase's local mail server (`[local_smtp]`, Mailpit; disabled today in `supabase/config.toml`). E2E reads the delivered mail through Mailpit's API and asserts the recipient, the rendered name and the action link. The local mail server stays inside the network guard's local hosts.
-  - Enable Mailpit only on the stack that needs it (the QE-P2 direction). Plan it when a new mail flow arrives (password reset, auth confirmations) or together with the NestJS mail module. ADR 0001 replaces the current server-action mail path, so build no mail infrastructure the migration discards.
-  - From QE-F6 (BL-F5): `npm run dev` sends with Gmail placeholders, so a send fails and is only logged (`app/action/payment.ts:293` ignores the result). Route dev mail into the same local mail server (an SMTP port exposed), with the SMTP host set in `__tests__/helpers/dev-env.ts`, so a manual pass can read the mail. Hosted mail stays Gmail.
-  - Real provider delivery (Gmail) stays out of scope, as QE-F2 says.
-- Target program: quality-engineering.
-
 ## QE-F7: Classify tests by layer, then by area
 
 - Status: Recorded 2026-11-04 by the Owner; deferred until its own initiative is approved.
@@ -58,3 +47,4 @@ Future initiatives retain their transferred scope and need separate approval. QE
 
 - QE-F1 — Done: QE-U1 delivered scoped test-data ownership, cleanup/recovery and preflight regressions; later intermittent Windows lifecycle observations remain separately tracked as QE-P1 (PR #42)
 - QE-F10 — Done: QE-U6 covers the U6 manual-pass gaps (Header search, review paging and edit, lesson completion and a full quiz, the admin dashboard and bell, the transactions filter and the avatar preview); the fallback-image and confetti appearance stay manual (PR #75)
+- QE-F4 — Moved to [techstack-migration](../techstack-migration/future-features.md)

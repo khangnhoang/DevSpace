@@ -7,14 +7,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | [SE-U1 plan](implementation-plans/se-u1-payment-write-integrity/plan.md) r3, approved by the Owner on 2026-11-07 after the Codex plan gate passed in round 4. |
-| Current unit / checkpoint | SE-U1 correction round 3 (Codex implementation gate) is implemented locally on both branches. `fix/se-u1-payment-write-lock` (PR 2, CP3) has merged `fix/se-u1-payment-write-integrity` (PR 1, CP1 and CP2). |
-| Status | CP1 to CP3 and correction round 3 implemented locally and awaiting Main re-review. No push, PR or hosted step. |
-| Completed evidence | SE-U1 hosted catalog snapshot (Main, read-only, 2026-11-07) in plan section 2; Codex plan gate PASS on r3. SE-U4: milestones and PR #70. |
+| Current unit / checkpoint | SE-U1 PR 2 (`fix/se-u1-payment-write-lock`, CP3: M2 write lock). PR 1 (CP1, CP2 and corrections 1 to 3) is merged. |
+| Status | Codex implementation gate PASS (round 4) on both branches. Runbook steps 1 to 6 done: M1 applied to hosted, catalog postflight and D5 probes passed, PR 1 merged and its production deploy succeeded. M2 not applied. |
+| Completed evidence | SE-U1 milestones; M1 postflight and D5 probes below; PR #71. SE-U4: milestones and PR #70. |
 | Accepted deviations | None. |
-| Hosted state | Hosted migration history ends at `20261106175756_se_u4_avatar_path_ownership`; `payments`, `coupons` and `enrollments` match the baseline (no `coupon_id`, no trigger, no `increment_coupon_usage`). No user data was read and nothing was written. |
-| Blockers / Owner decisions | None for implementation. Delivery needs the separate push, PR, merge, hosted prepare/apply and D5 behavior-probe grants, at each gate of the plan runbook. |
-| Next action | Main re-reviews correction round 3 on both branches, then runs the Codex implementation re-gate. Outstanding Owner-requested work not yet scheduled: SE-F2 and SE-F3 in [future-features.md](future-features.md). |
-| Current authority | Owner approved r3 (including D6) and granted the plan commit and implementation by one implementor session (2026-11-07): local checkpoint and correction commits, creating the stacked branch `fix/se-u1-payment-write-lock` for CP3, merging PR 1 into it (no rebase, force or amend), and the managed test stack. No push, PR, hosted read of user data or hosted write is granted. |
+| Hosted state | Hosted migration history ends at `20261106211345_se_u1_payment_rpcs` (M1). Catalog postflight: the four functions are `security definer` with an empty `search_path`, owned by `postgres` and executable only by `service_role`; the three guard triggers, the statement-level release trigger, the partial unique index and the `coupon_id` FK (`on delete restrict`) are present. D5 probes (Owner grant: `student@devspace.com`, course `ngonngu-c` after `html-css` returned `enrolled`, coupon `SV2025`) in one rolled-back transaction: anon and authenticated refused with 42501; create, apply, switch, cancel, delete release and approve gave the expected counts; guard refusals 42501; afterwards no order, enrollment or probe coupon remained and `SV2025` stayed at 0 uses. R5 figures: `SV2025`, `FREE100` and `DEVSPACE` at 0 uses of 100, no pending or success coupon orders. M2 is not applied. |
+| Blockers / Owner decisions | None. Each remaining runbook gate needs its own grant: PR 2 CI, M2 prepare and apply, the M2 D5 probes, PR 2 merge, then Owner QA. |
+| Next action | Main pushes PR 2 and opens it; after CI is green, M2 prepare and apply from PR 2's head, then the M2 postflight (runbook steps 7 to 9). Outstanding Owner-requested work not yet scheduled: SE-F2 and SE-F3 in [future-features.md](future-features.md). |
+| Current authority | Owner granted (2026-11-07) this State commit on PR 2's branch and the push and creation of PR 2. No M2 prepare or apply, PR 2 merge or further hosted read of user data is granted. |
 
 ## Milestones
 
@@ -49,4 +49,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-07 SE-U1 correction 2 made the W6a test hook commit in one transaction and every cleanup step independent, with a check that no hook object remains; `npm test` 938/938 passed with a clean audit (`73896f8`)
 - 2026-11-07 SE-U1 merged correction 2 into the write lock branch (`ce92690`) and made the write-lock rows assert their owned pending order; `npm test` 947/947 passed with a clean audit (`82f0355`)
 - 2026-11-07 SE-U1 correction 3 marks the test run unclean when the W6a hook cleanup fails, proven by a forced DROP failure that left the run state dirty; `npm test` 938/938 passed on the following clean reset (`a50f852`)
-- 2026-11-07 SE-U1 merged correction 3 into the write lock branch; `npm test` 947/947 passed with a clean audit (this commit)
+- 2026-11-07 SE-U1 merged correction 3 into the write lock branch; `npm test` 947/947 passed with a clean audit (`0f4b1ed`)
+- 2026-11-07 SE-U1 Codex implementation gate PASS in round 4; M1 applied to hosted with catalog postflight and D5 behavior probes passed; PR 1 merged and deployed to production (PR 71, 268545d)

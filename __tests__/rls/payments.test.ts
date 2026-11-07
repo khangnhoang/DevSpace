@@ -1909,30 +1909,61 @@ describe("payments write lock", () => {
     });
   });
 
-  it("[W38] AC10 the service role is refused with 42501 on a direct insert and update, and the seed payment is unchanged", async () => {
-    const before = must(
-      await fixtures.from("payments").select("*").order("id"),
-    );
+  // The refusal rows write nothing if the privilege were missing, so a broken lock must find only rows this test owns:
+  // an owned course and pending order to update, and the exact selector of the insert that must be refused, reserved
+  // before the first request. The scope removes both, also when an assertion fails.
+  async function ownedTarget() {
+    const s = slug();
+    await fixtureScope().reserve("courses", { slug: s });
+    const courseId = must(
+      await fixtures
+        .from("courses")
+        .insert({ name: s, slug: s, price: 100000 })
+        .select("id")
+        .single(),
+    ).id;
+    await fixtureScope().reserve("payments", {
+      user_id: IDS.student,
+      course_id: courseId,
+    });
+    const created = await fixtures.rpc("create_pending_payment", {
+      p_user_id: IDS.student,
+      p_course_id: courseId,
+    });
+    expect(created.error).toBeNull();
+    await fixtureScope().reserve("payments", {
+      user_id: IDS.learner,
+      course_id: courseId,
+    });
+    return {
+      courseId,
+      orderId: (created.data as { payment_id: number }).payment_id,
+    };
+  }
+  const allPayments = async () =>
+    must(await fixtures.from("payments").select("*").order("id"));
+
+  it("[W38] AC10 the service role is refused with 42501 on a direct insert and update, and the rows are unchanged", async () => {
+    const { courseId, orderId } = await ownedTarget();
+    const before = await allPayments();
     const insert = await fixtures.from("payments").insert({
       user_id: IDS.learner,
-      course_id: 2,
-      amount: 199000,
+      course_id: courseId,
+      amount: 100000,
       status: "pending",
     });
     expectDenied(insert.error);
     const update = await fixtures
       .from("payments")
       .update({ status: "success" })
-      .eq("id", 1);
+      .eq("id", orderId);
     expectDenied(update.error);
     const touch = await fixtures
       .from("payments")
       .update({ updated_at: new Date().toISOString() })
-      .eq("id", 1);
+      .eq("id", orderId);
     expectDenied(touch.error);
-    expect(
-      must(await fixtures.from("payments").select("*").order("id")),
-    ).toEqual(before);
+    expect(await allPayments()).toEqual(before);
   });
 
   it.each([
@@ -1943,24 +1974,21 @@ describe("payments write lock", () => {
   ] as const)(
     "[W39] AC10 %s is refused with 42501 on a direct insert and update",
     async (_actor, client) => {
-      const before = must(
-        await fixtures.from("payments").select("*").order("id"),
-      );
+      const { courseId, orderId } = await ownedTarget();
+      const before = await allPayments();
       const insert = await client.from("payments").insert({
         user_id: IDS.learner,
-        course_id: 2,
-        amount: 199000,
+        course_id: courseId,
+        amount: 100000,
         status: "pending",
       });
       expectDenied(insert.error);
       const update = await client
         .from("payments")
         .update({ status: "failed" })
-        .eq("id", 1);
+        .eq("id", orderId);
       expectDenied(update.error);
-      expect(
-        must(await fixtures.from("payments").select("*").order("id")),
-      ).toEqual(before);
+      expect(await allPayments()).toEqual(before);
     },
   );
 

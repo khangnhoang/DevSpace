@@ -45,4 +45,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-07 SE-U1 CP2 moved the payment actions onto the database functions with Zod schemas, made the payment modal show a refused cancel, and turned K4 to K8 into normal rows; `npm test` 931/931 and E2E 160/160 passed with clean audits (`f68cd28`)
 - 2026-11-07 SE-U1 CP3 added M2 (direct INSERT and UPDATE on `payments` revoked from the API roles) with its rollback and tests; `npm test` 940/940 and E2E 160/160 passed with clean audits on the stacked branch (`e3badc7`)
 - 2026-11-07 SE-U1 correction 1 after the Codex implementation gate: coupon amount computed in numeric, create retries when its conflicting order closes, the guard exempts only `postgres`, lock-order and negative-write rows made deterministic and owned (`4ed7814`)
-- 2026-11-07 SE-U1 merged correction 1 into the write lock branch and made the write-lock rows own the fixtures they write (this commit)
+- 2026-11-07 SE-U1 merged correction 1 into the write lock branch (`1c0ceb4`) and made the write-lock rows own the fixtures they write; `npm test` 947/947 and E2E 160/160 passed with clean audits (this commit)

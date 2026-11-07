@@ -281,11 +281,29 @@ describe("payment functions: catalog", () => {
   });
 
   it("[W4] anon, learner, student and admin sessions cannot execute any payment function, and nothing is written", async () => {
+    // If a denial failed, create_pending_payment would write. Its exact selector is reserved before the first call, so
+    // the scope removes whatever a broken grant created, also when an assertion below fails.
+    const s = slug();
+    await fixtureScope().reserve("courses", { slug: s });
+    const courseId = must(
+      await fixtures
+        .from("courses")
+        .insert({ name: s, slug: s, price: 100000 })
+        .select("id")
+        .single(),
+    ).id;
+    await fixtureScope().reserve("payments", {
+      user_id: IDS.learner,
+      course_id: courseId,
+    });
     const before = must(
       await fixtures.from("payments").select("id, status, coupon_id"),
     );
     const calls: [string, Row][] = [
-      ["create_pending_payment", { p_user_id: IDS.learner, p_course_id: 2 }],
+      [
+        "create_pending_payment",
+        { p_user_id: IDS.learner, p_course_id: courseId },
+      ],
       [
         "apply_payment_coupon",
         { p_payment_id: 1, p_user_id: IDS.student, p_code: "LOCAL10" },
@@ -478,6 +496,42 @@ describe("payment functions: apply_payment_coupon", () => {
       ).toMatchObject({ amount: 1000 });
       expect(await usedCount(c, over.id)).toBe(0);
       expect(await usedCount(c, under.id)).toBe(1);
+    });
+  });
+
+  it("[W10a] AC1 the amount is computed in numeric: a price above 23.9 million and a percent far outside 0..100 do not overflow", async () => {
+    await inTx(async (c) => {
+      const big = await course(c, 30000000);
+      const max = await course(c, 2147483647);
+      const ten = await coupon(c, { percent: 10 });
+      const none = await coupon(c, { percent: 0 });
+      const full = await coupon(c, { percent: 100 });
+      const hugeOver = await coupon(c, { percent: 2147483647 });
+      const hugeUnder = await coupon(c, { percent: -2147483648 });
+      await asService(c);
+      const bigOrder = await createOrder(c, IDS.learner, big);
+      const maxOrder = await createOrder(c, IDS.learner, max);
+      const amountOf = async (order: number, cp: { code: string }) =>
+        (
+          await call(c, "public.apply_payment_coupon($1, $2, $3)", [
+            order,
+            IDS.learner,
+            cp.code,
+          ])
+        ).amount;
+      expect(await amountOf(bigOrder, ten)).toBe(27000000);
+      expect(await amountOf(bigOrder, none)).toBe(30000000);
+      expect(await amountOf(bigOrder, full)).toBe(0);
+      expect(await amountOf(bigOrder, hugeOver)).toBe(0);
+      expect(await amountOf(bigOrder, hugeUnder)).toBe(30000000);
+      expect(await amountOf(maxOrder, ten)).toBe(1932735282);
+      expect(await amountOf(maxOrder, none)).toBe(2147483647);
+      expect(await amountOf(maxOrder, hugeOver)).toBe(0);
+      expect(await amountOf(maxOrder, hugeUnder)).toBe(2147483647);
+      expect(await payment(c, maxOrder)).toMatchObject({
+        amount: 2147483647,
+        coupon_id: hugeUnder.id,
+      });
     });
   });
 
@@ -1044,6 +1098,32 @@ describe("payments_guard", () => {
       ).toMatchObject({ approved: true });
     });
   });
+
+  it("[W26a] G4 only the table owner postgres passes the guard: supabase_admin is held to the contract too", async () => {
+    // SET ROLE is not allowed for postgres, so this connects as supabase_admin (same local password).
+    const url = new URL(stack.dbUrl);
+    url.username = "supabase_admin";
+    const c = new pg.Client({ connectionString: url.toString() });
+    await c.connect();
+    try {
+      await c.query("begin");
+      expect((await c.query("select current_user as u")).rows[0].u).toBe(
+        "supabase_admin",
+      );
+      const id = await course(c, 100000);
+      const insert = (amount: number) =>
+        attempt(
+          c,
+          "insert into public.payments (user_id, course_id, amount, status) values ($1, $2, $3, 'pending')",
+          [IDS.learner, id, amount],
+        );
+      expect((await insert(1))?.code).toBe("42501");
+      expect(await insert(100000)).toBeNull();
+    } finally {
+      await c.query("rollback").catch(() => undefined);
+      await c.end();
+    }
+  });
 });
 
 describe("payments_release_on_delete", () => {
@@ -1205,6 +1285,114 @@ describe("payment functions: concurrency", { timeout: 60000 }, () => {
       await a.query("rollback").catch(() => undefined);
       await b.query("rollback").catch(() => undefined);
       await Promise.all([a.end(), b.end(), m.end()]);
+    }
+  }
+
+  type Settled<T> = { ok: true; value: T } | { ok: false; error: SqlError };
+  type Tracked<T> = { settled: boolean; promise: Promise<T> };
+  const track = <T>(promise: Promise<T>): Tracked<T> => {
+    const tracked = { settled: false, promise };
+    promise.then(
+      () => (tracked.settled = true),
+      () => (tracked.settled = true),
+    );
+    return tracked;
+  };
+  const sleep = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+  const settle = <T>(promise: Promise<T>): Promise<Settled<T>> =>
+    promise.then(
+      (value) => ({ ok: true as const, value }),
+      (error: SqlError) => ({ ok: false as const, error }),
+    );
+
+  // Builds a real lock queue instead of hoping two calls interleave (plan G7). A holder connection locks the row of
+  // coupon "held". "head" starts and is seen blocked by the holder; "second" starts and is seen blocked by "head"
+  // (pg_blocking_pids). The coupon "free" must still be unlocked then, so the second contender waits holding
+  // nothing the head needs next. Only when both take their coupons in one ascending order does releasing the
+  // holder finish both; with opposite orders the second one holds "free" and the release closes a lock cycle.
+  async function lockQueue<A, B>(
+    held: number,
+    free: number,
+    head: (c: pg.Client) => Promise<A>,
+    second: (c: pg.Client) => Promise<B>,
+  ): Promise<[Settled<A>, Settled<B>]> {
+    const clients = [0, 1, 2, 3].map(
+      () => new pg.Client({ connectionString: stack.dbUrl }),
+    );
+    const [h, a, b, m] = clients;
+    await Promise.all(clients.map((c) => c.connect()));
+    const pidOf = async (c: pg.Client) =>
+      (await c.query("select pg_backend_pid() as pid")).rows[0].pid as number;
+    const blockedBy = async (
+      who: string,
+      pid: number,
+      by: number,
+      tracked: Tracked<unknown>,
+    ) => {
+      const deadline = Date.now() + 15000;
+      for (;;) {
+        const blockers = (
+          await m.query("select pg_blocking_pids($1) as b", [pid])
+        ).rows[0].b as number[];
+        if (blockers.includes(by)) return;
+        if (tracked.settled) throw new Error(`${who} finished without waiting`);
+        if (Date.now() > deadline)
+          throw new Error(
+            `${who} never waited on the expected holder (blocked by ${blockers})`,
+          );
+        await sleep(25);
+      }
+    };
+    const finish = async <T>(conn: pg.Client, tracked: Tracked<T>) => {
+      const settled = await settle(tracked.promise);
+      await conn
+        .query(settled.ok ? "commit" : "rollback")
+        .catch(() => undefined);
+      return settled;
+    };
+    try {
+      await h.query("begin");
+      await h.query("select 1 from public.coupons where id = $1 for update", [
+        held,
+      ]);
+      for (const c of [a, b]) {
+        await c.query("begin");
+        await c.query("set local role service_role");
+        await c.query("set local lock_timeout = '20s'");
+      }
+      const [pidH, pidA, pidB] = [
+        await pidOf(h),
+        await pidOf(a),
+        await pidOf(b),
+      ];
+
+      const first = track(head(a));
+      await blockedBy("the first contender", pidA, pidH, first);
+      const next = track(second(b));
+      await blockedBy("the second contender", pidB, pidA, next);
+
+      await m.query("begin");
+      try {
+        await m.query(
+          "select 1 from public.coupons where id = $1 for update nowait",
+          [free],
+        );
+      } catch {
+        throw new Error(
+          `the second contender holds coupon ${free} while it waits: the locks are not taken in ascending order`,
+        );
+      } finally {
+        await m.query("rollback");
+      }
+
+      await h.query("commit");
+      return await Promise.all([finish(a, first), finish(b, next)]);
+    } finally {
+      await Promise.all(
+        [h, a, b].map((c) => c.query("rollback").catch(() => undefined)),
+      );
+      await Promise.all(clients.map((c) => c.end()));
     }
   }
 
@@ -1413,100 +1601,218 @@ describe("payment functions: concurrency", { timeout: 60000 }, () => {
     ).toHaveLength(1);
   });
 
-  it("[W34] AC2 two orders switching codes in opposite directions finish without a deadlock and the counts are exact", async () => {
+  it("[W6a] AC8 a create whose conflicting pending order is closed before it reads the order still answers with a valid order", async () => {
     const courseId = await fixtureCourse();
-    const m = await fixtureCoupon({ max: 10 });
-    const n = await fixtureCoupon({ max: 10 });
-    const a = await fixtureOrder(IDS.learner, courseId);
-    const b = await fixtureOrder(IDS.student, courseId);
-    for (const [order, user, cp] of [
-      [a, IDS.learner, m],
-      [b, IDS.student, n],
-    ] as const) {
-      const { error } = await fixtures.rpc("apply_payment_coupon", {
-        p_payment_id: order,
-        p_user_id: user,
-        p_code: cp.code,
-      });
-      expect(error).toBeNull();
-    }
-    expect([await used(m.id), await used(n.id)]).toEqual([1, 1]);
-    const [ra, rb] = await overlap(
-      (c) => apply(c, a, IDS.learner, n.code),
-      (c) => apply(c, b, IDS.student, m.code),
+    const earlier = await fixtureOrder(IDS.learner, courseId);
+    // A statement trigger runs after the insert's conflict check and before the function reads the conflicting order,
+    // which is the window; it waits on an advisory lock the test holds, and only for the connection that set the flag.
+    const key = Number.parseInt(RUN.slice(0, 7), 16);
+    const hook = `w_hook_${RUN}`;
+    await withPg(async (c) => {
+      await c.query(
+        `create function public.${hook}() returns trigger language plpgsql as $$
+         begin
+           if current_setting('se_u1.hook', true) = '1' then perform pg_advisory_xact_lock(${key}); end if;
+           return null;
+         end $$`,
+      );
+      await c.query(
+        `create trigger ${hook} after insert on public.payments for each statement execute function public.${hook}()`,
+      );
+    });
+    const clients = [0, 1, 2].map(
+      () => new pg.Client({ connectionString: stack.dbUrl }),
     );
-    expect(ra).toMatchObject({ discount_percent: 10 });
-    expect(rb).toMatchObject({ discount_percent: 10 });
-    expect([await used(m.id), await used(n.id)]).toEqual([1, 1]);
-    expect(
-      must(
-        await fixtures
-          .from("payments")
-          .select("id, coupon_id")
-          .in("id", [a, b])
-          .order("id"),
-      ),
-    ).toEqual([
-      { id: a, coupon_id: n.id },
-      { id: b, coupon_id: m.id },
-    ]);
+    const [h, a, m] = clients;
+    await Promise.all(clients.map((c) => c.connect()));
+    try {
+      await h.query("begin");
+      await h.query("select pg_advisory_xact_lock($1)", [key]);
+      await a.query("begin");
+      await a.query("set local role service_role");
+      await a.query("set local se_u1.hook = '1'");
+      await a.query("set local lock_timeout = '20s'");
+      const pidH = (await h.query("select pg_backend_pid() as pid")).rows[0]
+        .pid;
+      const pidA = (await a.query("select pg_backend_pid() as pid")).rows[0]
+        .pid;
+
+      const pending = track(
+        call(a, "public.create_pending_payment($1, $2)", [
+          IDS.learner,
+          courseId,
+        ]),
+      );
+      const deadline = Date.now() + 15000;
+      for (;;) {
+        const blockers = (
+          await m.query("select pg_blocking_pids($1) as b", [pidA])
+        ).rows[0].b as number[];
+        if (blockers.includes(pidH)) break;
+        if (pending.settled)
+          throw new Error("the create finished before it reached the window");
+        if (Date.now() > deadline)
+          throw new Error("the create never reached the window");
+        await sleep(25);
+      }
+
+      // The create is past its conflict check; the order it conflicted with is closed and committed now.
+      const closed = await fixtures.rpc("close_pending_payment", {
+        p_payment_id: earlier,
+        p_user_id: IDS.learner,
+      });
+      expect(closed.error).toBeNull();
+      expect(closed.data).toBe(true);
+
+      await h.query("commit");
+      const result = await pending.promise;
+      await a.query("commit");
+      expect(result).toMatchObject({ result: "created", amount: 100000 });
+      expect(result.payment_id).not.toBe(earlier);
+      expect(typeof result.payment_id).toBe("number");
+      expect(
+        must(
+          await fixtures
+            .from("payments")
+            .select("id, status")
+            .eq("user_id", IDS.learner)
+            .eq("course_id", courseId)
+            .order("id"),
+        ),
+      ).toEqual([
+        { id: earlier, status: "failed" },
+        { id: result.payment_id, status: "pending" },
+      ]);
+    } finally {
+      await Promise.all(
+        [h, a].map((c) => c.query("rollback").catch(() => undefined)),
+      );
+      await Promise.all(clients.map((c) => c.end()));
+      // The scope's selector (user, course) must match one row at cleanup; the closed order goes first.
+      must(await fixtures.from("payments").delete().eq("id", earlier));
+      await withPg(async (c) => {
+        await c.query(`drop trigger if exists ${hook} on public.payments`);
+        await c.query(`drop function if exists public.${hook}()`);
+      });
+    }
   });
 
-  it("[W35] AC11 two user deletions at once, holding pending orders on the same two coupons in opposite row order, both finish and release every use", async () => {
-    const [c1, c2, c3, c4] = [
-      await fixtureCourse(),
-      await fixtureCourse(),
-      await fixtureCourse(),
-      await fixtureCourse(),
-    ];
-    const m = await fixtureCoupon({ max: 10 });
-    const n = await fixtureCoupon({ max: 10 });
-    const users: string[] = [];
-    for (const label of ["a", "b"]) {
-      const email = `w-${fixtureScope().tag}-${label}@devspace.test`;
-      await fixtureScope().reserveAuth(email);
-      const created = await fixtures.auth.admin.createUser({
-        email,
-        password: "payments-local-pass-1",
-        email_confirm: true,
-      });
-      if (created.error || !created.data.user)
-        throw new Error(created.error?.message ?? "missing user");
-      users.push(created.data.user.id);
-    }
-    // User one holds M then N; user two holds N then M (their rows are inserted in that order).
-    const plan: [string, number, { id: number; code: string }][] = [
-      [users[0], c1, m],
-      [users[0], c2, n],
-      [users[1], c3, n],
-      [users[1], c4, m],
-    ];
-    for (const [user, courseId, cp] of plan) {
-      const order = await fixtureOrder(user, courseId);
-      const { error } = await fixtures.rpc("apply_payment_coupon", {
-        p_payment_id: order,
-        p_user_id: user,
-        p_code: cp.code,
-      });
-      expect(error).toBeNull();
-    }
-    expect([await used(m.id), await used(n.id)]).toEqual([2, 2]);
-    const asOwnerTx = async (c: pg.Client) => c.query("reset role");
-    await overlap(
-      async (c) => {
-        await asOwnerTx(c);
-        await c.query("delete from auth.users where id = $1", [users[0]]);
-      },
-      async (c) => {
-        await asOwnerTx(c);
-        await c.query("delete from auth.users where id = $1", [users[1]]);
-      },
-    );
-    expect([await used(m.id), await used(n.id)]).toEqual([0, 0]);
-    expect(
-      must(await fixtures.from("payments").select("id").in("user_id", users)),
-    ).toEqual([]);
-  });
+  it.each([
+    ["the order moving to the higher code starts first", "a"],
+    ["the order moving to the lower code starts first", "b"],
+  ] as const)(
+    "[W34] AC2 two orders switching codes in opposite directions queue behind a held lower code without a deadlock and the counts are exact (%s)",
+    async (_name, firstOrder) => {
+      const courseId = await fixtureCourse();
+      const m = await fixtureCoupon({ max: 10 });
+      const n = await fixtureCoupon({ max: 10 });
+      expect(m.id).toBeLessThan(n.id);
+      const a = await fixtureOrder(IDS.learner, courseId);
+      const b = await fixtureOrder(IDS.student, courseId);
+      for (const [order, user, cp] of [
+        [a, IDS.learner, m],
+        [b, IDS.student, n],
+      ] as const) {
+        const { error } = await fixtures.rpc("apply_payment_coupon", {
+          p_payment_id: order,
+          p_user_id: user,
+          p_code: cp.code,
+        });
+        expect(error).toBeNull();
+      }
+      expect([await used(m.id), await used(n.id)]).toEqual([1, 1]);
+
+      // a moves M to N (takes the higher code last), b moves N to M. The holder keeps the lower code M locked.
+      const switchA = (c: pg.Client) => apply(c, a, IDS.learner, n.code);
+      const switchB = (c: pg.Client) => apply(c, b, IDS.student, m.code);
+      const settled =
+        firstOrder === "a"
+          ? await lockQueue(m.id, n.id, switchA, switchB)
+          : await lockQueue(m.id, n.id, switchB, switchA);
+      const [ra, rb] = firstOrder === "a" ? settled : [settled[1], settled[0]];
+
+      expect(ra).toMatchObject({ ok: true, value: { discount_percent: 10 } });
+      expect(rb).toMatchObject({ ok: true, value: { discount_percent: 10 } });
+      expect([await used(m.id), await used(n.id)]).toEqual([1, 1]);
+      expect(
+        must(
+          await fixtures
+            .from("payments")
+            .select("id, coupon_id")
+            .in("id", [a, b])
+            .order("id"),
+        ),
+      ).toEqual([
+        { id: a, coupon_id: n.id },
+        { id: b, coupon_id: m.id },
+      ]);
+    },
+  );
+
+  it.each([
+    ["user one first", 0],
+    ["user two first", 1],
+  ] as const)(
+    "[W35] AC11 two user deletions holding pending orders on the same two coupons in opposite row order queue behind a held lower code, both finish and release every use (%s)",
+    async (_name, firstUser) => {
+      const [c1, c2, c3, c4] = [
+        await fixtureCourse(),
+        await fixtureCourse(),
+        await fixtureCourse(),
+        await fixtureCourse(),
+      ];
+      const m = await fixtureCoupon({ max: 10 });
+      const n = await fixtureCoupon({ max: 10 });
+      expect(m.id).toBeLessThan(n.id);
+      const users: string[] = [];
+      for (const label of ["a", "b"]) {
+        const email = `w-${fixtureScope().tag}-${label}@devspace.test`;
+        await fixtureScope().reserveAuth(email);
+        const created = await fixtures.auth.admin.createUser({
+          email,
+          password: "payments-local-pass-1",
+          email_confirm: true,
+        });
+        if (created.error || !created.data.user)
+          throw new Error(created.error?.message ?? "missing user");
+        users.push(created.data.user.id);
+      }
+      // User one holds M then N; user two holds N then M (their orders are created in that order).
+      const plan: [string, number, { id: number; code: string }][] = [
+        [users[0], c1, m],
+        [users[0], c2, n],
+        [users[1], c3, n],
+        [users[1], c4, m],
+      ];
+      for (const [user, courseId, cp] of plan) {
+        const order = await fixtureOrder(user, courseId);
+        const { error } = await fixtures.rpc("apply_payment_coupon", {
+          p_payment_id: order,
+          p_user_id: user,
+          p_code: cp.code,
+        });
+        expect(error).toBeNull();
+      }
+      expect([await used(m.id), await used(n.id)]).toEqual([2, 2]);
+
+      const remove = (user: string) => async (c: pg.Client) => {
+        await c.query("reset role");
+        await c.query("delete from auth.users where id = $1", [user]);
+      };
+      const [one, two] = [remove(users[0]), remove(users[1])];
+      const settled =
+        firstUser === 0
+          ? await lockQueue(m.id, n.id, one, two)
+          : await lockQueue(m.id, n.id, two, one);
+
+      expect(settled[0]).toMatchObject({ ok: true });
+      expect(settled[1]).toMatchObject({ ok: true });
+      expect([await used(m.id), await used(n.id)]).toEqual([0, 0]);
+      expect(
+        must(await fixtures.from("payments").select("id").in("user_id", users)),
+      ).toEqual([]);
+    },
+  );
 });
 
 describe("rollback of the payment functions migration", () => {

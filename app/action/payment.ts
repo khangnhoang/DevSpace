@@ -189,18 +189,22 @@ export async function getAllPayments() {
 // `{ success: false }` and a thrown mail error are logged on the server only. Delivery is not guaranteed (no outbox).
 async function sendApprovalMail(userId: string, courseId: number) {
   try {
-    const { data: profile } = await supabaseAdmin
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .select("full_name, email")
       .eq("id", userId)
       .single();
+    if (profileError)
+      console.error("Approval mail profile lookup failed:", profileError.code);
     if (!profile?.email) return;
 
-    const { data: course } = await supabaseAdmin
+    const { data: course, error: courseError } = await supabaseAdmin
       .from("courses")
       .select("name, slug")
       .eq("id", courseId)
       .single();
+    if (courseError)
+      console.error("Approval mail course lookup failed:", courseError.code);
 
     // Link to the first lesson: the first chapter, then its first lesson.
     let firstLessonSlug: string | null = null;

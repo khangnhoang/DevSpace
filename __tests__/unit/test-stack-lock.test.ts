@@ -224,6 +224,10 @@ describe("start-time read diagnostics and fail-closed identity", () => {
     const pid = (await dying.event("idle")).pid as number;
     const exitsDuringRead = () => {
       process.kill(pid, "SIGKILL");
+      // SIGKILL is delivered asynchronously on Linux, so wait until the process has really exited, as it has when
+      // Get-Process fails in the race; the read itself is synchronous, so this waits without yielding.
+      const deadline = Date.now() + 5_000;
+      while (alive(pid) && Date.now() < deadline);
       throw failure;
     };
     expect(alive(pid)).toBe(true);

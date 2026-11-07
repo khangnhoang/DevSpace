@@ -4,14 +4,6 @@ Problems that no open program owns. This is not a program: it has no plan and no
 
 ## Open
 
-### BL-P1: lint rules suppressed line by line where the real fix changes behavior
-
-- Status: Open (2026-10-25, Owner decision D28 of infrastructure U6).
-- Problem: U6 made lint blocking with 0 problems while keeping behavior identical, so five lines carry an `eslint-disable-next-line` with a reason instead of the real fix: `react-hooks/set-state-in-effect` at `app/(main)/course/[slug]/page.tsx:125` (the review list resets `page` and `hasMore` before the refetch), and `@next/next/no-img-element` at `app/(main)/course/[slug]/page.tsx:298` (review avatar), `app/admin/users/page.tsx:502` (`blob:` avatar preview), `app/components/CoursePaymentModal.tsx:167` (payment QR from an external URL) and `app/components/Header.tsx:232` (search result image with an `onError` fallback).
-- Evidence: `grep -rn "eslint-disable" app lib` on the U6 branch lists exactly these five; [U6 plan](../programs/infrastructure/implementation-plans/u6-lint-cleanup/plan.md) D28 and G4.
-- Direction: one small UI task with a manual browser pass: move the images to `next/image` with explicit sizes (`unoptimized` for `blob:`, a fallback for the Header image, the QR host listed), the host list is settled by BL-002 (`remotePatterns` now names only explicit hosts, so list any new host there); restructure the review reset so it no longer sets state synchronously in the effect, checking paging and the `hasEnrolled` change by hand.
-- Exit condition: `grep -rn "eslint-disable" app lib` finds nothing, lint stays at 0, and the review list, avatars, QR and search images behave as before.
-
 ### BL-P5: running C++ on Try It shows nothing, because the public Piston API now refuses it
 
 - Status: Open (2026-11-01).
@@ -75,3 +67,4 @@ One line each: ID, status, one-line outcome. Details stay in Git.
 - BL-P13 — Done: the admin chapters card names the course chosen in "Chuyển khóa học" and says "Chưa chọn khóa học" before one is chosen (PR #73)
 - BL-P17 — Done: a failed load or reload on the transactions page shows an error with "Thử lại", clears the loader and leaves no unhandled rejection (PR #73)
 - BL-P18 — Done: the transactions table and both confirm dialogs show the learner's name, email and avatar from the returned `users` relation (PR #73)
+- BL-P1 — Done: the five suppressed lint lines are fixed: the images use `next/image` (the QR and the `blob:` preview `unoptimized`, the Header search image with a component-tested fallback) and the review paging reset no longer sets state in the effect (PR #76)

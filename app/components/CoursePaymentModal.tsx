@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import Image from "next/image";
 import { X, Loader2, Copy, Check, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { cancelPayment, updatePaymentWithCoupon } from "@/app/action/payment";
@@ -170,10 +171,13 @@ export default function CoursePaymentModal({
           <div className="w-full bg-blue-50 border border-blue-200 p-4 rounded-xl flex flex-col items-center gap-4">
             {/* Ảnh QR từ VietQR */}
             <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-100">
-              {/* eslint-disable-next-line @next/next/no-img-element -- payment QR from an external URL; next/image would proxy it through /_next/image, tracked in BL-003 */}
-              <img
+              {/* unoptimized: the QR URL carries the amount and transfer content, so the browser loads it straight from VietQR instead of through the image optimizer (Owner decision, BL-P1). */}
+              <Image
                 src={qrUrl}
                 alt="QR Payment"
+                width={160}
+                height={160}
+                unoptimized
                 className="w-40 h-40 object-contain"
               />
             </div>

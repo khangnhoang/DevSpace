@@ -39,6 +39,14 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Update (2026-11-07, Owner decision): this will be done with BL-F11 in the techstack migration.
 - Exit condition: two courses cannot share a slug, and a slug the forms accept is a valid URL segment, or the Owner drops it.
 
+### BL-P20: the Header search puts the typed text into a PostgREST filter unescaped
+
+- Status: Open (2026-11-07, found by Main while planning QE-U6; outside it).
+- Problem: `searchLesson` (`lib/supabase.ts:228`) builds ``.or(`name.ilike.%${query}%`)`` from the search box, so a query containing `,`, `)` or a filter keyword can change or break the filter; it also runs the query before checking for blank input.
+- Evidence: read at `259f123`; not reproduced. The browser client runs as anon or the user under RLS, so the reach is limited to rows RLS already allows.
+- Direction: use ``.ilike("name", `%${escaped}%`)`` with `%`, `_` and `\` escaped, and return early on blank input; add a unit or e2e row with a query containing `,`.
+- Exit condition: a query with filter characters searches for the literal text and cannot add a filter.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

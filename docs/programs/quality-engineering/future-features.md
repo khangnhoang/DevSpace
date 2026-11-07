@@ -50,6 +50,13 @@ Future initiatives retain their transferred scope and need separate approval. QE
 - Direction: a few whole-schema assertions in the integration layer, written like the existing catalog checks (`has_function_privilege` in `[P10]` of `__tests__/rls/profiles.test.ts` and in `community.test.ts`): every `public` table has RLS enabled; no `security definer` function is executable by `anon` or `authenticated` outside an explicit allowlist with reasons; named constraints the app relies on exist (a unique `courses.slug` once BL-P12 adds it). They fail on the migration that forgets one. No pgTAP or `supabase test db`, since the techstack migration (ADR 0001) replaces Supabase.
 - Target program: quality-engineering.
 
+## QE-F10: E2e coverage for the flows U6 checked by hand
+
+
+- Status: Planned in [QE-U6](implementation-plans/qe-u6-e2e-coverage/plan.md) (moved from BL-F2 on 2026-11-07, charter decision 6; was Deferred, Owner request, 2026-10-25).
+- Direction: automate remaining behavior from the U6 manual pass ([plan Appendix B](../infrastructure/implementation-plans/u6-lint-cleanup/plan.md), M1-M12 and M5b), selected by `test-quality-strategy`, without duplicating current assertions. Rendering/payment coverage already covers much of M4 and approve/reject in M10. App-foundation U1 replaced native confirms and added real fixture deletes for course/chapter/lesson/exercise/user (`admin.spec.ts` A4-A8), comment deletion (`student.spec.ts` T4), dialog keyboard/mobile/style checks (A10/T5), cancelled AI bulk-create/unsaved-lesson behavior (A9), non-payment transit failure (A3), and payment dialog cancel/pending/transit failure (AP4-AP6). App-foundation AF-U4 automated the wrong-password recovery (M2, `auth-forms.spec.ts` AU1) and the same-password reset message (M12, AU7). No native-confirm stub dependency remains. Outstanding scenarios include Header search (M1), review list/paging/edit (M3), remaining comment behavior, notes, complete button and a full quiz (M5/M5b; T2/T3 assert only initial quiz interaction), profile edit and transaction filter (M6), try-it editing (M7), admin notification bell (M8), course/chapter/lesson/exercise edit (M9), admin transaction status filter (M10) and avatar preview (M11). Coordinate with feature-owned coverage, BL-F7 failure/race work and BL-F6 safe fixtures; this entry remains open and adds no tests now. Justify residual perceptual/exploratory checks such as confetti or image appearance per scenario.
+- Target program: quality-engineering.
+
 ## Closed
 
 - QE-F5 — Done: QE-U3 runs `rls` and `e2e` on a separate `devspace-test` stack (ports 55320–55329) that the test commands start, check and reset, beside the dev stack (PR #50)

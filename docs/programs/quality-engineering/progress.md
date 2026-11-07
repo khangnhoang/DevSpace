@@ -6,13 +6,13 @@ Charter: [README.md](README.md). Problems: [problems.md](problems.md). Git histo
 
 | Field | Value |
 | --- | --- |
-| Spec revision | [QE-U5](implementation-plans/qe-u5-flaky-harness/plan.md) r3 (2026-11-07), Codex plan gate PASS in round 3 (`gpt-6.1-sol`, high, read-only) at the Owner's request; approved by the Owner on 2026-11-07. |
-| Current unit / checkpoint | QE-U5, CP1 to CP4 and the Final checks done locally; awaiting Main's review and delivery. |
-| Status | QE-U5 CP1 and CP2 implemented on `test/qe-flaky-harness`: QE-P8 and QE-P5 fixed locally, awaiting delivery. QE-P7 (diagnostics added, not reproduced) and the remaining QE-F8 e2e audit are open. CP3 and CP4 are implemented and the Final checks passed; delivery is not done. |
-| Completed evidence | QE-U5 plan: `npm run docs:check` 0 violations; Codex plan review rounds 1 to 3 (PASS in round 3). CP1: new unit tests with their mutations failing; `npm test -- --reset` then `npm test` without reset, 980 of 980 each. CP2: the lock test file failed once in 20 runs, the cause was named and fixed, and 20 of 20 consecutive runs passed after the fix. CP1 correction R1 (service-role writes of a test body guarded, cleanup on a separate unguarded client): `npm test -- --reset` then `npm test` without reset, 998 of 998 each. CP3: `[T8]` diagnostics added; QE-P7 not reproduced. CP4: SE-U1 and backlog PR 73 documents caught up. Final checks at `ffd5ad8` (Node v26.13.0), each once and unfiltered: `npx tsc --noEmit`, `npm run lint`, `npm run test:unit` (789 of 789), `npm test` (998 of 998), `npm run test:e2e` (161 of 161), `npm run build` and `npm run docs:check` all exit 0. |
-| Accepted deviations | CP3 also changed `scripts/e2e/serve.mjs` (outside the plan's file list): the server record of the Auth calls (AC4) needs the `E2E_AUTH_FILE` preload passed to `next start`, which only that script starts. Main accepted it as the direct dependency of AC4 (2026-11-07). |
-| Blockers / Owner decisions | none. Owner decisions 1 to 5 of 2026-11-07 are in the plan (section 1.4). |
-| Next action | Main reviews the implementation diff; push, PR and merge need their own grants. |
+| Spec revision | [QE-U6](implementation-plans/qe-u6-e2e-coverage/plan.md) r1 (2026-11-07), approved by the Owner on 2026-11-07. |
+| Current unit / checkpoint | QE-U6, CP1 not started. QE-U5 is delivered in PR 74 (`259f123`). |
+| Status | QE-U5 completed on 2026-11-07: QE-P5 and QE-P8 resolved. QE-U6 plan approved and committed on `test/qe-e2e-coverage` (QE-F10, moved from BL-F2, and the QE-F8 classification). QE-P7, QE-P9 and the QE-F8 moves are open. |
+| Completed evidence | QE-U5 milestones and PR 74. The first CI run failed `db` 1 of 998 on a Linux-only race in the new QE-P5 regression test; CI self-fix `d5e6113` (test only) made the second run green on all six jobs. |
+| Accepted deviations | none. |
+| Blockers / Owner decisions | none. |
+| Next action | A separate implementor implements CP1 to CP4 with local checkpoint commits. |
 | Current authority | Owner granted (2026-11-07) plan approval, this plan commit and implementation with local checkpoint commits. No push, PR or merge is granted. |
 
 ## Milestones
@@ -53,3 +53,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-07 QE-U5 CP3 adds the session diagnostics of `[T8]` and a server Auth record; 58 and 123 student-subset rows (5 repeats each) passed with no refresh and no session loss, so QE-P7 stays open with that evidence (`1a0987f`).
 - 2026-11-07 QE-U5 correction R1 after Main's review: the service-role `fixtures` client of the rls test bodies refuses writes once the run is unclean, RPC writes included, while cleanup uses its own unguarded client (`947231c`).
 - 2026-11-07 QE-U5 CP4 catches up security-engineering (SE-U1 delivered in PR 71 and PR 72, SE-P8 to SE-P12 resolved, SE-F2 and SE-F3 target the techstack migration) and the backlog (BL-P2, BL-P3, BL-P13, BL-P17 and BL-P18 done in PR 73) (`ffd5ad8`).
+- 2026-11-07 QE-U5 merged: fixture writes admitted per request and cleanup-hook timeouts mark the run (QE-P8), the lock start-time race fixed (QE-P5), `[T8]` session diagnostics added (QE-P7 open) (PR 74, `259f123`).
+- 2026-11-07 QE-U6 r1 approved by the Owner: QE-F10 (moved from BL-F2) gaps covered at the smallest layer and every e2e row classified for QE-F8, with the QE-U5 docs catch-up (this commit).

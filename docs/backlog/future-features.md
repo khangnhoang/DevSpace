@@ -2,12 +2,6 @@
 
 Direction the Owner has set that is outside the current scope. Work that is in scope belongs in the plan.
 
-## BL-F2: E2e coverage for the flows U6 checked by hand
-
-- Status: Deferred (Owner request, 2026-10-25).
-- Direction: automate remaining behavior from the U6 manual pass ([plan Appendix B](../programs/infrastructure/implementation-plans/u6-lint-cleanup/plan.md), M1-M12 and M5b), selected by `test-quality-strategy`, without duplicating current assertions. Rendering/payment coverage already covers much of M4 and approve/reject in M10. App-foundation U1 replaced native confirms and added real fixture deletes for course/chapter/lesson/exercise/user (`admin.spec.ts` A4-A8), comment deletion (`student.spec.ts` T4), dialog keyboard/mobile/style checks (A10/T5), cancelled AI bulk-create/unsaved-lesson behavior (A9), non-payment transit failure (A3), and payment dialog cancel/pending/transit failure (AP4-AP6). App-foundation AF-U4 automated the wrong-password recovery (M2, `auth-forms.spec.ts` AU1) and the same-password reset message (M12, AU7). No native-confirm stub dependency remains. Outstanding scenarios include Header search (M1), review list/paging/edit (M3), remaining comment behavior, notes, complete button and a full quiz (M5/M5b; T2/T3 assert only initial quiz interaction), profile edit and transaction filter (M6), try-it editing (M7), admin notification bell (M8), course/chapter/lesson/exercise edit (M9), admin transaction status filter (M10) and avatar preview (M11). Coordinate with feature-owned coverage, BL-F7 failure/race work and BL-F6 safe fixtures; this entry remains open and adds no tests now. Justify residual perceptual/exploratory checks such as confetti or image appearance per scenario.
-- Target program: none yet (app-foundation is the natural owner if its form units want the cover first).
-
 ## BL-F4: Images for the seed courses
 
 - Status: Deferred (Owner decision, agent-workflow U4 D7, 2026-10-25).
@@ -51,3 +45,4 @@ Direction the Owner has set that is outside the current scope. Work that is in s
 - BL-F10 — Moved to [ui-ux](../programs/ui-ux/future-features.md)
 - BL-F1 — Done: the three seed users share one local password in `supabase/seed.sql`, `__tests__/e2e/accounts.ts` and `__tests__/rls/global-setup.ts`; the dev stack takes it at its next `db reset` (PR #55)
 - BL-F12 — Done: Prettier 3.9.10 pinned, `npm run format` and `npm run format:check` on the files a change touches, the format step in `git-pr-workflow`; Markdown is not formatted (PR #59)
+- BL-F2 — Moved to [quality-engineering](../programs/quality-engineering/future-features.md)

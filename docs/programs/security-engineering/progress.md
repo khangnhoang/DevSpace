@@ -7,13 +7,13 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | [SE-U1 plan](implementation-plans/se-u1-payment-write-integrity/plan.md) r3, approved by the Owner on 2026-11-07 after the Codex plan gate passed in round 4. |
-| Current unit / checkpoint | SE-U1 correction round 2 (Codex implementation gate) is implemented locally on both branches. `fix/se-u1-payment-write-lock` (PR 2, CP3) has merged `fix/se-u1-payment-write-integrity` (PR 1, CP1 and CP2). |
-| Status | CP1 to CP3 and correction round 2 implemented locally and awaiting Main re-review. No push, PR or hosted step. |
+| Current unit / checkpoint | SE-U1 correction round 3 (Codex implementation gate) is implemented locally on both branches. `fix/se-u1-payment-write-lock` (PR 2, CP3) has merged `fix/se-u1-payment-write-integrity` (PR 1, CP1 and CP2). |
+| Status | CP1 to CP3 and correction round 3 implemented locally and awaiting Main re-review. No push, PR or hosted step. |
 | Completed evidence | SE-U1 hosted catalog snapshot (Main, read-only, 2026-11-07) in plan section 2; Codex plan gate PASS on r3. SE-U4: milestones and PR #70. |
 | Accepted deviations | None. |
 | Hosted state | Hosted migration history ends at `20261106175756_se_u4_avatar_path_ownership`; `payments`, `coupons` and `enrollments` match the baseline (no `coupon_id`, no trigger, no `increment_coupon_usage`). No user data was read and nothing was written. |
 | Blockers / Owner decisions | None for implementation. Delivery needs the separate push, PR, merge, hosted prepare/apply and D5 behavior-probe grants, at each gate of the plan runbook. |
-| Next action | Main re-reviews correction round 2 on both branches, then runs the Codex implementation re-gate. Outstanding Owner-requested work not yet scheduled: SE-F2 and SE-F3 in [future-features.md](future-features.md). |
+| Next action | Main re-reviews correction round 3 on both branches, then runs the Codex implementation re-gate. Outstanding Owner-requested work not yet scheduled: SE-F2 and SE-F3 in [future-features.md](future-features.md). |
 | Current authority | Owner approved r3 (including D6) and granted the plan commit and implementation by one implementor session (2026-11-07): local checkpoint and correction commits, creating the stacked branch `fix/se-u1-payment-write-lock` for CP3, merging PR 1 into it (no rebase, force or amend), and the managed test stack. No push, PR, hosted read of user data or hosted write is granted. |
 
 ## Milestones
@@ -47,4 +47,6 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-07 SE-U1 correction 1 after the Codex implementation gate: coupon amount computed in numeric, create retries when its conflicting order closes, the guard exempts only `postgres`, lock-order and negative-write rows made deterministic and owned (`4ed7814`)
 - 2026-11-07 SE-U1 merged correction 1 into the write lock branch (`1c0ceb4`) and made the write-lock rows own the fixtures they write; `npm test` 947/947 and E2E 160/160 passed with clean audits (`bd2ef9a`)
 - 2026-11-07 SE-U1 correction 2 made the W6a test hook commit in one transaction and every cleanup step independent, with a check that no hook object remains; `npm test` 938/938 passed with a clean audit (`73896f8`)
-- 2026-11-07 SE-U1 merged correction 2 into the write lock branch (`ce92690`) and made the write-lock rows assert their owned pending order; `npm test` 947/947 passed with a clean audit (this commit)
+- 2026-11-07 SE-U1 merged correction 2 into the write lock branch (`ce92690`) and made the write-lock rows assert their owned pending order; `npm test` 947/947 passed with a clean audit (`82f0355`)
+- 2026-11-07 SE-U1 correction 3 marks the test run unclean when the W6a hook cleanup fails, proven by a forced DROP failure that left the run state dirty; `npm test` 938/938 passed on the following clean reset (`a50f852`)
+- 2026-11-07 SE-U1 merged correction 3 into the write lock branch; `npm test` 947/947 passed with a clean audit (this commit)

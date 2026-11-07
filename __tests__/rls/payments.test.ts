@@ -1990,21 +1990,36 @@ describe("payments write lock", () => {
       p_course_id: courseId,
     });
     expect(created.error).toBeNull();
+    // The refusal rows below are only meaningful against a real pending order that this test owns.
+    expect(created.data).toMatchObject({ result: "created" });
+    const orderId = (created.data as { payment_id: unknown }).payment_id;
+    expect(typeof orderId).toBe("number");
     await fixtureScope().reserve("payments", {
       user_id: IDS.learner,
       course_id: courseId,
     });
-    return {
-      courseId,
-      orderId: (created.data as { payment_id: number }).payment_id,
-    };
+    return { courseId, orderId: orderId as number };
   }
+  const expectOwnedPending = (
+    before: Record<string, unknown>[],
+    orderId: number,
+    courseId: number,
+  ) =>
+    expect(before).toContainEqual(
+      expect.objectContaining({
+        id: orderId,
+        user_id: IDS.student,
+        course_id: courseId,
+        status: "pending",
+      }),
+    );
   const allPayments = async () =>
     must(await fixtures.from("payments").select("*").order("id"));
 
   it("[W38] AC10 the service role is refused with 42501 on a direct insert and update, and the rows are unchanged", async () => {
     const { courseId, orderId } = await ownedTarget();
     const before = await allPayments();
+    expectOwnedPending(before, orderId, courseId);
     const insert = await fixtures.from("payments").insert({
       user_id: IDS.learner,
       course_id: courseId,
@@ -2035,6 +2050,7 @@ describe("payments write lock", () => {
     async (_actor, client) => {
       const { courseId, orderId } = await ownedTarget();
       const before = await allPayments();
+      expectOwnedPending(before, orderId, courseId);
       const insert = await client.from("payments").insert({
         user_id: IDS.learner,
         course_id: courseId,

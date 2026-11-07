@@ -47,3 +47,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-07 SE-U1 correction 1 after the Codex implementation gate: coupon amount computed in numeric, create retries when its conflicting order closes, the guard exempts only `postgres`, lock-order and negative-write rows made deterministic and owned (`4ed7814`)
 - 2026-11-07 SE-U1 merged correction 1 into the write lock branch (`1c0ceb4`) and made the write-lock rows own the fixtures they write; `npm test` 947/947 and E2E 160/160 passed with clean audits (`bd2ef9a`)
 - 2026-11-07 SE-U1 correction 2 made the W6a test hook commit in one transaction and every cleanup step independent, with a check that no hook object remains; `npm test` 938/938 passed with a clean audit (`73896f8`)
+- 2026-11-07 SE-U1 merged correction 2 into the write lock branch (`ce92690`) and made the write-lock rows assert their owned pending order; `npm test` 947/947 passed with a clean audit (this commit)

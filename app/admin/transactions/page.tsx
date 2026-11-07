@@ -31,25 +31,35 @@ const orderSummary = (p: PaymentRow, consequence: string) =>
 export default function TransactionsPage() {
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [filter, setFilter] = useState("all"); // all, pending, success, failed
   const [approveTarget, setApproveTarget] = useState<PaymentRow | null>(null);
   const [rejectTarget, setRejectTarget] = useState<PaymentRow | null>(null);
 
+  // A rejected load must clear the loader and show a retry, never leave "Đang tải dữ liệu..." or an unhandled rejection.
+  const loadPayments = async () => {
+    try {
+      const data = await getAllPayments();
+      setPayments((data as unknown as PaymentRow[]) || []);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Fetch dữ liệu
-  const fetchPayments = async () => {
+  const fetchPayments = () => {
     setIsLoading(true);
-    const data = await getAllPayments();
-    setPayments((data as unknown as PaymentRow[]) || []);
-    setIsLoading(false);
+    setLoadError(false);
+    return loadPayments();
   };
 
   useEffect(() => {
     // isLoading already starts true, so the mount fetch skips the
     // setIsLoading(true) that fetchPayments does for the later refetches.
-    getAllPayments().then((data) => {
-      setPayments((data as unknown as PaymentRow[]) || []);
-      setIsLoading(false);
-    });
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loadPayments sets state only after its awaited call
+    loadPayments();
   }, []);
 
   // Xử lý Duyệt
@@ -149,6 +159,21 @@ export default function TransactionsPage() {
                     <td colSpan={5} className="p-12 text-center text-gray-500">
                       <Loader2 className="animate-spin mx-auto mb-2" />
                       Đang tải dữ liệu...
+                    </td>
+                  </tr>
+                ) : loadError ? (
+                  <tr>
+                    <td colSpan={5} className="p-12 text-center">
+                      <p role="alert" className="text-red-400 mb-4">
+                        Không tải được danh sách giao dịch. Hãy kiểm tra kết nối
+                        rồi thử lại.
+                      </p>
+                      <button
+                        onClick={fetchPayments}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-md text-white text-sm font-medium transition-colors"
+                      >
+                        Thử lại
+                      </button>
                     </td>
                   </tr>
                 ) : filteredPayments.length === 0 ? (

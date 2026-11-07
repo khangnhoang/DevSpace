@@ -1,3 +1,23 @@
+// Layer audit (QE-U6, AC11, 2026-11-07): the layer each row needs under the e2e rule of test-quality-strategy.
+// Boundaries: persistence, refusal (server, database or Auth), failed request, permission, redirect, upload, layout
+// (real browser: layout, engine or sandbox). A row that needs two names both; "guard client-only" marks a part a
+// component test could cover. "client-only -> <file>" is a QE-F8 move candidate under __tests__/unit/components/.
+// The audit changes no row, assertion or timeout.
+//   [T1] permission: an enrolled student reads the lesson (server gate)
+//   [T2] permission: exercises are readable by an enrolled student (RLS)
+//   [T3] client-only -> Quiz.test.tsx (wrong and right answer feedback)
+//   [T4] persistence: the comment is soft-deleted (cancel paths client-only)
+//   [T5] layout: keyboard flow, 375px, stacking and dark scheme of the dialog
+//   [T6] layout: Radix select, dark scheme and phone alignment (the filter logic is client-only ->
+//       ProfilePage.test.tsx)
+//   [T7] persistence, redirect: the profile card from stored progress leads to the next lesson
+//   [T8] persistence: newest enrollment first (expand and collapse client-only -> ProfilePage.test.tsx)
+//   [T11] layout: row height and no sideways scroll at 375px
+//   [T9] layout: no sideways scroll at 375px
+//   [T10] layout: the name and the edit button do not wrap at 768px
+//   [T12] persistence, redirect: the complete button sends the student to the quiz and saves nothing
+//   [T13] persistence: a full quiz saves the progress
+//   [T14] persistence, redirect: the last lesson is saved and the finish page opens
 import type { Locator, Page } from "@playwright/test";
 import { authFile } from "./accounts";
 import {

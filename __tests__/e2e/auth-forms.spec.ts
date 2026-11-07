@@ -1,3 +1,28 @@
+// Layer audit (QE-U6, AC11, 2026-11-07): the layer each row needs under the e2e rule of test-quality-strategy.
+// Boundaries: persistence, refusal (server, database or Auth), failed request, permission, redirect, upload, layout
+// (real browser: layout, engine or sandbox). A row that needs two names both; "guard client-only" marks a part a
+// component test could cover. "client-only -> <file>" is a QE-F8 move candidate under __tests__/unit/components/.
+// The audit changes no row, assertion or timeout.
+//   [SE-U2 CP2] refusal, redirect: genuine PKCE recovery survives a reload (Auth, Mailpit)
+//   [AU1] refusal: a wrong password is refused and the right one signs in (Auth)
+//   [AU2] client-only -> SignInForm.test.tsx (field errors, no request)
+//   [AU9] client-only -> SignInForm.test.tsx (duplicate-submit guard)
+//   [AU6] client-only -> ForgotPasswordForm.test.tsx (field errors, callback URL, success text)
+//   [AU6] failed request: the aborted recover request keeps the email
+//   [AU9] client-only -> ForgotPasswordForm.test.tsx (duplicate-submit guard)
+//   [AU3] persistence: the sign-up creates the user and the profile row, then redirects
+//   [AU4] client-only -> SignUpForm.test.tsx (step validation, nothing sent)
+//   [AU5] refusal: a registered email is refused and creates no user (Auth)
+//   [AU10] client-only -> SignUpForm.test.tsx (answer without a session; the response is faked)
+//   [AU9] client-only -> SignUpForm.test.tsx (duplicate-submit guard)
+//   [AU7] refusal, persistence: the reset form changes the password (Auth); its field errors are client-only
+//   [AU8] permission, redirect: no recovery session is sent to /login
+//   [AU9] client-only -> ResetPasswordPage.test.tsx (duplicate-submit guard)
+//   [AU8] permission, redirect: a normal session and a spoofed URL cannot open the form
+//   [AU8] refusal, redirect: a non-recovery PKCE exchange cannot open the form (Auth)
+//   [AU8] refusal, redirect: a used recovery link is refused (Auth)
+//   [AU8] refusal, redirect: an expired recovery link is refused (Auth)
+//   [AU8] refusal, redirect: a stale reset form is refused after another recovery (Auth)
 import {
   mergeTests,
   type Locator,

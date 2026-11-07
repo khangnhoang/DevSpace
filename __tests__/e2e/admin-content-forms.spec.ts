@@ -1,3 +1,31 @@
+// Layer audit (QE-U6, AC11, 2026-11-07): the layer each row needs under the e2e rule of test-quality-strategy.
+// Boundaries: persistence, refusal (server, database or Auth), failed request, permission, redirect, upload, layout
+// (real browser: layout, engine or sandbox). A row that needs two names both; "guard client-only" marks a part a
+// component test could cover. "client-only -> <file>" is a QE-F8 move candidate under __tests__/unit/components/.
+// The audit changes no row, assertion or timeout.
+//   [C1] persistence: the course is stored trimmed
+//   [C3] persistence: a price of 0 is stored and shown again
+//   [C4] failed request: the aborted save keeps the dialog and the retry saves one row
+//   [C5] layout: 40px close button and sticky title bar at 375px
+//   [D1] client-only -> CourseFormDialog.test.tsx (the repeated-submit test covers the guard)
+//   [H1] persistence: the chapter is stored with its course and order
+//   [H2] client-only -> ChapterFormDialog.test.tsx (field errors, nothing sent)
+//   [H3] persistence: an order of 0 is stored and shown again
+//   [H4] failed request: the aborted save keeps the dialog and the retry saves one row
+//   [H5] layout: 40px close button
+//   [D1] client-only -> ChapterFormDialog.test.tsx (duplicate-submit guard)
+//   [L1] persistence: a blank order is stored as null
+//   [L2] client-only -> LessonsPage.test.tsx (the lesson form is inline in app/admin/lessons/page.tsx)
+//   [L3] persistence: a null order is shown blank and saved back as null
+//   [L4] failed request: the aborted save keeps the form and the retry saves one row
+//   [D1] client-only -> LessonsPage.test.tsx (duplicate-submit guard)
+//   [E1] persistence: a question without explanation is stored and listed
+//   [E2] client-only -> LessonsPage.test.tsx (field errors, nothing sent)
+//   [E3] persistence: an edit clears the explanation to null
+//   [E4] failed request: the aborted save keeps what was typed and the retry saves one row
+//   [E5] client-only -> LessonsPage.test.tsx (panel state after reopening)
+//   [E6] client-only -> LessonsPage.test.tsx (AI fill switches edit mode to add mode)
+//   [D1] client-only -> LessonsPage.test.tsx (duplicate-submit guard)
 import type { Locator, Page } from "@playwright/test";
 import { authFile } from "./accounts";
 import { recordMutations } from "./confirm-dialog";

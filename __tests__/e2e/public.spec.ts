@@ -1,3 +1,19 @@
+// Layer audit (QE-U6, AC11, 2026-11-07): the layer each row needs under the e2e rule of test-quality-strategy.
+// Boundaries: persistence, refusal (server, database or Auth), failed request, permission, redirect, upload, layout
+// (real browser: layout, engine or sandbox). A row that needs two names both; "guard client-only" marks a part a
+// component test could cover. "client-only -> <file>" is a QE-F8 move candidate under __tests__/unit/components/.
+// The audit changes no row, assertion or timeout.
+//   [S1] persistence: the public home lists the seed courses
+//   [S2] persistence: a free course and its lessons are public
+//   [S3] permission, redirect: /admin sends an anonymous visitor to /login
+//   [S4] permission, redirect: a lesson sends an anonymous visitor to /login
+//   [S9] persistence: the Header search queries the database with ilike
+//   [S10] persistence: reviews page by range, newest first
+//   [S5] layout: Monaco loads from the app's own origin
+//   [S5b] layout: the Monaco language worker runs
+//   [S7] layout: the crafted link keeps the output sandbox
+//   [S8] layout: the JavaScript link shows its console line
+//   [S6] client-only -> SignInForm.test.tsx (the form renders its fields)
 import type { Page } from "@playwright/test";
 import { tryItHref } from "../../lib/try-it";
 import { expect, test } from "./fixtures";

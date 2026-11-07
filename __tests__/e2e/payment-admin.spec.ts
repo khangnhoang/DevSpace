@@ -11,6 +11,23 @@
 // Known bugs: none (SE-P10 is resolved by SE-U1).
 // Invariants: the learner's orders are created through the actions as the learner (G8); the service role only
 //   reads state back and cleans up; the mail record is read from the point a row starts.
+//
+// Layer audit (QE-U6, AC11, 2026-11-07): the layer each row needs under the e2e rule of test-quality-strategy.
+// Boundaries: persistence, refusal (server, database or Auth), failed request, permission, redirect, upload, layout
+// (real browser: layout, engine or sandbox). A row that needs two names both; "guard client-only" marks a part a
+// component test could cover. "client-only -> <file>" is a QE-F8 move candidate under __tests__/unit/components/.
+// The audit changes no row, assertion or timeout.
+//   [AP1] persistence: approving enrolls the learner and sends one mail
+//   [AP2] persistence: rejecting cancels the order with no enrollment or mail
+//   [AP3] persistence: the discounted amount and the coupon count are kept
+//   [AP10] persistence: rejecting releases the coupon use
+//   [AP4] client-only -> TransactionsPage.test.tsx (cancelling the dialog sends nothing)
+//   [AP5] client-only -> TransactionsPage.test.tsx (the dialog stays open and disabled while pending)
+//   [AP6] failed request: a reject that fails in transit leaves the order pending
+//   [AP7] persistence: a stale second tab does not mail twice
+//   [AP8] refusal: rejecting an approved order changes nothing
+//   [AP9] refusal: approving a cancelled order changes nothing
+//   [AP11] refusal: an unknown order or malformed id changes nothing
 import type { Page } from "@playwright/test";
 import { authFile } from "./accounts";
 import { expect, test } from "./fixtures";

@@ -1,3 +1,22 @@
+// Layer audit (QE-U6, AC11, 2026-11-07): the layer each row needs under the e2e rule of test-quality-strategy.
+// Boundaries: persistence, refusal (server, database or Auth), failed request, permission, redirect, upload, layout
+// (real browser: layout, engine or sandbox). A row that needs two names both; "guard client-only" marks a part a
+// component test could cover. "client-only -> <file>" is a QE-F8 move candidate under __tests__/unit/components/.
+// The audit changes no row, assertion or timeout.
+//   [F1] persistence: the profile and blank-as-null are stored (guard client-only)
+//   [F9] upload: a failed avatar upload keeps the dialog and writes nothing
+//   [F10] upload: the avatar is saved as the public URL of its uploaded name (Storage faked)
+//   [F13] persistence: the profile card shows the stored fields
+//   [F12] upload: a real Storage object renders and is removed
+//   [F2] persistence: the review is stored trimmed and listed
+//   [F3] client-only -> CoursePage.test.tsx (the review form is inline in app/(main)/course/[slug]/page.tsx)
+//   [F14] persistence: the stored review fills the edit form and one row is updated
+//   [F11] layout: the review form keeps its dark surface in both OS schemes
+//   [F4] persistence: the comment is stored once (guard client-only -> LessonComments.test.tsx)
+//   [F5] client-only -> LessonComments.test.tsx (length limits, nothing sent)
+//   [F6] persistence: the edited comment is stored trimmed
+//   [F7] persistence: the note is stored once (guard client-only -> NoteManager.test.tsx)
+//   [F8] client-only -> NoteManager.test.tsx (blank note, nothing sent)
 import type { Locator, Page } from "@playwright/test";
 import { IDS, authFile } from "./accounts";
 import { recordMutations } from "./confirm-dialog";

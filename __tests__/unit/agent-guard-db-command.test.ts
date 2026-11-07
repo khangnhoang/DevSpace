@@ -68,11 +68,25 @@ const ASKS = [
   "env FOO=bar supabase db push",
   "(npx supabase db push)",
   "echo $(npx supabase db push)",
-  "echo `npx supabase db push`",
+  'echo "$(npx supabase db push)"',
   'bash -c "npx supabase db push"',
   "sh -c 'cd x && supabase db push'",
-  'echo "a" ; supabase db dump -f "a;b" --linked',
-  'echo \\" ; supabase db push ; echo \\"',
+  "sh -lc 'cd x && npx.cmd supabase link'",
+  'powershell -Command "npx supabase db pull"',
+  'pwsh -c "npx supabase db push"',
+  'cmd /c "npx supabase migration repair"',
+  'eval "npx supabase db push"',
+  "xargs npx supabase db push",
+  "find . -exec psql {} +",
+  "FOO=1 npx -y supabase@2 db push",
+  "env -i FOO=1 supabase db push",
+  "time npx supabase db push",
+  "nohup npx supabase db push",
+  "fnm exec --using=26 -- npx.cmd supabase --linked migration list",
+  'npx supabase db push "--linked"',
+  'npx supabase "db" push',
+  "npx supabase 'db' 'push'",
+  'echo "supabase db push',
   "npm exec -- supabase db push",
   "supabase db push `\n--linked",
   // PowerShell spelling
@@ -81,6 +95,9 @@ const ASKS = [
   "Set-Location x; npx.cmd supabase db push",
   'Start-Process supabase -ArgumentList "db push"',
   'powershell -Command "npx supabase db push"',
+  "iex 'npx supabase db push'",
+  "Invoke-Expression 'npx supabase link'",
+  'Write-Output "$(npx supabase db push)"',
   // AC2: db reset outside the test workdir
   "npx supabase db reset",
   "npx supabase db reset --local",
@@ -96,7 +113,7 @@ const ASKS = [
   "pg_dump mydb",
   "pg_restore -d x f.dump",
   "PGHOSTADDR=1.2.3.4 psql",
-  "C:\\Program Files\\PostgreSQL\\18\\bin\\psql.exe -c 'select 1'",
+  '"C:\\Program Files\\PostgreSQL\\18\\bin\\psql.exe" -c "select 1"',
   "docker exec supabase_db_x psql -U postgres",
   "psql --help-me",
 ];
@@ -144,6 +161,56 @@ const ALLOWS = [
   "node scripts/test-stack/test.mjs",
   "echo ok",
   "docker ps -a",
+  // Text that only mentions a database command is data, not a command that runs.
+  "echo npx supabase db push",
+  'git commit -m "fix supabase db push --linked handling"',
+  'grep -rn "psql" scripts',
+  "sed -i 's/--linked/x/' f",
+  "node -e \"console.log('npx supabase db push')\"",
+  `printf '{"tool_input":{"command":"npx supabase db push"}}' | node .claude/hooks/db-command-guard.mjs`,
+  'rg "supabase db push" docs',
+  "Write-Output 'supabase db push --linked'",
+  "Select-String -Pattern 'psql' -Path x.md",
+  "npm run docs:check",
+  "bash scripts/x.sh",
+  "git log --grep='supabase db push'",
+];
+
+// Spellings that only one shell reads as a command: the same text means something else in the other one.
+const ASKS_BASH = [
+  "echo `npx supabase db push`",
+  "echo `psql -c 1`",
+  'echo \\" ; supabase db push ; echo \\"',
+  "bash <<EOF\nnpx supabase db push\nEOF",
+  "bash <<-EOF\n\tnpx supabase db push\n\tEOF",
+  "sh <<'EOF'\nsupabase link\nEOF",
+  "cat <<EOF | bash\nnpx supabase db push\nEOF",
+  "cat <<EOF | sh\nnpx supabase db push\nEOF",
+  "echo 'npx supabase db push' | bash",
+  "psql <<EOF\nselect 1\nEOF",
+  "bash -c 'cat <<EOF\nx\nEOF\nnpx supabase db push'",
+];
+const ALLOWS_BASH = [
+  "cat > f <<'EOF'\nnpx supabase db push --linked\nEOF",
+  "cat > f <<EOF\nnpx supabase db push --linked\nEOF",
+  "cat <<-EOF > f\n\tnpx supabase db push\n\tEOF",
+  "python - <<'PY'\nprint('supabase db push --linked')\nPY",
+  "git commit -F - <<'MSG'\nfix: supabase db push --linked\nMSG",
+  "echo 'a `supabase db push` b'",
+  'echo "\\$(npx supabase db push)"',
+  "echo '$(npx supabase db push)'",
+];
+const ASKS_POWERSHELL = [
+  'iex "$(npx supabase db push)"',
+  "$x = $(npx supabase db push)",
+  '$q = @"\n$(npx supabase db push)\n"@',
+];
+const ALLOWS_POWERSHELL = [
+  "$q = @'\nsupabase db push --linked\n'@",
+  '$q = @"\nnpx supabase db push\n"@',
+  "$q = @'\nsupabase db push\n'@\nWrite-Output $q",
+  'Write-Output `"npx supabase db push`"',
+  "echo '$(npx supabase db push)'",
 ];
 
 describe("agent guard: db command classifier", () => {
@@ -158,6 +225,45 @@ describe("agent guard: db command classifier", () => {
     const result = bash(command);
     expect(result.decision, result.reason).toBe("allow");
     expect(powershell(command).decision).toBe("allow");
+  });
+
+  it.each(ASKS_BASH)("asks before %j in Bash", (command) => {
+    const result = bash(command);
+    expect(result.decision, result.reason).toBe("ask");
+  });
+  it.each(ALLOWS_BASH)("lets %j run in Bash", (command) => {
+    const result = bash(command);
+    expect(result.decision, result.reason).toBe("allow");
+  });
+  it.each(ASKS_POWERSHELL)("asks before %j in PowerShell", (command) => {
+    const result = powershell(command);
+    expect(result.decision, result.reason).toBe("ask");
+  });
+  it.each(ALLOWS_POWERSHELL)("lets %j run in PowerShell", (command) => {
+    const result = powershell(command);
+    expect(result.decision, result.reason).toBe("allow");
+  });
+
+  it("asks when the text cannot be read and names a database tool, and only then", () => {
+    for (const command of [
+      'echo "supabase db push',
+      "echo $(supabase db push",
+      "cat <<EOF\nsupabase db push\n",
+      "echo 'psql",
+    ]) {
+      const result = bash(command);
+      expect(result.decision, command).toBe("ask");
+      expect(result.reason).toMatch(/cannot be read/);
+    }
+    expect(bash('echo "unfinished').decision).toBe("allow");
+    expect(bash("echo $(ls").decision).toBe("allow");
+  });
+
+  it("stops at the nesting limit instead of recursing forever", () => {
+    let command = "npx supabase status";
+    for (let i = 0; i < 8; i++)
+      command = `bash -c '${command.replaceAll("'", `'\\''`)}'`;
+    expect(bash(command).decision).toBe("ask");
   });
 
   it("resolves a relative --workdir against the call's working directory", () => {

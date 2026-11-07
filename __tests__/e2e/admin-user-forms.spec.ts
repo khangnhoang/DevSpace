@@ -1,3 +1,14 @@
+// Layer audit (QE-U6, AC11, 2026-11-07): the layer each row needs under the e2e rule of test-quality-strategy.
+// Boundaries: persistence, refusal (server, database or Auth), failed request, permission, redirect, upload, layout
+// (real browser: layout, engine or sandbox). A row that needs two names both; "guard client-only" marks a part a
+// component test could cover. "client-only -> <file>" is a QE-F8 move candidate under __tests__/unit/components/.
+// The audit changes no row, assertion or timeout.
+//   [U1] persistence, upload: the edited name, role and avatar are stored (Storage faked)
+//   [U2] refusal: an email in use is shown and no user is created
+//   [U3] upload: a failed avatar upload keeps the dialog and creates no user
+//   [U4] failed request: a create that fails in transit creates no user
+//   [U5] failed request: an edit write that fails in transit leaves the profile
+//   [U6] persistence, upload: the admin user is stored with name and avatar (Storage faked)
 import type { Page } from "@playwright/test";
 import { IDS, authFile } from "./accounts";
 import { recordMutations } from "./confirm-dialog";

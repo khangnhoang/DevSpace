@@ -55,6 +55,72 @@ beforeEach(() => {
   rejectPayment.mockReset();
 });
 
+const orderOf = (id: number, status: string, name: string) => ({
+  ...pendingPayment,
+  id,
+  status,
+  users: { ...pendingPayment.users, full_name: name },
+});
+
+describe("Transactions page status filter", () => {
+  const NONE = "Không tìm thấy giao dịch nào";
+  const filterButton = (name: string) => screen.getByRole("button", { name });
+
+  it("lists only the orders of the chosen status and shows the empty text for a status without an order", async () => {
+    const user = userEvent.setup();
+    getAllPayments.mockResolvedValue([
+      orderOf(1, "pending", "Học Viên Chờ"),
+      orderOf(2, "success", "Học Viên Xong"),
+      orderOf(3, "success", "Học Viên Xong Hai"),
+    ]);
+    render(<TransactionsPage />);
+    await screen.findByText("Học Viên Chờ");
+
+    // Every order is listed under "Tất cả".
+    expect(screen.getByText("Học Viên Xong")).toBeInTheDocument();
+    expect(screen.getByText("Học Viên Xong Hai")).toBeInTheDocument();
+
+    await user.click(filterButton("Chờ duyệt"));
+    expect(screen.getByText("Học Viên Chờ")).toBeInTheDocument();
+    expect(screen.queryByText("Học Viên Xong")).not.toBeInTheDocument();
+    expect(screen.queryByText("Học Viên Xong Hai")).not.toBeInTheDocument();
+
+    await user.click(filterButton("Thành công"));
+    expect(screen.queryByText("Học Viên Chờ")).not.toBeInTheDocument();
+    expect(screen.getByText("Học Viên Xong")).toBeInTheDocument();
+    expect(screen.getByText("Học Viên Xong Hai")).toBeInTheDocument();
+
+    // No failed order exists, so the filter has nothing to list.
+    await user.click(filterButton("Đã hủy"));
+    expect(screen.getByText(NONE)).toBeInTheDocument();
+    expect(screen.queryByText("Học Viên Chờ")).not.toBeInTheDocument();
+    expect(screen.queryByText("Học Viên Xong")).not.toBeInTheDocument();
+
+    await user.click(filterButton("Tất cả"));
+    expect(screen.queryByText(NONE)).not.toBeInTheDocument();
+    expect(screen.getByText("Học Viên Chờ")).toBeInTheDocument();
+    expect(screen.getByText("Học Viên Xong")).toBeInTheDocument();
+  });
+
+  it("lists a failed order under the cancelled filter only", async () => {
+    const user = userEvent.setup();
+    getAllPayments.mockResolvedValue([
+      orderOf(1, "pending", "Học Viên Chờ"),
+      orderOf(4, "failed", "Học Viên Hủy"),
+    ]);
+    render(<TransactionsPage />);
+    await screen.findByText("Học Viên Chờ");
+
+    await user.click(filterButton("Đã hủy"));
+    expect(screen.getByText("Học Viên Hủy")).toBeInTheDocument();
+    expect(screen.queryByText("Học Viên Chờ")).not.toBeInTheDocument();
+
+    await user.click(filterButton("Thành công"));
+    expect(screen.getByText(NONE)).toBeInTheDocument();
+    expect(screen.queryByText("Học Viên Hủy")).not.toBeInTheDocument();
+  });
+});
+
 describe("Transactions page loading", () => {
   it("shows the learner's name from the users relation", async () => {
     getAllPayments.mockResolvedValue([pendingPayment]);

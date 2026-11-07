@@ -14,6 +14,23 @@
 //   application path is covered by action-parse.test.ts with the SDK mocked.
 // Invariants: Auth users are created only for reserved, scope-tagged emails and removed by the automatic scope; the
 //   service role reads state back and never sends a request under test; no row records a mail or an outbound call.
+//
+// Layer audit (QE-U6, AC11, 2026-11-07): the layer each row needs under the e2e rule of test-quality-strategy.
+// Boundaries: persistence, refusal (server, database or Auth), failed request, permission, redirect, upload, layout
+// (real browser: layout, engine or sandbox). A row that needs two names both; "guard client-only" marks a part a
+// component test could cover. "client-only -> <file>" is a QE-F8 move candidate under __tests__/unit/components/.
+// The audit changes no row, assertion or timeout.
+//   [V1] refusal: a malformed course id enrolls nobody
+//   [V2] refusal: an invalid field creates no account
+//   [V3] permission: a learner cannot create a user
+//   [V4] persistence: the admin form creates the user
+//   [V5] persistence, permission: the admin creates an admin user through the action
+//   [V6] refusal: a malformed user id deletes nobody
+//   [V7] refusal: a malformed quiz request stops before Gemini
+//   [V8] refusal: a second enrollment keeps one row
+//   [V9] refusal: a duplicate email names the conflict
+//   [V10] refusal: an unknown user returns the fixed message
+//   [V11] refusal: a malformed payment argument writes nothing
 import { IDS, authFile } from "./accounts";
 import { expect, test } from "./fixtures";
 import {

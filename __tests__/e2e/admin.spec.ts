@@ -1,3 +1,30 @@
+// Layer audit (QE-U6, AC11, 2026-11-07): the layer each row needs under the e2e rule of test-quality-strategy.
+// Boundaries: persistence, refusal (server, database or Auth), failed request, permission, redirect, upload, layout
+// (real browser: layout, engine or sandbox). A row that needs two names both; "guard client-only" marks a part a
+// component test could cover. "client-only -> <file>" is a QE-F8 move candidate under __tests__/unit/components/.
+// The audit changes no row, assertion or timeout.
+//   [A14] persistence: the dashboard aggregates the seed through the admin actions
+//   [A15] persistence, permission: opening a notification stores it as read under RLS
+//   [A16] persistence, permission: mark all read stores the admin's rows, not another user's
+//   [A1] persistence: the dashboard lists the seed courses
+//   [A1] persistence, layout: seed course cards show the fallback image that loads
+//   [A1] persistence: the chapters of the chosen course load
+//   [A1] client-only -> ChaptersPage.test.tsx (the card names the chosen course)
+//   [A1] persistence: the seed lessons are listed
+//   [A1] persistence: the approved payment is joined with the learner profile
+//   [A1] persistence: the three seed users are listed
+//   [A3] failed request: a delete that fails in transit keeps the user listed
+//   [A2] permission: an admin reads a lesson without enrollment
+//   [A4] persistence: the course is deleted on confirm (cancel paths client-only)
+//   [A5] persistence: the chapter is deleted on confirm (cancel paths client-only)
+//   [A6] persistence: the lesson is deleted on confirm (cancel paths client-only)
+//   [A7] persistence: the exercise is deleted on confirm (cancel paths client-only)
+//   [A8] persistence: the account is deleted on confirm (cancel paths client-only)
+//   [A9] client-only -> LessonsPage.test.tsx (confirm before AI bulk create, unsaved-lesson guard)
+//   [A10] layout: keyboard flow, 375px fit and dark scheme of the delete dialog
+//   [A11] layout: the example opens the try-it tab with its exact code in Monaco
+//   [A12] client-only -> PreBlock.test.tsx (CSS example has Copy and no Thử ngay)
+//   [A13] layout: Monaco tab state after switching tabs
 import type { Page } from "@playwright/test";
 import { ACCOUNTS, authFile } from "./accounts";
 import {
@@ -15,14 +42,108 @@ import {
   createCourseFixture,
   createExerciseFixture,
   createLessonFixture,
+  createAdminNotificationFixtures,
   createUserFixture,
+  notificationIsRead,
   rowExists,
+  SEED_STUDENT_NOTIFICATION_ID,
   userExists,
 } from "./service-role";
 
 test.use({ storageState: authFile("admin") });
 
 test.describe("admin pages", () => {
+  // M8 render: every figure below follows from supabase/seed.sql (two learners, two courses, four lessons, three
+  // exercises, one finished lesson, one approved payment of 199000, one enrollment).
+  test("[A14] the dashboard shows the stat cards, the top student and the recent activity of the seed", async ({
+    page,
+  }) => {
+    await page.goto("/admin");
+    const stat = (title: string) =>
+      page
+        .locator("p")
+        .filter({ hasText: new RegExp(`^${title}$`) })
+        .locator("xpath=following-sibling::h3");
+
+    await expect(stat("Tổng Doanh thu")).toHaveText(/^199\.000\s*₫$/);
+    await expect(stat("Học viên")).toHaveText("2");
+    await expect(stat("Khóa học")).toHaveText("2");
+    await expect(stat("Bài học")).toHaveText("4");
+    await expect(stat("Bài tập")).toHaveText("3");
+    await expect(stat("Hoạt động học tập")).toHaveText("1");
+
+    const top = page
+      .getByRole("listitem")
+      .filter({ hasText: "student@devspace.test" });
+    await expect(top).toHaveCount(1);
+    await expect(top).toContainText(ACCOUNTS.student.fullName);
+    await expect(top).toContainText(/1\s*Bài/);
+
+    const activity = (verb: string) =>
+      page.getByRole("listitem").filter({ hasText: verb });
+    await expect(activity("đã tham gia")).toContainText(
+      ACCOUNTS.student.fullName,
+    );
+    await expect(activity("đã tham gia")).toContainText("JavaScript căn bản");
+    await expect(activity("đã học xong")).toContainText(
+      ACCOUNTS.student.fullName,
+    );
+    await expect(activity("đã học xong")).toContainText("Biến và kiểu dữ liệu");
+  });
+
+  // M8 bell: the bell reads and updates `notifications` through the browser client, so it needs RLS and the stored rows.
+  test.describe("header bell", () => {
+    const bell = (page: Page) =>
+      page
+        .locator("header button")
+        .filter({ has: page.locator("svg.lucide-bell") });
+
+    test("[A15] shows the unread count, and opening a notification stores it as read and lowers the count", async ({
+      page,
+    }) => {
+      const [first, second] = await createAdminNotificationFixtures(2);
+      expect(await notificationIsRead(SEED_STUDENT_NOTIFICATION_ID)).toBe(
+        false,
+      );
+      await page.goto("/admin");
+      await expect(bell(page)).toHaveText("2");
+
+      await bell(page).click();
+      await expect(page.getByText(first.title, { exact: true })).toBeVisible();
+      await expect(page.getByText(second.title, { exact: true })).toBeVisible();
+      await page.getByText(first.title, { exact: true }).click();
+
+      await expect(bell(page)).toHaveText("1");
+      await expect.poll(() => notificationIsRead(first.id)).toBe(true);
+      expect(await notificationIsRead(second.id)).toBe(false);
+      expect(await notificationIsRead(SEED_STUDENT_NOTIFICATION_ID)).toBe(
+        false,
+      );
+    });
+
+    test("[A16] mark all read stores the admin's unread notifications as read and leaves another user's unread", async ({
+      page,
+    }) => {
+      const fixtures = await createAdminNotificationFixtures(2);
+      // The control must start unread, or leaving it unread would prove nothing.
+      expect(await notificationIsRead(SEED_STUDENT_NOTIFICATION_ID)).toBe(
+        false,
+      );
+      await page.goto("/admin");
+      await expect(bell(page)).toHaveText("2");
+
+      await bell(page).click();
+      await page.getByRole("button", { name: "Đánh dấu đã đọc" }).click();
+
+      await expect(bell(page)).toHaveText("");
+      for (const { id } of fixtures)
+        await expect.poll(() => notificationIsRead(id)).toBe(true);
+      expect(await notificationIsRead(SEED_STUDENT_NOTIFICATION_ID)).toBe(
+        false,
+      );
+    });
+  });
+
   test("[A1] the dashboard shows the seed courses", async ({ page }) => {
     await page.goto("/admin");
     await expect(page.getByText("Tổng quan hệ thống")).toBeVisible();

@@ -1128,5 +1128,15 @@
       "file": "docs/backlog/problems.md",
       "id": "BL-P19"
     }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "BL-F2"
+    },
+    "to": {
+      "file": "docs/programs/quality-engineering/future-features.md",
+      "id": "QE-F10"
+    }
   }
 ]

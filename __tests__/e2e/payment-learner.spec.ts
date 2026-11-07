@@ -11,6 +11,38 @@
 // Known bugs: none (SE-P8 to SE-P12 are resolved by SE-U1).
 // Invariants: payments are created and changed only through the actions as the right actor (G8); the service
 //   role prepares coupon fixtures, reads state back and cleans up; no row records a mail.
+//
+// Layer audit (QE-U6, AC11, 2026-11-07): the layer each row needs under the e2e rule of test-quality-strategy.
+// Boundaries: persistence, refusal (server, database or Auth), failed request, permission, redirect, upload, layout
+// (real browser: layout, engine or sandbox). A row that needs two names both; "guard client-only" marks a part a
+// component test could cover. "client-only -> <file>" is a QE-F8 move candidate under __tests__/unit/components/.
+// The audit changes no row, assertion or timeout.
+//   [PF1] persistence: the buy button creates one pending order
+//   [PF2] persistence: a reload still shows one pending order
+//   [PF3] persistence: LOCAL10 is stored on the order
+//   [PF4] refusal: an unknown code leaves the full price
+//   [PF5] refusal: an inactive code is refused
+//   [PF6] refusal: an exhausted code is refused
+//   [PF7] persistence: a code without a use limit is applied
+//   [PF8] persistence: the cancel button cancels the order
+//   [PF10] persistence: cancelling releases the coupon use
+//   [PF11] refusal: a cancel the server refuses shows the error
+//   [PF9] persistence: confirming leaves the order pending
+//   [H1] permission: an anonymous client cannot create an order
+//   [H2] persistence: creating an order twice returns the same order
+//   [H3] permission: a learner cannot apply a coupon to another's order
+//   [H4] permission: a learner cannot cancel another's order
+//   [H5] permission: a learner cannot approve or reject an order
+//   [H6] refusal: a cancelled order cannot take a coupon
+//   [H7] refusal: an unknown course creates no order
+//   [H8] persistence: one coupon use is reserved
+//   [H9] refusal: an extra coupon argument is ignored
+//   [H10] persistence: switching codes reserves the new use and releases the old
+//   [H11] refusal: a refused code keeps the stored coupon
+//   [H12] persistence: cancelling releases the use once
+//   [H13] refusal: an owner gets no pending order
+//   [H14] refusal: a free course gets no pending order
+//   [H15] refusal: a malformed argument writes nothing
 import { IDS, authFile } from "./accounts";
 import { expect, test } from "./fixtures";
 import {

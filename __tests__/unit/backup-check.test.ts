@@ -1,4 +1,7 @@
 // TM-U1 AC7 to AC10: the pure parts of `backup:check` and every refusal that happens before a write.
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   compareDumpToRestore,
@@ -20,7 +23,11 @@ import {
   validateManifest,
   versionMismatches,
 } from "../../scripts/backup/core.mjs";
-import { parseArgs, preflight } from "../../scripts/backup/check.mjs";
+import {
+  parseArgs,
+  preflight,
+  readJsonFile,
+} from "../../scripts/backup/check.mjs";
 import {
   generateScratchConfig,
   SCRATCH_PORTS,
@@ -710,6 +717,18 @@ describe("backup:check refusals before any write (AC10)", () => {
 });
 
 describe("backup:check arguments and report", () => {
+  it("reads a JSON file with a byte order mark, as Windows PowerShell writes it", () => {
+    const dir = mkdtempSync(join(tmpdir(), "backup-check-"));
+    try {
+      writeFileSync(join(dir, "a.json"), '﻿{"ok":true}');
+      expect(readJsonFile(join(dir, "a.json"))).toEqual({ ok: true });
+      writeFileSync(join(dir, "b.json"), "{not json");
+      expect(() => readJsonFile(join(dir, "b.json"))).toThrow();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("accepts one folder or --teardown, with or without npm's separator", () => {
     expect(parseArgs(["C:\\b"])).toEqual({ folder: "C:\\b" });
     expect(parseArgs(["--", "C:\\b"])).toEqual({ folder: "C:\\b" });

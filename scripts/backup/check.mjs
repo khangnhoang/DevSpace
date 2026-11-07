@@ -601,6 +601,11 @@ function saveResult(folder, result, outcome) {
 
 // ---------- entry point ----------
 
+// Windows PowerShell 5.1 writes a byte order mark with `Set-Content -Encoding utf8`; JSON.parse rejects it.
+export function readJsonFile(file) {
+  return JSON.parse(readFileSync(file, "utf8").replace(/^﻿/, ""));
+}
+
 export function parseArgs(argv) {
   const rest = argv.filter((arg) => arg !== "--");
   if (rest.length === 1 && rest[0] === "--teardown") return { teardown: true };
@@ -642,7 +647,7 @@ export async function main(argv) {
         listFolder: (dir) => readdirSync(dir),
         readJson: (file) => {
           try {
-            return JSON.parse(readFileSync(file, "utf8"));
+            return readJsonFile(file);
           } catch {
             return null;
           }
@@ -661,7 +666,7 @@ export async function main(argv) {
     }
 
     const hosted = validateHosted(
-      JSON.parse(readFileSync(join(folder, "hosted.json"), "utf8")),
+      readJsonFile(join(folder, "hosted.json")),
     ).hosted;
     return await run(folder, hosted, engine);
   } catch (error) {

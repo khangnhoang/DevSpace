@@ -6,6 +6,7 @@ import {
   FixtureScope,
   guardedFetch,
   runCleanupHook,
+  serviceRoleClients,
   sharedRunMarker,
   type HookContext,
 } from "../helpers/fixture-ownership";
@@ -21,9 +22,10 @@ const clientOptions = {
   },
 };
 
-// Every actor request that can change data is admitted right before it is sent, so a timed-out test that resumes
-// cannot write after the run turned unclean (QE-P8). Reads pass. The service-role `fixtures` client below is not
-// guarded: it prepares, reads back and cleans up, and cleanup must still run on an unclean run.
+// Every request of a test body that can change data, from an actor or from the service-role `fixtures` client (RPC
+// writes included), is admitted right before it is sent, so a timed-out test that resumes cannot write after the run
+// turned unclean (QE-P8). Reads pass. Cleanup uses `cleanupFixtures` below, which is not guarded and must still run
+// on an unclean run.
 const actorFetch = guardedFetch(sharedRunMarker);
 
 function clientWith(token?: string): SupabaseClient {
@@ -48,14 +50,21 @@ export const newAnonClient = () => clientWith();
 
 // Service role: bypasses RLS. Only for preparing fixtures, reading state back to verify a result, and cleanup;
 // never for the request under test.
-export const fixtures = createClient(
-  stack.apiUrl,
-  stack.serviceRoleKey,
-  clientOptions,
-);
+function serviceRoleClient(fetchWith: typeof fetch) {
+  return createClient(stack.apiUrl, stack.serviceRoleKey, {
+    ...clientOptions,
+    global: { fetch: fetchWith },
+  });
+}
+const serviceRole = serviceRoleClients(serviceRoleClient, sharedRunMarker);
+export const fixtures = serviceRole.fixtures;
+
+// The same service role for cleanup and its reconciliation only (the scope's cleanup, a finally block that removes
+// what the test created): never guarded, so an unclean run can still clean up.
+export const cleanupFixtures = serviceRole.cleanup;
 
 export function startFixtureScope() {
-  currentScope = new FixtureScope(fixtures, stack.dbUrl);
+  currentScope = new FixtureScope(cleanupFixtures, stack.dbUrl);
 }
 export function fixtureScope() {
   if (!currentScope) throw new Error("No RLS fixture scope");

@@ -85,6 +85,22 @@ export function guardedFetch(
   };
 }
 
+// The two service-role clients of the rls tests, built by `make` with the fetch each one uses. `fixtures` is what a test
+// body uses to prepare data and read it back: its non-GET requests (RPC writes included) are admitted right before they
+// are sent, like an actor's, so a timed-out test cannot write after the run turned unclean. `cleanup` is for the scope's
+// cleanup and the finally blocks that remove what the test created: it is never guarded, so an unclean run can still
+// clean up (QE-P8).
+export function serviceRoleClients<Client>(
+  make: (fetchWith: typeof fetch) => Client,
+  run: () => RunMarker,
+  base: typeof fetch = (...args) => fetch(...args),
+): { fixtures: Client; cleanup: Client } {
+  return {
+    fixtures: make(guardedFetch(run, base)),
+    cleanup: make(base),
+  };
+}
+
 // What a hook gets from Vitest. `signal` aborts when the test or the hook times out, and the pending operation of a
 // timed-out hook keeps running after that.
 export type HookContext = {

@@ -22,6 +22,7 @@ import { afterEach, beforeEach, describe, expect, inject, it } from "vitest";
 import {
   admin,
   anon,
+  cleanupFixtures,
   expectDenied,
   finishFixtureScope,
   fixtureScope,
@@ -1725,7 +1726,7 @@ describe("payment functions: concurrency", { timeout: 60000 }, () => {
     for (const c of connected) await step(() => c.end());
     // The scope's selector (user, course) must match one row at cleanup; the closed order goes first.
     await step(async () =>
-      must(await fixtures.from("payments").delete().eq("id", earlier)),
+      must(await cleanupFixtures.from("payments").delete().eq("id", earlier)),
     );
     await step(() =>
       withPg((c) =>

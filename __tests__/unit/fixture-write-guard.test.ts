@@ -13,6 +13,7 @@ import {
   FixtureScope,
   guardedFetch,
   noteTimeout,
+  serviceRoleClients,
   type RunMarker,
 } from "../helpers/fixture-ownership";
 
@@ -114,6 +115,53 @@ describe("admitted", () => {
     release();
     await expect(write).rejects.toThrow("residue: elsewhere");
     expect(calls).toBe(0);
+  });
+});
+
+describe("guardedFetch on the service-role client of the test bodies", () => {
+  function serviceRole(run: RunMarker) {
+    const sent: string[] = [];
+    const base = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      sent.push(
+        `${init?.method ?? "GET"} ${new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url).pathname}`,
+      );
+      return reply();
+    }) as typeof fetch;
+    const pair = serviceRoleClients(
+      (fetchWith) =>
+        createClient("http://127.0.0.1:1", "service-key", {
+          auth: { persistSession: false, autoRefreshToken: false },
+          global: { fetch: fetchWith },
+        }),
+      () => run,
+      base,
+    );
+    return {
+      sent,
+      // The pair the rls helpers export: `fixtures` guarded, `cleanupFixtures` not.
+      fixtures: pair.fixtures,
+      cleanupFixtures: pair.cleanup,
+    };
+  }
+
+  it("refuses an insert, an update, a delete and a write RPC after the run turned unclean, but still reads and cleans up", async () => {
+    const run = marker();
+    const { fixtures, cleanupFixtures, sent } = serviceRole(run);
+    await fixtures.from("payments").insert({ amount: 1 });
+    expect(sent).toEqual(["POST /rest/v1/payments"]);
+    sent.length = 0;
+    noteTimeout("slow test", run);
+    const refused = await heldThenResumed(run, async () => [
+      await fixtures.from("payments").insert({ amount: 1 }),
+      await fixtures.from("payments").update({ amount: 2 }).eq("id", 1),
+      await fixtures.from("payments").delete().eq("id", 1),
+      await fixtures.rpc("create_pending_payment", { p_course_id: 1 }),
+    ]);
+    for (const result of refused as { error: unknown }[])
+      expect(result.error).toBeTruthy();
+    await fixtures.from("payments").select("id"); // read-back
+    await cleanupFixtures.from("payments").delete().eq("id", 1); // cleanup
+    expect(sent).toEqual(["GET /rest/v1/payments", "DELETE /rest/v1/payments"]);
   });
 });
 

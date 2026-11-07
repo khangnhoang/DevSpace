@@ -1747,6 +1747,12 @@ describe("payment functions: concurrency", { timeout: 60000 }, () => {
           `test hook ${hook} was not removed: ${left.fns} function(s), ${left.triggers} trigger(s) remain`,
         );
     });
+    // A catalog object that outlives the test is not table residue, so the end-of-run audit cannot see it: mark the run
+    // unclean here, and the next command resets the database.
+    if (cleanupErrors.length)
+      fixtureScope().run.mark(
+        `test hook ${hook} cleanup failed: ${cleanupErrors.map((e) => (e instanceof Error ? e.message : String(e))).join("; ")}`,
+      );
     if (failed && cleanupErrors.length === 0) throw original;
     if (failed || cleanupErrors.length)
       throw new AggregateError(

@@ -16,15 +16,15 @@ type Chain = {
   eq: () => Chain;
   order: () => Chain;
   limit: () => Chain;
-  single: () => Promise<{ data: unknown }>;
+  single: () => Promise<{ data: unknown; error: { code: string } | null }>;
 };
-const chain = (data: unknown): Chain => {
+const chain = (data: unknown, error: { code: string } | null = null): Chain => {
   const q: Chain = {
     select: () => q,
     eq: () => q,
     order: () => q,
     limit: () => q,
-    single: async () => ({ data }),
+    single: async () => ({ data, error }),
   };
   return q;
 };
@@ -322,6 +322,36 @@ describe("approvePayment", () => {
     expect(await approvePayment(7)).toEqual({ success: true });
     expect(mocks.sendSuccessEmail).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["profiles", false],
+    ["courses", true],
+  ])(
+    "logs only the code when the %s lookup for the mail fails, and still reports the approval",
+    async (failing, mailed) => {
+      mocks.rpc.mockResolvedValue(won);
+      mocks.sendSuccessEmail.mockResolvedValue({ success: true });
+      const rows: Record<string, unknown> = {
+        profiles: { full_name: "Học Viên", email: "learner@devspace.test" },
+        courses: { name: "JavaScript căn bản", slug: "javascript-can-ban" },
+        chapters: { id: 5 },
+        lessons: { slug: "bai-1" },
+      };
+      mocks.from.mockImplementation((table: string) =>
+        table === failing
+          ? chain(null, { code: "PGRST116" })
+          : chain(rows[table]),
+      );
+
+      expect(await approvePayment(7)).toEqual({ success: true });
+
+      expect(console.error).toHaveBeenCalledWith(
+        expect.any(String),
+        "PGRST116",
+      );
+      expect(mocks.sendSuccessEmail).toHaveBeenCalledTimes(mailed ? 1 : 0);
+    },
+  );
 
   it.each([
     ["not approved", { approved: false }],

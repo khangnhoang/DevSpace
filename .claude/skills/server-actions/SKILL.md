@@ -11,7 +11,7 @@ Use when a task adds, changes or reviews a file in `app/action/`, a route handle
 
 Do not use for UI-only state that never crosses to the server. For the database side (policies, RPCs, grants) also use `supabase-migration`; for the screen using the action use `frontend-workflow`.
 
-Server actions validate with Zod: `zod` is a dependency and the shared schemas live in `lib/schemas/` (see Validate on the server). The payment and coupon actions (`app/action/payment.ts`) validate by hand; their rewrite belongs to security-hotfix H2-2b, so another task does not convert them. A form's schema also lives in `lib/schemas/` ([frontend-workflow](../frontend-workflow/references/async-state-and-forms.md)). A form that writes through the browser Supabase client relies on RLS for enforcement; a form that posts to a server action never replaces the action's own parse (Validate on the server). Do not add another validation library, or a form library, inside an unrelated task.
+Server actions validate with Zod: `zod` is a dependency and the shared schemas live in `lib/schemas/` (see Validate on the server). The payment and coupon actions (`app/action/payment.ts`) parse with `lib/schemas/payment.ts` and write only through the database functions of SE-U1 (`create_pending_payment`, `apply_payment_coupon`, `close_pending_payment`, `approve_payment`). A form's schema also lives in `lib/schemas/` ([frontend-workflow](../frontend-workflow/references/async-state-and-forms.md)). A form that writes through the browser Supabase client relies on RLS for enforcement; a form that posts to a server action never replaces the action's own parse (Validate on the server). Do not add another validation library, or a form library, inside an unrelated task.
 
 ## Core rules
 

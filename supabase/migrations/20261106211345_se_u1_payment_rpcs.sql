@@ -24,6 +24,7 @@ declare
   v_price integer;
   v_id bigint;
   v_amount integer;
+  v_attempt integer;
 begin
   select c.price into v_price from public.courses c where c.id = p_course_id;
   if not found or v_price is null then
@@ -41,19 +42,28 @@ begin
     return jsonb_build_object('result', 'enrolled');
   end if;
 
-  -- The old code may still insert a plain pending order directly until the write lock, so the insert can conflict.
-  insert into public.payments (user_id, course_id, amount, status)
-  values (p_user_id, p_course_id, v_price, 'pending')
-  on conflict (user_id, course_id) where status = 'pending' do nothing
-  returning id, amount into v_id, v_amount;
-  if found then
-    return jsonb_build_object('result', 'created', 'payment_id', v_id, 'amount', v_amount);
-  end if;
+  -- The insert conflicts with a pending order that the old code wrote directly or that an earlier create left. The
+  -- conflicting order can be closed between the conflict and the read below, because close_pending_payment takes no
+  -- advisory lock; the loop then inserts again. A result never carries a missing payment_id.
+  for v_attempt in 1..3 loop
+    insert into public.payments (user_id, course_id, amount, status)
+    values (p_user_id, p_course_id, v_price, 'pending')
+    on conflict (user_id, course_id) where status = 'pending' do nothing
+    returning id, amount into v_id, v_amount;
+    if found then
+      return jsonb_build_object('result', 'created', 'payment_id', v_id, 'amount', v_amount);
+    end if;
 
-  select p.id, p.amount into v_id, v_amount
-  from public.payments p
-  where p.user_id = p_user_id and p.course_id = p_course_id and p.status = 'pending';
-  return jsonb_build_object('result', 'resumed', 'payment_id', v_id, 'amount', v_amount);
+    select p.id, p.amount into v_id, v_amount
+    from public.payments p
+    where p.user_id = p_user_id and p.course_id = p_course_id and p.status = 'pending';
+    if found then
+      return jsonb_build_object('result', 'resumed', 'payment_id', v_id, 'amount', v_amount);
+    end if;
+  end loop;
+
+  -- Only a create and a close that keep alternating on the same order get here; the caller sees a failed call.
+  raise exception 'could not create or resume the pending payment' using errcode = '40001';
 end $$;
 
 create function public.apply_payment_coupon(p_payment_id bigint, p_user_id uuid, p_code text)
@@ -109,7 +119,9 @@ begin
     end if;
   end if;
 
-  v_amount := greatest(0, least(v_price, round(v_price * (100 - v_percent) / 100.0)))::integer;
+  -- numeric: price times (100 - percent) overflows integer above about 23.9 million, and a stored percent can lie
+  -- outside 0..100. The result is clamped to 0..price before it goes back to integer.
+  v_amount := greatest(0::numeric, least(v_price::numeric, round(v_price::numeric * (100 - v_percent::numeric) / 100)))::integer;
   update public.payments p
   set coupon_id = v_coupon_id, amount = v_amount, updated_at = now()
   where p.id = v_pay.id;
@@ -179,7 +191,7 @@ begin
   return jsonb_build_object('approved', true, 'user_id', v_user_id, 'course_id', v_course_id);
 end $$;
 
--- Holds every role but the table owner (the functions above run as their owner) to the payment contract. It
+-- Holds every role but the table owner postgres (the functions above run as their owner) to the payment contract. It
 -- decides by current_user only; it reads no client-settable setting. The service role bypasses RLS but not triggers.
 create function public.payments_guard() returns trigger
   language plpgsql
@@ -189,7 +201,7 @@ as $$
 declare
   v_price integer;
 begin
-  if current_user in ('postgres', 'supabase_admin') then
+  if current_user = 'postgres' then
     return new;
   end if;
 

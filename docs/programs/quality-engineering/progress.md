@@ -7,10 +7,10 @@ Charter: [README.md](README.md). Problems: [problems.md](problems.md). Git histo
 | Field | Value |
 | --- | --- |
 | Spec revision | [QE-U6](implementation-plans/qe-u6-e2e-coverage/plan.md) r1 (2026-11-07), approved by the Owner on 2026-11-07. |
-| Current unit / checkpoint | QE-U6, CP1 done (AC9, AC10 as component tests), CP2 next. QE-U5 is delivered in PR 74 (`259f123`). |
+| Current unit / checkpoint | QE-U6, CP1 (AC9, AC10) and CP2 (AC1 to AC6) done, CP3 next. QE-U5 is delivered in PR 74 (`259f123`). |
 | Status | QE-U5 completed on 2026-11-07: QE-P5 and QE-P8 resolved. QE-U6 plan approved and committed on `test/qe-e2e-coverage` (QE-F10, moved from BL-F2, and the QE-F8 classification). QE-P7, QE-P9 and the QE-F8 moves are open. |
 | Completed evidence | QE-U5 milestones and PR 74. The first CI run failed `db` 1 of 998 on a Linux-only race in the new QE-P5 regression test; CI self-fix `d5e6113` (test only) made the second run green on all six jobs. |
-| Accepted deviations | none. |
+| Accepted deviations | AC4 and AC5 run on an owned fixture course (one lesson, two exercises, no progress) instead of seed lesson 3: `user_progress` is unique per user and lesson, so an unwanted insert on the seed row fails with 23505 and the app ignores it, which would leave "rows unchanged" unable to fail. |
 | Blockers / Owner decisions | none. |
 | Next action | The implementor continues with CP2 to CP4 and the final checks, with local checkpoint commits. |
 | Current authority | Owner granted (2026-11-07) plan approval, this plan commit and implementation with local checkpoint commits. No push, PR or merge is granted. |
@@ -55,4 +55,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-07 QE-U5 CP4 catches up security-engineering (SE-U1 delivered in PR 71 and PR 72, SE-P8 to SE-P12 resolved, SE-F2 and SE-F3 target the techstack migration) and the backlog (BL-P2, BL-P3, BL-P13, BL-P17 and BL-P18 done in PR 73) (`ffd5ad8`).
 - 2026-11-07 QE-U5 merged: fixture writes admitted per request and cleanup-hook timeouts mark the run (QE-P8), the lock start-time race fixed (QE-P5), `[T8]` session diagnostics added (QE-P7 open) (PR 74, `259f123`).
 - 2026-11-07 QE-U6 r1 approved by the Owner: QE-F10 (moved from BL-F2) gaps covered at the smallest layer and every e2e row classified for QE-F8, with the QE-U5 docs catch-up (`9f349e8`).
-- 2026-11-07 QE-U6 CP1 covers AC9 and AC10 with component tests: the transactions status filter and the user dialog avatar preview; the filter returning every order or inverting the match, and the preview not being set, each fail them (this commit).
+- 2026-11-07 QE-U6 CP1 covers AC9 and AC10 with component tests: the transactions status filter and the user dialog avatar preview; the filter returning every order or inverting the match, and the preview not being set, each fail them (`a6b3a19`).
+- 2026-11-07 QE-U6 CP2 adds six e2e rows for the learner and public flows: Header course search [S9], review paging [S10], review edit [F14], and the lesson complete gating [T12], full quiz [T13] and last-lesson finish [T14], with scoped fixtures for reviews and a one-lesson course (this commit).

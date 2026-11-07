@@ -7,6 +7,7 @@ import {
   avatarObjectNames,
   commentContent,
   createCommentFixture,
+  createStudentReviewFixture,
   fixtureLabel,
   profileEmailOf,
   removeAvatarObject,
@@ -325,6 +326,33 @@ test.describe("course review form", () => {
     await expect(textbox(page)).toHaveAttribute("aria-invalid", "true");
     expect(await studentReviews()).toEqual([]);
     expect(mutations, "nothing was sent").toEqual([]);
+  });
+
+  // M3 edit: a learner who reviewed the course gets the form in edit mode, and saving updates that one row.
+  test("[F14] a learner who already reviewed the course sees the stored review in the edit form and saving updates that one row", async ({
+    page,
+  }) => {
+    const stored = fixtureLabel("E2E đánh giá cũ");
+    // A rating other than the form's default (5): it survives the save only when the form was filled from the stored row.
+    await createStudentReviewFixture(2, stored);
+    await page.goto(COURSE_URL);
+
+    await expect(
+      page.getByRole("heading", { name: "Chỉnh sửa đánh giá của bạn" }),
+    ).toBeVisible();
+    await expect(textbox(page)).toHaveValue(stored);
+    await expect(
+      page.getByRole("button", { name: "Cập nhật đánh giá" }),
+    ).toBeVisible();
+
+    const text = fixtureLabel("E2E đánh giá mới");
+    await textbox(page).fill(text);
+    await page.getByRole("button", { name: "Cập nhật đánh giá" }).click();
+
+    await expect(page.getByText("Đánh giá thành công!")).toBeVisible();
+    await expect(page.getByText(text, { exact: true })).toBeVisible();
+    await expect(page.getByText(stored, { exact: true })).toHaveCount(0);
+    expect(await studentReviews()).toEqual([{ rating: 2, content: text }]);
   });
 
   test("[F11] the review form keeps its dark surface in a light and a dark OS scheme", async ({

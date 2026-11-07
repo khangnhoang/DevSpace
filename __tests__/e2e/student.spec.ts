@@ -16,7 +16,9 @@ import {
   commentDeletedAt,
   createCommentFixture,
   createCompletedStudentCourseFixture,
+  createLearningCourseFixture,
   createStudentCourseFixtures,
+  studentProgressOf,
 } from "./service-role";
 
 // The student is enrolled in the paid course with an approved payment.
@@ -430,4 +432,79 @@ test("[T10] at 768px the name and the edit button do not wrap", async ({
   expect(await overflows(page, "html"), "the page scrolls sideways").toBe(
     false,
   );
+});
+
+// M5 / M5b: the lesson complete button and the quiz save progress through the browser client. Each row uses its own
+// course fixture with one lesson, so the progress it causes (or does not) is the only progress of that lesson.
+test.describe("lesson completion", () => {
+  const COMPLETE = /Đến bài sau/;
+
+  test("[T12] completing a lesson that has exercises sends the student to its quiz and saves no progress", async ({
+    page,
+  }) => {
+    const fixture = await createLearningCourseFixture(2);
+    await page.goto(`/learn/${fixture.slug}/${fixture.lessonSlug}`);
+
+    await page.getByRole("button", { name: COMPLETE }).click();
+
+    await expect(
+      page.getByText("Bạn cần hoàn thành bài tập trước!"),
+    ).toBeVisible();
+    await expect(page).toHaveURL(
+      new RegExp(`/learn/${fixture.slug}/${fixture.lessonSlug}/quiz$`),
+    );
+    await expect(page.getByText("Câu 1 / 2")).toBeVisible();
+    expect(await studentProgressOf(fixture.lessonId)).toBe(0);
+  });
+
+  test("[T13] answering every question of a lesson quiz shows the completion screen without the answer buttons and saves the progress", async ({
+    page,
+  }) => {
+    const fixture = await createLearningCourseFixture(2);
+    await page.goto(`/learn/${fixture.slug}/${fixture.lessonSlug}/quiz`);
+
+    for (const [index, question] of fixture.questions.entries()) {
+      const last = index === fixture.questions.length - 1;
+      await expect(
+        page.getByText(`Câu ${index + 1} / ${fixture.questions.length}`),
+      ).toBeVisible();
+      await expect(page.getByText(question.question)).toBeVisible();
+      await page
+        .getByText(question.options[question.correct], { exact: true })
+        .click();
+      await page.getByRole("button", { name: "Kiểm tra" }).click();
+      // The next-step button only exists after a correct answer.
+      await page
+        .getByRole("button", {
+          name: last ? "Hoàn thành bài học" : "Câu tiếp theo",
+        })
+        .click();
+    }
+
+    await expect(page.getByText("Xuất sắc!")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Kiểm tra" })).toHaveCount(0);
+    await expect(
+      page.getByText(fixture.questions.at(-1)!.options[0], { exact: true }),
+    ).toHaveCount(0);
+    await expect.poll(() => studentProgressOf(fixture.lessonId)).toBe(1);
+  });
+
+  test("[T14] completing the last lesson of a course without exercises saves the progress and reaches the finish page", async ({
+    page,
+  }) => {
+    const fixture = await createLearningCourseFixture(0);
+    await page.goto(`/learn/${fixture.slug}/${fixture.lessonSlug}`);
+
+    await page.getByRole("button", { name: COMPLETE }).click();
+
+    await expect(page.getByText("Đã hoàn thành bài học!")).toBeVisible();
+    // The app pushes to the finish page after a timer; the URL wait covers it without a fixed sleep.
+    await page.waitForURL(`**/learn/${fixture.slug}/finish`);
+    await expect(
+      page.getByRole("heading", {
+        name: "Chúc mừng bạn đã hoàn thành khóa học!",
+      }),
+    ).toBeVisible();
+    expect(await studentProgressOf(fixture.lessonId)).toBe(1);
+  });
 });

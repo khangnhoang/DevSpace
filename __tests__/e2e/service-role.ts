@@ -651,7 +651,7 @@ export async function exerciseById(id: number): Promise<ExerciseRow> {
       .single(),
   );
 }
-export async function createUserFixture(variant?: "alternate") {
+export async function createUserFixture(variant?: string) {
   const email = `e2e-${scope().tag}${variant ? `-${variant}` : ""}@devspace.test`;
   const label = scope().label("E2E Người dùng xóa");
   await scope().reserveAuth(email);
@@ -665,6 +665,152 @@ export async function createUserFixture(variant?: "alternate") {
   if (error || !data.user)
     throw new Error(`e2e createUser failed: ${error?.message}`);
   return { id: data.user.id, email, label, password };
+}
+// QE-U6: a free course with `count` reviews, each by its own new user (reviews are unique per user and course), so a
+// visitor sees more reviews than one page. `reviews[0]` is the newest: created_at is set explicitly, an hour apart.
+// The scope deletes the reviews, then the users and the course.
+export async function createCourseWithReviewsFixture(count: number) {
+  const slug = `e2e-course-${scope().tag}`;
+  const course = await createFixture(
+    "courses",
+    "name",
+    "E2E Khóa học đánh giá",
+    {
+      slug,
+      description: "E2E fixture",
+      price: 0,
+    },
+  );
+  const reviews: { content: string; rating: number }[] = [];
+  for (let i = 0; i < count; i++) {
+    const user = await createUserFixture(`r${i + 1}`);
+    const review = {
+      content: scope().label(`E2E đánh giá số ${i + 1}`),
+      rating: (i % 5) + 1,
+    };
+    await scope().reserve("reviews", {
+      user_id: user.id,
+      course_id: course.id,
+    });
+    must(
+      await serviceRole()
+        .from("reviews")
+        .insert({
+          user_id: user.id,
+          course_id: course.id,
+          ...review,
+          created_at: new Date(Date.now() - i * 3_600_000).toISOString(),
+        })
+        .select("id"),
+    );
+    reviews.push(review);
+  }
+  return { ...course, slug, reviews };
+}
+// The seed student's review of the paid course as it is stored before the row edits it. It is the same selector as
+// reserveStudentReview, which the scope deletes.
+export async function createStudentReviewFixture(
+  rating: number,
+  content: string,
+) {
+  await reserveStudentReview();
+  must(
+    await serviceRole()
+      .from("reviews")
+      .insert({
+        user_id: IDS.student,
+        course_id: PAID_COURSE_ID,
+        rating,
+        content,
+      })
+      .select("id"),
+  );
+}
+// QE-U6: a free course the seed student is enrolled in, with one chapter and one lesson that has `exerciseCount`
+// four-option questions (question n is answered by option n modulo 4, counting from 0, so the keys differ) and no progress yet, so a
+// row sees the progress it causes. The lesson is the only one of the course, which makes it the next unfinished lesson
+// the "learn in order" check lets the student open. The scope deletes the progress, exercises, lesson, chapter and
+// enrollment before the course.
+export async function createLearningCourseFixture(exerciseCount: number) {
+  const slug = `e2e-learn-${scope().tag}`;
+  const course = await createFixture(
+    "courses",
+    "name",
+    "E2E Khóa học bài tập",
+    {
+      slug,
+      description: "E2E fixture",
+      price: 0,
+    },
+  );
+  await scope().reserve("enrollments", {
+    user_id: IDS.student,
+    course_id: course.id,
+  });
+  must(
+    await serviceRole()
+      .from("enrollments")
+      .insert({ user_id: IDS.student, course_id: course.id })
+      .select("id"),
+  );
+  const chapter = await createFixture(
+    "chapters",
+    "title",
+    "E2E Chương bài tập",
+    {
+      course_id: course.id,
+      order_index: 1,
+    },
+  );
+  const lessonSlug = `e2e-lesson-${scope().tag}`;
+  const lesson = await createFixture(
+    "lessons",
+    "title",
+    "E2E Bài học bài tập",
+    {
+      course_id: course.id,
+      chapter_id: chapter.id,
+      slug: lessonSlug,
+      order_index: 1,
+      content: "E2E fixture",
+    },
+  );
+  const questions: { question: string; options: string[]; correct: number }[] =
+    [];
+  for (let n = 1; n <= exerciseCount; n++) {
+    const options = ["a", "b", "c", "d"].map(
+      (letter) => `Lựa chọn ${n}${letter}`,
+    );
+    const correct = n % 4;
+    const exercise = await createFixture(
+      "exercises",
+      "question",
+      `E2E Câu hỏi bài tập ${n}`,
+      {
+        lesson_id: lesson.id,
+        option_a: options[0],
+        option_b: options[1],
+        option_c: options[2],
+        option_d: options[3],
+        correct_answer: ["a", "b", "c", "d"][correct],
+        explanation: "E2E fixture",
+      },
+    );
+    questions.push({ question: exercise.label, options, correct });
+  }
+  await scope().reserve("user_progress", {
+    user_id: IDS.student,
+    lesson_id: lesson.id,
+  });
+  return { ...course, slug, lessonId: lesson.id, lessonSlug, questions };
+}
+export async function studentProgressOf(lessonId: number): Promise<number> {
+  return must(
+    await serviceRole()
+      .from("user_progress")
+      .select("id")
+      .match({ user_id: IDS.student, lesson_id: lessonId }),
+  ).length;
 }
 // A new address for the sign-up row: the scope deletes the user it creates (the profile row cascades), and a seed user's
 // password or profile is never touched.

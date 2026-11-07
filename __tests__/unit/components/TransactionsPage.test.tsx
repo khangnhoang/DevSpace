@@ -86,12 +86,10 @@ describe("Transactions page loading", () => {
     approvePayment.mockResolvedValue({ success: true });
     render(<TransactionsPage />);
 
-    await user.click(
-      await screen.findByRole("button", { name: "Duyệt", exact: true }),
-    );
+    await user.click(await screen.findByRole("button", { name: /^Duyệt$/ }));
     getAllPayments.mockRejectedValueOnce(new Error("network"));
     await user.click(
-      await screen.findByRole("button", { name: "Duyệt đơn", exact: true }),
+      await screen.findByRole("button", { name: /^Duyệt đơn$/ }),
     );
 
     expect(await screen.findByText(LOAD_FAILED)).toBeInTheDocument();

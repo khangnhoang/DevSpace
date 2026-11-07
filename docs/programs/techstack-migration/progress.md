@@ -7,12 +7,12 @@ Plan: [plan.md](plan.md). Problems: [problems.md](problems.md). Git history is t
 | Field | Value |
 | --- | --- |
 | Spec revision | [plan.md](plan.md) r3; Codex plan gate PASS in round 3 and approved by the Owner on 2026-11-08. |
-| Current unit / checkpoint | TM-U1 planning: [detail plan](implementation-plans/tm-u1-guardrails-backup/plan.md) r3 on branch `chore/tm-u1-guardrails-backup`. |
-| Status | In progress: TM-U1 plan r3 passed the Codex plan gate and was approved by the Owner on 2026-11-08, hook settings included; implementation not started. |
+| Current unit / checkpoint | TM-U1 CP1 done (hook), CP2 next: [detail plan](implementation-plans/tm-u1-guardrails-backup/plan.md) r3 on branch `chore/tm-u1-guardrails-backup`. |
+| Status | In progress: TM-U1 plan r3 passed the Codex plan gate and was approved by the Owner on 2026-11-08, hook settings included; CP1 implemented locally (guard module, hook script, settings entry, rules binding, unit tests); the live hook proof (CP4) is Main's. |
 | Completed evidence | Program opening merged (PR 77). Dependency check at opening (2026-11-08, Node v26.13.0): `npm outdated`, `npm audit` (10 findings: 1 low, 8 moderate, 1 critical) and `npm audit --omit=dev` (2: DM-P1 group B, unchanged); new minor and major rows recorded in dependency-maintenance DM-F2 and DM-F6. |
 | Accepted deviations | None. |
 | Blockers / Owner decisions | None; TM-U1 Owner decisions 9 to 12 are recorded in its plan. |
-| Next action | One implementor implements CP1 to CP3 of the TM-U1 plan. |
+| Next action | The implementor continues with CP2 (`backup:check`) and CP3 (runbook and instruction edits). |
 | Current authority | TM-U1 plan r3 approved and committed; implementation of CP1 to CP3 with one local commit per checkpoint, including read-only dumps and counts on the dev stack for the CP2 rehearsal (Owner, 2026-11-08). No push, PR, merge, hosted read or hosted write is granted. |
 
 ## Milestones

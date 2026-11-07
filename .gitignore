@@ -58,3 +58,9 @@ next-env.d.ts
 # claude code local state
 /.claude/*.local.json
 /.claude/worktrees/
+
+# Claude hook fault switch (live fail-closed proof, TM-U1)
+/.claude/hooks/.fault
+
+# scratch Supabase workdir of backup:check (TM-U1)
+/.supabase-backup-check/

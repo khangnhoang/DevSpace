@@ -2,11 +2,29 @@ import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import pg from "pg";
-import { markUnclean, runContext, uncleanCause } from "../../scripts/test-stack/lock.mjs";
+import {
+  markUnclean,
+  runContext,
+  uncleanCause,
+} from "../../scripts/test-stack/lock.mjs";
 
 type Value = string | number | boolean | null;
 type Where = Record<string, Value>;
-const order = ["notifications", "payments", "user_progress", "notes", "reviews", "comments", "exercises", "lessons", "chapters", "enrollments", "courses", "coupons", "profiles"];
+const order = [
+  "notifications",
+  "payments",
+  "user_progress",
+  "notes",
+  "reviews",
+  "comments",
+  "exercises",
+  "lessons",
+  "chapters",
+  "enrollments",
+  "courses",
+  "coupons",
+  "profiles",
+];
 
 // What a scope tells the rest of its run. The default is the run's shared state, so a failed cleanup, residue or a
 // timed-out test in one process stops every later scope of the run in any other process (AC7). A test that
@@ -17,21 +35,102 @@ export function sharedRunMarker(): RunMarker {
   const run = runContext();
   // rls and e2e cannot start outside a run (requireActiveRun); a unit row that builds a scope outside one passes its
   // own marker, so a scope never fails silently with no shared state.
-  if (!run) throw new Error("No test run is active, so a fixture scope has no shared run state; pass an explicit run marker in an isolated probe.");
-  return { check: () => uncleanCause(run), mark: (cause) => markUnclean({ ...run, cause }) };
+  if (!run)
+    throw new Error(
+      "No test run is active, so a fixture scope has no shared run state; pass an explicit run marker in an isolated probe.",
+    );
+  return {
+    check: () => uncleanCause(run),
+    mark: (cause) => markUnclean({ ...run, cause }),
+  };
 }
 
 // A test that times out may leave a request in flight, so the run is unclean even if the cleanup then succeeds.
-export function noteTimeout(testName: string, run: RunMarker = sharedRunMarker()) {
+export function noteTimeout(
+  testName: string,
+  run: RunMarker = sharedRunMarker(),
+) {
   run.mark(`test timed out: ${testName}`);
 }
 
-export function checked<T>(result: { data: T; error: { message: string } | null }): NonNullable<T> {
-  if (result.error) throw new Error(`fixture query failed: ${result.error.message}`);
+// A timed-out test or hook keeps running in the background, so a write must be admitted at the last moment before it
+// leaves: after every preparatory await, right before the request. Cleanup and read-back never go through here and
+// stay possible while the run is unclean (QE-P8).
+export async function admitted<T>(
+  run: RunMarker,
+  request: () => PromiseLike<T> | T,
+): Promise<T> {
+  const cause = run.check();
+  if (cause)
+    throw new Error(
+      `The run is unclean (${cause}); no further fixture write is admitted`,
+    );
+  return await request();
+}
+
+// Wraps the fetch of an actor client: every request that can change data (anything but GET and HEAD, so inserts,
+// updates, deletes, write RPCs, Storage uploads, moves and removes, and Auth calls) is admitted right before it is
+// sent. The run is read per request, never cached.
+export function guardedFetch(
+  run: () => RunMarker,
+  base: typeof fetch = (...args) => fetch(...args),
+): typeof fetch {
+  return (input, init) => {
+    const method = (
+      init?.method ??
+      (typeof input === "object" && "method" in input ? input.method : "GET")
+    ).toUpperCase();
+    if (method === "GET" || method === "HEAD") return base(input, init);
+    return admitted(run(), () => base(input, init));
+  };
+}
+
+// What a hook gets from Vitest. `signal` aborts when the test or the hook times out, and the pending operation of a
+// timed-out hook keeps running after that.
+export type HookContext = {
+  signal?: AbortSignal;
+  task?: { name?: string; result?: { errors?: { message?: string }[] } };
+};
+
+// Runs a fixture cleanup inside a hook. A timeout of the test body is noted on entry. When the hook's own signal
+// aborts (`hookTimeout`) or is already aborted on entry, the run is marked at once, before the pending cleanup
+// operation settles, so no scope opens while it is still running. The listener goes when the cleanup ends.
+export async function runCleanupHook<T>(
+  context: HookContext,
+  run: RunMarker,
+  cleanup: () => Promise<T>,
+): Promise<T> {
+  if (
+    context.task?.result?.errors?.some((error) =>
+      /timed out/i.test(error.message ?? ""),
+    )
+  )
+    noteTimeout(context.task.name ?? "unnamed test", run);
+  const signal = context.signal;
+  const onAbort = () =>
+    run.mark(`cleanup hook aborted: ${context.task?.name ?? "unnamed test"}`);
+  if (signal?.aborted) onAbort();
+  else signal?.addEventListener("abort", onAbort, { once: true });
+  try {
+    return await cleanup();
+  } finally {
+    signal?.removeEventListener("abort", onAbort);
+  }
+}
+
+export function checked<T>(result: {
+  data: T;
+  error: { message: string } | null;
+}): NonNullable<T> {
+  if (result.error)
+    throw new Error(`fixture query failed: ${result.error.message}`);
   return result.data as NonNullable<T>;
 }
 
-export async function userExists(db: SupabaseClient, id: string): Promise<boolean> {
+export async function userExists(
+  db: SupabaseClient,
+  id: string,
+): Promise<boolean> {
   const { data, error } = await db.auth.admin.getUserById(id);
   if (error) {
     if (error.status === 404 && error.code === "user_not_found") return false;
@@ -48,12 +147,20 @@ export async function deleteOwnedUser(db: SupabaseClient, id: string) {
   if (await userExists(db, id)) throw new Error(`cleanup left user ${id}`);
 }
 
-type Entry = { id: string; kind: "rows" | "restore" | "auth"; table: string; where?: Where; fields?: Where; email?: string };
+type Entry = {
+  id: string;
+  kind: "rows" | "restore" | "auth";
+  table: string;
+  where?: Where;
+  fields?: Where;
+  email?: string;
+};
 
 // Selectors held by open scopes of this process. It is memory only: a selector that an earlier or a crashed run
 // left occupied is found by the empty-selector check of `reserve`, and a write nobody reserved by the end-of-run audit.
 const held = new Map<string, string>();
-const selectorKey = (table: string, where: Where) => `${table}|${JSON.stringify(Object.entries(where).sort(([a], [b]) => a.localeCompare(b)))}`;
+const selectorKey = (table: string, where: Where) =>
+  `${table}|${JSON.stringify(Object.entries(where).sort(([a], [b]) => a.localeCompare(b)))}`;
 const authKey = (email: string) => `auth|${email}`;
 // Rows an open scope acquired fields of; deleting such a row would drop fields another scope must restore.
 const acquired = new Set<string>();
@@ -66,17 +173,33 @@ export class FixtureScope {
   readonly run: RunMarker;
   readonly entries: Entry[] = [];
   private closed = false;
-  constructor(db: SupabaseClient, dbUrl: string, options: { run?: RunMarker } = {}) {
-    this.db = db; this.dbUrl = dbUrl; this.run = options.run ?? sharedRunMarker();
+  constructor(
+    db: SupabaseClient,
+    dbUrl: string,
+    options: { run?: RunMarker } = {},
+  ) {
+    this.db = db;
+    this.dbUrl = dbUrl;
+    this.run = options.run ?? sharedRunMarker();
     const cause = this.run.check();
-    if (cause) throw new Error(`Previous fixture cleanup is unresolved or the run is unclean (${cause}); no new scope may acquire mutations`);
+    if (cause)
+      throw new Error(
+        `Previous fixture cleanup is unresolved or the run is unclean (${cause}); no new scope may acquire mutations`,
+      );
   }
 
-  label(value: string) { return `${value} [${this.tag}]`; }
-  code(value: string) { return `${value}-${this.tag}`.toUpperCase(); }
+  label(value: string) {
+    return `${value} [${this.tag}]`;
+  }
+  code(value: string) {
+    return `${value}-${this.tag}`.toUpperCase();
+  }
 
   private record(key: string, entry: Omit<Entry, "id">): string {
-    if (held.has(key)) throw new Error("Fixture selector is already reserved; do not share ownership between scopes");
+    if (held.has(key))
+      throw new Error(
+        "Fixture selector is already reserved; do not share ownership between scopes",
+      );
     const added = { ...entry, id: randomUUID() };
     held.set(key, this.id);
     if (entry.kind === "restore") acquired.add(key);
@@ -85,40 +208,77 @@ export class FixtureScope {
   }
 
   async reserve(table: string, where: Where) {
-    if (this.closed) throw new Error("Fixture scope no longer admits mutations");
-    if (!order.includes(table) || !Object.keys(where).length) throw new Error("Unbounded fixture ownership selector");
+    if (this.closed)
+      throw new Error("Fixture scope no longer admits mutations");
+    if (!order.includes(table) || !Object.keys(where).length)
+      throw new Error("Unbounded fixture ownership selector");
     if (checked(await this.db.from(table).select("id").match(where)).length) {
       // Rows under a selector nobody holds are residue of an earlier write, late or not: report it, never adopt it.
-      this.run.mark(`residue: ${table} selector ${JSON.stringify(where)} was occupied at reservation`);
-      throw new Error(`Fixture prerequisite failed: ${table} selector is already occupied`);
+      this.run.mark(
+        `residue: ${table} selector ${JSON.stringify(where)} was occupied at reservation`,
+      );
+      throw new Error(
+        `Fixture prerequisite failed: ${table} selector is already occupied`,
+      );
     }
-    return this.record(selectorKey(table, where), { kind: "rows", table, where });
+    return this.record(selectorKey(table, where), {
+      kind: "rows",
+      table,
+      where,
+    });
   }
 
   async acquire(table: string, id: Value, fields: string[], expected?: Where) {
-    if (this.closed) throw new Error("Fixture scope no longer admits mutations");
-    if (!order.includes(table) || !fields.length || fields.includes("*")) throw new Error("Invalid acquired fields");
-    const row = checked(await this.db.from(table).select(fields.join(",")).eq("id", id).single()) as unknown as Where;
-    if (expected && !isDeepStrictEqual(row, expected)) throw new Error(`Fixture prerequisite failed: ${table} acquired fields differ from baseline`);
-    this.record(selectorKey(table, { id }), { kind: "restore", table, where: { id }, fields: row });
+    if (this.closed)
+      throw new Error("Fixture scope no longer admits mutations");
+    if (!order.includes(table) || !fields.length || fields.includes("*"))
+      throw new Error("Invalid acquired fields");
+    const row = checked(
+      await this.db.from(table).select(fields.join(",")).eq("id", id).single(),
+    ) as unknown as Where;
+    if (expected && !isDeepStrictEqual(row, expected))
+      throw new Error(
+        `Fixture prerequisite failed: ${table} acquired fields differ from baseline`,
+      );
+    this.record(selectorKey(table, { id }), {
+      kind: "restore",
+      table,
+      where: { id },
+      fields: row,
+    });
     return row;
   }
 
   // Replaces the intent recorded before a write whose response may be lost with the row that write created.
   adopt(table: string, rowId: Value, intent: string) {
-    this.record(selectorKey(table, { id: rowId }), { kind: "rows", table, where: { id: rowId } });
+    this.record(selectorKey(table, { id: rowId }), {
+      kind: "rows",
+      table,
+      where: { id: rowId },
+    });
     this.forget(intent);
   }
 
   async authIds(email: string): Promise<string[]> {
-    const db = new pg.Client({ connectionString: this.dbUrl, application_name: "devspace-fixtures" });
-    try { await db.connect(); return (await db.query("select id from auth.users where email = $1", [email])).rows.map(row => row.id); }
-    finally { await db.end(); }
+    const db = new pg.Client({
+      connectionString: this.dbUrl,
+      application_name: "devspace-fixtures",
+    });
+    try {
+      await db.connect();
+      return (
+        await db.query("select id from auth.users where email = $1", [email])
+      ).rows.map((row) => row.id);
+    } finally {
+      await db.end();
+    }
   }
 
   async reserveAuth(email: string) {
-    if (this.closed) throw new Error("Fixture scope no longer admits mutations");
-    if (!email.endsWith("@devspace.test") || !email.includes(this.tag)) throw new Error("Auth email must belong to this scope");
+    if (this.closed)
+      throw new Error("Fixture scope no longer admits mutations");
+    if (!email.endsWith("@devspace.test") || !email.includes(this.tag))
+      throw new Error("Auth email must belong to this scope");
     if ((await this.authIds(email)).length) {
       this.run.mark(`residue: Auth user ${email} existed at reservation`);
       throw new Error("Auth fixture prerequisite failed: email already exists");
@@ -128,75 +288,148 @@ export class FixtureScope {
 
   /** @internal */
   forget(id: string) {
-    const index = this.entries.findIndex(entry => entry.id === id);
+    const index = this.entries.findIndex((entry) => entry.id === id);
     if (index < 0) return;
     const [entry] = this.entries.splice(index, 1);
-    const key = entry.kind === "auth" ? authKey(entry.email!) : selectorKey(entry.table, entry.where!);
+    const key =
+      entry.kind === "auth"
+        ? authKey(entry.email!)
+        : selectorKey(entry.table, entry.where!);
     held.delete(key);
     acquired.delete(key);
   }
 
   async cleanup() {
     this.closed = true;
-    try { await cleanupEntries(this, this.db, this.dbUrl); }
-    catch (error) {
-      this.run.mark(`fixture cleanup failed in scope ${this.id}: ${error instanceof Error ? error.message : String(error)}`);
+    try {
+      await cleanupEntries(this, this.db, this.dbUrl);
+    } catch (error) {
+      this.run.mark(
+        `fixture cleanup failed in scope ${this.id}: ${error instanceof Error ? error.message : String(error)}`,
+      );
       throw error;
     }
   }
 }
 
-export async function withFixtureScope<T>(scope: Pick<FixtureScope, "cleanup">, run: () => Promise<T>): Promise<T> {
+export async function withFixtureScope<T>(
+  scope: Pick<FixtureScope, "cleanup">,
+  run: () => Promise<T>,
+): Promise<T> {
   let result: T;
-  try { result = await run(); }
-  catch (original) {
-    try { await scope.cleanup(); }
-    catch (cleanup) { throw new AggregateError([original, cleanup], "Fixture body and cleanup failed", { cause: original }); }
+  try {
+    result = await run();
+  } catch (original) {
+    try {
+      await scope.cleanup();
+    } catch (cleanup) {
+      throw new AggregateError(
+        [original, cleanup],
+        "Fixture body and cleanup failed",
+        { cause: original },
+      );
+    }
     throw original;
   }
   await scope.cleanup();
   return result;
 }
 
-async function assertNoDependents(dbUrl: string, schema: string, table: string, id: Value, provisionedProfile = false) {
-  const client = new pg.Client({ connectionString: dbUrl, application_name: "devspace-fixtures" });
+async function assertNoDependents(
+  dbUrl: string,
+  schema: string,
+  table: string,
+  id: Value,
+  provisionedProfile = false,
+) {
+  const client = new pg.Client({
+    connectionString: dbUrl,
+    application_name: "devspace-fixtures",
+  });
   const quote = (identifier: string) => `"${identifier.replaceAll('"', '""')}"`;
   try {
     await client.connect();
-    const { rows } = await client.query(`select child.relname as child_table, ca.attname as child_column,
+    const { rows } = await client.query(
+      `select child.relname as child_table, ca.attname as child_column,
         pa.attname as parent_column, cardinality(c.conkey) as columns
       from pg_constraint c join pg_class child on child.oid = c.conrelid
       join pg_namespace n on n.oid = child.relnamespace
       join pg_attribute ca on ca.attrelid = child.oid and ca.attnum = c.conkey[1]
       join pg_attribute pa on pa.attrelid = c.confrelid and pa.attnum = c.confkey[1]
-      where c.contype = 'f' and c.confrelid = $1::regclass and n.nspname = 'public'`, [`${schema}.${table}`]);
+      where c.contype = 'f' and c.confrelid = $1::regclass and n.nspname = 'public'`,
+      [`${schema}.${table}`],
+    );
     for (const relation of rows) {
-      if (relation.columns !== 1 || relation.parent_column !== "id") throw new Error(`Unsupported fixture dependency: ${table} -> ${relation.child_table}`);
+      if (relation.columns !== 1 || relation.parent_column !== "id")
+        throw new Error(
+          `Unsupported fixture dependency: ${table} -> ${relation.child_table}`,
+        );
       // Auth provisioning creates this profile as part of the owned account. Its own dependents are
       // checked separately; all other application rows must be gone before the account can be deleted.
-      if (provisionedProfile && relation.child_table === "profiles" && relation.child_column === "id") continue;
-      const dependent = await client.query(`select 1 from public.${quote(relation.child_table)} where ${quote(relation.child_column)} = $1 limit 1`, [id]);
-      if (dependent.rows.length) throw new Error(`Cleanup blocked: ${schema}.${table} ${id} still has dependent ${relation.child_table} rows`);
+      if (
+        provisionedProfile &&
+        relation.child_table === "profiles" &&
+        relation.child_column === "id"
+      )
+        continue;
+      const dependent = await client.query(
+        `select 1 from public.${quote(relation.child_table)} where ${quote(relation.child_column)} = $1 limit 1`,
+        [id],
+      );
+      if (dependent.rows.length)
+        throw new Error(
+          `Cleanup blocked: ${schema}.${table} ${id} still has dependent ${relation.child_table} rows`,
+        );
     }
-  } finally { await client.end(); }
+  } finally {
+    await client.end();
+  }
 }
 
 function assertNoAcquiredFields(table: string, id: Value) {
   // An acquired row of any scope in this process blocks deleting that row.
-  if (acquired.has(selectorKey(table, { id }))) throw new Error(`Cleanup blocked: ${table} still has acquired fields`);
+  if (acquired.has(selectorKey(table, { id })))
+    throw new Error(`Cleanup blocked: ${table} still has acquired fields`);
 }
 
-export async function cleanupEntries(scope: FixtureScope, db: SupabaseClient, dbUrl: string) {
+export async function cleanupEntries(
+  scope: FixtureScope,
+  db: SupabaseClient,
+  dbUrl: string,
+) {
   const entries = [...scope.entries];
-  entries.sort((a, b) => (a.kind === "restore" ? -100 : a.kind === "auth" ? 100 : order.indexOf(a.table)) - (b.kind === "restore" ? -100 : b.kind === "auth" ? 100 : order.indexOf(b.table)));
+  entries.sort(
+    (a, b) =>
+      (a.kind === "restore"
+        ? -100
+        : a.kind === "auth"
+          ? 100
+          : order.indexOf(a.table)) -
+      (b.kind === "restore"
+        ? -100
+        : b.kind === "auth"
+          ? 100
+          : order.indexOf(b.table)),
+  );
   const failures: unknown[] = [];
   for (const entry of entries) {
     try {
       if (entry.kind === "auth") {
-        const client = new pg.Client({ connectionString: dbUrl, application_name: "devspace-fixtures" });
+        const client = new pg.Client({
+          connectionString: dbUrl,
+          application_name: "devspace-fixtures",
+        });
         let ids: string[];
-        try { await client.connect(); ids = (await client.query("select id from auth.users where email = $1", [entry.email])).rows.map(row => row.id); }
-        finally { await client.end(); }
+        try {
+          await client.connect();
+          ids = (
+            await client.query("select id from auth.users where email = $1", [
+              entry.email,
+            ])
+          ).rows.map((row) => row.id);
+        } finally {
+          await client.end();
+        }
         if (ids.length > 1) throw new Error("Ambiguous Auth ownership");
         for (const id of ids) {
           assertNoAcquiredFields("profiles", id);
@@ -205,14 +438,33 @@ export async function cleanupEntries(scope: FixtureScope, db: SupabaseClient, db
           await deleteOwnedUser(db, id);
         }
       } else if (entry.kind === "restore") {
-        if (!order.includes(entry.table) || !entry.where?.id || !entry.fields) throw new Error("Unrecognized restore ownership");
-        checked(await db.from(entry.table).update(entry.fields).match(entry.where));
-        const restored = checked(await db.from(entry.table).select(Object.keys(entry.fields).join(",")).match(entry.where).single());
-        if (!isDeepStrictEqual(restored, entry.fields)) throw new Error(`Restore verification failed: ${entry.table}`);
+        if (!order.includes(entry.table) || !entry.where?.id || !entry.fields)
+          throw new Error("Unrecognized restore ownership");
+        checked(
+          await db.from(entry.table).update(entry.fields).match(entry.where),
+        );
+        const restored = checked(
+          await db
+            .from(entry.table)
+            .select(Object.keys(entry.fields).join(","))
+            .match(entry.where)
+            .single(),
+        );
+        if (!isDeepStrictEqual(restored, entry.fields))
+          throw new Error(`Restore verification failed: ${entry.table}`);
       } else {
-        if (!order.includes(entry.table) || !Object.keys(entry.where ?? {}).length) throw new Error("Unrecognized row ownership");
-        const rows = checked(await db.from(entry.table).select("id").match(entry.where!));
-        if (rows.length > 1) throw new Error(`Ambiguous ownership: ${entry.table} selector matched multiple rows`);
+        if (
+          !order.includes(entry.table) ||
+          !Object.keys(entry.where ?? {}).length
+        )
+          throw new Error("Unrecognized row ownership");
+        const rows = checked(
+          await db.from(entry.table).select("id").match(entry.where!),
+        );
+        if (rows.length > 1)
+          throw new Error(
+            `Ambiguous ownership: ${entry.table} selector matched multiple rows`,
+          );
         for (const row of rows) {
           assertNoAcquiredFields(entry.table, row.id);
           // Cascades and SET NULL can change a foreign scope even when the parent ID is ours.
@@ -220,10 +472,21 @@ export async function cleanupEntries(scope: FixtureScope, db: SupabaseClient, db
           await assertNoDependents(dbUrl, "public", entry.table, row.id);
           checked(await db.from(entry.table).delete().in("id", [row.id]));
         }
-        if (checked(await db.from(entry.table).select("id").match(entry.where!)).length) throw new Error(`Cleanup left owned ${entry.table} rows`);
+        if (
+          checked(await db.from(entry.table).select("id").match(entry.where!))
+            .length
+        )
+          throw new Error(`Cleanup left owned ${entry.table} rows`);
       }
       scope.forget(entry.id);
-    } catch (error) { failures.push(error); }
+    } catch (error) {
+      failures.push(error);
+    }
   }
-  if (failures.length) throw new AggregateError(failures, "Owned fixture cleanup failed; unresolved entries retained", { cause: failures[0] });
+  if (failures.length)
+    throw new AggregateError(
+      failures,
+      "Owned fixture cleanup failed; unresolved entries retained",
+      { cause: failures[0] },
+    );
 }

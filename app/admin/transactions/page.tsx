@@ -37,16 +37,12 @@ export default function TransactionsPage() {
   const [rejectTarget, setRejectTarget] = useState<PaymentRow | null>(null);
 
   // A rejected load must clear the loader and show a retry, never leave "Đang tải dữ liệu..." or an unhandled rejection.
-  const loadPayments = async () => {
-    try {
-      const data = await getAllPayments();
-      setPayments((data as unknown as PaymentRow[]) || []);
-    } catch {
-      setLoadError(true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Every state update sits in a promise callback, which keeps the mount effect below free of a synchronous setState.
+  const loadPayments = () =>
+    getAllPayments()
+      .then((data) => setPayments((data as unknown as PaymentRow[]) || []))
+      .catch(() => setLoadError(true))
+      .finally(() => setIsLoading(false));
 
   // Fetch dữ liệu
   const fetchPayments = () => {
@@ -58,7 +54,6 @@ export default function TransactionsPage() {
   useEffect(() => {
     // isLoading already starts true, so the mount fetch skips the
     // setIsLoading(true) that fetchPayments does for the later refetches.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- loadPayments sets state only after its awaited call
     loadPayments();
   }, []);
 

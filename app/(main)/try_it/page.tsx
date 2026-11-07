@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import MobileBlocker from "@/app/components/MobileBlocker";
 import { readTryItParams, type TryItLanguage } from "@/lib/try-it";
+import { interpretPistonResponse } from "./_lib/piston-result";
 
 // Monaco is copied from the npm package to public/monaco/vs at install (scripts/monaco/copy-vs.mjs), so the editor
 // runs the version package-lock.json holds from this origin instead of the loader's default CDN.
@@ -56,14 +57,20 @@ function TryItEditor() {
   const [example] = useState(() => readTryItParams(searchParams));
 
   const [language, setLanguage] = useState<TryItLanguage>(example.language);
-  const [code, setCode] = useState(example.code ?? DEFAULT_CODE[example.language]);
+  const [code, setCode] = useState(
+    example.code ?? DEFAULT_CODE[example.language],
+  );
   const [srcDoc, setSrcDoc] = useState("");
   const [consoleOutput, setConsoleOutput] = useState<string[]>([]);
   const [isRunning, setIsRunning] = useState(false);
 
   const switchLanguage = (lang: TryItLanguage) => {
     setLanguage(lang);
-    setCode(example.code !== null && lang === example.language ? example.code : DEFAULT_CODE[lang]);
+    setCode(
+      example.code !== null && lang === example.language
+        ? example.code
+        : DEFAULT_CODE[lang],
+    );
 
     setSrcDoc("");
     setConsoleOutput([]);
@@ -124,15 +131,14 @@ function TryItEditor() {
           }),
         });
 
-        const data = await res.json();
-
-        if (data.run) {
-          const outputLines = data.run.output.split("\n");
-          setConsoleOutput(outputLines);
-          if (data.run.code !== 0)
-            toast.error("Có lỗi biên dịch hoặc runtime!");
-          else toast.success("Chạy thành công!");
-        }
+        // A non-JSON body (an HTML error page) is read as no body, so it shows the HTTP error below.
+        const data: unknown = await res.json().catch(() => null);
+        const display = interpretPistonResponse(res.status, res.ok, data);
+        setConsoleOutput(display.lines);
+        if (display.outcome === "success") toast.success("Chạy thành công!");
+        else if (display.outcome === "run-error")
+          toast.error("Có lỗi biên dịch hoặc runtime!");
+        else toast.error("Server biên dịch không chạy được mã!");
       } catch {
         toast.error("Lỗi kết nối Server biên dịch!");
         setConsoleOutput(["Lỗi: Không thể kết nối đến server Piston API."]);
@@ -198,8 +204,8 @@ function TryItEditor() {
               language === "javascript"
                 ? "javascript"
                 : language === "cpp"
-                ? "cpp"
-                : "html"
+                  ? "cpp"
+                  : "html"
             }
             theme="vs-dark"
             value={code}

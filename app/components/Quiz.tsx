@@ -31,7 +31,7 @@ export default function Quiz({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [correct, setIsCorrect] = useState<boolean | null>(null);
-  const [isCompleted] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
 
   if (!questions || questions.length === 0) {
     return null;
@@ -49,9 +49,11 @@ export default function Quiz({
 
   const handleNextQuestion = async () => {
     if (isLastQuestion) {
+      // Before the first await: the completion screen removes the buttons, so the last step cannot be sent twice.
+      setIsCompleted(true);
       let currentUserId = userId;
-      if(!currentUserId){
-        const {data} = await supabase.auth.getUser();
+      if (!currentUserId) {
+        const { data } = await supabase.auth.getUser();
         currentUserId = data.user?.id;
       }
       if (currentUserId && lessonId) {
@@ -63,7 +65,7 @@ export default function Quiz({
       toast("Chúc mừng! Bạn đã hoàn thành tất cả bài tập 🎉");
       router.refresh();
       setTimeout(() => {
-        router.push(nextLessonPath || "/"); 
+        router.push(nextLessonPath || "/");
       }, 1500);
       return;
     }
@@ -186,8 +188,8 @@ export default function Quiz({
                       ? correct === true
                         ? "bg-green-500 border-green-500 text-white"
                         : correct === false
-                        ? "bg-red-500 border-red-500 text-white"
-                        : "bg-blue-500 border-blue-500 text-white"
+                          ? "bg-red-500 border-red-500 text-white"
+                          : "bg-blue-500 border-blue-500 text-white"
                       : "border-gray-300 text-gray-500 bg-white"
                   }
                 `}

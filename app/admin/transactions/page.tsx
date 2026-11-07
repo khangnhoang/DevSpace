@@ -15,7 +15,8 @@ interface PaymentRow {
   status: string;
   amount?: number;
   created_at: string;
-  profiles?: {
+  // getAllPayments joins the learner by hand and returns it as `users`.
+  users?: {
     full_name?: string | null;
     avatar_url?: string | null;
     email?: string | null;
@@ -23,32 +24,37 @@ interface PaymentRow {
   courses?: { name?: string } | null;
 }
 
-// The learner label is the one the table row shows (P15 keeps it "Ẩn danh" until the page reads the right relation).
+// The learner label is the one the table row shows.
 const orderSummary = (p: PaymentRow, consequence: string) =>
-  `Học viên: ${p.profiles?.full_name || "Ẩn danh"}. Khóa học: ${p.courses?.name || "Khóa học đã xóa"}. Số tiền: ${p.amount?.toLocaleString("vi-VN")} đ. ${consequence}`;
+  `Học viên: ${p.users?.full_name || "Ẩn danh"}. Khóa học: ${p.courses?.name || "Khóa học đã xóa"}. Số tiền: ${p.amount?.toLocaleString("vi-VN")} đ. ${consequence}`;
 
 export default function TransactionsPage() {
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [filter, setFilter] = useState("all"); // all, pending, success, failed
   const [approveTarget, setApproveTarget] = useState<PaymentRow | null>(null);
   const [rejectTarget, setRejectTarget] = useState<PaymentRow | null>(null);
 
+  // A rejected load must clear the loader and show a retry, never leave "Đang tải dữ liệu..." or an unhandled rejection.
+  // Every state update sits in a promise callback, which keeps the mount effect below free of a synchronous setState.
+  const loadPayments = () =>
+    getAllPayments()
+      .then((data) => setPayments((data as unknown as PaymentRow[]) || []))
+      .catch(() => setLoadError(true))
+      .finally(() => setIsLoading(false));
+
   // Fetch dữ liệu
-  const fetchPayments = async () => {
+  const fetchPayments = () => {
     setIsLoading(true);
-    const data = await getAllPayments();
-    setPayments((data as unknown as PaymentRow[]) || []);
-    setIsLoading(false);
+    setLoadError(false);
+    return loadPayments();
   };
 
   useEffect(() => {
     // isLoading already starts true, so the mount fetch skips the
     // setIsLoading(true) that fetchPayments does for the later refetches.
-    getAllPayments().then((data) => {
-      setPayments((data as unknown as PaymentRow[]) || []);
-      setIsLoading(false);
-    });
+    loadPayments();
   }, []);
 
   // Xử lý Duyệt
@@ -75,7 +81,7 @@ export default function TransactionsPage() {
       res = await rejectPayment(id);
     } catch {
       toast.error(
-        "Không nhận được kết quả từ máy chủ. Hãy tải lại trang để kiểm tra trạng thái đơn."
+        "Không nhận được kết quả từ máy chủ. Hãy tải lại trang để kiểm tra trạng thái đơn.",
       );
       return;
     }
@@ -88,7 +94,7 @@ export default function TransactionsPage() {
 
   // Logic lọc client-side
   const filteredPayments = payments.filter((p) =>
-    filter === "all" ? true : p.status === filter
+    filter === "all" ? true : p.status === filter,
   );
 
   return (
@@ -120,10 +126,10 @@ export default function TransactionsPage() {
                 {status === "all"
                   ? "Tất cả"
                   : status === "pending"
-                  ? "Chờ duyệt"
-                  : status === "success"
-                  ? "Thành công"
-                  : "Đã hủy"}
+                    ? "Chờ duyệt"
+                    : status === "success"
+                      ? "Thành công"
+                      : "Đã hủy"}
               </button>
             ))}
           </div>
@@ -131,124 +137,143 @@ export default function TransactionsPage() {
 
         {/* Table Container */}
         <div className="bg-[#191C24] rounded-xl overflow-hidden border border-gray-800 shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-[#222732] text-gray-400 text-xs uppercase font-semibold tracking-wider">
-                <tr>
-                  <th className="px-6 py-4">Học viên</th>
-                  <th className="px-6 py-4">Khóa học</th>
-                  <th className="px-6 py-4">Số tiền</th>
-                  <th className="px-6 py-4">Trạng thái</th>
-                  <th className="px-6 py-4 text-right">Hành động</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-800">
-                {isLoading ? (
+          {loadError && !isLoading ? (
+            // Outside the table: its scroll area is wider than a phone, which would clip a centered message.
+            <div className="p-12 text-center">
+              <p role="alert" className="text-red-400 mb-4">
+                Không tải được danh sách giao dịch. Hãy kiểm tra kết nối rồi thử
+                lại.
+              </p>
+              <button
+                onClick={fetchPayments}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-md text-white text-sm font-medium transition-colors"
+              >
+                Thử lại
+              </button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-[#222732] text-gray-400 text-xs uppercase font-semibold tracking-wider">
                   <tr>
-                    <td colSpan={5} className="p-12 text-center text-gray-500">
-                      <Loader2 className="animate-spin mx-auto mb-2" />
-                      Đang tải dữ liệu...
-                    </td>
+                    <th className="px-6 py-4">Học viên</th>
+                    <th className="px-6 py-4">Khóa học</th>
+                    <th className="px-6 py-4">Số tiền</th>
+                    <th className="px-6 py-4">Trạng thái</th>
+                    <th className="px-6 py-4 text-right">Hành động</th>
                   </tr>
-                ) : filteredPayments.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="p-12 text-center text-gray-500 italic"
-                    >
-                      Không tìm thấy giao dịch nào
-                    </td>
-                  </tr>
-                ) : (
-                  filteredPayments.map((p) => (
-                    <tr
-                      key={p.id}
-                      className="hover:bg-[#2C3039] transition-colors group"
-                    >
-                      {/* Cột User */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <CustomAvatar
-                            src={p.profiles?.avatar_url}
-                            className="w-9 h-9 border border-gray-700"
-                          />
-                          <div>
-                            <p className="font-semibold text-white text-sm">
-                              {p.profiles?.full_name || "Ẩn danh"}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {p.profiles?.email}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Cột Course */}
-                      <td className="px-6 py-4">
-                        <span className="text-blue-400 font-medium text-sm">
-                          {p.courses?.name || "Khóa học đã xóa"}
-                        </span>
-                        <p className="text-[11px] text-gray-500 mt-0.5">
-                          {new Date(p.created_at).toLocaleString("vi-VN")}
-                        </p>
-                      </td>
-
-                      {/* Cột Tiền */}
-                      <td className="px-6 py-4 font-mono font-bold text-green-400">
-                        {p.amount?.toLocaleString("vi-VN")} đ
-                      </td>
-
-                      {/* Cột Status */}
-                      <td className="px-6 py-4">
-                        {p.status === "pending" && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-500/10 text-yellow-500 rounded-full text-xs font-medium border border-yellow-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
-                            Chờ duyệt
-                          </span>
-                        )}
-                        {p.status === "success" && (
-                          <span className="inline-flex items-center px-2.5 py-1 bg-green-500/10 text-green-500 rounded-full text-xs font-medium border border-green-500/20">
-                            Thành công
-                          </span>
-                        )}
-                        {p.status === "failed" && (
-                          <span className="inline-flex items-center px-2.5 py-1 bg-red-500/10 text-red-500 rounded-full text-xs font-medium border border-red-500/20">
-                            Đã hủy
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Cột Action */}
-                      <td className="px-6 py-4 text-right">
-                        {p.status === "pending" ? (
-                          <div className="flex justify-end gap-2 opacity-100 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => setApproveTarget(p)}
-                              className="px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded-md text-white flex items-center gap-1.5 text-xs font-medium transition-colors shadow-sm"
-                              title="Xác nhận tiền về & Kích hoạt khóa học"
-                            >
-                              <Check size={14} /> Duyệt
-                            </button>
-                            <button
-                              onClick={() => setRejectTarget(p)}
-                              className="px-2 py-1.5 bg-gray-700 hover:bg-red-500/20 hover:text-red-500 text-gray-300 rounded-md flex items-center justify-center transition-colors border border-gray-600 hover:border-red-500/30"
-                              title="Hủy đơn này"
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-gray-600 text-xs select-none">
-                            --
-                          </span>
-                        )}
+                </thead>
+                <tbody className="divide-y divide-gray-800">
+                  {isLoading ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="p-12 text-center text-gray-500"
+                      >
+                        <Loader2 className="animate-spin mx-auto mb-2" />
+                        Đang tải dữ liệu...
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : filteredPayments.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="p-12 text-center text-gray-500 italic"
+                      >
+                        Không tìm thấy giao dịch nào
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredPayments.map((p) => (
+                      <tr
+                        key={p.id}
+                        className="hover:bg-[#2C3039] transition-colors group"
+                      >
+                        {/* Cột User */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <CustomAvatar
+                              src={p.users?.avatar_url}
+                              className="w-9 h-9 border border-gray-700"
+                            />
+                            <div>
+                              <p className="font-semibold text-white text-sm">
+                                {p.users?.full_name || "Ẩn danh"}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {p.users?.email}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Cột Course */}
+                        <td className="px-6 py-4">
+                          <span className="text-blue-400 font-medium text-sm">
+                            {p.courses?.name || "Khóa học đã xóa"}
+                          </span>
+                          <p className="text-[11px] text-gray-500 mt-0.5">
+                            {new Date(p.created_at).toLocaleString("vi-VN")}
+                          </p>
+                        </td>
+
+                        {/* Cột Tiền */}
+                        <td className="px-6 py-4 font-mono font-bold text-green-400">
+                          {p.amount?.toLocaleString("vi-VN")} đ
+                        </td>
+
+                        {/* Cột Status */}
+                        <td className="px-6 py-4">
+                          {p.status === "pending" && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-500/10 text-yellow-500 rounded-full text-xs font-medium border border-yellow-500/20">
+                              <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
+                              Chờ duyệt
+                            </span>
+                          )}
+                          {p.status === "success" && (
+                            <span className="inline-flex items-center px-2.5 py-1 bg-green-500/10 text-green-500 rounded-full text-xs font-medium border border-green-500/20">
+                              Thành công
+                            </span>
+                          )}
+                          {p.status === "failed" && (
+                            <span className="inline-flex items-center px-2.5 py-1 bg-red-500/10 text-red-500 rounded-full text-xs font-medium border border-red-500/20">
+                              Đã hủy
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Cột Action */}
+                        <td className="px-6 py-4 text-right">
+                          {p.status === "pending" ? (
+                            <div className="flex justify-end gap-2 opacity-100 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => setApproveTarget(p)}
+                                className="px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded-md text-white flex items-center gap-1.5 text-xs font-medium transition-colors shadow-sm"
+                                title="Xác nhận tiền về & Kích hoạt khóa học"
+                              >
+                                <Check size={14} /> Duyệt
+                              </button>
+                              <button
+                                onClick={() => setRejectTarget(p)}
+                                className="px-2 py-1.5 bg-gray-700 hover:bg-red-500/20 hover:text-red-500 text-gray-300 rounded-md flex items-center justify-center transition-colors border border-gray-600 hover:border-red-500/30"
+                                title="Hủy đơn này"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-gray-600 text-xs select-none">
+                              --
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
       {approveTarget && (
@@ -259,7 +284,7 @@ export default function TransactionsPage() {
           title="Duyệt đơn thanh toán"
           description={orderSummary(
             approveTarget,
-            "Xác nhận đã nhận tiền? Hành động này sẽ kích hoạt khóa học cho học viên."
+            "Xác nhận đã nhận tiền? Hành động này sẽ kích hoạt khóa học cho học viên.",
           )}
           confirmLabel="Duyệt đơn"
           onConfirm={() => handleApprove(approveTarget.id)}
@@ -274,7 +299,7 @@ export default function TransactionsPage() {
           title="Hủy đơn hàng"
           description={orderSummary(
             rejectTarget,
-            "Hủy bỏ giao dịch này? Học viên sẽ không được kích hoạt khóa học."
+            "Hủy bỏ giao dịch này? Học viên sẽ không được kích hoạt khóa học.",
           )}
           confirmLabel="Hủy đơn hàng"
           cancelLabel="Giữ đơn hàng"

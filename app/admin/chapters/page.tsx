@@ -46,6 +46,9 @@ export default function ChaptersManagerPage() {
     setFormChapter(chapter);
     setIsOpenForm(true);
   };
+  const selectedCourse = courses.find(
+    (course) => course.id === selectedCourseId,
+  );
   const filteredChapters = chapters
     .filter((chapter) => chapter.course_id === selectedCourseId)
     .sort((a, b) => a.order_index - b.order_index);
@@ -129,7 +132,9 @@ export default function ChaptersManagerPage() {
                 <p className="text-xs text-gray-400 font-semibold tracking-wider mb-1">
                   KHÓA HỌC HIỆN TẠI
                 </p>
-                <p className="text-md font-bold">HTML & CSS Cơ bản</p>
+                <p className="text-md font-bold">
+                  {selectedCourse?.name ?? "Chưa chọn khóa học"}
+                </p>
               </div>
             </div>
 

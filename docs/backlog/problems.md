@@ -14,7 +14,7 @@ Problems that no open program owns. This is not a program: it has no plan and no
 
 ### BL-P2: the quiz completion screen never renders
 
-- Status: Open (2026-10-25).
+- Status: Fixed locally, awaiting delivery (2026-11-07: `Quiz.tsx` sets the completion state before the last step runs, so the completion screen shows and the buttons are gone; quiz result persistence stays with SE-P18; was Open (2026-10-25)).
 - Problem: `app/components/Quiz.tsx` declares `isCompleted` but never sets it (U6 removed the unused setter without changing behavior), so the completion branch at `Quiz.tsx:92` is unreachable and a finished quiz never shows its completion screen.
 - Evidence: `git show b8e3e0f:app/components/Quiz.tsx` has no `setIsCompleted(...)` call; found by the infrastructure U6 lint cleanup. Related to security-hotfix P20 (quiz results are not stored), which covers persistence, not this screen.
 - Direction: small UI task: set the completion state after the last question and check the screen by hand; decide with P20 whether completion should also be stored.
@@ -22,7 +22,7 @@ Problems that no open program owns. This is not a program: it has no plan and no
 
 ### BL-P3: the avatar menu is already open after signing back in
 
-- Status: Open (2026-10-25).
+- Status: Fixed locally, awaiting delivery (2026-11-07: `Header.handleLogout` closes the menu before signing out; was Open (2026-10-25)).
 - Problem: `handleLogout` in `app/components/Header.tsx:161` signs out and routes to `/login` without closing the user menu, and the header stays mounted across that route, so `showUserMenu` is still `true` and the menu shows open right after the next sign-in.
 - Evidence: reported by the Owner during the infrastructure U6 manual pass, 2026-10-25 (sign out as `student@devspace.test`, sign in as `admin@devspace.test` on the local stack); cause read from the code, not yet confirmed by a fix. U6 changed only types and one suppression comment in this file.
 - Direction: small UI fix: close the menu in `handleLogout` (and check whether the menu should also close on route change), then check sign out and sign in by hand.
@@ -43,6 +43,7 @@ Problems that no open program owns. This is not a program: it has no plan and no
   - Compiler Explorer (godbolt.org) can execute code, but its docs warn that rate limits and authentication may come later.
   - Self-hosted Piston needs a privileged Docker host with cgroup v2, which Vercel cannot provide.
   - Removing the C++ tab.
+- Update (2026-11-07, Owner decision): the error display is fixed locally and awaiting delivery: a non-OK answer or a body without `run` shows an error line in the console and an error toast. Choosing the backend moves to the techstack migration, so this entry stays open for it.
 - Exit condition: C++ code runs and shows its output, or the C++ tab is removed; a failed run always shows an error.
 
 ### BL-P12: course and lesson slugs have no format rule, and a course slug is not unique
@@ -51,11 +52,12 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Problem: the admin course and lesson forms accept any non-blank slug (spaces, capitals, Vietnamese accents, `/`), which then becomes the `/course/<slug>` or `/learn/<course>/<lesson>` URL. `lessons.slug` is unique (`lessons_slug_key`), but `courses.slug` has no unique constraint, and the course readers use `.eq("slug", …).single()` (`lib/supabase.ts:60-63`), so a second course with the same slug makes its page fail.
 - Evidence: `supabase/migrations/20261021000000_baseline.sql` (only `lessons_slug_key`, read at `cc2d5ff`); `app/admin/courses/coursesclient.tsx` and `app/admin/lessons/page.tsx` send the typed slug unchanged. Hosted slugs were not read (reading data rows needs the Owner's approval).
 - Direction: first read the hosted slugs (Owner-approved read) to see whether any existing slug breaks a kebab-case rule or is duplicated; then a migration with a unique constraint on `courses.slug` (Codex-gated, `supabase-migration`) and a slug rule in the admin schemas that new and edited slugs follow, with a plan for any existing slug that does not. Possibly with the techstack migration's schema review (BL-F11).
+- Update (2026-11-07, Owner decision): this will be done with BL-F11 in the techstack migration.
 - Exit condition: two courses cannot share a slug, and a slug the forms accept is a valid URL segment, or the Owner drops it.
 
 ### BL-P13: the admin chapters page always names "HTML & CSS Cơ bản" as the current course
 
-- Status: Open (2026-11-04, found by Main during AF-U5 manual QA; outside AF-U5, which changed only the chapter form).
+- Status: Fixed locally, awaiting delivery (2026-11-07: the card names the course chosen in "Chuyển khóa học" and says "Chưa chọn khóa học" before one is chosen; was Open (2026-11-04, found by Main during AF-U5 manual QA; outside AF-U5, which changed only the chapter form)).
 - Problem: the "Khóa học hiện tại" card on `/admin/chapters` shows a hard-coded course name, so it disagrees with the course chosen in "Chuyển khóa học" and names a course even before one is chosen.
 - Evidence: `app/admin/chapters/page.tsx` renders the literal `HTML & CSS Cơ bản` (also at `1cab557`, before AF-U5); on the dev stack with course 1 ("Làm quen với HTML") selected, the card still read "HTML & CSS Cơ bản".
 - Direction: derive the card from the selected course (or an empty-state text when none is chosen); a small UI fix with one browser check.
@@ -63,7 +65,7 @@ Problems that no open program owns. This is not a program: it has no plan and no
 
 ### BL-P17: the transactions page reloads its orders without handling a failure
 
-- Status: Open (2026-10-29, found in the app-foundation U1 Codex diff review as AF-P3; moved here on 2026-11-05 when app-foundation closed, Owner decision).
+- Status: Fixed locally, awaiting delivery (2026-11-07: a failed load or reload shows an error with "Thử lại", `isLoading` clears in `finally`, and nothing is left unhandled; was Open (2026-10-29, found in the app-foundation U1 Codex diff review as AF-P3; moved here on 2026-11-05 when app-foundation closed, Owner decision)).
 - Problem: `fetchPayments()` is called without `await` or a catch after an approve or reject (`app/admin/transactions/page.tsx`, the `toast.promise` success callback and `handleReject`), and it sets `isLoading` true before `getAllPayments()`; if that call rejects, the rejection is unhandled and the table stays on "Đang tải dữ liệu...".
 - Evidence: read at `e44489f`; the same calls exist at `4179bf5`. Not reproduced.
 - Direction: a small task, or security-hotfix H2-2b when it rewrites the payment actions: catch the reload, clear `isLoading` in `finally`, and show an error with a retry.
@@ -71,19 +73,11 @@ Problems that no open program owns. This is not a program: it has no plan and no
 
 ### BL-P18: Transactions show anonymous learner names
 
-- Status: Deferred (moved from SH-P15 on 2026-11-05, ADR 0007).
+- Status: Fixed locally, awaiting delivery (2026-11-07: the page reads the `users` relation that `getAllPayments` returns, so the table and both confirm dialogs show the learner's name, email and avatar; was Deferred (moved from SH-P15 on 2026-11-05, ADR 0007)).
 - Problem: `/admin/transactions` shows every learner as "Ẩn danh": the page reads `p.profiles?.full_name` (`app/admin/transactions/page.tsx:148`) but `getAllPayments` returns `users`. The bug predates H1 (found during H1 QA).
 - Evidence: Legacy P15; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Later work reconciles the transactions page profile lookup with the users returned by getAllPayments.
 - Exit condition: Transactions display the correct learner name from the returned relation.
-
-### BL-P19: Purchased courses without progress are hidden
-
-- Status: Deferred (moved from SH-P29 on 2026-11-05, ADR 0007).
-- Problem: "Khóa học của tôi" at `/profile` shows only courses with ≥ 1 completed lesson (`getUserDashboardData` filters `isStarted`) → a user who bought a course but has not finished any lesson sees "Bạn chưa tham gia khóa học nào". The bug predates H2 (found during H2-1 QA).
-- Evidence: Legacy P29; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Later work shows purchased courses before the first completed lesson.
-- Exit condition: A newly purchased course appears in the profile before any completed lesson.
 
 ## Resolved
 
@@ -107,3 +101,4 @@ One line each: ID, status, one-line outcome. Details stay in Git.
 - BL-P14 — Moved to [security-engineering](../programs/security-engineering/problems.md)
 - BL-P15 — Moved to [security-engineering](../programs/security-engineering/problems.md)
 - BL-P16 — Moved to [security-engineering](../programs/security-engineering/problems.md)
+- BL-P19 — Done: fixed by ui-ux UX-U1, `buildDashboardCourses` lists an enrolled course with nothing done at 0% (PR #57)

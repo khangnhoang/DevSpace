@@ -159,6 +159,8 @@ export default function Header() {
   // 4. LOGOUT
   // =========================
   const handleLogout = async () => {
+    // Header stays mounted across the sign-out redirect, so an open menu would still be open after the next sign-in.
+    setShowUserMenu(false);
     await supabase.auth.signOut();
     router.push("/login");
   };
@@ -171,10 +173,7 @@ export default function Header() {
       {/* --- LEFT: LOGO --- */}
       <div className="flex items-center z-10">
         {/* Đã xóa nút Menu Mobile ở đây */}
-        <Link
-          href="/"
-          className="flex items-center gap-2 py-1 group"
-        >
+        <Link href="/" className="flex items-center gap-2 py-1 group">
           {/* Logo Icon giả lập */}
           <div className="bg-blue-600 text-white p-1.5 md:p-2 rounded-lg shadow-sm group-hover:bg-blue-700 transition-colors duration-300">
             <Code2 size={20} strokeWidth={2.5} className="md:w-6 md:h-6" />
@@ -237,7 +236,7 @@ export default function Header() {
                         onError={(e) => {
                           e.currentTarget.style.display = "none";
                           e.currentTarget.nextElementSibling?.classList.remove(
-                            "hidden"
+                            "hidden",
                           );
                         }}
                       />

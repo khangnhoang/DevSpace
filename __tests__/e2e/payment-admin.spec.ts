@@ -38,8 +38,7 @@ test.beforeEach(async () => {
 
 const LEARNER_EMAIL = "learner@devspace.test";
 
-// The learner's pending order is the only pending row of the table. The page shows "Ẩn danh" for every user (it
-// reads `profiles`, the action returns `users`), so the status badge is what tells the row apart.
+// The learner's pending order is the only pending row of the table, so the status badge tells the row apart.
 const pendingRow = (page: Page) =>
   page.getByRole("row").filter({ hasText: "Chờ duyệt" });
 
@@ -157,6 +156,8 @@ test.describe("approving and rejecting through the transactions page", () => {
     await pendingRow(page).getByRole("button", { name: "Hủy đơn này" }).click();
     const dialog = page.getByRole("alertdialog");
     await expect(dialog).toBeVisible();
+    // The dialog names the learner from their profile (BL-P18), not "Ẩn danh".
+    await expect(dialog).toContainText("Học viên: Nguyễn Văn Học.");
     await dialog.getByRole("button", { name: "Giữ đơn hàng" }).click();
     await expect(dialog).toBeHidden();
 

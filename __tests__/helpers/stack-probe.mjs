@@ -58,6 +58,10 @@ if (mode === "hold") {
   } catch (error) {
     say({ event: "refused", code: error.code, message: error.message });
   }
+} else if (mode === "crash") {
+  // Dies the way a probe does when a start-time read fails: a message on stderr and a non-zero status.
+  console.error("probe crashed on purpose");
+  process.exit(3);
 } else if (mode === "idle") {
   say({ event: "idle", pid: process.pid });
   await forever();

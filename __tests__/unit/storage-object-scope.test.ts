@@ -44,7 +44,7 @@ describe("OwnedObjects", () => {
     });
     objects.own("a.png");
     objects.own("b/c.png");
-    await objects.cleanup();
+    await objects.cleanup({});
     expect(removed).toEqual(["a.png", "b/c.png"]);
     expect(run.causes).toEqual([]);
     objects.own("d.png");
@@ -61,7 +61,9 @@ describe("OwnedObjects", () => {
     });
     objects.own("a.png");
     objects.own("b.png");
-    await expect(objects.cleanup()).rejects.toThrow(/a\.png \(storage down\)/);
+    await expect(objects.cleanup({})).rejects.toThrow(
+      /a\.png \(storage down\)/,
+    );
     expect(attempted).toEqual(["a.png", "b.png"]);
     expect(run.causes).toHaveLength(1);
     expect(() => scope(run).own("next.png")).toThrow("run is unclean");
@@ -75,7 +77,7 @@ describe("OwnedObjects", () => {
       },
     });
     objects.own("a.png");
-    await expect(objects.cleanup()).rejects.toThrow(/read failed/);
+    await expect(objects.cleanup({})).rejects.toThrow(/read failed/);
     expect(() => scope(run).own("next.png")).toThrow("run is unclean");
   });
 
@@ -83,7 +85,9 @@ describe("OwnedObjects", () => {
     const run = recorder();
     const objects = scope(run, { exists: async () => true });
     objects.own("a.png");
-    await expect(objects.cleanup()).rejects.toThrow(/a\.png \(still present\)/);
+    await expect(objects.cleanup({})).rejects.toThrow(
+      /a\.png \(still present\)/,
+    );
     expect(() => scope(run).own("next.png")).toThrow("run is unclean");
   });
 

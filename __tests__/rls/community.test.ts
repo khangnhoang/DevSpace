@@ -35,8 +35,8 @@ beforeEach(async () => {
   seedComments = must(await fixtures.from("comments").select("*").order("id"));
   seedReviews = must(await fixtures.from("reviews").select("*").order("id"));
 });
-afterEach(async () => {
-  await finishFixtureScope();
+afterEach(async (context) => {
+  await finishFixtureScope(context);
   if (seedComments)
     expect(
       must(await fixtures.from("comments").select("*").order("id")),

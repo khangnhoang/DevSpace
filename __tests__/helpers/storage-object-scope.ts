@@ -1,8 +1,8 @@
-import { noteTimeout, type RunMarker } from "./fixture-ownership";
-
-type TestContext = {
-  task?: { name?: string; result?: { errors?: { message?: string }[] } };
-};
+import {
+  runCleanupHook,
+  type HookContext,
+  type RunMarker,
+} from "./fixture-ownership";
 
 // Ownership of Storage objects a test may create, with the same run-state rules as FixtureScope: a name is recorded
 // before its request, a run already marked unclean admits no new writer, and a failed cleanup, a failed verification
@@ -29,14 +29,13 @@ export class OwnedObjects {
   }
 
   // Each recorded name is removed and verified absent on its own, so one failure never hides another object.
-  async cleanup(context?: TestContext) {
+  // The hook context is required: its signal marks the run when the cleanup hook itself times out (QE-P8).
+  cleanup(context: HookContext) {
+    return runCleanupHook(context, this.options.run, () => this.removeAll());
+  }
+
+  private async removeAll() {
     const { run, remove, exists } = this.options;
-    if (
-      context?.task?.result?.errors?.some((e) =>
-        /timed out/i.test(e.message ?? ""),
-      )
-    )
-      noteTimeout(context.task.name ?? "unnamed test", run);
     const names = [...this.names];
     this.names.clear();
     const unresolved: string[] = [];

@@ -20,6 +20,7 @@ import {
 } from "../../scripts/test-stack/audit.mjs";
 import {
   fixtures,
+  cleanupFixtures,
   must,
   IDS,
   admin,
@@ -51,7 +52,7 @@ const recorder = () => {
   } satisfies RunMarker & { causes: string[] };
 };
 const scope = (run: RunMarker = recorder()) =>
-  new FixtureScope(fixtures, stack.dbUrl, { run });
+  new FixtureScope(cleanupFixtures, stack.dbUrl, { run });
 beforeEach(startFixtureScope);
 afterEach(finishFixtureScope);
 
@@ -461,7 +462,7 @@ describe("fixture ownership persistence", () => {
         sentinelId = sentinel.data.user!.id;
       // The real local SQL server refuses this invented, nonexistent role; no policy/schema is changed.
       await expect(
-        cleanupEntries(owner, fixtures, lookupFailureUrl(stack.dbUrl)),
+        cleanupEntries(owner, cleanupFixtures, lookupFailureUrl(stack.dbUrl)),
       ).rejects.toThrow("unresolved entries retained");
       expect(
         owner.entries.some(
@@ -502,7 +503,9 @@ describe("fixture ownership persistence", () => {
         ),
       ).toHaveLength(1);
     } finally {
-      must(await fixtures.from("notifications").delete().eq("title", title));
+      must(
+        await cleanupFixtures.from("notifications").delete().eq("title", title),
+      );
       await owner.cleanup();
     }
     expect(
@@ -537,7 +540,9 @@ describe("fixture ownership persistence", () => {
         [expect.stringMatching(/^public\.notifications: /)],
       );
     } finally {
-      must(await fixtures.from("notifications").delete().eq("title", title));
+      must(
+        await cleanupFixtures.from("notifications").delete().eq("title", title),
+      );
       await owner.cleanup();
     }
     expect(compareSnapshots(before, await takeSnapshot(stack.dbUrl))).toEqual(

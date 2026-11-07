@@ -6,46 +6,6 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 
 ## Open
 
-### SE-P8: Coupon usage RPC is missing
-
-- Status: Open, before migration (moved from SH-P5 on 2026-11-05, Owner decisions 1 and 2).
-- Problem: The code calls the RPC `increment_coupon_usage` but the function does not exist in the DB → coupon usage never increases.
-- Evidence: Legacy P5; severity Medium; discovery-era Planned: H2 or later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Deferred to H2-2b (initiative SE-U1); preserve the original H2-or-later scope and the H2 reservation design in [plan-h2.md](../security-hotfix/plan-h2.md), together with SE-P9 and SE-P10.
-- Exit condition: The approved coupon reservation path exists and usage changes correctly through the supported actions.
-
-### SE-P9: Coupon usage is counted inconsistently
-
-- Status: Open, before migration (moved from SH-P6 on 2026-11-05, Owner decisions 1 and 2).
-- Problem: A coupon is counted when the pending order is created, while `updatePaymentWithCoupon` does not count → inconsistent usage logic.
-- Evidence: Legacy P6; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Deferred to H2-2b (initiative SE-U1) under the approved H2 reservation design in [plan-h2.md](../security-hotfix/plan-h2.md); original scheduling was later.
-- Exit condition: Coupon application, switch, cancellation, rejection and approval maintain the approved reservation invariant.
-
-### SE-P10: Order approval and rejection are not atomic
-
-- Status: Open, before migration (moved from SH-P25 on 2026-11-05, Owner decisions 1 and 2).
-- Problem: `approvePayment`/`rejectPayment` UPDATE only by `id`, not filtering `status = 'pending'` → approving again an order that was already processed, sending the email again; the enrollment is created by a separate request and its error is ignored.
-- Evidence: Legacy P25; severity Low; discovery-era Planned: **H2-2**; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Deferred to H2-2b (initiative SE-U1): atomic approval/rejection, enrollment creation and side effects under the existing plan ([plan-h2.md](../security-hotfix/plan-h2.md)).
-- Exit condition: Repeated approval/rejection is denied, enrollment persists atomically and email is sent only for the winning transition.
-
-### SE-P11: An enrolled user can create another pending order
-
-- Status: Open, before migration (moved from SH-P30 on 2026-11-05, Owner decisions 1 and 2).
-- Problem: `createPendingPayment` (`app/action/payment.ts:72`) never checks for an existing enrollment, so a direct call by an enrolled user creates a pending order for a course they already own; the UI hides the buy button, but the action is a public POST endpoint. Found while planning infrastructure U5 (2026-10-24); U5 does not encode it.
-- Evidence: Legacy P30; severity Low; discovery-era Planned: with H2-2b; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Handle with H2-2b (initiative SE-U1, [plan-h2.md](../security-hotfix/plan-h2.md)); infrastructure U5 did not encode this case.
-- Exit condition: A direct createPendingPayment call by an already enrolled user cannot create a redundant pending order.
-
-### SE-P12: Unlimited coupons fail in direct pending-order creation
-
-- Status: Open, before migration (moved from SH-P31 on 2026-11-05, Owner decisions 1 and 2).
-- Problem: `createPendingPayment` applies a coupon only when `coupon.used_count < coupon.max_uses` (`app/action/payment.ts:122`), so a code without a use limit (`max_uses` null) gives no discount there, while `updatePaymentWithCoupon` treats null as unlimited and applies it (infrastructure U5 row PF7). The UI never sends a code to `createPendingPayment` (SE-P8), so only a direct call sees it. Found while implementing infrastructure U5 (2026-10-24); U5 does not encode it.
-- Evidence: Legacy P31; severity Low; discovery-era Planned: with H2-2b; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Handle with H2-2b (initiative SE-U1, [plan-h2.md](../security-hotfix/plan-h2.md)); retain the direct-call distinction and infrastructure U5 PF7 evidence (U5 did not encode this case).
-- Exit condition: An unlimited coupon is handled consistently in direct createPendingPayment and updatePaymentWithCoupon calls.
-
 ### SE-P13: Server components use an anon client
 
 - Status: Deferred to techstack-migration (moved from SH-P7 on 2026-11-05, Owner decisions 1 and 2).
@@ -137,3 +97,8 @@ One line each: ID, status, one-line outcome. Details stay in Git.
 - SE-P6 — Resolved 2026-11-07: PR #69 (`e76cc05`) removes the unused `pg_graphql` extension after dependency checks, with an exact 1.5.11 rollback; hosted migration `20261106100209` applied, and the Owner confirmed the postflight, Advisor 0026/0027 and production QA.
 - SE-P4 — Resolved 2026-11-07: PR #70 (`b03a9b4`) hides soft-deleted comments from every API role while keeping their content, requires enrollment or admin for new comments and soft-deletes through `soft_delete_comment`; hosted migration `20261106174213` applied, the catalog postflight and the D8 behavior probes passed, and the Owner confirmed production QA.
 - SE-P5 — Resolved 2026-11-07: PR #70 (`b03a9b4`) limits non-admin `avatars` writes to the user's own `<uid>/` folder while admins keep any path; hosted migration `20261106175756` applied, the catalog postflight and the D8 behavior probes passed, and the Owner confirmed production QA.
+- SE-P8 — Resolved 2026-11-07: PR 71 (`268545d`) and PR 72 (`8fb9b59`) add the database payment functions behind the payment actions, so coupon usage changes through apply, switch and cancel; hosted M1 and M2 applied with postflights and D5 probes, and production QA passed.
+- SE-P9 — Resolved 2026-11-07: PR 71 (`268545d`) and PR 72 (`8fb9b59`) reserve a coupon use when a code is applied and release it on cancel, reject, switch or delete, in one reservation invariant; production QA passed.
+- SE-P10 — Resolved 2026-11-07: PR 71 (`268545d`) makes approval and rejection act only on a pending order, with the enrollment committed in the same transaction; production QA passed.
+- SE-P11 — Resolved 2026-11-07: PR 71 (`268545d`) refuses a pending order for a course the user already owns and allows one pending order per user and course; production QA passed.
+- SE-P12 — Resolved 2026-11-07: PR 71 (`268545d`) applies a coupon without a use limit the same way in order creation and coupon application; PR 72 (`8fb9b59`) revokes the direct `payments` INSERT and UPDATE grants.

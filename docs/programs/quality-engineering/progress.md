@@ -6,14 +6,14 @@ Charter: [README.md](README.md). Problems: [problems.md](problems.md). Git histo
 
 | Field | Value |
 | --- | --- |
-| Spec revision | Owner-approved small task (2026-11-05): staged test execution and QE-P6, focused verification during implementation and final full regression after whole-diff review; conditional repeats instead of two full runs by default. No plan file. |
-| Current unit / checkpoint | None active. |
-| Status | QE-P6 resolved in [PR 67](https://github.com/khangnhoang/DevSpace/pull/67). QE-P5, QE-P7 and the remaining QE-F8 e2e audit are open. |
-| Completed evidence | Local docs checks and independent diff review passed; the CI docs, lint, typecheck and build jobs passed. CI skipped the database and e2e jobs for the docs-only diff. |
-| Accepted deviations | none. |
-| Blockers / Owner decisions | none. |
-| Next action | The Owner selects the next Quality Engineering item. |
-| Current authority | None active. |
+| Spec revision | [QE-U5](implementation-plans/qe-u5-flaky-harness/plan.md) r3 (2026-11-07), Codex plan gate PASS in round 3 (`gpt-6.1-sol`, high, read-only) at the Owner's request; approved by the Owner on 2026-11-07. |
+| Current unit / checkpoint | QE-U5, CP1 to CP4 and the Final checks done locally; awaiting Main's review and delivery. |
+| Status | QE-U5 CP1 and CP2 implemented on `test/qe-flaky-harness`: QE-P8 and QE-P5 fixed locally, awaiting delivery. QE-P7 (diagnostics added, not reproduced) and the remaining QE-F8 e2e audit are open. CP3 and CP4 are implemented and the Final checks passed; delivery is not done. |
+| Completed evidence | QE-U5 plan: `npm run docs:check` 0 violations; Codex plan review rounds 1 to 3 (PASS in round 3). CP1: new unit tests with their mutations failing; `npm test -- --reset` then `npm test` without reset, 980 of 980 each. CP2: the lock test file failed once in 20 runs, the cause was named and fixed, and 20 of 20 consecutive runs passed after the fix. CP1 correction R1 (service-role writes of a test body guarded, cleanup on a separate unguarded client): `npm test -- --reset` then `npm test` without reset, 998 of 998 each. CP3: `[T8]` diagnostics added; QE-P7 not reproduced. CP4: SE-U1 and backlog PR 73 documents caught up. Final checks at `ffd5ad8` (Node v26.13.0), each once and unfiltered: `npx tsc --noEmit`, `npm run lint`, `npm run test:unit` (789 of 789), `npm test` (998 of 998), `npm run test:e2e` (161 of 161), `npm run build` and `npm run docs:check` all exit 0. |
+| Accepted deviations | CP3 also changed `scripts/e2e/serve.mjs` (outside the plan's file list): the server record of the Auth calls (AC4) needs the `E2E_AUTH_FILE` preload passed to `next start`, which only that script starts. Main accepted it as the direct dependency of AC4 (2026-11-07). |
+| Blockers / Owner decisions | none. Owner decisions 1 to 5 of 2026-11-07 are in the plan (section 1.4). |
+| Next action | Main reviews the implementation diff; push, PR and merge need their own grants. |
+| Current authority | Owner granted (2026-11-07) plan approval, this plan commit and implementation with local checkpoint commits. No push, PR or merge is granted. |
 
 ## Milestones
 
@@ -47,3 +47,9 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-05 Small task QE-P6: staged verification and risk-based repeatability checks replace automatic double full runs; lifecycle, review and commit guidance synchronized, fixed locally and awaiting delivery (`f1d7ff5`).
 - 2026-11-05 Audit follow-up makes the Owner-confirmed Prettier-only local verification exception explicit in the test-selection owner and its dependency consumer (`fd4e650`).
 - 2026-11-05 QE-P6 merged with the staged test policy, risk-based repeats and the Prettier-only local verification exception (PR 67, `3d21627`).
+- 2026-11-07 QE-U5 r3 approved by the Owner after the Codex plan gate passed in round 3: QE-P8 admission and hook-abort guards, diagnostics-first focused investigation of QE-P5 and QE-P7, SE-U1 and PR 73 docs catch-up (`e3ee40f`).
+- 2026-11-07 QE-U5 CP1 admits every actor write right before its request and marks the run when a cleanup hook times out; QE-P8 fixed locally, awaiting delivery (`22640be`).
+- 2026-11-07 QE-U5 CP2 names the cause of the intermittent lock test (the probe exits while PowerShell reads its start time), fixes it fail-closed, keeps the read diagnostics and probe stderr; QE-P5 fixed locally, awaiting delivery (`cd832aa`).
+- 2026-11-07 QE-U5 CP3 adds the session diagnostics of `[T8]` and a server Auth record; 58 and 123 student-subset rows (5 repeats each) passed with no refresh and no session loss, so QE-P7 stays open with that evidence (`1a0987f`).
+- 2026-11-07 QE-U5 correction R1 after Main's review: the service-role `fixtures` client of the rls test bodies refuses writes once the run is unclean, RPC writes included, while cleanup uses its own unguarded client (`947231c`).
+- 2026-11-07 QE-U5 CP4 catches up security-engineering (SE-U1 delivered in PR 71 and PR 72, SE-P8 to SE-P12 resolved, SE-F2 and SE-F3 target the techstack migration) and the backlog (BL-P2, BL-P3, BL-P13, BL-P17 and BL-P18 done in PR 73) (`ffd5ad8`).

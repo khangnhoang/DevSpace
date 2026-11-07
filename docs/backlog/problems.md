@@ -12,22 +12,6 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Direction: one small UI task with a manual browser pass: move the images to `next/image` with explicit sizes (`unoptimized` for `blob:`, a fallback for the Header image, the QR host listed), the host list is settled by BL-002 (`remotePatterns` now names only explicit hosts, so list any new host there); restructure the review reset so it no longer sets state synchronously in the effect, checking paging and the `hasEnrolled` change by hand.
 - Exit condition: `grep -rn "eslint-disable" app lib` finds nothing, lint stays at 0, and the review list, avatars, QR and search images behave as before.
 
-### BL-P2: the quiz completion screen never renders
-
-- Status: Fixed locally, awaiting delivery (2026-11-07: `Quiz.tsx` sets the completion state before the last step runs, so the completion screen shows and the buttons are gone; quiz result persistence stays with SE-P18; was Open (2026-10-25)).
-- Problem: `app/components/Quiz.tsx` declares `isCompleted` but never sets it (U6 removed the unused setter without changing behavior), so the completion branch at `Quiz.tsx:92` is unreachable and a finished quiz never shows its completion screen.
-- Evidence: `git show b8e3e0f:app/components/Quiz.tsx` has no `setIsCompleted(...)` call; found by the infrastructure U6 lint cleanup. Related to security-hotfix P20 (quiz results are not stored), which covers persistence, not this screen.
-- Direction: small UI task: set the completion state after the last question and check the screen by hand; decide with P20 whether completion should also be stored.
-- Exit condition: answering the last question of a quiz shows the completion screen.
-
-### BL-P3: the avatar menu is already open after signing back in
-
-- Status: Fixed locally, awaiting delivery (2026-11-07: `Header.handleLogout` closes the menu before signing out; was Open (2026-10-25)).
-- Problem: `handleLogout` in `app/components/Header.tsx:161` signs out and routes to `/login` without closing the user menu, and the header stays mounted across that route, so `showUserMenu` is still `true` and the menu shows open right after the next sign-in.
-- Evidence: reported by the Owner during the infrastructure U6 manual pass, 2026-10-25 (sign out as `student@devspace.test`, sign in as `admin@devspace.test` on the local stack); cause read from the code, not yet confirmed by a fix. U6 changed only types and one suppression comment in this file.
-- Direction: small UI fix: close the menu in `handleLogout` (and check whether the menu should also close on route change), then check sign out and sign in by hand.
-- Exit condition: after signing out and signing in again, the avatar menu is closed until clicked.
-
 ### BL-P5: running C++ on Try It shows nothing, because the public Piston API now refuses it
 
 - Status: Open (2026-11-01).
@@ -55,30 +39,6 @@ Problems that no open program owns. This is not a program: it has no plan and no
 - Update (2026-11-07, Owner decision): this will be done with BL-F11 in the techstack migration.
 - Exit condition: two courses cannot share a slug, and a slug the forms accept is a valid URL segment, or the Owner drops it.
 
-### BL-P13: the admin chapters page always names "HTML & CSS Cơ bản" as the current course
-
-- Status: Fixed locally, awaiting delivery (2026-11-07: the card names the course chosen in "Chuyển khóa học" and says "Chưa chọn khóa học" before one is chosen; was Open (2026-11-04, found by Main during AF-U5 manual QA; outside AF-U5, which changed only the chapter form)).
-- Problem: the "Khóa học hiện tại" card on `/admin/chapters` shows a hard-coded course name, so it disagrees with the course chosen in "Chuyển khóa học" and names a course even before one is chosen.
-- Evidence: `app/admin/chapters/page.tsx` renders the literal `HTML & CSS Cơ bản` (also at `1cab557`, before AF-U5); on the dev stack with course 1 ("Làm quen với HTML") selected, the card still read "HTML & CSS Cơ bản".
-- Direction: derive the card from the selected course (or an empty-state text when none is chosen); a small UI fix with one browser check.
-- Exit condition: the card names the selected course, or says none is chosen.
-
-### BL-P17: the transactions page reloads its orders without handling a failure
-
-- Status: Fixed locally, awaiting delivery (2026-11-07: a failed load or reload shows an error with "Thử lại", `isLoading` clears in `finally`, and nothing is left unhandled; was Open (2026-10-29, found in the app-foundation U1 Codex diff review as AF-P3; moved here on 2026-11-05 when app-foundation closed, Owner decision)).
-- Problem: `fetchPayments()` is called without `await` or a catch after an approve or reject (`app/admin/transactions/page.tsx`, the `toast.promise` success callback and `handleReject`), and it sets `isLoading` true before `getAllPayments()`; if that call rejects, the rejection is unhandled and the table stays on "Đang tải dữ liệu...".
-- Evidence: read at `e44489f`; the same calls exist at `4179bf5`. Not reproduced.
-- Direction: a small task, or security-hotfix H2-2b when it rewrites the payment actions: catch the reload, clear `isLoading` in `finally`, and show an error with a retry.
-- Exit condition: a failed reload shows an error state instead of a stuck loader, with no unhandled rejection.
-
-### BL-P18: Transactions show anonymous learner names
-
-- Status: Fixed locally, awaiting delivery (2026-11-07: the page reads the `users` relation that `getAllPayments` returns, so the table and both confirm dialogs show the learner's name, email and avatar; was Deferred (moved from SH-P15 on 2026-11-05, ADR 0007)).
-- Problem: `/admin/transactions` shows every learner as "Ẩn danh": the page reads `p.profiles?.full_name` (`app/admin/transactions/page.tsx:148`) but `getAllPayments` returns `users`. The bug predates H1 (found during H1 QA).
-- Evidence: Legacy P15; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Later work reconciles the transactions page profile lookup with the users returned by getAllPayments.
-- Exit condition: Transactions display the correct learner name from the returned relation.
-
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.
@@ -102,3 +62,8 @@ One line each: ID, status, one-line outcome. Details stay in Git.
 - BL-P15 — Moved to [security-engineering](../programs/security-engineering/problems.md)
 - BL-P16 — Moved to [security-engineering](../programs/security-engineering/problems.md)
 - BL-P19 — Done: fixed by ui-ux UX-U1, `buildDashboardCourses` lists an enrolled course with nothing done at 0% (PR #57)
+- BL-P2 — Done: answering the last question of a quiz shows the completion screen; quiz result persistence stays with SE-P18 (PR #73)
+- BL-P3 — Done: the avatar menu closes when the user signs out, so it is closed after the next sign-in (PR #73)
+- BL-P13 — Done: the admin chapters card names the course chosen in "Chuyển khóa học" and says "Chưa chọn khóa học" before one is chosen (PR #73)
+- BL-P17 — Done: a failed load or reload on the transactions page shows an error with "Thử lại", clears the loader and leaves no unhandled rejection (PR #73)
+- BL-P18 — Done: the transactions table and both confirm dialogs show the learner's name, email and avatar from the returned `users` relation (PR #73)

@@ -165,14 +165,12 @@ it("rejects an occupied unknown-course ID before payment acquisition and preserv
   const owner = fixtureScope();
   await owner.reserve("courses", { id: UNKNOWN_COURSE_ID });
   must(
-    await fixtures
-      .from("courses")
-      .insert({
-        id: UNKNOWN_COURSE_ID,
-        name: owner.label("E2E unrelated 9999"),
-        slug: `e2e-unknown-${owner.tag}`,
-        price: 100,
-      }),
+    await fixtures.from("courses").insert({
+      id: UNKNOWN_COURSE_ID,
+      name: owner.label("E2E unrelated 9999"),
+      slug: `e2e-unknown-${owner.tag}`,
+      price: 100,
+    }),
   );
   await sentinel();
   await expectReadOnlyRejection(

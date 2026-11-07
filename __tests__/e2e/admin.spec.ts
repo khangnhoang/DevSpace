@@ -15,14 +15,108 @@ import {
   createCourseFixture,
   createExerciseFixture,
   createLessonFixture,
+  createAdminNotificationFixtures,
   createUserFixture,
+  notificationIsRead,
   rowExists,
+  SEED_STUDENT_NOTIFICATION_ID,
   userExists,
 } from "./service-role";
 
 test.use({ storageState: authFile("admin") });
 
 test.describe("admin pages", () => {
+  // M8 render: every figure below follows from supabase/seed.sql (two learners, two courses, four lessons, three
+  // exercises, one finished lesson, one approved payment of 199000, one enrollment).
+  test("[A14] the dashboard shows the stat cards, the top student and the recent activity of the seed", async ({
+    page,
+  }) => {
+    await page.goto("/admin");
+    const stat = (title: string) =>
+      page
+        .locator("p")
+        .filter({ hasText: new RegExp(`^${title}$`) })
+        .locator("xpath=following-sibling::h3");
+
+    await expect(stat("Tổng Doanh thu")).toHaveText(/^199\.000\s*₫$/);
+    await expect(stat("Học viên")).toHaveText("2");
+    await expect(stat("Khóa học")).toHaveText("2");
+    await expect(stat("Bài học")).toHaveText("4");
+    await expect(stat("Bài tập")).toHaveText("3");
+    await expect(stat("Hoạt động học tập")).toHaveText("1");
+
+    const top = page
+      .getByRole("listitem")
+      .filter({ hasText: "student@devspace.test" });
+    await expect(top).toHaveCount(1);
+    await expect(top).toContainText(ACCOUNTS.student.fullName);
+    await expect(top).toContainText(/1\s*Bài/);
+
+    const activity = (verb: string) =>
+      page.getByRole("listitem").filter({ hasText: verb });
+    await expect(activity("đã tham gia")).toContainText(
+      ACCOUNTS.student.fullName,
+    );
+    await expect(activity("đã tham gia")).toContainText("JavaScript căn bản");
+    await expect(activity("đã học xong")).toContainText(
+      ACCOUNTS.student.fullName,
+    );
+    await expect(activity("đã học xong")).toContainText("Biến và kiểu dữ liệu");
+  });
+
+  // M8 bell: the bell reads and updates `notifications` through the browser client, so it needs RLS and the stored rows.
+  test.describe("header bell", () => {
+    const bell = (page: Page) =>
+      page
+        .locator("header button")
+        .filter({ has: page.locator("svg.lucide-bell") });
+
+    test("[A15] shows the unread count, and opening a notification stores it as read and lowers the count", async ({
+      page,
+    }) => {
+      const [first, second] = await createAdminNotificationFixtures(2);
+      expect(await notificationIsRead(SEED_STUDENT_NOTIFICATION_ID)).toBe(
+        false,
+      );
+      await page.goto("/admin");
+      await expect(bell(page)).toHaveText("2");
+
+      await bell(page).click();
+      await expect(page.getByText(first.title, { exact: true })).toBeVisible();
+      await expect(page.getByText(second.title, { exact: true })).toBeVisible();
+      await page.getByText(first.title, { exact: true }).click();
+
+      await expect(bell(page)).toHaveText("1");
+      await expect.poll(() => notificationIsRead(first.id)).toBe(true);
+      expect(await notificationIsRead(second.id)).toBe(false);
+      expect(await notificationIsRead(SEED_STUDENT_NOTIFICATION_ID)).toBe(
+        false,
+      );
+    });
+
+    test("[A16] mark all read stores the admin's unread notifications as read and leaves another user's unread", async ({
+      page,
+    }) => {
+      const fixtures = await createAdminNotificationFixtures(2);
+      // The control must start unread, or leaving it unread would prove nothing.
+      expect(await notificationIsRead(SEED_STUDENT_NOTIFICATION_ID)).toBe(
+        false,
+      );
+      await page.goto("/admin");
+      await expect(bell(page)).toHaveText("2");
+
+      await bell(page).click();
+      await page.getByRole("button", { name: "Đánh dấu đã đọc" }).click();
+
+      await expect(bell(page)).toHaveText("");
+      for (const { id } of fixtures)
+        await expect.poll(() => notificationIsRead(id)).toBe(true);
+      expect(await notificationIsRead(SEED_STUDENT_NOTIFICATION_ID)).toBe(
+        false,
+      );
+    });
+  });
+
   test("[A1] the dashboard shows the seed courses", async ({ page }) => {
     await page.goto("/admin");
     await expect(page.getByText("Tổng quan hệ thống")).toBeVisible();

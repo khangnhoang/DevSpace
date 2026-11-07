@@ -812,6 +812,44 @@ export async function studentProgressOf(lessonId: number): Promise<number> {
       .match({ user_id: IDS.student, lesson_id: lessonId }),
   ).length;
 }
+// QE-U6: unread notifications the admin received, so the header bell has something to read without touching the seed.
+// The only seed notification belongs to the student (`SEED_STUDENT_NOTIFICATION_ID`), which a row uses as the untouched
+// control for "mark all read". `type` is one of the values the table check allows. The scope deletes them.
+export const SEED_STUDENT_NOTIFICATION_ID = 1;
+export async function createAdminNotificationFixtures(count: number) {
+  const fixtures: { id: number; title: string }[] = [];
+  for (let i = 1; i <= count; i++) {
+    const title = scope().label(`E2E thông báo ${i}`);
+    await scope().reserve("notifications", {
+      receiver_id: IDS.admin,
+      title,
+    });
+    const row = must(
+      await serviceRole()
+        .from("notifications")
+        .insert({
+          receiver_id: IDS.admin,
+          actor_id: IDS.student,
+          type: "system",
+          title,
+          message: `Nội dung của ${title}`,
+        })
+        .select("id")
+        .single(),
+    );
+    fixtures.push({ id: row.id, title });
+  }
+  return fixtures;
+}
+export async function notificationIsRead(id: number): Promise<boolean> {
+  return must(
+    await serviceRole()
+      .from("notifications")
+      .select("is_read")
+      .eq("id", id)
+      .single(),
+  ).is_read;
+}
 // A new address for the sign-up row: the scope deletes the user it creates (the profile row cascades), and a seed user's
 // password or profile is never touched.
 export async function reserveSignUpEmail() {

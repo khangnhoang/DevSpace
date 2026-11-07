@@ -1138,5 +1138,195 @@
       "file": "docs/programs/quality-engineering/future-features.md",
       "id": "QE-F10"
     }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-engineering/problems.md",
+      "id": "SE-P13"
+    },
+    "to": {
+      "file": "docs/programs/techstack-migration/problems.md",
+      "id": "TM-P1"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-engineering/problems.md",
+      "id": "SE-P14"
+    },
+    "to": {
+      "file": "docs/programs/techstack-migration/problems.md",
+      "id": "TM-P2"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-engineering/problems.md",
+      "id": "SE-P15"
+    },
+    "to": {
+      "file": "docs/programs/techstack-migration/problems.md",
+      "id": "TM-P3"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-engineering/problems.md",
+      "id": "SE-P16"
+    },
+    "to": {
+      "file": "docs/programs/techstack-migration/problems.md",
+      "id": "TM-P4"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-engineering/problems.md",
+      "id": "SE-P17"
+    },
+    "to": {
+      "file": "docs/programs/techstack-migration/problems.md",
+      "id": "TM-P5"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-engineering/problems.md",
+      "id": "SE-P18"
+    },
+    "to": {
+      "file": "docs/programs/techstack-migration/problems.md",
+      "id": "TM-P6"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-engineering/problems.md",
+      "id": "SE-P19"
+    },
+    "to": {
+      "file": "docs/programs/techstack-migration/problems.md",
+      "id": "TM-P7"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-engineering/problems.md",
+      "id": "SE-P20"
+    },
+    "to": {
+      "file": "docs/programs/techstack-migration/problems.md",
+      "id": "TM-P8"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-engineering/problems.md",
+      "id": "SE-P21"
+    },
+    "to": {
+      "file": "docs/programs/techstack-migration/problems.md",
+      "id": "TM-P9"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-engineering/problems.md",
+      "id": "SE-P22"
+    },
+    "to": {
+      "file": "docs/programs/techstack-migration/problems.md",
+      "id": "TM-P10"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/problems.md",
+      "id": "BL-P5"
+    },
+    "to": {
+      "file": "docs/programs/techstack-migration/problems.md",
+      "id": "TM-P11"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/problems.md",
+      "id": "BL-P12"
+    },
+    "to": {
+      "file": "docs/programs/techstack-migration/problems.md",
+      "id": "TM-P12"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/problems.md",
+      "id": "BL-P20"
+    },
+    "to": {
+      "file": "docs/programs/techstack-migration/problems.md",
+      "id": "TM-P13"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-engineering/future-features.md",
+      "id": "SE-F1"
+    },
+    "to": {
+      "file": "docs/programs/techstack-migration/future-features.md",
+      "id": "TM-F1"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-engineering/future-features.md",
+      "id": "SE-F2"
+    },
+    "to": {
+      "file": "docs/programs/techstack-migration/future-features.md",
+      "id": "TM-F2"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/security-engineering/future-features.md",
+      "id": "SE-F3"
+    },
+    "to": {
+      "file": "docs/programs/techstack-migration/future-features.md",
+      "id": "TM-F3"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/backlog/future-features.md",
+      "id": "BL-F11"
+    },
+    "to": {
+      "file": "docs/programs/techstack-migration/future-features.md",
+      "id": "TM-F4"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/quality-engineering/future-features.md",
+      "id": "QE-F4"
+    },
+    "to": {
+      "file": "docs/programs/techstack-migration/future-features.md",
+      "id": "TM-F5"
+    }
+  },
+  {
+    "from": {
+      "file": "docs/programs/agent-workflow/future-features.md",
+      "id": "AW-F5"
+    },
+    "to": {
+      "file": "docs/programs/techstack-migration/future-features.md",
+      "id": "TM-F6"
+    }
   }
 ]

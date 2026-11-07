@@ -5,6 +5,7 @@ import {
   recordSize,
   recordsSince,
   serverRecordPaths,
+  type AuthRecord,
   type GuardRecord,
   type MailRecord,
 } from "../helpers/e2e-server";
@@ -32,7 +33,11 @@ declare global {
 // (`playwright.config.ts`) and the request listener still reports a hosted hop.
 // The e2e server runs behind the server guard (server-guard.cjs). `mailsSent()` returns the mails the server
 // recorded since this test began; a test during which the server tried to resolve or reach a non-local host fails.
-export type ServerRecords = { mailsSent: () => MailRecord[] };
+// `authCalls()` lists the refresh and token-check calls the server sent to Auth since the test began (QE-P7).
+export type ServerRecords = {
+  mailsSent: () => MailRecord[];
+  authCalls: () => AuthRecord[];
+};
 
 function reportableUrl(value: string) {
   const url = URL.parse(value);
@@ -72,9 +77,11 @@ export const test = base.extend<{
       const paths = serverRecordPaths(join(__dirname, "../.."));
       const guardStart = recordSize(paths.guard);
       const mailStart = recordSize(paths.mail);
+      const authStart = recordSize(paths.auth);
 
       await provide({
         mailsSent: () => recordsSince<MailRecord>(paths.mail, mailStart),
+        authCalls: () => recordsSince<AuthRecord>(paths.auth, authStart),
       });
       await owned.cleanup();
 

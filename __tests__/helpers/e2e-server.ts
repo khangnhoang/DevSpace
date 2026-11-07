@@ -5,11 +5,28 @@ import { join } from "node:path";
 // ignored by git (`.gitignore`) and scripts/e2e/serve.mjs empties both files before it starts the server.
 export function serverRecordPaths(root: string) {
   const dir = join(root, "__tests__", "e2e", ".server");
-  return { dir, guard: join(dir, "guard.jsonl"), mail: join(dir, "mail.jsonl") };
+  return {
+    dir,
+    guard: join(dir, "guard.jsonl"),
+    mail: join(dir, "mail.jsonl"),
+    auth: join(dir, "auth.jsonl"),
+  };
 }
 
-export type GuardRecord = { kind: "dns" | "connect"; host: string; port: number | null; time: number };
+export type GuardRecord = {
+  kind: "dns" | "connect";
+  host: string;
+  port: number | null;
+  time: number;
+};
 export type MailRecord = { to: string; subject: string; time: number };
+// A call of the server to Auth: the session refresh or the token check, with its status ("error" when no answer came).
+export type AuthRecord = {
+  kind: "refresh" | "user";
+  status: number | "error";
+  time: number;
+  durationMs: number;
+};
 
 export function recordSize(file: string): number {
   return existsSync(file) ? statSync(file).size : 0;

@@ -13,25 +13,37 @@ const fs = require("node:fs");
 const net = require("node:net");
 
 const guardFile = process.env.E2E_GUARD_FILE;
-if (!guardFile) throw new Error("server-guard: E2E_GUARD_FILE is not set, so a refusal could not be recorded");
+if (!guardFile)
+  throw new Error(
+    "server-guard: E2E_GUARD_FILE is not set, so a refusal could not be recorded",
+  );
 const mailFile = process.env.E2E_MAIL_FILE;
 
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "::1"]);
 
 function isLoopback(host) {
-  return typeof host === "string" && LOOPBACK.has(host.toLowerCase().replace(/^\[|\]$/g, ""));
+  return (
+    typeof host === "string" &&
+    LOOPBACK.has(host.toLowerCase().replace(/^\[|\]$/g, ""))
+  );
 }
 
 function refuse(kind, host, port) {
   const name = String(host);
-  fs.appendFileSync(guardFile, `${JSON.stringify({ kind, host: name, port: port ?? null, time: Date.now() })}\n`);
-  const error = new Error(`e2e server guard refused ${kind === "dns" ? "to resolve" : "to connect to"} ${name}`);
+  fs.appendFileSync(
+    guardFile,
+    `${JSON.stringify({ kind, host: name, port: port ?? null, time: Date.now() })}\n`,
+  );
+  const error = new Error(
+    `e2e server guard refused ${kind === "dns" ? "to resolve" : "to connect to"} ${name}`,
+  );
   error.code = "E2E_GUARD";
   return error;
 }
 
 // An IP literal needs no query; its connection is refused below.
-const mustRefuseName = (host) => Boolean(host) && !isLoopback(host) && net.isIP(String(host)) === 0;
+const mustRefuseName = (host) =>
+  Boolean(host) && !isLoopback(host) && net.isIP(String(host)) === 0;
 
 const realLookup = dns.lookup;
 dns.lookup = function lookup(hostname, options, callback) {
@@ -96,7 +108,10 @@ function connectTarget(args) {
     return { host: first.host ?? "localhost", port: first.port };
   }
   if (typeof first === "string" && Number.isNaN(Number(first))) return null;
-  return { host: typeof args[1] === "string" ? args[1] : "localhost", port: first };
+  return {
+    host: typeof args[1] === "string" ? args[1] : "localhost",
+    port: first,
+  };
 }
 
 const realConnect = net.Socket.prototype.connect;
@@ -111,3 +126,8 @@ net.Socket.prototype.connect = function connect(...args) {
 };
 
 if (mailFile) require("./server-mail.cjs").installMailRecord(mailFile);
+
+// 3. Auth record: when E2E_AUTH_FILE is set, the server's refresh and token-check calls to Auth are recorded with their
+// status (server-auth-record.cjs). It observes only; it blocks and changes nothing.
+const authFile = process.env.E2E_AUTH_FILE;
+if (authFile) require("./server-auth-record.cjs").installAuthRecord(authFile);

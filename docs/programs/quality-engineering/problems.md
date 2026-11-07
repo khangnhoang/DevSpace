@@ -34,7 +34,8 @@ Charter: [README.md](README.md). Progress: [progress.md](progress.md).
 - Problem: in a full `npm run test:e2e` run, `[T8]` (`__tests__/e2e/student.spec.ts`) found no course card on `/profile` (`getByRole('article')` expected 4, received 0 after 10 s); the page snapshot showed the signed-out header ("Đăng nhập"), so the saved student session was not recognised for that page load.
 - Evidence: branch `fix/se-p2-mail-template` from `7c7d74e`, uncommitted change to `lib/email.server.ts` and the new `lib/activation-email.ts` only: 142 passed, 1 failed (`test-results/.../error-context.md`). Rerunning `npm run test:e2e -- --grep "\[T8\]"` right after passed (no reset, nothing changed). Whether the run ended clean was not kept, and the cause (session refresh, a cookie race with another student row, fixture timing) is not known.
 - Direction: reproduce with repeated full runs keeping the Playwright trace of a failure, then fix the cause in the test, its fixtures or the session setup; do not add a retry or a longer timeout without a named cause.
-- Exit condition: the cause is named and fixed, and 5 consecutive full `npm run test:e2e` runs pass `[T8]`.
+- Update (2026-11-07, QE-U5 CP3): `[T8]` now records the saved session's age and remaining lifetime, whether Auth recognises the access token (`getUser(jwt)`, no refresh), the browser's refresh requests, the server's refresh and token-check calls with status, and the auth cookie names, and fails with a message that says so when the session is lost. Two focused invocations (`student.spec.ts` x5: 58 passed; `student.spec.ts` plus `learner-forms.spec.ts` x5: 123 passed; repeats in one invocation are not independent full runs) showed a fresh session of 3600 s lifetime, age 33 to 170 s, about 14 `/auth/v1/user` calls per `[T8]` all 200, no refresh by the browser or the server, and no loss. Not reproduced; expiry-triggered refresh is unlikely to explain a run shorter than the token lifetime.
+- Exit condition: the cause is named and fixed with a reproducing regression, one `--repeat-each=10` invocation of the student subset passes, and one final full `npm run test:e2e` run passes `[T8]`.
 
 ### QE-P8: rls fixture guards do not stop a timed-out test's later writes or a timed-out cleanup hook
 
@@ -43,6 +44,14 @@ Charter: [README.md](README.md). Progress: [progress.md](progress.md).
 - Evidence: `__tests__/helpers/fixture-ownership.ts` (`FixtureScope` constructor check), `__tests__/rls/helpers.ts` (`ownedInsert`, `finishFixtureScope`), `__tests__/helpers/storage-object-scope.ts` at `937a7e7`. In the installed Vitest, a timeout rejects the wrapper without stopping the test function, and the hook timeout is wired to `context.signal`. The end-of-run audit, which covers `storage.objects` and runs after the writer wait, detects persisted residue and makes the run dirty, so the next command resets; nothing reproduced a residue.
 - Direction: check admission immediately before each actor write that uses an already-held selector or name, and mark the run when the cleanup hook's `context.signal` aborts; cover both with controlled pending-request unit tests, for `FixtureScope` and `OwnedObjects` together.
 - Exit condition: a resumed timed-out test can send no further fixture write, a cleanup-hook timeout marks the run before the pending operation settles, and both are proven by tests.
+
+### QE-P9: Playwright traces kept on failure store cookies and headers
+
+- Status: Open (2026-11-07, found while planning QE-U5; outside it).
+- Problem: `playwright.config.ts` keeps traces on failure (`retain-on-failure`) and the installed recorder stores request and response headers, cookies included, while `test-quality-strategy` says sessions stay out of traces. CI uploads `playwright-report/` on failure.
+- Evidence: `playwright.config.ts:27`; `.github/workflows/ci.yml` (upload-artifact of `playwright-report/`). The sessions are local seed users on the test stack. No raw trace was opened (QE-U5 G4).
+- Direction: a later initiative decides between no trace, a scrubbed trace or accepting local-only traces.
+- Exit condition: a failure artifact holds no cookie or token value, or the Owner accepts the exposure.
 
 ## Resolved
 

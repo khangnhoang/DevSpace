@@ -10,6 +10,7 @@ import {
   recordMutations,
 } from "./confirm-dialog";
 import { expect, test } from "./fixtures";
+import { observeSession } from "./session-diagnostics";
 import {
   commentContent,
   commentDeletedAt,
@@ -256,7 +257,17 @@ test("[T7] the course the student is on is a featured card that leads back to th
 
 test("[T8] with more than four courses the featured card and three rows show first, newest enrollment first, and the rest expand and collapse in place", async ({
   page,
+  serverRecords,
 }) => {
+  // QE-P7: this row once found the student signed out. The facts below say whether Auth recognises the saved session
+  // and whether anything refreshed it, so a lost session is named instead of surfacing as a missing course card.
+  const session = await observeSession(
+    page.context(),
+    "student",
+    serverRecords,
+  );
+  session.requireRecognised();
+  await session.log("start");
   const extra = await createStudentCourseFixtures(4);
   await page.goto("/profile");
   const cards = page.getByRole("article");
@@ -270,7 +281,7 @@ test("[T8] with more than four courses the featured card and three rows show fir
       )
     ).reduce((sum, count) => sum + count, 0);
 
-  await expect(cards).toHaveCount(4);
+  await session.explainSignedOut(page, () => expect(cards).toHaveCount(4));
   await expect(expand).toHaveAttribute("aria-expanded", "false");
   // The only unfinished course with lessons is featured on top; the rows follow, the latest enrollment first.
   await expect(cards.first()).toContainText("JavaScript căn bản");
@@ -291,6 +302,7 @@ test("[T8] with more than four courses the featured card and three rows show fir
   await collapse.click();
   await expect(cards).toHaveCount(4);
   await expect(expand).toBeVisible();
+  await session.log("end");
 });
 
 test('[T11] a course without lessons reads "Chưa có bài học", a finished one "Hoàn thành" with its review link, and a row is at most 72px tall at 375px', async ({

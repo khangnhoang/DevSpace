@@ -6,15 +6,15 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | [SE-U4 plan](implementation-plans/se-u4-comment-avatar-integrity/plan.md) r3, approved by the Owner on 2026-11-07 after the independent Opus review of r1 and Codex PASS on r3. |
-| Current unit / checkpoint | SE-U4 implementation complete locally on `fix/se-u4-comment-avatar-integrity`: CP1 comment integrity `154fd67`, CP2 avatar path ownership `2d0f42a`, correction 1 `937a7e7`. |
-| Status | Main review passed with no Critical or Required; the Codex implementation gate passed in round 3 (round 1 Required fixed in `937a7e7`; the round 2 timeout findings were withdrawn as pre-existing harness limits, recorded as quality-engineering QE-P8). No push, PR or hosted step. |
-| Completed evidence | SE-U4 final local regression: `npm test` 835/835, `npm run test:e2e` 149/149, `tsc`, lint, build, docs check; community 47/47 and storage 13/13 (storage also on the retained stack). Hosted untouched. SE-U3: milestones and PR #69. |
+| Spec revision | [SE-U1 plan](implementation-plans/se-u1-payment-write-integrity/plan.md) r3, approved by the Owner on 2026-11-07 after the Codex plan gate passed in round 4. |
+| Current unit / checkpoint | SE-U1 correction round 3 (Codex implementation gate) on `fix/se-u1-payment-write-integrity` (PR 1, CP1 and CP2). CP3 is on the stacked `fix/se-u1-payment-write-lock` (PR 2), which merges this branch. |
+| Status | CP1 to CP3 and correction round 3 implemented locally and awaiting Main re-review. No push, PR or hosted step. |
+| Completed evidence | SE-U1 hosted catalog snapshot (Main, read-only, 2026-11-07) in plan section 2; Codex plan gate PASS on r3. SE-U4: milestones and PR #70. |
 | Accepted deviations | None. |
-| Hosted state | SE-U4 baseline (Main, read-only catalog, 2026-11-06/07): `comments` policies and triggers and the `avatars` bucket and policies match the repository; no view, function body or publication references `comments`; `storage.objects` is owned by `supabase_storage_admin`, and `supautils.policy_grants` lets `postgres` manage its policies. No user data was read and nothing was written. |
-| Blockers / Owner decisions | None for implementation. Delivery needs the separate push, PR, merge, hosted prepare/apply and D8 behavior-probe grants. |
-| Next action | Owner decides delivery: push and PR, then CI, merge, hosted prepare/apply and the D8 behavior-probe grant, each separately. |
-| Current authority | Owner approved r3 and granted the plan commit and implementation by one implementor session (2026-11-07): local checkpoint and correction commits, the managed test stack. No push, PR, merge, hosted read of user data or hosted write is granted. |
+| Hosted state | Hosted migration history ends at `20261106175756_se_u4_avatar_path_ownership`; `payments`, `coupons` and `enrollments` match the baseline (no `coupon_id`, no trigger, no `increment_coupon_usage`). No user data was read and nothing was written. |
+| Blockers / Owner decisions | None for implementation. Delivery needs the separate push, PR, merge, hosted prepare/apply and D5 behavior-probe grants, at each gate of the plan runbook. |
+| Next action | Main re-reviews correction round 3 on both branches, then runs the Codex implementation re-gate. Outstanding Owner-requested work not yet scheduled: SE-F2 and SE-F3 in [future-features.md](future-features.md). |
+| Current authority | Owner approved r3 (including D6) and granted the plan commit and implementation by one implementor session (2026-11-07): local checkpoint and correction commits, creating the stacked branch `fix/se-u1-payment-write-lock` for CP3, merging PR 1 into it (no rebase, force or amend), and the managed test stack. No push, PR, hosted read of user data or hosted write is granted. |
 
 ## Milestones
 
@@ -38,4 +38,11 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-07 Owner approved SE-U4 r3 (SE-P4, SE-P5) after an independent Opus review and Codex PASS, and granted the plan commit and implementation (`299a1b1`)
 - 2026-11-07 SE-U4 CP1 hid soft-deleted comments from every API role, required enrollment or admin for new comments, and moved soft delete to `soft_delete_comment`; community 47/47 with rollback/reapply and mutation checks (`154fd67`)
 - 2026-11-07 SE-U4 CP2 limited non-admin `avatars` writes to the user's own folder, kept admin writes anywhere, moved the learner avatar upload to `<uid>/`; storage 13/13 with rollback/reapply, and the full local suites passed (`2d0f42a`)
-- 2026-11-07 SE-U4 correction 1 made Storage test fixtures follow the shared unclean-run rules (a marked run or a timeout refuses the next writer) and clarified the avatars WITH CHECK comment (this commit)
+- 2026-11-07 SE-U4 correction 1 made Storage test fixtures follow the shared unclean-run rules (a marked run or a timeout refuses the next writer) and clarified the avatars WITH CHECK comment (`937a7e7`)
+- 2026-11-07 SE-U4 completed: deleted comments hidden from every API role, enrollment or admin required to comment, non-admin avatar writes limited to `<uid>/`; hosted migrations applied with catalog postflight, D8 behavior probes and Owner-confirmed production QA; SE-P4 and SE-P5 resolved (PR 70, b03a9b4)
+- 2026-11-07 Owner approved SE-U1 r3 (SE-P8 to SE-P12; D2–D6) after Codex PASS, and granted the plan commit and implementation (`49e5dbb`)
+- 2026-11-07 SE-U1 CP1 added M1 (`coupon_id`, one pending order per user and course, four payment functions, transition guard and delete release triggers) with its rollback; payments 37/37 and the full local suite 877/877 passed with a clean audit (`e7df5c0`)
+- 2026-11-07 SE-U1 CP2 moved the payment actions onto the database functions with Zod schemas, made the payment modal show a refused cancel, and turned K4 to K8 into normal rows; `npm test` 931/931 and E2E 160/160 passed with clean audits (`f68cd28`)
+- 2026-11-07 SE-U1 correction 1 after the Codex implementation gate: coupon amount computed in numeric, create retries when its conflicting order closes, the guard exempts only `postgres`, lock-order and negative-write rows made deterministic and owned (`4ed7814`)
+- 2026-11-07 SE-U1 correction 2 made the W6a test hook commit in one transaction and every cleanup step independent, with a check that no hook object remains; `npm test` 938/938 passed with a clean audit (`73896f8`)
+- 2026-11-07 SE-U1 correction 3 marks the test run unclean when the W6a hook cleanup fails, proven by a forced DROP failure that left the run state dirty; `npm test` 938/938 passed on the following clean reset (this commit)

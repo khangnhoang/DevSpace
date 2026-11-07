@@ -286,6 +286,7 @@ export async function studentNoteCount(): Promise<number> {
   ).length;
 }
 export const PAID_COURSE_ID = 2;
+export const FREE_COURSE_ID = 1;
 export const UNKNOWN_COURSE_ID = 9999;
 export const SEED_COUPON = "LOCAL10";
 export type PaymentRow = {
@@ -294,21 +295,23 @@ export type PaymentRow = {
   course_id: number;
   amount: number;
   status: string;
+  coupon_id: number | null;
 };
 export async function paymentsOf(userId: string): Promise<PaymentRow[]> {
   return must(
     await serviceRole()
       .from("payments")
-      .select("id,user_id,course_id,amount,status")
+      .select("id,user_id,course_id,amount,status,coupon_id")
       .eq("user_id", userId)
       .order("id"),
   );
 }
+export const studentOrders = () => paymentsOf(IDS.student);
 export async function paymentById(id: number): Promise<PaymentRow> {
   return must(
     await serviceRole()
       .from("payments")
-      .select("id,user_id,course_id,amount,status")
+      .select("id,user_id,course_id,amount,status,coupon_id")
       .eq("id", id)
       .single(),
   );

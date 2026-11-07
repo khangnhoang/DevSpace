@@ -6,22 +6,6 @@ Every entry below moved here on 2026-11-05 (Owner decisions 1 and 2) from the cl
 
 ## Open
 
-### SE-P4: Comments expose deleted content and lack enrollment checks
-
-- Status: Open, before migration (moved from SH-P27 on 2026-11-05, Owner decisions 1 and 2).
-- Problem: The content of a soft-deleted comment is still readable through REST; a user who has not enrolled can still read/write comments on a paid lesson.
-- Evidence: Legacy P27; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: [SE-U4](implementation-plans/se-u4-comment-avatar-integrity/plan.md) CP1 (Owner decisions 2026-11-06): hide soft-deleted comments from every API role while keeping their stored content, keep reads of other comments public, and require enrollment or admin for new comments on every course.
-- Exit condition: Deleted comment content is protected and paid-lesson comment access enforces the approved enrollment rules.
-
-### SE-P5: Avatar uploads do not enforce path ownership
-
-- Status: Open, before migration (moved from SH-P10 on 2026-11-05, Owner decisions 1 and 2).
-- Problem: Bucket `avatars`: any signed-in user can upload to any path.
-- Evidence: Legacy P10; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: [SE-U4](implementation-plans/se-u4-comment-avatar-integrity/plan.md) CP2 (Owner decision 2026-11-06): non-admins write only under `<uid>/`, admins keep any path in `avatars`, existing flat objects stay.
-- Exit condition: One signed-in user cannot write another user’s avatar path.
-
 ### SE-P8: Coupon usage RPC is missing
 
 - Status: Open, before migration (moved from SH-P5 on 2026-11-05, Owner decisions 1 and 2).
@@ -151,3 +135,5 @@ One line each: ID, status, one-line outcome. Details stay in Git.
 - SE-P3 — Resolved 2026-11-07: PR #69 (`e76cc05`) blocks client email and identity changes and client profile INSERT/UPSERT; hosted migration `20261106094309` applied, and the Owner confirmed hosted acceptance and production QA.
 - SE-P7 — Resolved 2026-11-07: PR #69 (`e76cc05`) enforces a validated user/admin CHECK and NOT NULL on `profiles.role`; hosted migration `20261106095706` applied, and the Owner confirmed hosted acceptance and production QA.
 - SE-P6 — Resolved 2026-11-07: PR #69 (`e76cc05`) removes the unused `pg_graphql` extension after dependency checks, with an exact 1.5.11 rollback; hosted migration `20261106100209` applied, and the Owner confirmed the postflight, Advisor 0026/0027 and production QA.
+- SE-P4 — Resolved 2026-11-07: PR #70 (`b03a9b4`) hides soft-deleted comments from every API role while keeping their content, requires enrollment or admin for new comments and soft-deletes through `soft_delete_comment`; hosted migration `20261106174213` applied, the catalog postflight and the D8 behavior probes passed, and the Owner confirmed production QA.
+- SE-P5 — Resolved 2026-11-07: PR #70 (`b03a9b4`) limits non-admin `avatars` writes to the user's own `<uid>/` folder while admins keep any path; hosted migration `20261106175756` applied, the catalog postflight and the D8 behavior probes passed, and the Owner confirmed production QA.

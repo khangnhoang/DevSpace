@@ -4,147 +4,116 @@ import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { sendSuccessEmail } from "@/lib/email.server";
 import { requireAdmin, requireUser } from "@/lib/auth.server";
+import { courseIdSchema } from "@/lib/schemas/enrollment";
+import { parseFailure } from "@/lib/schemas/parse-failure";
+import { couponCodeSchema, paymentIdSchema } from "@/lib/schemas/payment";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
+// Every payment and coupon-usage write is one database function per transition (migration se_u1_payment_rpcs): the
+// functions check the current state in the write itself, so a repeat or a race is harmless. The user id always
+// comes from the session, never from the client.
+
 export async function updatePaymentWithCoupon(
   paymentId: number,
   couponCode: string,
 ) {
+  const id = paymentIdSchema.safeParse(paymentId);
+  if (!id.success) return { error: parseFailure(id.error) };
+  const code = couponCodeSchema.safeParse(couponCode);
+  if (!code.success) return { error: parseFailure(code.error) };
+
   try {
     const auth = await requireUser();
     if ("error" in auth) return { error: auth.error };
-    const user = auth.user;
 
-    const { data: payment } = await supabaseAdmin
-      .from("payments")
-      .select("course_id, user_id, status")
-      .eq("id", paymentId)
-      .eq("user_id", user.id)
-      .single();
-    if (!payment || payment.status !== "pending")
+    const { data, error } = await supabaseAdmin.rpc("apply_payment_coupon", {
+      p_payment_id: id.data,
+      p_user_id: auth.user.id,
+      p_code: code.data,
+    });
+    if (error || !data) {
+      console.error("apply_payment_coupon failed:", error?.code);
+      return { error: "Lỗi cập nhật giá" };
+    }
+
+    const result = data as {
+      error?: string;
+      amount?: number;
+      discount_percent?: number;
+    };
+    if (result.error === "invalid_payment")
       return { error: "Đơn hàng không hợp lệ" };
-
-    const { data: course } = await supabaseAdmin
-      .from("courses")
-      .select("price")
-      .eq("id", payment.course_id)
-      .single();
-    if (!course) return { error: "Khóa học không tồn tại" };
-
-    const { data: coupon } = await supabaseAdmin
-      .from("coupons")
-      .select("*")
-      .eq("code", couponCode.toUpperCase())
-      .eq("is_active", true)
-      .single();
-    if (!coupon) return { error: "Mã giảm giá không tồn tại hoặc đã hết hạn" };
-    // max_uses null = unlimited
-    if (coupon.max_uses !== null && coupon.used_count >= coupon.max_uses)
+    if (result.error === "invalid_coupon")
+      return { error: "Mã giảm giá không tồn tại hoặc đã hết hạn" };
+    if (result.error === "coupon_exhausted")
       return { error: "Mã này đã hết lượt sử dụng" };
-
-    const discountAmount = (course.price * coupon.discount_percent) / 100;
-    const finalAmount = Math.round(Math.max(0, course.price - discountAmount));
-
-    const { data: updated, error } = await supabaseAdmin
-      .from("payments")
-      .update({ amount: finalAmount, updated_at: new Date().toISOString() })
-      .eq("id", paymentId)
-      .eq("user_id", user.id)
-      .eq("status", "pending")
-      .select("id");
-    if (error || !updated || updated.length === 0)
+    if (
+      typeof result.amount !== "number" ||
+      typeof result.discount_percent !== "number"
+    )
       return { error: "Lỗi cập nhật giá" };
 
     return {
       success: true,
-      newAmount: finalAmount,
-      discountPercent: coupon.discount_percent as number,
+      newAmount: result.amount,
+      discountPercent: result.discount_percent,
     };
   } catch {
     return { error: "Lỗi hệ thống" };
   }
 }
 
-export async function createPendingPayment(
-  courseId: number,
-  couponCode: string | null = null, // 👈 Thêm tham số này
-) {
+export async function createPendingPayment(courseId: number) {
+  const parsed = courseIdSchema.safeParse(courseId);
+  if (!parsed.success) return { error: parseFailure(parsed.error) };
+
   try {
     const auth = await requireUser();
     if ("error" in auth) return { error: auth.error };
-    const userId = auth.user.id;
 
-    // 1. Check xem có đơn pending nào cũ không (logic cũ giữ nguyên)
-    const { data: existingPayment } = await supabaseAdmin
-      .from("payments")
-      .select("id, amount")
-      .eq("user_id", userId)
-      .eq("course_id", courseId)
-      .eq("status", "pending")
-      .maybeSingle();
+    // The price comes from the course row inside the function; this action never discounts.
+    const { data, error } = await supabaseAdmin.rpc("create_pending_payment", {
+      p_user_id: auth.user.id,
+      p_course_id: parsed.data,
+    });
+    if (error || !data) {
+      console.error("create_pending_payment failed:", error?.code);
+      return { error: "Lỗi tạo giao dịch" };
+    }
 
-    if (existingPayment) {
-      // Nếu đơn cũ giá khác đơn mới (do mã giảm giá), có thể cân nhắc xóa đơn cũ tạo đơn mới
-      // Nhưng để đơn giản, cứ return đơn cũ.
+    const result = data as {
+      result?: string;
+      payment_id?: number;
+      amount?: number;
+    };
+    if (result.result === "invalid_course")
+      return { error: "Khóa học không tồn tại" };
+    if (result.result === "free_course")
+      return { error: "Khóa học này miễn phí, hãy đăng ký trực tiếp" };
+    if (result.result === "enrolled")
+      return { error: "Bạn đã sở hữu khóa học này" };
+    if (
+      (result.result !== "created" && result.result !== "resumed") ||
+      typeof result.payment_id !== "number"
+    )
+      return { error: "Lỗi tạo giao dịch" };
+
+    if (result.result === "resumed")
       return {
         success: true,
-        paymentId: existingPayment.id,
-        amount: existingPayment.amount,
+        paymentId: result.payment_id,
+        amount: result.amount,
         isResumed: true,
       };
-    }
-
-    // 2. Lấy giá gốc khóa học
-    const { data: course } = await supabaseAdmin
-      .from("courses")
-      .select("price")
-      .eq("id", courseId)
-      .single();
-
-    if (!course) return { error: "Khóa học không tồn tại" };
-
-    let finalAmount = course.price;
-
-    // 3. 👇 LOGIC MỚI: Xử lý mã giảm giá trên Server
-    if (couponCode) {
-      const { data: coupon } = await supabaseAdmin
-        .from("coupons")
-        .select("*")
-        .eq("code", couponCode.toUpperCase())
-        .eq("is_active", true)
-        .single();
-
-      // Check valid và còn lượt dùng
-      if (coupon && coupon.used_count < coupon.max_uses) {
-        const discount = (course.price * coupon.discount_percent) / 100;
-        finalAmount = Math.max(0, course.price - discount);
-
-        // (Optional) Update số lượng đã dùng +1 (Atomic update)
-        await supabaseAdmin.rpc("increment_coupon_usage", {
-          coupon_id: coupon.id,
-        });
-      }
-    }
-
-    // 4. Tạo Payment với giá finalAmount
-    const { data: payment, error } = await supabaseAdmin
-      .from("payments")
-      .insert({
-        user_id: userId,
-        course_id: courseId,
-        status: "pending",
-        amount: finalAmount, // 👈 LƯU GIÁ ĐÃ GIẢM
-      })
-      .select("id, amount")
-      .single();
-
-    if (error) return { error: error.message };
-
-    return { success: true, paymentId: payment.id, amount: payment.amount };
+    return {
+      success: true,
+      paymentId: result.payment_id,
+      amount: result.amount,
+    };
   } catch (error) {
     console.error(error);
     return { error: "Lỗi tạo giao dịch" };
@@ -152,21 +121,22 @@ export async function createPendingPayment(
 }
 
 export async function cancelPayment(paymentId: number | null) {
-  if (!paymentId) return { error: "Mã giao dịch không hợp lệ" };
+  const id = paymentIdSchema.safeParse(paymentId);
+  if (!id.success) return { error: parseFailure(id.error) };
 
   try {
     const auth = await requireUser();
     if ("error" in auth) return { error: auth.error };
 
-    const { data: updated, error } = await supabaseAdmin
-      .from("payments")
-      .update({ status: "failed", updated_at: new Date().toISOString() })
-      .eq("id", paymentId)
-      .eq("user_id", auth.user.id)
-      .eq("status", "pending")
-      .select("id");
-    if (error || !updated || updated.length === 0)
-      return { error: "Không thể hủy giao dịch này" };
+    const { data, error } = await supabaseAdmin.rpc("close_pending_payment", {
+      p_payment_id: id.data,
+      p_user_id: auth.user.id,
+    });
+    if (error) {
+      console.error("close_pending_payment failed:", error.code);
+      return { error: "Lỗi hủy giao dịch" };
+    }
+    if (data !== true) return { error: "Không thể hủy giao dịch này" };
     return { success: true };
   } catch {
     return { error: "Lỗi hủy giao dịch" };
@@ -215,89 +185,91 @@ export async function getAllPayments() {
   return paymentsWithUser;
 }
 
-// 👇 HÀM MỚI: Admin duyệt đơn (Manual Approve)
-export async function approvePayment(paymentId: number) {
+// The approval is already committed when this runs, so nothing here may fail the action: a lookup error, a resolved
+// `{ success: false }` and a thrown mail error are logged on the server only. Delivery is not guaranteed (no outbox).
+async function sendApprovalMail(userId: string, courseId: number) {
   try {
-    const auth = await requireAdmin();
-    if ("error" in auth) return { error: auth.error };
-
-    // 1. Lấy thông tin Payment
-    const { data: payment } = await supabaseAdmin
-      .from("payments")
-      .select("*, courses ( id, name, slug )") // Lấy ID khóa học để query bài học
-      .eq("id", paymentId)
-      .single();
-
-    if (!payment) return { error: "Không tìm thấy giao dịch" };
-
-    // 2. Lấy Profile
-    const { data: profile } = await supabaseAdmin
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .select("full_name, email")
-      .eq("id", payment.user_id)
+      .eq("id", userId)
       .single();
+    if (profileError)
+      console.error("Approval mail profile lookup failed:", profileError.code);
+    if (!profile?.email) return;
 
-    // 3. Update Status Payment
-    const { error: updateError } = await supabaseAdmin
-      .from("payments")
-      .update({ status: "success", updated_at: new Date().toISOString() })
-      .eq("id", paymentId);
-
-    if (updateError) return { error: "Lỗi update payment" };
-
-    // 4. Enroll (Logic giữ nguyên)
-    const { data: existingEnroll } = await supabaseAdmin
-      .from("enrollments")
-      .select("id")
-      .eq("user_id", payment.user_id)
-      .eq("course_id", payment.course_id)
+    const { data: course, error: courseError } = await supabaseAdmin
+      .from("courses")
+      .select("name, slug")
+      .eq("id", courseId)
       .single();
+    if (courseError)
+      console.error("Approval mail course lookup failed:", courseError.code);
 
-    if (!existingEnroll) {
-      await supabaseAdmin.from("enrollments").insert({
-        user_id: payment.user_id,
-        course_id: payment.course_id,
-      });
-    }
-
-    // 5. 👇 LOGIC MỚI: TÌM BÀI HỌC ĐẦU TIÊN
-    // (Tìm Chapter đầu tiên -> Tìm Lesson đầu tiên của Chapter đó)
-    let firstLessonSlug = null;
-
-    // B1: Lấy chương đầu tiên
+    // Link to the first lesson: the first chapter, then its first lesson.
+    let firstLessonSlug: string | null = null;
     const { data: firstChapter } = await supabaseAdmin
       .from("chapters")
       .select("id")
-      .eq("course_id", payment.course_id)
+      .eq("course_id", courseId)
       .order("order_index", { ascending: true })
       .limit(1)
       .single();
-
     if (firstChapter) {
-      // B2: Lấy bài học đầu tiên của chương đó
       const { data: firstLesson } = await supabaseAdmin
         .from("lessons")
         .select("slug")
         .eq("chapter_id", firstChapter.id)
-        .order("order_index", { ascending: true }) // Hoặc order by id nếu không có order_index
+        .order("order_index", { ascending: true })
         .limit(1)
         .single();
-
-      if (firstLesson) {
-        firstLessonSlug = firstLesson.slug;
-      }
+      firstLessonSlug = firstLesson?.slug ?? null;
     }
 
-    // 6. Gửi Email với link bài học chuẩn
-    if (profile?.email) {
-      await sendSuccessEmail(
-        profile.email,
-        profile.full_name || "Học viên",
-        payment.courses?.name || "Khóa học",
-        payment.courses?.slug || "",
-        firstLessonSlug, // 👈 Truyền slug bài học vào đây
-      );
+    const sent = await sendSuccessEmail(
+      profile.email,
+      profile.full_name || "Học viên",
+      course?.name || "Khóa học",
+      course?.slug || "",
+      firstLessonSlug,
+    );
+    if (!sent.success) console.error("Approval mail was not sent");
+  } catch {
+    console.error("Approval mail failed");
+  }
+}
+
+// Admin approves an order: status and enrollment commit together in the database function.
+export async function approvePayment(paymentId: number) {
+  const id = paymentIdSchema.safeParse(paymentId);
+  if (!id.success) return { error: parseFailure(id.error) };
+
+  try {
+    const auth = await requireAdmin();
+    if ("error" in auth) return { error: auth.error };
+
+    const { data, error } = await supabaseAdmin.rpc("approve_payment", {
+      p_payment_id: id.data,
+    });
+    if (error) {
+      console.error("approve_payment failed:", error.code);
+      return { error: "Lỗi hệ thống" };
     }
+
+    // Only the request that won the transition mails the learner.
+    const result = data as {
+      approved?: boolean;
+      user_id?: string;
+      course_id?: number;
+    } | null;
+    if (
+      result?.approved !== true ||
+      typeof result.user_id !== "string" ||
+      typeof result.course_id !== "number"
+    )
+      return { error: "Đơn đã được xử lý" };
+
+    await sendApprovalMail(result.user_id, result.course_id);
 
     revalidatePath("/admin/transactions");
     return { success: true };
@@ -307,18 +279,24 @@ export async function approvePayment(paymentId: number) {
   }
 }
 
-// 👇 HÀM MỚI: Admin từ chối/Hủy đơn
+// Admin rejects an order and releases its reserved coupon use.
 export async function rejectPayment(paymentId: number) {
+  const id = paymentIdSchema.safeParse(paymentId);
+  if (!id.success) return { error: parseFailure(id.error) };
+
   try {
     const auth = await requireAdmin();
     if ("error" in auth) return { error: auth.error };
 
-    const { error } = await supabaseAdmin
-      .from("payments")
-      .update({ status: "failed", updated_at: new Date().toISOString() })
-      .eq("id", paymentId);
-
-    if (error) return { error: error.message };
+    const { data, error } = await supabaseAdmin.rpc("close_pending_payment", {
+      p_payment_id: id.data,
+      p_user_id: null,
+    });
+    if (error) {
+      console.error("close_pending_payment failed:", error.code);
+      return { error: "Lỗi hủy đơn" };
+    }
+    if (data !== true) return { error: "Đơn đã được xử lý" };
 
     revalidatePath("/admin/transactions");
     return { success: true };

@@ -8,7 +8,15 @@
 // Known bugs: none.
 // Invariants: every state directory is a temporary one; every process a row starts is killed afterwards.
 import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -17,11 +25,17 @@ import { compareSnapshots } from "../../scripts/test-stack/audit.mjs";
 import { decideReset } from "../../scripts/test-stack/ensure.mjs";
 import * as lock from "../../scripts/test-stack/lock.mjs";
 import { childEnvironment } from "../../scripts/test-stack/run.mjs";
-import { readState, stateDir, writeState } from "../../scripts/test-stack/state.mjs";
+import {
+  readState,
+  stateDir,
+  writeState,
+} from "../../scripts/test-stack/state.mjs";
 
 const root = process.cwd();
 const probePath = join(root, "__tests__/helpers/stack-probe.mjs");
-const preload = pathToFileURL(join(root, "scripts/test-stack/writer-preload.mjs")).href;
+const preload = pathToFileURL(
+  join(root, "scripts/test-stack/writer-preload.mjs"),
+).href;
 
 type Env = Record<string, string | undefined>;
 type Event = { event: string; [key: string]: unknown };
@@ -30,13 +44,27 @@ let started: ChildProcess[] = [];
 // Processes a row detached on purpose (a grandchild the probe cannot reach), with the start time that identifies them.
 let strays: { pid: number; start: string | null }[] = [];
 
-beforeEach(() => { dir = mkdtempSync(join(tmpdir(), "devspace-stack-lock-")); });
+beforeEach(() => {
+  dir = mkdtempSync(join(tmpdir(), "devspace-stack-lock-"));
+});
 afterEach(async () => {
-  for (const child of started) { try { child.kill("SIGKILL"); } catch { /* gone */ } }
+  for (const child of started) {
+    try {
+      child.kill("SIGKILL");
+    } catch {
+      /* gone */
+    }
+  }
   started = [];
   // Only the exact process that was recorded is stopped, never a later one that reused the PID.
   for (const { pid, start } of strays) {
-    if (lock.pidAlive(pid) && lock.processStart(pid) === start) { try { process.kill(pid, "SIGKILL"); } catch { /* gone */ } }
+    if (lock.pidAlive(pid) && lock.processStart(pid) === start) {
+      try {
+        process.kill(pid, "SIGKILL");
+      } catch {
+        /* gone */
+      }
+    }
     await gone(pid);
   }
   strays = [];
@@ -48,17 +76,32 @@ function environment(extra: Env = {}) {
   const env: Env = { ...process.env };
   delete env.DEVSPACE_TEST_RUN;
   delete env.DEVSPACE_TEST_RUN_DIR;
-  env.NODE_OPTIONS = (env.NODE_OPTIONS ?? "").replace(/--import=\S*writer-preload\.mjs/, "").trim();
+  env.NODE_OPTIONS = (env.NODE_OPTIONS ?? "")
+    .replace(/--import=\S*writer-preload\.mjs/, "")
+    .trim();
   return { ...env, STACK_PROBE_DIR: dir, ...extra };
 }
-const withPreload = (runId: string) => environment({ DEVSPACE_TEST_RUN: runId, DEVSPACE_TEST_RUN_DIR: dir, NODE_OPTIONS: `--import=${preload}` });
+const withPreload = (runId: string) =>
+  environment({
+    DEVSPACE_TEST_RUN: runId,
+    DEVSPACE_TEST_RUN_DIR: dir,
+    NODE_OPTIONS: `--import=${preload}`,
+  });
 
 class Probe {
   readonly events: Event[] = [];
   readonly proc: ChildProcess;
   readonly exited: Promise<number | null>;
+  // What the child left behind: everything it wrote to stderr, and how it ended once its streams closed. A probe that
+  // dies on its own is reported at once with these, not after the event timeout (QE-P5).
+  stderr = "";
+  closed: { code: number | null; signal: NodeJS.Signals | null } | null = null;
   constructor(mode: string, args: string[] = [], env: Env = environment()) {
-    this.proc = spawn(process.execPath, [probePath, mode, ...args], { cwd: root, env: env as NodeJS.ProcessEnv, stdio: ["ignore", "pipe", "pipe"] });
+    this.proc = spawn(process.execPath, [probePath, mode, ...args], {
+      cwd: root,
+      env: env as NodeJS.ProcessEnv,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
     started.push(this.proc);
     let buffer = "";
     this.proc.stdout!.on("data", (chunk) => {
@@ -67,36 +110,67 @@ class Probe {
       while ((newline = buffer.indexOf("\n")) >= 0) {
         const line = buffer.slice(0, newline).trim();
         buffer = buffer.slice(newline + 1);
-        try { this.events.push(JSON.parse(line)); } catch { /* not an event */ }
+        try {
+          this.events.push(JSON.parse(line));
+        } catch {
+          /* not an event */
+        }
       }
     });
-    this.proc.stderr!.resume();
+    this.proc.stderr!.on("data", (chunk) => {
+      this.stderr = (this.stderr + chunk).slice(-2000);
+    });
+    this.proc.once("close", (code, signal) => {
+      this.closed = { code, signal };
+    });
     this.exited = new Promise((resolve) => this.proc.once("exit", resolve));
   }
-  get pid() { return this.proc.pid!; }
+  describe() {
+    return `probe ${this.pid} (${this.closed ? `exit status ${this.closed.code}, signal ${this.closed.signal}` : "still running"}); stderr: ${this.stderr.trim() || "(empty)"}; events: ${JSON.stringify(this.events)}`;
+  }
+  get pid() {
+    return this.proc.pid!;
+  }
   async event(name: string, timeout = 40_000): Promise<Event> {
     const deadline = Date.now() + timeout;
     for (;;) {
       const found = this.events.find((event) => event.event === name);
       if (found) return found;
-      if (Date.now() > deadline) throw new Error(`no "${name}" event from probe ${this.pid}; saw ${JSON.stringify(this.events)}`);
+      if (this.closed)
+        throw new Error(`no "${name}" event: ${this.describe()}`);
+      if (Date.now() > deadline)
+        throw new Error(
+          `no "${name}" event within ${timeout} ms: ${this.describe()}`,
+        );
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
   }
-  async kill() { this.proc.kill("SIGKILL"); await this.exited; }
+  async kill() {
+    this.proc.kill("SIGKILL");
+    await this.exited;
+  }
 }
 
 const alive = (pid: number) => lock.pidAlive(pid);
 async function gone(pid: number, timeout = 10_000) {
   const deadline = Date.now() + timeout;
-  while (alive(pid) && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 25));
+  while (alive(pid) && Date.now() < deadline)
+    await new Promise((resolve) => setTimeout(resolve, 25));
   return !alive(pid);
 }
 const listing = () => readdirSync(dir).sort();
-const writerFiles = () => (existsSync(join(dir, "writers")) ? readdirSync(join(dir, "writers")) : []);
-function record(pid: number, runId = "earlier-run", start = lock.processStart(pid)) {
+const writerFiles = () =>
+  existsSync(join(dir, "writers")) ? readdirSync(join(dir, "writers")) : [];
+function record(
+  pid: number,
+  runId = "earlier-run",
+  start = lock.processStart(pid),
+) {
   mkdirSync(join(dir, "writers"), { recursive: true });
-  writeFileSync(join(dir, "writers", `${runId}-${pid}-${start}.json`), JSON.stringify({ runId, pid, start, role: "test" }));
+  writeFileSync(
+    join(dir, "writers", `${runId}-${pid}-${start}.json`),
+    JSON.stringify({ runId, pid, start, role: "test" }),
+  );
 }
 async function staleLock(command = "npm test (stale)") {
   const holder = new Probe("hold", [command]);
@@ -104,12 +178,132 @@ async function staleLock(command = "npm test (stale)") {
   await holder.kill();
 }
 
+describe("start-time read diagnostics and fail-closed identity", () => {
+  it("keeps exit status, signal, stderr, duration and PID when the Windows start-time read fails, and still throws", () => {
+    const failure = Object.assign(new Error("Command failed: powershell.exe"), {
+      status: 1,
+      signal: null,
+      stderr: "Get-Process : The process has exited",
+    });
+    let thrown: Error | undefined;
+    try {
+      lock.windowsStartTime(process.pid, () => {
+        throw failure;
+      });
+    } catch (error) {
+      thrown = error as Error;
+    }
+    expect(thrown?.message).toMatch(
+      new RegExp(
+        `process ${process.pid}: powershell\\.exe exited with status 1, signal none, code none after \\d+ ms \\(process still alive: true\\); stderr: Get-Process : The process has exited`,
+      ),
+    );
+    expect(thrown?.cause).toBe(failure);
+  });
+
+  it("reports an empty stderr and a signal as such", () => {
+    const failure = Object.assign(new Error("killed"), {
+      status: null,
+      signal: "SIGTERM",
+    });
+    expect(() =>
+      lock.windowsStartTime(process.pid, () => {
+        throw failure;
+      }),
+    ).toThrow(/status none, signal SIGTERM.*stderr: \(empty\)/);
+  });
+
+  it("reads a process that exits during the Windows start-time read as gone, and keeps throwing for one that is still alive", async () => {
+    // The QE-P5 race: Get-Process fails (status 1, empty stderr) because the process exited while it was read.
+    const failure = Object.assign(new Error("Command failed: powershell.exe"), {
+      status: 1,
+      signal: null,
+      stderr: "",
+    });
+    const dying = new Probe("idle");
+    const pid = (await dying.event("idle")).pid as number;
+    const exitsDuringRead = () => {
+      process.kill(pid, "SIGKILL");
+      throw failure;
+    };
+    expect(alive(pid)).toBe(true);
+    expect(lock.windowsStartTime(pid, exitsDuringRead)).toBe("");
+    expect(await gone(pid)).toBe(true);
+    expect(lock.processStart(pid)).toBeNull();
+
+    const live = new Probe("idle");
+    const livePid = (await live.event("idle")).pid as number;
+    expect(() =>
+      lock.windowsStartTime(livePid, () => {
+        throw failure;
+      }),
+    ).toThrow(
+      /Cannot read the start time of process \d+: powershell\.exe exited with status 1/,
+    );
+    expect(alive(livePid)).toBe(true);
+  });
+
+  it("never reads a live process whose start time cannot be read as dead", async () => {
+    const live = new Probe("idle");
+    const pid = (await live.event("idle")).pid as number;
+    const unreadable = () => {
+      throw new Error("start time unreadable");
+    };
+    expect(() => lock.processStart(pid, { read: unreadable })).toThrow(
+      "start time unreadable",
+    );
+    expect(() => lock.isLive({ pid, start: "1" }, unreadable)).toThrow(
+      "start time unreadable",
+    );
+  });
+
+  it("neither takes over a lock nor stops a writer when the start-time read throws", async () => {
+    const holder = new Probe("hold", ["npm test (holder)"]);
+    await holder.event("held");
+    const unreadable = () => {
+      throw new Error("start time unreadable");
+    };
+    const before = listing();
+    expect(() =>
+      lock.acquireLock({
+        command: "npm test (taker)",
+        dir,
+        startOf: unreadable,
+      }),
+    ).toThrow("start time unreadable");
+    expect(listing()).toEqual(before);
+    expect(alive(holder.pid)).toBe(true);
+
+    const writer = new Probe("idle");
+    const writerPid = (await writer.event("idle")).pid as number;
+    record(writerPid);
+    await expect(
+      lock.reapOrphans({ dir, waitMs: 200, startOf: unreadable }),
+    ).rejects.toThrow("start time unreadable");
+    expect(alive(writerPid)).toBe(true);
+    expect(writerFiles()).toHaveLength(1);
+  });
+});
+
+describe("probe diagnostics", () => {
+  it("reports a probe that dies on its own at once, with its exit status and stderr, instead of waiting out the event timeout", async () => {
+    const crashing = new Probe("crash");
+    const began = Date.now();
+    await expect(crashing.event("passed", 30_000)).rejects.toThrow(
+      /exit status 3, signal null\); stderr: probe crashed on purpose/,
+    );
+    expect(Date.now() - began).toBeLessThan(10_000);
+  });
+});
+
 describe("test stack lock", { timeout: 120_000 }, () => {
   it("refuses a second command while the holder is live, names the holder and changes nothing", async () => {
     const holder = new Probe("hold", ["npm test (holder)"]);
     await holder.event("held");
     const before = listing();
-    expect(() => lock.acquireLock({ command: "npm run test:e2e", dir })).toThrow(new RegExp(`PID ${holder.pid} running "npm test \\(holder\\)"`));
+    expect(() =>
+      lock.acquireLock({ command: "npm run test:e2e", dir }),
+    ).toThrow(new RegExp(`PID ${holder.pid} running "npm test \\(holder\\)"`));
     expect(listing()).toEqual(before);
   });
 
@@ -120,23 +314,37 @@ describe("test stack lock", { timeout: 120_000 }, () => {
     const second = new Probe("contend", [barrier, join(dir, "checkout-b")]);
     writeFileSync(barrier, "");
     try {
-      const outcomes = await Promise.all([first, second].map(async (probe) => {
-        const deadline = Date.now() + 40_000;
-        while (!probe.events.length && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 20));
-        return probe.events[0];
-      }));
-      expect(outcomes.filter((outcome) => outcome.event === "won")).toHaveLength(1);
+      const outcomes = await Promise.all(
+        [first, second].map(async (probe) => {
+          const deadline = Date.now() + 40_000;
+          while (!probe.events.length && Date.now() < deadline)
+            await new Promise((resolve) => setTimeout(resolve, 20));
+          return probe.events[0];
+        }),
+      );
+      expect(
+        outcomes.filter((outcome) => outcome.event === "won"),
+      ).toHaveLength(1);
       const loser = outcomes.find((outcome) => outcome.event === "refused")!;
       expect(["lost", "held"]).toContain(loser.code);
-      const winner = outcomes.indexOf(outcomes.find((outcome) => outcome.event === "won")!) === 0 ? first : second;
+      const winner =
+        outcomes.indexOf(
+          outcomes.find((outcome) => outcome.event === "won")!,
+        ) === 0
+          ? first
+          : second;
       expect(lock.currentLock(dir)!.holder.pid).toBe(winner.pid);
-    } finally { rmSync(barrier, { force: true }); }
+    } finally {
+      rmSync(barrier, { force: true });
+    }
   });
 
   it("refuses a lock file that cannot be parsed, names it and changes nothing", () => {
     writeFileSync(join(dir, "lock.1.json"), "{not json");
     const before = listing();
-    expect(() => lock.acquireLock({ command: "npm test", dir })).toThrow(/lock\.1\.json cannot be parsed/);
+    expect(() => lock.acquireLock({ command: "npm test", dir })).toThrow(
+      /lock\.1\.json cannot be parsed/,
+    );
     expect(listing()).toEqual(before);
     expect(readFileSync(join(dir, "lock.1.json"), "utf8")).toBe("{not json");
   });
@@ -148,8 +356,16 @@ describe("test stack lock", { timeout: 120_000 }, () => {
     await contender.event("read");
     // Two commands take and release the lock, then a third holds it; pruning frees generation 2, which the
     // paused contender is about to claim.
-    await (async () => { const first = new Probe("acquire-release"); await first.event("released"); await first.exited; })();
-    await (async () => { const second = new Probe("acquire-release"); await second.event("released"); await second.exited; })();
+    await (async () => {
+      const first = new Probe("acquire-release");
+      await first.event("released");
+      await first.exited;
+    })();
+    await (async () => {
+      const second = new Probe("acquire-release");
+      await second.event("released");
+      await second.exited;
+    })();
     const third = new Probe("hold", ["npm test (third)"]);
     await third.event("held");
     expect(existsSync(join(dir, "lock.2.json"))).toBe(false);
@@ -179,13 +395,18 @@ describe("test stack lock", { timeout: 120_000 }, () => {
   });
 
   it("stops a writer that registered after the first scan on the next scan, and deletes the records only then", async () => {
-    const first = new Probe("idle"); const second = new Probe("idle");
-    const firstPid = (await first.event("idle")).pid as number; const secondPid = (await second.event("idle")).pid as number;
+    const first = new Probe("idle");
+    const second = new Probe("idle");
+    const firstPid = (await first.event("idle")).pid as number;
+    const secondPid = (await second.event("idle")).pid as number;
     record(firstPid);
     await lock.reapOrphans({
       dir,
       waitMs: 10_000,
-      stop: (pid: number) => { process.kill(pid, "SIGKILL"); if (pid === firstPid) record(secondPid); },
+      stop: (pid: number) => {
+        process.kill(pid, "SIGKILL");
+        if (pid === firstPid) record(secondPid);
+      },
     });
     expect(await gone(firstPid)).toBe(true);
     expect(await gone(secondPid)).toBe(true);
@@ -207,30 +428,74 @@ describe("test stack lock", { timeout: 120_000 }, () => {
   it("registers many writers at once without losing a record", async () => {
     lock.acquireLock({ command: "npm test (many)", dir, runId: "many-run" });
     const barrier = join(dir, "..", `many-${Date.now()}`);
-    const probes = Array.from({ length: 12 }, () => new Probe("register", [barrier], environment({ DEVSPACE_TEST_RUN: "many-run" })));
+    const probes = Array.from(
+      { length: 12 },
+      () =>
+        new Probe(
+          "register",
+          [barrier],
+          environment({ DEVSPACE_TEST_RUN: "many-run" }),
+        ),
+    );
     writeFileSync(barrier, "");
     try {
-      const passed = await Promise.all(probes.map((probe) => probe.event("passed")));
+      const passed = await Promise.all(
+        probes.map((probe) => probe.event("passed")),
+      );
       const files = writerFiles();
       expect(files).toHaveLength(12);
-      for (const event of passed) expect(files.some((name) => name.startsWith(`many-run-${event.pid}-`))).toBe(true);
-    } finally { rmSync(barrier, { force: true }); }
+      for (const event of passed)
+        expect(
+          files.some((name) => name.startsWith(`many-run-${event.pid}-`)),
+        ).toBe(true);
+    } finally {
+      rmSync(barrier, { force: true });
+    }
   });
 
   it("never loses a record that passed the lock check while a takeover scans", async () => {
     await staleLock();
     const stale = lock.currentLock(dir)!.holder.runId;
     const barrier = join(dir, "..", `race-${Date.now()}`);
-    const probes = Array.from({ length: 8 }, () => new Probe("register", [barrier], environment({ DEVSPACE_TEST_RUN: stale })));
+    const probes = Array.from(
+      { length: 8 },
+      () =>
+        new Probe(
+          "register",
+          [barrier],
+          environment({ DEVSPACE_TEST_RUN: stale }),
+        ),
+    );
     writeFileSync(barrier, "");
     try {
-      lock.acquireLock({ command: "npm test (taker)", dir, runId: "taker-run" });
+      lock.acquireLock({
+        command: "npm test (taker)",
+        dir,
+        runId: "taker-run",
+      });
       await lock.reapOrphans({ dir });
-      await Promise.all(probes.map((probe) => Promise.race([probe.event("passed"), probe.event("lost")]).catch(() => undefined)));
+      await Promise.all(
+        probes.map((probe) =>
+          Promise.race([probe.event("passed"), probe.event("lost")]).catch(
+            () => undefined,
+          ),
+        ),
+      );
       await new Promise((resolve) => setTimeout(resolve, 300));
+      // A probe the takeover stopped has no event and no stderr; one that crashed on its own (for example a failed
+      // start-time read) has stderr, and that is a failure of its own, not an outcome of the race.
+      expect(
+        probes
+          .filter((probe) => probe.stderr.trim())
+          .map((probe) => probe.describe()),
+      ).toEqual([]);
       // A registrant that passed the check before the takeover has a record the scan saw, so it was stopped.
-      for (const probe of probes) if (probe.events.some((event) => event.event === "passed")) expect(await gone(probe.pid)).toBe(true);
-    } finally { rmSync(barrier, { force: true }); }
+      for (const probe of probes)
+        if (probe.events.some((event) => event.event === "passed"))
+          expect(await gone(probe.pid)).toBe(true);
+    } finally {
+      rmSync(barrier, { force: true });
+    }
   });
 
   it("does not stop a reused PID, and does not stop an unrecorded child of a stopped writer", async () => {
@@ -253,12 +518,20 @@ describe("test stack lock", { timeout: 120_000 }, () => {
   });
 
   it("waits for a run's writers by PID and confirms identity once at the end", async () => {
-    const reused = new Probe("idle"); const live = new Probe("idle");
-    const reusedPid = (await reused.event("idle")).pid as number; const livePid = (await live.event("idle")).pid as number;
+    const reused = new Probe("idle");
+    const live = new Probe("idle");
+    const reusedPid = (await reused.event("idle")).pid as number;
+    const livePid = (await live.event("idle")).pid as number;
     record(reusedPid, "this-run", "1");
     record(livePid, "this-run");
-    const survivors = await lock.awaitRunWriters({ dir, runId: "this-run", timeoutMs: 300 });
-    expect(survivors.map((writer: { pid: number }) => writer.pid)).toEqual([livePid]);
+    const survivors = await lock.awaitRunWriters({
+      dir,
+      runId: "this-run",
+      timeoutMs: 300,
+    });
+    expect(survivors.map((writer: { pid: number }) => writer.pid)).toEqual([
+      livePid,
+    ]);
   });
 
   it("refuses to stop while a live command holds the lock, and takes a stale lock over for the stop", async () => {
@@ -266,7 +539,9 @@ describe("test stack lock", { timeout: 120_000 }, () => {
     await holder.event("held");
     const refused = new Probe("stop");
     expect(await refused.event("refused")).toMatchObject({ code: "held" });
-    expect(refused.events.some((event) => event.event === "stopped")).toBe(false);
+    expect(refused.events.some((event) => event.event === "stopped")).toBe(
+      false,
+    );
     expect(lock.currentLock(dir)!.holder.pid).toBe(holder.pid);
 
     await holder.kill();
@@ -278,87 +553,177 @@ describe("test stack lock", { timeout: 120_000 }, () => {
 
   it("keeps the production directory fixed whatever the environment says, and hands a launcher's directory to its children", () => {
     const production = stateDir();
-    const saved = { dir: process.env.DEVSPACE_TEST_STACK_DIR, data: process.env.ProgramData, runDir: process.env.DEVSPACE_TEST_RUN_DIR };
+    const saved = {
+      dir: process.env.DEVSPACE_TEST_STACK_DIR,
+      data: process.env.ProgramData,
+      runDir: process.env.DEVSPACE_TEST_RUN_DIR,
+    };
     try {
       process.env.DEVSPACE_TEST_STACK_DIR = join(dir, "other");
       process.env.ProgramData = join(dir, "elsewhere");
       process.env.DEVSPACE_TEST_RUN_DIR = join(dir, "forged");
       expect(stateDir()).toBe(production);
     } finally {
-      for (const [key, value] of [["DEVSPACE_TEST_STACK_DIR", saved.dir], ["ProgramData", saved.data], ["DEVSPACE_TEST_RUN_DIR", saved.runDir]] as const) {
-        if (value === undefined) delete process.env[key]; else process.env[key] = value;
+      for (const [key, value] of [
+        ["DEVSPACE_TEST_STACK_DIR", saved.dir],
+        ["ProgramData", saved.data],
+        ["DEVSPACE_TEST_RUN_DIR", saved.runDir],
+      ] as const) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
       }
     }
     expect(production).toMatch(/devspace-test-stack-v1$/);
-    expect(childEnvironment("run-1", dir, {})).toMatchObject({ DEVSPACE_TEST_RUN: "run-1", DEVSPACE_TEST_RUN_DIR: dir });
-    expect(lock.runContext({ DEVSPACE_TEST_RUN: "run-1", DEVSPACE_TEST_RUN_DIR: dir })).toEqual({ dir, runId: "run-1" });
+    expect(childEnvironment("run-1", dir, {})).toMatchObject({
+      DEVSPACE_TEST_RUN: "run-1",
+      DEVSPACE_TEST_RUN_DIR: dir,
+    });
+    expect(
+      lock.runContext({
+        DEVSPACE_TEST_RUN: "run-1",
+        DEVSPACE_TEST_RUN_DIR: dir,
+      }),
+    ).toEqual({ dir, runId: "run-1" });
   });
 
   it("counts a Linux zombie as exited and reads the start time of any process name", () => {
-    const stat = "4242 (node (x) y) Z 1 4242 4242 0 -1 4194560 100 0 0 0 0 0 0 0 20 0 1 0 987654 1000 500";
+    const stat =
+      "4242 (node (x) y) Z 1 4242 4242 0 -1 4194560 100 0 0 0 0 0 0 0 20 0 1 0 987654 1000 500";
     expect(lock.parseProcStat(stat)).toEqual({ state: "Z", start: "987654" });
-    expect(lock.parseProcStat(stat.replace(" Z ", " S "))).toMatchObject({ state: "S" });
+    expect(lock.parseProcStat(stat.replace(" Z ", " S "))).toMatchObject({
+      state: "S",
+    });
   });
 
   it("admits a process to a run only when it holds the lock and has its own writer record", () => {
     const env = { DEVSPACE_TEST_RUN: "guard-run" };
-    expect(() => lock.requireActiveRun({ command: "npm test", env: {}, dir })).toThrow(/No test run is active.*npm test/);
-    expect(() => lock.requireActiveRun({ command: "npm test", env, dir })).toThrow(/does not hold the test stack lock/);
+    expect(() =>
+      lock.requireActiveRun({ command: "npm test", env: {}, dir }),
+    ).toThrow(/No test run is active.*npm test/);
+    expect(() =>
+      lock.requireActiveRun({ command: "npm test", env, dir }),
+    ).toThrow(/does not hold the test stack lock/);
     lock.acquireLock({ command: "npm test (guard)", dir, runId: "guard-run" });
-    expect(() => lock.requireActiveRun({ command: "npm test", env, dir })).toThrow(/not registered as a writer/);
+    expect(() =>
+      lock.requireActiveRun({ command: "npm test", env, dir }),
+    ).toThrow(/not registered as a writer/);
     lock.registerWriter({ dir, runId: "guard-run", role: "guard" });
-    expect(() => lock.requireActiveRun({ command: "npm test", env, dir })).not.toThrow();
-    expect(() => lock.requireActiveRun({ command: "npm test", env: { DEVSPACE_TEST_RUN: "other-run" }, dir })).toThrow(/does not hold/);
+    expect(() =>
+      lock.requireActiveRun({ command: "npm test", env, dir }),
+    ).not.toThrow();
+    expect(() =>
+      lock.requireActiveRun({
+        command: "npm test",
+        env: { DEVSPACE_TEST_RUN: "other-run" },
+        dir,
+      }),
+    ).toThrow(/does not hold/);
   });
 
   it("checks the writer record's content, not its file name, against this process", () => {
     const env = { DEVSPACE_TEST_RUN: "record-run" };
-    lock.acquireLock({ command: "npm test (record)", dir, runId: "record-run" });
+    lock.acquireLock({
+      command: "npm test (record)",
+      dir,
+      runId: "record-run",
+    });
     const file = join(dir, "writers", `record-run-${process.pid}-x.json`);
     mkdirSync(join(dir, "writers"), { recursive: true });
-    const refused = (pattern: RegExp) => expect(() => lock.requireActiveRun({ command: "npm test", env, dir })).toThrow(pattern);
+    const refused = (pattern: RegExp) =>
+      expect(() =>
+        lock.requireActiveRun({ command: "npm test", env, dir }),
+      ).toThrow(pattern);
 
     writeFileSync(file, "{not json");
     refused(/cannot be read or parsed/);
-    writeFileSync(file, JSON.stringify({ runId: "record-run", pid: process.pid }));
+    writeFileSync(
+      file,
+      JSON.stringify({ runId: "record-run", pid: process.pid }),
+    );
     refused(/malformed/);
-    writeFileSync(file, JSON.stringify({ runId: "other-run", pid: process.pid, start: lock.processStart(process.pid) }));
+    writeFileSync(
+      file,
+      JSON.stringify({
+        runId: "other-run",
+        pid: process.pid,
+        start: lock.processStart(process.pid),
+      }),
+    );
     refused(/malformed/);
     // An earlier process with the same PID: valid record, other start time.
-    writeFileSync(file, JSON.stringify({ runId: "record-run", pid: process.pid, start: "1" }));
+    writeFileSync(
+      file,
+      JSON.stringify({ runId: "record-run", pid: process.pid, start: "1" }),
+    );
     refused(/earlier process with the same PID/);
-    writeFileSync(file, JSON.stringify({ runId: "record-run", pid: process.pid, start: lock.processStart(process.pid) }));
-    expect(() => lock.requireActiveRun({ command: "npm test", env, dir })).not.toThrow();
+    writeFileSync(
+      file,
+      JSON.stringify({
+        runId: "record-run",
+        pid: process.pid,
+        start: lock.processStart(process.pid),
+      }),
+    );
+    expect(() =>
+      lock.requireActiveRun({ command: "npm test", env, dir }),
+    ).not.toThrow();
   });
 
   it("refuses a registration when the admission mark cannot be read, and names the mark", () => {
-    lock.acquireLock({ command: "npm test (unreadable mark)", dir, runId: "mark-run" });
+    lock.acquireLock({
+      command: "npm test (unreadable mark)",
+      dir,
+      runId: "mark-run",
+    });
     // A directory in the mark's place fails to read with a code other than ENOENT, as a permission error would.
     mkdirSync(join(dir, "closed", "mark-run"), { recursive: true });
-    expect(() => lock.registerWriter({ dir, runId: "mark-run", role: "late" })).toThrow(/admission mark .*mark-run cannot be read/);
+    expect(() =>
+      lock.registerWriter({ dir, runId: "mark-run", role: "late" }),
+    ).toThrow(/admission mark .*mark-run cannot be read/);
   });
 
   it("exits a preloaded process with an unreadable admission mark before it writes anything", async () => {
-    lock.acquireLock({ command: "npm test (unreadable mark)", dir, runId: "mark-run" });
+    lock.acquireLock({
+      command: "npm test (unreadable mark)",
+      dir,
+      runId: "mark-run",
+    });
     mkdirSync(join(dir, "closed", "mark-run"), { recursive: true });
     const marker = join(dir, "marker");
-    expect(await new Probe("late-write", [marker], withPreload("mark-run")).exited).toBe(1);
+    expect(
+      await new Probe("late-write", [marker], withPreload("mark-run")).exited,
+    ).toBe(1);
     expect(existsSync(marker)).toBe(false);
   });
 
   it("refuses a registration once admission is closed, and keeps admitting before", () => {
-    lock.acquireLock({ command: "npm test (admission)", dir, runId: "admission-run" });
-    expect(() => lock.registerWriter({ dir, runId: "admission-run", role: "early" })).not.toThrow();
+    lock.acquireLock({
+      command: "npm test (admission)",
+      dir,
+      runId: "admission-run",
+    });
+    expect(() =>
+      lock.registerWriter({ dir, runId: "admission-run", role: "early" }),
+    ).not.toThrow();
     lock.closeAdmission({ dir, runId: "admission-run" });
     lock.closeAdmission({ dir, runId: "admission-run" });
-    expect(() => lock.registerWriter({ dir, runId: "admission-run", role: "late", start: "2" })).toThrow(/already finishing/);
+    expect(() =>
+      lock.registerWriter({
+        dir,
+        runId: "admission-run",
+        role: "late",
+        start: "2",
+      }),
+    ).toThrow(/already finishing/);
   });
 
   it("treats an unreadable or unparseable state.json as unclean, so the next run resets", () => {
     writeFileSync(join(dir, "state.json"), "{broken");
     const state = readState(dir);
     expect(state.status).toBe("dirty");
-    expect(decideReset({ state, hash: "h", fresh: false, force: false })).toMatchObject({ reset: true, kind: "a" });
+    expect(
+      decideReset({ state, hash: "h", fresh: false, force: false }),
+    ).toMatchObject({ reset: true, kind: "a" });
   });
 });
 
@@ -386,14 +751,18 @@ describe("test run lifecycle", { timeout: 120_000 }, () => {
     const launcher = new Probe("run", ["residue"]);
     expect((await launcher.event("done")).code).toBe(1);
     expect(readState(dir)).toMatchObject({ status: "dirty" });
-    expect(readState(dir).cause).toContain("end-of-run audit found residue: public.notes");
+    expect(readState(dir).cause).toContain(
+      "end-of-run audit found residue: public.notes",
+    );
   });
 
   it("ends dirty after a failed cleanup, and every later scope of the run in another process refuses", async () => {
     writeState(clean, dir);
     const launcher = new Probe("run", ["fixture-failure"]);
     await launcher.event("cleanup-failed");
-    expect((await launcher.event("refused")).message).toContain("Previous fixture cleanup is unresolved");
+    expect((await launcher.event("refused")).message).toContain(
+      "Previous fixture cleanup is unresolved",
+    );
     expect((await launcher.event("done")).code).toBe(1);
     expect(readState(dir)).toMatchObject({ status: "dirty" });
     expect(readState(dir).cause).toContain("fixture cleanup failed");
@@ -419,27 +788,38 @@ describe("test run lifecycle", { timeout: 120_000 }, () => {
     expect(readState(dir)).toMatchObject({ status: "dirty" });
     expect(readState(dir).cause).toContain(`${writer} (`);
     expect(alive(writer)).toBe(true);
-    expect(writerFiles().some((name) => name.includes(`-${writer}-`))).toBe(true);
+    expect(writerFiles().some((name) => name.includes(`-${writer}-`))).toBe(
+      true,
+    );
 
     const next = new Probe("run", ["pass"]);
-    expect(await next.event("ensure")).toMatchObject({ status: "dirty", kind: "a" });
+    expect(await next.event("ensure")).toMatchObject({
+      status: "dirty",
+      kind: "a",
+    });
     expect(await gone(writer)).toBe(true);
   });
 
   it.each([
     ["during the reset", "hang-mutate", "mutating"],
     ["before the clean write", "hang-audit", "auditing"],
-  ])("leaves the run dirty when the launcher is killed %s", async (_name, scenario, ready) => {
-    writeState(clean, dir);
-    const launcher = new Probe("run", [scenario]);
-    await launcher.event(ready);
-    await launcher.kill();
-    expect(readState(dir)).toMatchObject({ status: "dirty" });
-    const next = new Probe("run", ["pass"]);
-    expect(await next.event("ensure")).toMatchObject({ status: "dirty", kind: "a" });
-    expect((await next.event("done")).code).toBe(0);
-    expect(readState(dir)).toMatchObject({ status: "clean" });
-  });
+  ])(
+    "leaves the run dirty when the launcher is killed %s",
+    async (_name, scenario, ready) => {
+      writeState(clean, dir);
+      const launcher = new Probe("run", [scenario]);
+      await launcher.event(ready);
+      await launcher.kill();
+      expect(readState(dir)).toMatchObject({ status: "dirty" });
+      const next = new Probe("run", ["pass"]);
+      expect(await next.event("ensure")).toMatchObject({
+        status: "dirty",
+        kind: "a",
+      });
+      expect((await next.event("done")).code).toBe(0);
+      expect(readState(dir)).toMatchObject({ status: "clean" });
+    },
+  );
 
   it("treats a taken-over lock as unclean even when the state still reads clean", async () => {
     writeState(clean, dir);
@@ -453,11 +833,32 @@ describe("test run lifecycle", { timeout: 120_000 }, () => {
   });
 
   it("resets when a write landed after the last audit", () => {
-    const saved = { tables: { "public.notes": { count: 1, hash: "a" }, "auth.users": { count: 3, hash: "b" } } };
+    const saved = {
+      tables: {
+        "public.notes": { count: 1, hash: "a" },
+        "auth.users": { count: 3, hash: "b" },
+      },
+    };
     expect(compareSnapshots(saved, saved)).toEqual([]);
-    const later = { tables: { "public.notes": { count: 2, hash: "c" }, "auth.users": { count: 3, hash: "x" } } };
+    const later = {
+      tables: {
+        "public.notes": { count: 2, hash: "c" },
+        "auth.users": { count: 3, hash: "x" },
+      },
+    };
     const drift = compareSnapshots(saved, later);
-    expect(drift).toEqual(["public.notes: 1 rows at the last reset, 2 now", "auth.users: same 3 rows, content changed"]);
-    expect(decideReset({ state: { status: "clean", resetHash: "h" }, hash: "h", fresh: false, force: false, drift: drift.join("; ") })).toMatchObject({ reset: true, kind: "a" });
+    expect(drift).toEqual([
+      "public.notes: 1 rows at the last reset, 2 now",
+      "auth.users: same 3 rows, content changed",
+    ]);
+    expect(
+      decideReset({
+        state: { status: "clean", resetHash: "h" },
+        hash: "h",
+        fresh: false,
+        force: false,
+        drift: drift.join("; "),
+      }),
+    ).toMatchObject({ reset: true, kind: "a" });
   });
 });

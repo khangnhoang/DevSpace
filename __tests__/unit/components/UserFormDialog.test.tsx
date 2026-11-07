@@ -192,6 +192,23 @@ describe("UserFormDialog (create)", () => {
     });
   });
 
+  it("shows the chosen file as the avatar preview before saving, where the dialog had no image", async () => {
+    const { user } = renderCreate();
+    const file = avatarFile();
+
+    expect(screen.queryByAltText("Avatar Preview")).not.toBeInTheDocument();
+    await user.upload(fileInput(), file);
+
+    expect(URL.createObjectURL).toHaveBeenCalledWith(file);
+    expect(screen.getByAltText("Avatar Preview")).toHaveAttribute(
+      "src",
+      "blob:preview",
+    );
+    // A preview is not a save: nothing was uploaded or created yet.
+    expect(uploadUserAvatar).not.toHaveBeenCalled();
+    expect(createNewUser).not.toHaveBeenCalled();
+  });
+
   it("submits when the admin presses Enter in a field", async () => {
     const { user, onClose } = renderCreate();
 
@@ -408,6 +425,23 @@ describe("UserFormDialog (edit)", () => {
       { full_name: null, avatar_url: null, role: "user" },
       null,
     );
+  });
+
+  it("replaces the stored avatar with the chosen file's preview before saving", async () => {
+    const { user } = renderEdit();
+
+    expect(screen.getByAltText("Avatar Preview")).toHaveAttribute(
+      "src",
+      storedUser.avatar_url,
+    );
+    await user.upload(fileInput(), avatarFile());
+
+    expect(screen.getByAltText("Avatar Preview")).toHaveAttribute(
+      "src",
+      "blob:preview",
+    );
+    expect(uploadUserAvatar).not.toHaveBeenCalled();
+    expect(editUser).not.toHaveBeenCalled();
   });
 
   it("saves the uploaded URL when the admin chooses a file", async () => {

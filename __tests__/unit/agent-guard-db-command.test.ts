@@ -95,6 +95,22 @@ const ASKS = [
   "Set-Location x; npx.cmd supabase db push",
   'Start-Process supabase -ArgumentList "db push"',
   'powershell -Command "npx supabase db push"',
+  // A runner whose argument is only known when it runs asks: what executes cannot be read.
+  "$s = 'npx supabase db push'; Invoke-Expression $s",
+  "$s = 'npx supabase db push'; iex $s",
+  'iex "$s"',
+  "Invoke-Expression (Get-Content x.ps1 -Raw)",
+  "powershell -Command $s",
+  'pwsh -c "& $s"',
+  "powershell -EncodedCommand AAAA",
+  "powershell -enc AAAA",
+  "pwsh -e AAAA",
+  "cmd /c %CMDLINE%",
+  "echo x | powershell",
+  "s='npx supabase db push'; eval $s",
+  'eval "$s"',
+  'bash -c "$s"',
+  'sh -c "$(cat f)"',
   "iex 'npx supabase db push'",
   "Invoke-Expression 'npx supabase link'",
   'Write-Output "$(npx supabase db push)"',
@@ -174,10 +190,25 @@ const ALLOWS = [
   "npm run docs:check",
   "bash scripts/x.sh",
   "git log --grep='supabase db push'",
+  // Ordinary assignments and expansions are not runners.
+  "$x = Get-ChildItem",
+  "$s = 'npx supabase db push'",
+  'echo "$HOME"',
+  "x=$(ls); echo $x",
+  "bash -c 'echo $HOME'",
+  "powershell -Command 'Write-Output $env:PATH'",
+  "Invoke-Expression 'Get-Date'",
+  'eval "echo hi"',
+  "powershell -File x.ps1",
 ];
 
 // Spellings that only one shell reads as a command: the same text means something else in the other one.
 const ASKS_BASH = [
+  // Process substitution runs its body.
+  "source <(echo npx supabase db push)",
+  ". <(echo supabase link)",
+  "tee x >(npx supabase db push)",
+  "cat <(psql -c 1)",
   "echo `npx supabase db push`",
   "echo `psql -c 1`",
   'echo \\" ; supabase db push ; echo \\"',
@@ -191,6 +222,9 @@ const ASKS_BASH = [
   "bash -c 'cat <<EOF\nx\nEOF\nnpx supabase db push'",
 ];
 const ALLOWS_BASH = [
+  "source ./scripts/env.sh",
+  ". ./scripts/env.sh",
+  'source "$HOME/.bashrc"',
   "cat > f <<'EOF'\nnpx supabase db push --linked\nEOF",
   "cat > f <<EOF\nnpx supabase db push --linked\nEOF",
   "cat <<-EOF > f\n\tnpx supabase db push\n\tEOF",

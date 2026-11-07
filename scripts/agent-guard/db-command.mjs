@@ -8,6 +8,9 @@
 // (through wrappers such as `npx`, `fnm exec --`, `env`), in the command string of a shell or `eval`, or in a
 // command substitution. Anything else (an `echo` argument, a commit message, a heredoc body) is data. A script or
 // interpreter that calls the CLI from inside code (`node -e`, `python -c`, a script file) is out of reach.
+// Known limits: a program word that comes from a variable or an alias (`x=supabase; npx $x db push`,
+// `alias s=supabase`) is not resolved. A runner (`eval`, `iex`, a shell's `-c`/`-Command`, `cmd /c`) whose
+// argument is not literal text (a variable, a command's output, `-EncodedCommand`) asks, because what runs is unknown.
 // A false positive (one extra prompt) is accepted, a false negative on a form in AC1-AC3 is a defect.
 import path from "node:path";
 
@@ -71,6 +74,14 @@ const PREFIX_WORDS = new Set([
   "nice",
   "function",
 ]);
+
+// A token whose text the shell expands (`$x`, `${x}`, `$(...)`, a backtick) ends with this marker, so a runner can
+// tell literal command text from text that is only known when the command runs. Single quotes never expand.
+const DYN = "";
+const isDyn = (token) => token.endsWith(DYN);
+// A token that is a process substitution (`<(...)`): the text it yields is only known when it runs.
+const PSUB = "";
+const EXPANDS = /[A-Za-z_{0-9@*#?!$-]/;
 
 const allow = (reason = "no database command found") => ({
   decision: "allow",
@@ -137,13 +148,15 @@ function parse(text, flavor) {
   let seg = newSegment();
   let token = "";
   let inToken = false;
+  let dyn = false;
   const pending =
     /** @type {{ word: string, strip: boolean, seg: typeof seg }[]} */ ([]);
   const fail = (error) => ({ segments, subs, error });
   const endToken = () => {
-    if (inToken) seg.tokens.push(token);
+    if (inToken) seg.tokens.push(dyn ? token + DYN : token);
     token = "";
     inToken = false;
+    dyn = false;
   };
   const endSegment = (fromPipe = false) => {
     endToken();
@@ -202,13 +215,16 @@ function parse(text, flavor) {
           const end = matchParen(text, i + 2);
           if (end < 0) return fail("unterminated $(");
           subs.push(text.slice(i + 2, end));
+          dyn = true;
           i = end + 1;
         } else if (!ps && d === "`") {
           const end = text.indexOf("`", i + 1);
           if (end < 0) return fail("unterminated backtick");
           subs.push(text.slice(i + 1, end));
+          dyn = true;
           i = end + 1;
         } else {
+          if (d === "$" && EXPANDS.test(text[i + 1] ?? "")) dyn = true;
           token += d;
           i++;
         }
@@ -219,6 +235,17 @@ function parse(text, flavor) {
       const end = matchParen(text, i + 2);
       if (end < 0) return fail("unterminated $(");
       subs.push(text.slice(i + 2, end));
+      inToken = true;
+      dyn = true;
+      i = end + 1;
+      continue;
+    }
+    // Process substitution runs its body like a command substitution.
+    if (!ps && (c === "<" || c === ">") && next === "(") {
+      const end = matchParen(text, i + 2);
+      if (end < 0) return fail("unterminated process substitution");
+      subs.push(text.slice(i + 2, end));
+      token += PSUB;
       inToken = true;
       i = end + 1;
       continue;
@@ -239,6 +266,7 @@ function parse(text, flavor) {
       if (end < 0) return fail("unterminated backtick");
       subs.push(text.slice(i + 1, end));
       inToken = true;
+      dyn = true;
       i = end + 1;
       continue;
     }
@@ -347,6 +375,7 @@ function parse(text, flavor) {
       i++;
       continue;
     }
+    if (c === "$" && EXPANDS.test(next ?? "")) dyn = true;
     token += c;
     inToken = true;
     i++;
@@ -481,7 +510,10 @@ function unwrap(input) {
   let tokens = input.slice();
   for (let guard = 0; guard < 40 && tokens.length; guard++) {
     const first = tokens[0];
-    if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(first) || first === ".") {
+    if (
+      /^[A-Za-z_][A-Za-z0-9_]*=/.test(first) ||
+      (first === "." && !tokens[1]?.includes(PSUB))
+    ) {
       tokens.shift();
       continue;
     }
@@ -581,13 +613,10 @@ function nodeScriptIsSupabase(args) {
   return -1;
 }
 
-function decodeEncoded(value) {
-  try {
-    return Buffer.from(value ?? "", "base64").toString("utf16le");
-  } catch {
-    return "";
-  }
-}
+const opaque = (program) =>
+  ask(
+    `${program} runs command text that is only known when it runs (a variable, a command's output or an encoded command)`,
+  );
 
 /** Judges one command (already split into tokens). */
 function analyzeTokens(
@@ -614,6 +643,10 @@ function analyzeTokens(
       `${program} can take its target from variables the command text does not show`,
     );
   }
+  // `source <(cmd)` runs the output of cmd; `source file` is a script file, out of reach like any other.
+  if (program === "source" || program === ".") {
+    return args.some((arg) => arg.includes(PSUB)) ? opaque(program) : allow();
+  }
   if (program === "node") {
     const at = nodeScriptIsSupabase(args);
     if (at >= 0) return classifySupabase(args.slice(at + 1), context);
@@ -623,7 +656,9 @@ function analyzeTokens(
   if (SHELLS.has(program)) {
     const at = args.findIndex((arg) => /^-[a-z]*c[a-z]*$/.test(arg));
     if (at >= 0 && args[at + 1] !== undefined)
-      return scan(args[at + 1], "bash", context, depth + 1);
+      return isDyn(args[at + 1])
+        ? opaque(program)
+        : scan(args[at + 1], "bash", context, depth + 1);
     for (const body of heredocs) {
       const result = scan(body, "bash", context, depth + 1);
       if (result.decision === "ask") return result;
@@ -636,19 +671,10 @@ function analyzeTokens(
     for (let k = 0; k < args.length; k++) {
       const arg = lowerArgs[k];
       if (/^-c(?:o(?:m(?:m(?:a(?:n(?:d)?)?)?)?)?)?$/.test(arg))
-        return scan(
-          args.slice(k + 1).join(" "),
-          "powershell",
-          context,
-          depth + 1,
-        );
-      if (arg.startsWith("-enc"))
-        return scan(
-          decodeEncoded(args[k + 1]),
-          "powershell",
-          context,
-          depth + 1,
-        );
+        return args.slice(k + 1).some(isDyn)
+          ? opaque(program)
+          : scan(args.slice(k + 1).join(" "), "powershell", context, depth + 1);
+      if (/^-e(?:c|nc[a-z]*)?$/.test(arg)) return opaque(program);
       if (arg === "-file" || arg === "-f") return allow();
       if (
         [
@@ -668,25 +694,38 @@ function analyzeTokens(
         continue;
       }
       if (arg.startsWith("-")) continue;
-      return scan(args.slice(k).join(" "), "powershell", context, depth + 1);
+      return args.slice(k).some(isDyn)
+        ? opaque(program)
+        : scan(args.slice(k).join(" "), "powershell", context, depth + 1);
     }
+    if (fromPipe)
+      return ask("a shell reads commands from a pipe the text does not show");
     return allow();
   }
   if (program === "cmd") {
     const at = lowerArgs.findIndex((arg) => ["/c", "/k", "/r"].includes(arg));
-    if (at >= 0)
-      return scan(
-        args.slice(at + 1).join(" "),
-        "powershell",
-        context,
-        depth + 1,
-      );
+    if (at >= 0) {
+      const rest = args.slice(at + 1);
+      return rest.some((a) => isDyn(a) || /%[^%s]+%/.test(a))
+        ? opaque(program)
+        : scan(rest.join(" "), "powershell", context, depth + 1);
+    }
     return allow();
   }
-  if (program === "eval")
-    return scan(args.join(" "), "bash", context, depth + 1);
-  if (program === "iex" || program === "invoke-expression")
-    return scan(args.join(" "), "powershell", context, depth + 1);
+  if (
+    program === "eval" ||
+    program === "iex" ||
+    program === "invoke-expression"
+  ) {
+    // No argument means the text comes from a pipe or a parenthesized command, which is not visible here.
+    if (!args.length || args.some(isDyn)) return opaque(program);
+    return scan(
+      args.join(" "),
+      program === "eval" ? "bash" : "powershell",
+      context,
+      depth + 1,
+    );
+  }
   if (program === "xargs" || program === "watch") {
     const rest = stripFlags(args, [
       "-I",

@@ -6,7 +6,8 @@
 //   role, so their own rows run as service_role inside `withPg` transactions (plan G7). Row-level scenarios roll back;
 //   race and cascade rows that need committed data own and remove their fixtures.
 // Subject: payments.coupon_id, the partial unique index of pending orders, create_pending_payment, apply_payment_coupon,
-//   close_pending_payment, approve_payment, payments_guard (three triggers) and payments_release_on_delete.
+//   close_pending_payment, approve_payment, payments_guard (three triggers), payments_release_on_delete and the table
+//   privileges of public.payments after se_u1_payment_write_lock.
 // Allowed paths: the service role (and the table owner) runs the functions; a plain pending order at the course price
 //   without a coupon can still be written directly until the write lock migration.
 // Denied paths: anon, learner, student and admin sessions cannot execute the functions; a direct write that discounts,
@@ -59,6 +60,9 @@ const asOwner = (c: pg.Client) => c.query("reset role");
 // G7: a guard row that expects a direct service_role write to succeed grants insert and update first (a no-op before
 // the write lock migration), so the row tests the guard and not the revoked privilege.
 const asServiceWithWrites = async (c: pg.Client) => {
+  // Back to the owner first: a GRANT issued while still service_role grants nothing and would make every refusal row
+  // pass on the missing privilege instead of on the guard.
+  await asOwner(c);
   await c.query("grant insert, update on public.payments to service_role");
   await asService(c);
 };
@@ -1938,5 +1942,245 @@ describe("rollback of the payment functions migration", () => {
     await withPg(async (c) =>
       expect((await functionCatalog(c, FUNCTIONS)).length).toBe(4),
     );
+  });
+});
+
+describe("payments write lock", () => {
+  const ROLES = ["service_role", "anon", "authenticated"] as const;
+  const privileges = async (c: pg.Client) =>
+    (
+      await c.query(
+        `select r.rolname,
+           has_table_privilege(r.rolname, 'public.payments', 'INSERT') as can_insert,
+           has_table_privilege(r.rolname, 'public.payments', 'UPDATE') as can_update,
+           has_table_privilege(r.rolname, 'public.payments', 'DELETE') as can_delete,
+           has_table_privilege(r.rolname, 'public.payments', 'SELECT') as can_select
+         from pg_roles r where r.rolname = any($1) order by r.rolname`,
+        [[...ROLES]],
+      )
+    ).rows;
+
+  it("[W37] AC10 no API role holds INSERT or UPDATE on payments; DELETE and SELECT stay", async () => {
+    await withPg(async (c) => {
+      expect(await privileges(c)).toEqual(
+        ["anon", "authenticated", "service_role"].map((rolname) => ({
+          rolname,
+          can_insert: false,
+          can_update: false,
+          can_delete: true,
+          can_select: true,
+        })),
+      );
+    });
+  });
+
+  // The refusal rows write nothing if the privilege were missing, so a broken lock must find only rows this test owns:
+  // an owned course and pending order to update, and the exact selector of the insert that must be refused, reserved
+  // before the first request. The scope removes both, also when an assertion fails.
+  async function ownedTarget() {
+    const s = slug();
+    await fixtureScope().reserve("courses", { slug: s });
+    const courseId = must(
+      await fixtures
+        .from("courses")
+        .insert({ name: s, slug: s, price: 100000 })
+        .select("id")
+        .single(),
+    ).id;
+    await fixtureScope().reserve("payments", {
+      user_id: IDS.student,
+      course_id: courseId,
+    });
+    const created = await fixtures.rpc("create_pending_payment", {
+      p_user_id: IDS.student,
+      p_course_id: courseId,
+    });
+    expect(created.error).toBeNull();
+    // The refusal rows below are only meaningful against a real pending order that this test owns.
+    expect(created.data).toMatchObject({ result: "created" });
+    const orderId = (created.data as { payment_id: unknown }).payment_id;
+    expect(typeof orderId).toBe("number");
+    await fixtureScope().reserve("payments", {
+      user_id: IDS.learner,
+      course_id: courseId,
+    });
+    return { courseId, orderId: orderId as number };
+  }
+  const expectOwnedPending = (
+    before: Record<string, unknown>[],
+    orderId: number,
+    courseId: number,
+  ) =>
+    expect(before).toContainEqual(
+      expect.objectContaining({
+        id: orderId,
+        user_id: IDS.student,
+        course_id: courseId,
+        status: "pending",
+      }),
+    );
+  const allPayments = async () =>
+    must(await fixtures.from("payments").select("*").order("id"));
+
+  it("[W38] AC10 the service role is refused with 42501 on a direct insert and update, and the rows are unchanged", async () => {
+    const { courseId, orderId } = await ownedTarget();
+    const before = await allPayments();
+    expectOwnedPending(before, orderId, courseId);
+    const insert = await fixtures.from("payments").insert({
+      user_id: IDS.learner,
+      course_id: courseId,
+      amount: 100000,
+      status: "pending",
+    });
+    expectDenied(insert.error);
+    const update = await fixtures
+      .from("payments")
+      .update({ status: "success" })
+      .eq("id", orderId);
+    expectDenied(update.error);
+    const touch = await fixtures
+      .from("payments")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", orderId);
+    expectDenied(touch.error);
+    expect(await allPayments()).toEqual(before);
+  });
+
+  it.each([
+    ["anon", anon],
+    ["learner", learner],
+    ["student", student],
+    ["admin", admin],
+  ] as const)(
+    "[W39] AC10 %s is refused with 42501 on a direct insert and update",
+    async (_actor, client) => {
+      const { courseId, orderId } = await ownedTarget();
+      const before = await allPayments();
+      expectOwnedPending(before, orderId, courseId);
+      const insert = await client.from("payments").insert({
+        user_id: IDS.learner,
+        course_id: courseId,
+        amount: 100000,
+        status: "pending",
+      });
+      expectDenied(insert.error);
+      const update = await client
+        .from("payments")
+        .update({ status: "failed" })
+        .eq("id", orderId);
+      expectDenied(update.error);
+      expect(await allPayments()).toEqual(before);
+    },
+  );
+
+  it("[W40] the functions still write as the service role on the locked table, and a direct delete still releases a use", async () => {
+    await inTx(async (c) => {
+      const id = await course(c, 100000);
+      const cp = await coupon(c);
+      await asService(c);
+      const order = await createOrder(c, IDS.learner, id);
+      expect(
+        await call(c, "public.apply_payment_coupon($1, $2, $3)", [
+          order,
+          IDS.learner,
+          cp.code,
+        ]),
+      ).toMatchObject({ amount: 90000 });
+      const other = await createOrder(c, IDS.student, id);
+      expect(
+        await call(c, "public.approve_payment($1)", [other]),
+      ).toMatchObject({ approved: true });
+      expect(await usedCount(c, cp.id)).toBe(1);
+      expect(
+        await call(c, "public.close_pending_payment($1, $2)", [order, null]),
+      ).toBe(true);
+      expect(await usedCount(c, cp.id)).toBe(0);
+
+      const again = await createOrder(c, IDS.admin, id);
+      await call(c, "public.apply_payment_coupon($1, $2, $3)", [
+        again,
+        IDS.admin,
+        cp.code,
+      ]);
+      expect(await usedCount(c, cp.id)).toBe(1);
+      expect(
+        await attempt(c, "delete from public.payments where id = $1", [again]),
+      ).toBeNull();
+      expect(await payment(c, again)).toBeUndefined();
+      expect(await usedCount(c, cp.id)).toBe(0);
+    });
+  });
+
+  it("[W41] the service role deletes a committed pending order through the API", async () => {
+    const s = slug();
+    await fixtureScope().reserve("courses", { slug: s });
+    const courseId = must(
+      await fixtures
+        .from("courses")
+        .insert({ name: s, slug: s, price: 1000 })
+        .select("id")
+        .single(),
+    ).id;
+    await fixtureScope().reserve("payments", {
+      user_id: IDS.learner,
+      course_id: courseId,
+    });
+    const created = await fixtures.rpc("create_pending_payment", {
+      p_user_id: IDS.learner,
+      p_course_id: courseId,
+    });
+    expect(created.error).toBeNull();
+    const orderId = (created.data as { payment_id: number }).payment_id;
+
+    const removed = await fixtures.from("payments").delete().eq("id", orderId);
+
+    expect(removed.error).toBeNull();
+    expect(
+      must(await fixtures.from("payments").select("id").eq("id", orderId)),
+    ).toEqual([]);
+  });
+
+  it("[W42] AC12 the rollback restores the earlier table privileges exactly and the migration reapplies", async () => {
+    const name = "20261106214043_se_u1_payment_write_lock";
+    const read = async (dir: string, file: string) =>
+      (
+        await readFile(
+          new URL(`../../supabase/${dir}/${file}`, import.meta.url),
+          "utf8",
+        )
+      )
+        .replace(/^begin;$/m, "")
+        .replace(/^commit;$/m, "");
+    const up = await read("migrations", `${name}.sql`);
+    const down = await read("rollbacks", `${name}.down.sql`);
+    const acl = async (c: pg.Client, table: string) =>
+      (
+        await c.query(
+          "select relacl::text as acl from pg_class where oid = $1::regclass",
+          [table],
+        )
+      ).rows[0].acl as string;
+    await inTx(async (c) => {
+      const locked = await privileges(c);
+      const lockedAcl = await acl(c, "public.payments");
+      await c.query(down);
+      expect(await privileges(c)).toEqual(
+        ["anon", "authenticated", "service_role"].map((rolname) => ({
+          rolname,
+          can_insert: true,
+          can_update: true,
+          can_delete: true,
+          can_select: true,
+        })),
+      );
+      // The earlier ACL is the one of a table that never had the lock: same roles, same privileges, same grantor.
+      expect(await acl(c, "public.payments")).toBe(
+        await acl(c, "public.coupons"),
+      );
+      expect(await acl(c, "public.payments")).not.toBe(lockedAcl);
+      await c.query(up);
+      expect(await privileges(c)).toEqual(locked);
+      expect(await acl(c, "public.payments")).toBe(lockedAcl);
+    });
   });
 });

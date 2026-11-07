@@ -46,7 +46,7 @@ Order follows compatibility between old code, new code and the migration:
 
 ## Hosted apply
 
-Main applies a repo migration to hosted with `npx supabase db push` from this checkout, which stays linked to hosted (`supabase/.temp/project-ref`, gitignored). Two Owner grants gate it, *prepare* and *apply*; no step text below grants anything (`AGENTS.md` section 4).
+Main applies a repo migration to hosted with `npx supabase db push` from this checkout, which stays linked to hosted (`supabase/.temp/project-ref`, gitignored). Two Owner grants gate it, *prepare* and *apply*; no step text below grants anything (`AGENTS.md` section 4). A plan that requires a backup first takes and checks it with [backup-and-restore.md](references/backup-and-restore.md); read it before a hosted write step whose plan requires a backup.
 
 1. **Precondition.** The migration and its rollback passed Codex, the PR's CI is green, and the rollout order says it is time. A merge to `main` deploys production, so an additive or guard migration is applied, and its postflight done, before the merge; a restriction is applied only after the merge and after Main confirms the compatible production deploy is live.
 2. **Target.** `supabase/.temp/project-ref` must read `lkvxxrxojjlkchzzqidu` (`AGENTS.md`). Missing or different: stop.
@@ -71,6 +71,7 @@ Read the references when they match:
 | --- | --- | --- |
 | [rls-and-storage.md](references/rls-and-storage.md) | changing or reviewing a policy, a helper, a grant, a bucket or Storage access | schema-only or RPC-only work |
 | [rpc-trigger-concurrency.md](references/rpc-trigger-concurrency.md) | adding or changing an RPC, trigger, SQL helper, lock, retry or idempotent transition (coupons, payments, enrollment) | a migration that merely contains such objects and is not being changed or reviewed for them |
+| [backup-and-restore.md](references/backup-and-restore.md) | a hosted write step whose plan requires a backup, a request to back up the hosted database or Storage, or running or reading `npm run backup:check` | a local-only migration, or a hosted step that needs no backup |
 
 ## Anti-patterns
 

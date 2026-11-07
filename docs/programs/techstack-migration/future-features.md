@@ -49,7 +49,7 @@ Direction the Owner has set. The entries below moved here on 2026-11-08 (Owner d
 
 ## TM-F6: Harness hook that blocks dangerous database commands
 
-- Status: Recorded 2026-11-01 by the Owner (QE-U3 planning); a later task after QE-U3; moved from AW-F5 (agent-workflow) on 2026-11-08, techstack-migration Owner decision 5.
+- Status: Fixed locally, awaiting delivery (TM-U1: the hook asks the Owner instead of refusing, Owner decision 11, and also covers the Supabase MCP write tools); recorded 2026-11-01 by the Owner (QE-U3 planning); moved from AW-F5 (agent-workflow) on 2026-11-08, techstack-migration Owner decision 5.
 - Direction: a Claude `PreToolUse` hook in `.claude/settings.json` refuses, before it runs:
   - a `supabase` command with `--linked`, `db push`, `link`, `--db-url` or `migration repair`;
   - `db reset` without the test-stack `--workdir`;

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Save, SquarePen, Upload, X } from "lucide-react";
@@ -291,11 +292,13 @@ function UserForm({ user, onClose, onSaved }: UserFormDialogProps) {
                 onClick={() => fileInputRef.current?.click()}
               >
                 {previewUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- blob: preview URL that next/image does not optimize, tracked in BL-003
-                  <img
+                  // unoptimized: a freshly picked file is a blob: URL, which the image optimizer cannot fetch.
+                  <Image
                     src={previewUrl}
                     alt="Avatar Preview"
-                    className="w-full h-full object-cover"
+                    fill
+                    unoptimized
+                    className="object-cover"
                   />
                 ) : (
                   <span className="flex flex-col items-center justify-center text-gray-500 group-hover:text-[#3B81F4]">

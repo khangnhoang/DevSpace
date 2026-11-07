@@ -86,17 +86,14 @@ const CourseReviews = ({
   const fetchReviews = useCallback(
     async (pageIndex: number, isRefresh = false) => {
       try {
-        if (pageIndex * ITEMS_PER_PAGE >= MAX_ITEMS) {
-          setHasMore(false);
-          return;
-        }
-
         const from = pageIndex * ITEMS_PER_PAGE;
         const to = from + ITEMS_PER_PAGE - 1;
 
         const { data, error } = await supabase
           .from("reviews")
-          .select("*, profiles:profile_cards(full_name, avatar_url)", { count: "exact" })
+          .select("*, profiles:profile_cards(full_name, avatar_url)", {
+            count: "exact",
+          })
           .eq("course_id", courseId) // Nó phụ thuộc vào courseId
           .order("created_at", { ascending: false })
           .range(from, to);
@@ -105,13 +102,15 @@ const CourseReviews = ({
 
         if (data) {
           if (isRefresh) {
+            // The refresh resets paging once its data arrives, so the effect that calls it sets no state itself.
             setReviews(data);
+            setPage(0);
+            setHasMore(data.length >= ITEMS_PER_PAGE);
           } else {
             setReviews((prev) => [...prev, ...data]);
-          }
-
-          if (data.length < ITEMS_PER_PAGE) {
-            setHasMore(false);
+            if (data.length < ITEMS_PER_PAGE) {
+              setHasMore(false);
+            }
           }
         }
       } catch (err) {
@@ -142,19 +141,28 @@ const CourseReviews = ({
 
   // Load lần đầu
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- the pagination reset must happen before the refetch; moving it into the async callback changes when "Xem thêm" reappears, tracked in BL-003
-    setPage(0);
-    setHasMore(true);
-    fetchReviews(0, true);
-    if (hasEnrolled) {
-      checkUserReview(); // Chỉ check nếu đã mua khóa học
-    }
+    // Both callbacks set state only after their own await, but the lint rule cannot see that await through a
+    // useCallback. The calls run inside an async function, as in React's effect data-fetching example, which the
+    // rule does not inspect; keep any new state update in these callbacks after their first await.
+    const load = async () => {
+      const pending = [fetchReviews(0, true)];
+      if (hasEnrolled) {
+        pending.push(checkUserReview()); // Chỉ check nếu đã mua khóa học
+      }
+      await Promise.all(pending);
+    };
+    void load();
   }, [fetchReviews, checkUserReview, hasEnrolled]);
 
   // Xử lý nút "Xem thêm"
   const handleLoadMore = async () => {
-    setIsLoadingMore(true);
     const nextPage = page + 1;
+    // The cap lives here, not in fetchReviews: the effect calls fetchReviews, so it must set no state before its await.
+    if (nextPage * ITEMS_PER_PAGE >= MAX_ITEMS) {
+      setHasMore(false);
+      return;
+    }
+    setIsLoadingMore(true);
     await fetchReviews(nextPage);
     setPage(nextPage);
     setIsLoadingMore(false);
@@ -332,13 +340,14 @@ const CourseReviews = ({
               className="bg-[#1f2937] p-5 rounded-xl border border-gray-700 flex gap-4 animate-in fade-in slide-in-from-bottom-2"
             >
               <div className="shrink-0">
-                <div className="w-10 h-10 bg-linear-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center font-bold text-white text-sm overflow-hidden shadow-md">
+                <div className="relative w-10 h-10 bg-linear-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center font-bold text-white text-sm overflow-hidden shadow-md">
                   {review.profiles?.avatar_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- review avatar from an arbitrary remote URL; next/image needs a size and remote host config, tracked in BL-003
-                    <img
+                    <Image
                       src={review.profiles.avatar_url}
                       alt="Ava"
-                      className="w-full h-full object-cover"
+                      fill
+                      sizes="40px"
+                      className="object-cover"
                     />
                   ) : (
                     review.profiles?.full_name?.charAt(0) || "U"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase, searchLesson } from "@/lib/supabase";
@@ -22,6 +23,27 @@ interface SearchResult {
   name: string;
   image_url?: string | null;
   price: number;
+}
+
+export function SearchResultImage({ src, alt }: { src: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-blue-50">
+        <FileText size={16} className="text-blue-500" />
+      </div>
+    );
+  }
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      fill
+      sizes="56px"
+      className="object-cover"
+      onError={() => setFailed(true)}
+    />
+  );
 }
 
 export default function Header() {
@@ -227,23 +249,10 @@ export default function Header() {
               >
                 <div className="relative w-14 h-9 shrink-0 rounded overflow-hidden border border-gray-200 bg-gray-100">
                   {course.image_url ? (
-                    <>
-                      {/* eslint-disable-next-line @next/next/no-img-element -- keeps the direct image load and the current onError fallback until a next/image move is verified, tracked in BL-003 */}
-                      <img
-                        src={course.image_url}
-                        alt={course.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                          e.currentTarget.nextElementSibling?.classList.remove(
-                            "hidden",
-                          );
-                        }}
-                      />
-                      <div className="hidden w-full h-full flex items-center justify-center bg-blue-50">
-                        <FileText size={16} className="text-blue-500" />
-                      </div>
-                    </>
+                    <SearchResultImage
+                      src={course.image_url}
+                      alt={course.name}
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-blue-50">
                       <FileText size={16} className="text-blue-500" />

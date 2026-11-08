@@ -1,13 +1,13 @@
 ---
 name: server-actions
-description: "Rules for DevSpace server actions in app/action and any server-side request handler: public POST endpoints, auth and ownership inside the action, never trusting client ids or prices, service-role use, server-side validation with the shared Zod schemas in lib/schemas, return contract, uploads, duplicate submits and state transitions. Use when adding, changing or reviewing a server action or the data it accepts."
+description: "Rules for DevSpace server actions in app/action, NestJS controllers in backend/ and any server-side request handler: public POST endpoints, auth and ownership inside the action, never trusting client ids or prices, service-role use, server-side validation with the shared Zod schemas in lib/schemas, return contract, uploads, duplicate submits and state transitions. Use when adding, changing or reviewing a server action, an API controller route or the data it accepts."
 ---
 
 # Server actions
 
 ## Use when / do not use when
 
-Use when a task adds, changes or reviews a file in `app/action/`, a route handler, or any server code that accepts input from the browser (form values, ids, prices, file names, upload paths), or the result shape a client component consumes.
+Use when a task adds, changes or reviews a file in `app/action/`, a route handler, a controller of the NestJS API in `backend/`, or any server code that accepts input from the browser (form values, ids, prices, file names, upload paths), or the result shape a client component consumes.
 
 Do not use for UI-only state that never crosses to the server. For the database side (policies, RPCs, grants) also use `supabase-migration`; for the screen using the action use `frontend-workflow`.
 
@@ -33,6 +33,18 @@ Server actions validate with Zod: `zod` is a dependency and the shared schemas l
 ## Return contract
 
 The most common shape is `{ error: string }` on a failure and `{ success: true, ...data }` on success, so callers test `"error" in result`, but shapes vary: `app/action/admin-dashboard.ts` returns `null` or arrays, `gemini.ts` returns `{ data }`, `get-notifications.ts` returns nothing. Read the action's real shape and every caller first, and keep a boundary's contract unless the task changes it (then update the callers in the same change). A parse failure returns the action's own failure shape (`markAsRead` returns nothing, before it creates its client) with `parseFailure(error)` from `lib/schemas/parse-failure.ts`: the generic `Dữ liệu không hợp lệ.`, or the one first-issue message that the admin pages already show (password length, role, quiz content length), which is listed in that file; a new message that must reach the user is added to that list. Never return Zod's issue list, a path or the raw input, and never log a parse failure with its input (a failed `createNewUser` parse holds a password). The helper lives in `lib/schemas/` because a `"use server"` file may export only async functions. Messages are short, natural Vietnamese and generic enough to leak nothing. Do not return raw exceptions, stack traces, SQL or Supabase error text, secrets or full rows. Log the detail on the server instead. Do not turn an error into a fake success.
+
+## Nest endpoints (`backend/`)
+
+A controller route is a public HTTP endpoint with the same hostile-argument rules as an action, and the rules above (authorize before access, derive owner, role, price and status on the server, generic Vietnamese messages, repeat-safe transitions) apply unchanged. The API enforces part of them for every route, so a route author keeps these in mind:
+
+- **Default deny.** Every route needs a session unless it carries `@Public()` (`backend/src/auth/decorators.ts`); a test enumerates the registered routes and names the public ones, so a new public route is a visible decision. A payment or admin class operation carries `@Sensitive()`, so the session guard asks Auth on every call instead of trusting its 30-second cache. Role and ownership checks stay in the handler or a route guard, never in the cache.
+- **Order.** Global guards (CSRF, then session), then route guards, then interceptors (the body is read here, after the guards, so a refused caller's body is never read), then pipes, then the handler. A new guard or interceptor is placed by this order, and a row proves it.
+- **Validation.** The handler parses with `ZodPipe` and a schema from `lib/schemas/` (the same module an action uses; a schema file imports only `zod` so it compiles for the backend). A parse failure answers 400 with the one generic message, never Zod's issue list.
+- **Limits.** JSON and raw bodies are 4 MiB, one upload file is 2 MiB (`uploadFile`), a request ends at 60 seconds (`backend/src/common/limits.ts`). A route that needs more is a decision to bring to the plan, not a local constant.
+- **State changes and cookies.** A cookie-carrying request that is not a GET must pass the CSRF check (`Sec-Fetch-Site` or an allowed `Origin`). Next reaches the API only through `lib/api.server.ts`, which sets the app's Origin; a browser never calls the API on its own address.
+- **Database.** The API connects as the `devspace_api` role, which has only the grants its migration states, and reads through Drizzle. A new table or column it needs is a migration with its own grants (`supabase-migration`).
+- **Tests.** A route is proven in the `api` project (`__tests__/api/`, run by `npm test`) with a real API process, and a through-Next row in `__tests__/e2e/api-topology.spec.ts` when the browser path matters ([test-quality-strategy](../test-quality-strategy/SKILL.md)).
 
 ## Boundaries validation does not cover
 

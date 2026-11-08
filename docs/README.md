@@ -1,6 +1,6 @@
 # Docs
 
-Documentation for DevSpace. Docs are in English; text the app shows to users stays in Vietnamese, and such strings are quoted as they appear in the product. Run `npm run docs:check` after editing anything here; the `program-docs` skill (`.claude/skills/program-docs/SKILL.md`) owns the shape of every document below.
+Documentation for DevSpace. Docs are in English; text the app shows to users stays in Vietnamese, and such strings are quoted as they appear in the product. Run `npm run docs:check` after editing anything here; the `program-docs` skill (`.claude/skills/program-docs/SKILL.md`) owns the shape of every document below. The API's architecture and hosting decisions are in [ADR 0008](adr/0008-backend-architecture-and-hosting.md); where its code lives is in the code map of `AGENTS.md`.
 
 ## Folders
 

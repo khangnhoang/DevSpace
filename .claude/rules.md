@@ -26,7 +26,7 @@ The existing Codex review workflow stays read-only. Main runs it and decides on 
 
 ## 5. Browser bindings
 
-For manual UI validation in Claude, start the dev server with `preview_start` using `devspace-dev` in `.claude/launch.json` (`npm run dev`, `http://127.0.0.1:3000`). Use `read_page` or `get_page_text` for structure/text; `read_console_messages` and `read_network_requests` for errors and calls; `computer` and `form_input` for interaction; `resize_window` for viewport checks. The shared procedure and its stop/report boundaries are in `frontend-workflow/references/manual-ui-validation.md`.
+For manual UI validation in Claude, start the dev servers with `preview_start` using `devspace-dev` in `.claude/launch.json` (`npm run dev`, which runs `next dev` at `http://127.0.0.1:3000` and the API at `http://127.0.0.1:4000`). `devspace-api` has no command: it attaches to the API that `devspace-dev` started, to inspect it on its own address. Use `read_page` or `get_page_text` for structure/text; `read_console_messages` and `read_network_requests` for errors and calls; `computer` and `form_input` for interaction; `resize_window` for viewport checks. The shared procedure and its stop/report boundaries are in `frontend-workflow/references/manual-ui-validation.md`.
 
 ## 6. Reading skills
 

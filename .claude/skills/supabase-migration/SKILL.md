@@ -35,6 +35,12 @@ Database behavior is changed by a migration file, never by dashboard SQL left as
 6. **Line endings.** `.gitattributes` checks out SQL under `supabase/migrations` and `supabase/rollbacks` as LF. Do not add CRLF to those files or a new `-text` line; the baseline is the one `-text` file, which keeps hosted's CR bytes.
 7. **The baseline is frozen.** `supabase/migrations/20261021000000_baseline.sql` is the pre-H1 schema derived from the Owner's hosted dump of 2026-10-23; the baseline plus the published migrations rebuild hosted. Never edit it: its guard aborts on a database that already has `public.profiles`, and hosted history marks it applied.
 
+## The API role and the Drizzle schema
+
+- The NestJS API connects as `devspace_api`, a role the migration creates `NOLOGIN` with `BYPASSRLS` (ADR 0008 D7). RLS protects nothing the API reads, so its grants are the whole boundary of that role: the migration revokes everything first and grants only what the API reads, and each unit that needs more widens the grants in its own migration with a rollback. A new table or column the API reads is an explicit grant to `devspace_api`, never a default.
+- No migration holds a credential. The Owner sets `LOGIN` and a generated password on hosted in the SQL editor; the local seed sets an invented password for the dev and test stacks.
+- `backend/src/db/schema.ts` and `relations.ts` are generated from a local database by `drizzle-kit pull` (`npm run api:schema:pull`, from the dev stack) and `npm run api:schema:check` compares them with the test stack, so a migration that changes the schema also commits the regenerated files in the same change. `supabase/migrations` stays the only owner of the schema: no Drizzle `push`, `generate` or `migrate` command exists, and the output of `pull` is repaired by `scripts/api/repair-generated.mjs` until `drizzle-kit` fixes it.
+
 ## Rollout order
 
 Order follows compatibility between old code, new code and the migration:

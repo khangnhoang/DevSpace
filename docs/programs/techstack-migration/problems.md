@@ -121,6 +121,14 @@ Every entry below moved here on 2026-11-08 (Owner decision 5 in the plan) with i
 - Direction: use ``.ilike("name", `%${escaped}%`)`` with `%`, `_` and `\` escaped, and return early on blank input; add a unit or e2e row with a query containing `,`.
 - Exit condition: a query with filter characters searches for the literal text and cannot add a filter.
 
+### TM-P14: the `x-middleware-rewrite` response header carries the API's internal address to the browser
+
+- Status: Open (2026-11-09, found at TM-U3 CP4 by the implementor, reviewed by Main).
+- Problem: for a request that `proxy.ts` rewrites to `/api/*`, Next adds `x-middleware-rewrite: <API_INTERNAL_URL>/api/...` to the response, so the absolute internal address reaches the browser. This holds on `next start` (the e2e build, port 3100) and in `next dev`. Whether Vercel strips the header on its edge is not known.
+- Evidence: `curl -i http://127.0.0.1:3100/api/health` on a plain `npm run build` served with the e2e environment shows `x-middleware-rewrite: http://127.0.0.1:3101/api/health`; `npm run dev` shows the same with port 4000. AC10 and row T9 of `__tests__/e2e/api-topology.spec.ts` cover only the browser bundle and the files under `.next/static`, so they pass.
+- Direction: the address is not a secret boundary, because ADR 0008 treats the API as a public service and every route carries its own guard. During the TM-U3 rollout proofs, read the response headers of a deployed `/api/health` through the Vercel app and decide then whether to leave it, or to handle it in `proxy.ts` (a rewrite header that Next itself reads is not removed lightly). Do not change `proxy.ts` before that read.
+- Exit condition: the header of a deployed response is recorded and the Owner accepts it, or it no longer carries an internal address.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

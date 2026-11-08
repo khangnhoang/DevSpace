@@ -14,7 +14,12 @@ export type HttpCountingProxy = {
   requests: { method: string; path: string }[];
   count(path: string): number;
   // The next requests are answered with this status instead of being forwarded; null forwards again.
-  failWith(status: number | null, body?: string): void;
+  // `cut` sends the status and a partial body, then drops the connection, so reading the body fails.
+  failWith(
+    status: number | null,
+    body?: string,
+    options?: { cut?: boolean },
+  ): void;
   close(): Promise<void>;
 };
 
@@ -24,7 +29,7 @@ export async function startHttpCountingProxy(
   const target = new URL(upstream);
   const requests: { method: string; path: string }[] = [];
   const sockets = new Set<Socket>();
-  let failure: { status: number; body: string } | null = null;
+  let failure: { status: number; body: string; cut: boolean } | null = null;
   const server: Server = createServer((incoming: IncomingMessage, outgoing) => {
     requests.push({
       method: incoming.method ?? "GET",
@@ -32,6 +37,16 @@ export async function startHttpCountingProxy(
     });
     if (failure !== null) {
       incoming.resume();
+      if (failure.cut) {
+        // Announces more than it sends, then drops the connection.
+        outgoing.writeHead(failure.status, {
+          "content-type": "application/json",
+          "content-length": String(failure.body.length + 100),
+        });
+        outgoing.write(failure.body);
+        setTimeout(() => outgoing.destroy(), 20);
+        return;
+      }
       outgoing.writeHead(failure.status, {
         "content-type": "application/json",
       });
@@ -68,8 +83,9 @@ export async function startHttpCountingProxy(
     requests,
     count: (path) =>
       requests.filter((entry) => entry.path.split("?")[0] === path).length,
-    failWith: (status, body = "{}") => {
-      failure = status === null ? null : { status, body };
+    failWith: (status, body = "{}", options = {}) => {
+      failure =
+        status === null ? null : { status, body, cut: options.cut === true };
     },
     close: () =>
       new Promise<void>((resolve) => {

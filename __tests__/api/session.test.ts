@@ -249,6 +249,70 @@ describe("session guard (AC6)", () => {
       },
     );
 
+    it.each([401, 403])(
+      "[AC6] Auth answering %s whose body fails while being read gives 503: an incomplete call is no verdict on the session",
+      async (status) => {
+        const live = await sessions.mint(`cut-${status}`);
+        const before = calls(main);
+        main.proxy.failWith(status, '{"msg":"invalid', { cut: true });
+        try {
+          const response = await whoami(main, bearer(live));
+          expect(response.status).toBe(503);
+          expect(await response.json()).toEqual(UNAVAILABLE);
+        } finally {
+          main.proxy.failWith(null);
+        }
+        expect((await whoami(main, bearer(live))).status).toBe(200);
+        expect(calls(main), "nothing was remembered").toBe(before + 2);
+      },
+    );
+
+    // A token code in the body decides before the message does: the Auth server's own wording for a token problem can
+    // mention an API key. The codes are the ones the local stack really answers (the next row reads them from it).
+    it.each([
+      ["bad_jwt", "error_code"],
+      ["session_not_found", "error_code"],
+      ["user_not_found", "error_code"],
+      ["bad_jwt", "code"],
+    ])(
+      "[AC6] a %s answer in `%s` is a refusal even when its message mentions an API key",
+      async (value, field) => {
+        const live = await sessions.mint(`coded-${field}-${value}`);
+        main.proxy.failWith(
+          403,
+          JSON.stringify({ [field]: value, msg: "invalid api key claim" }),
+        );
+        try {
+          const response = await whoami(main, bearer(live));
+          expect(response.status).toBe(401);
+          expect(await response.json()).toEqual(UNAUTHORIZED);
+        } finally {
+          main.proxy.failWith(null);
+        }
+      },
+    );
+
+    it("[AC6] the local Auth server answers a bad token with the codes the guard knows", async () => {
+      const ask = async (token: string) => {
+        const response = await fetch(`${stack.apiUrl}${AUTH_USER}`, {
+          headers: {
+            apikey: stack.anonKey,
+            authorization: `Bearer ${token}`,
+          },
+        });
+        const body = (await response.json()) as { error_code?: string };
+        return [response.status, body.error_code];
+      };
+      const forged = forgedToken({ exp: Math.floor(Date.now() / 1000) + 3600 });
+      const out = await sessions.mint("codes-out");
+      await sessions.signOut(out);
+      const gone = await sessions.mint("codes-gone");
+      await sessions.deleteUser(gone);
+      expect(await ask(forged)).toEqual([403, "bad_jwt"]);
+      expect(await ask(out.accessToken)).toEqual([403, "session_not_found"]);
+      expect(await ask(gone.accessToken)).toEqual([403, "user_not_found"]);
+    });
+
     it("[AC6] an Auth server that cannot be reached gives 503", async () => {
       const closed = await freePort();
       const live = await sessions.mint("unreachable");

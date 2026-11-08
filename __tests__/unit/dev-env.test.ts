@@ -60,6 +60,7 @@ describe("buildDevEnv", () => {
 
   it("points Next at the API that `npm run dev` starts, on the loopback address", () => {
     expect(env.API_INTERNAL_URL).toBe(`http://127.0.0.1:${DEV_API_PORT}`);
+    expect(env.API_PROOF_ENABLED, "the proof page stays off in dev").toBe("0");
   });
 
   it("holds no empty value and no AI key", () => {

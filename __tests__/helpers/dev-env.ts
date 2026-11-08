@@ -27,6 +27,9 @@ export function buildDevEnv(stack: LocalStack): Record<string, string> {
     GMAIL_PASS: "dev-placeholder-not-a-password",
     // The API `npm run dev` starts beside Next (DEV_API_PORT): `/api/*` is rewritten to it and the helper calls it.
     API_INTERNAL_URL: `http://${DEV_HOST}:${DEV_API_PORT}`,
+    // The proof page is 404 unless this is exactly "1". The dev API does not enable the proof surfaces either, and an
+    // empty value would be refilled from the environment file, so the value is an explicit "off".
+    API_PROOF_ENABLED: "0",
   };
 }
 

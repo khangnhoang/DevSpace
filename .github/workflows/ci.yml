@@ -1,19 +1,18 @@
 name: CI
 
+# Pull requests only (Owner decision, 2026-11-08): the required checks gate each merge, and a merge commit on
+# main gets no run of its own. Branch protection is not strict, so a PR can merge without testing the latest main.
 on:
   pull_request:
-    branches: [main]
-  push:
     branches: [main]
 
 permissions:
   contents: read
 
-# A newer run on the same PR cancels the older one. Each push to main gets its own group (the run id),
-# because a shared group would let a newer run replace a pending one, so every push to main runs.
+# A newer run on the same PR cancels the older one.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 # Job ids are the check names that branch protection requires: do not rename them or add `name:`. The
 # required ones are typecheck, build, docs, db, e2e and lint; `changes` is a helper and not required.
@@ -25,7 +24,6 @@ jobs:
   # PR changes it: a PR that breaks it (for example, always `true`) could otherwise skip the tests that check it.
   # A base without the script (the PR that adds it) fails `git show`, the step fails and `db` and `e2e` run.
   changes:
-    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -97,11 +95,10 @@ jobs:
   # seed's users use (Kong and PostgREST stay as the API in front). Its lock and run state live in /var/tmp.
   db:
     # Skipped only for a pull request that the classifier called docs-only. Fail-open: a failed, skipped or
-    # silent classifier, and every push to main, run this job. `!cancelled()` (not `always()`) keeps a cancelled
-    # run from starting it. A bare `needs` would skip the job when the classifier fails, and a skipped required
-    # job counts as passed.
+    # silent classifier runs this job. `!cancelled()` (not `always()`) keeps a cancelled run from starting it.
+    # A bare `needs` would skip the job when the classifier fails, and a skipped required job counts as passed.
     needs: changes
-    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -122,7 +119,7 @@ jobs:
   e2e:
     # Same skip condition as `db`.
     needs: changes
-    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:

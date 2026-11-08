@@ -13,6 +13,7 @@ export default defineConfig({
     environment: "node",
     include: ["__tests__/unit/probes/api-timeout.probe.ts"],
     testTimeout: 200,
+    hookTimeout: 300,
     reporters: ["default"],
   },
 });

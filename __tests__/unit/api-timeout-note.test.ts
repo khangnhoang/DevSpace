@@ -1,16 +1,18 @@
 // Test plan
-// Goal: the `api` project marks the run unclean when one of its tests times out or its fixture cleanup outlives its
-//   deadline, and the cleanup still runs to its end, so a timeout stays dirty and leaves no residue (QE-P8).
-// Layer: unit; a real Vitest process runs the probe with a short testTimeout (no database, no network).
-// Subject: noteTimedOutTests and cleanupWithDeadline in __tests__/helpers/api-timeout-note.ts, which
-//   __tests__/api/setup.ts and the api session helper register.
+// Goal: the `api` project marks the run unclean when one of its tests times out, when a cleanup hook outlives its
+//   timeout, or when any step of an afterAll cleanup outlives the deadline around the whole body, and every cleanup
+//   step still runs to its end, so a timeout stays dirty and leaves no residue (QE-P8).
+// Layer: unit; a real Vitest process runs the probe with a short testTimeout and hookTimeout (no database, no network).
+// Subject: noteTimedOutTests, afterEachCleanup and afterAllCleanup in __tests__/helpers/api-timeout-note.ts, which
+//   __tests__/api/setup.ts and every file of __tests__/api register.
 // Allowed paths: a test that ends in time marks nothing.
-// Denied paths: a timed-out test marks the run and its cleanup still runs; a cleanup past its deadline marks the run
-//   before it settles and settles anyway.
+// Denied paths: a timed-out test marks the run and its cleanup still runs, also when that cleanup throws; a cleanup hook
+//   past its timeout, and a step after an earlier one that ended in time, mark the run before they settle and settle
+//   anyway; a failing step does not stop the steps after it.
 // Known bugs: none.
 // Invariants: the probe's marker is its own; nothing here touches the shared run state.
 import { spawn } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -79,15 +81,60 @@ describe("the api project's timeout wiring", () => {
     expect(events).toEqual(["cleaned"]);
   }, 30_000);
 
-  it("marks the run before a cleanup past its deadline settles, and the cleanup settles", async () => {
-    const events = await probe("slow-cleanup");
+  it("marks the run for a timed-out test even when the file's own cleanup then throws", async () => {
+    const events = await probe("slow-test-throwing-cleanup");
+    expect(
+      events.some((line) =>
+        line.startsWith("marked test timed out: is too slow"),
+      ),
+      events.join("\n"),
+    ).toBe(true);
+    expect(events, "the cleanup ran").toContain("cleaned");
+  }, 30_000);
+
+  it("marks the run before an afterEach cleanup hook past its timeout settles, and the step settles", async () => {
+    const events = await probe("hook-timeout");
+    const marked = events.findIndex((line) =>
+      line.startsWith("marked cleanup hook aborted"),
+    );
+    const settled = events.indexOf("settled");
+    expect(marked, events.join("\n")).toBeGreaterThanOrEqual(0);
+    expect(settled, "no residue: the step ran to its end").toBeGreaterThan(
+      marked,
+    );
+  }, 30_000);
+
+  it("marks the run before a step past the deadline settles, although the step before it ended in time", async () => {
+    const events = await probe("late-step");
+    const first = events.indexOf("first step done");
     const marked = events.findIndex((line) =>
       line.startsWith("marked cleanup hook aborted: probe cleanup"),
     );
     const settled = events.indexOf("settled");
-    expect(marked, events.join("\n")).toBeGreaterThanOrEqual(0);
-    expect(settled, "no residue: the cleanup ran to its end").toBeGreaterThan(
+    expect(first, events.join("\n")).toBeGreaterThanOrEqual(0);
+    expect(marked, events.join("\n")).toBeGreaterThan(first);
+    expect(settled, "no residue: the step ran to its end").toBeGreaterThan(
       marked,
     );
   }, 30_000);
+
+  it("runs the steps after a step that failed", async () => {
+    const events = await probe("failing-step");
+    expect(events).toContain("second step ran");
+  }, 30_000);
+
+  it("leaves no cleanup hook of an api file outside the shared helper", () => {
+    const dir = join(root, "__tests__/api");
+    const bare = readdirSync(dir)
+      .filter((name) => name.endsWith(".test.ts"))
+      .filter((name) =>
+        /^\s*(afterAll|afterEach)\(\s*(async|\()/m.test(
+          readFileSync(join(dir, name), "utf8"),
+        ),
+      );
+    expect(
+      bare,
+      "register the hook through afterEachCleanup or afterAllCleanup",
+    ).toEqual([]);
+  });
 });

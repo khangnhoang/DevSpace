@@ -6,6 +6,7 @@
 // Invariants: every API process ends; the guard refuses nothing a test did not expect; no password is printed.
 import { Pool } from "pg";
 import { afterEach, describe, expect, inject, it } from "vitest";
+import { afterEachCleanup } from "../helpers/api-timeout-note";
 import { poolConfig } from "../../backend/src/db/pool";
 import {
   apiTestEnv,
@@ -27,12 +28,13 @@ async function start(overrides: Record<string, string | undefined> = {}) {
   return api;
 }
 
-afterEach(async () => {
-  const apis = running.splice(0);
-  for (const close of closers.splice(0)) await close();
-  // stop() throws when the guard refused something, so a test cannot pass over a connection outside loopback.
-  for (const api of apis) await api.stop();
-});
+afterEach(
+  afterEachCleanup(() => [
+    ...closers.splice(0),
+    // stop() throws when the guard refused something, so a test cannot pass over a connection outside loopback.
+    ...running.splice(0).map((api) => () => api.stop()),
+  ]),
+);
 
 function urlWithPort(base: string, port: number) {
   const url = new URL(base);

@@ -15,6 +15,7 @@ import {
   inject,
   it,
 } from "vitest";
+import { afterEachCleanup, afterAllCleanup } from "../helpers/api-timeout-note";
 import {
   apiTestEnv,
   freePort,
@@ -41,14 +42,14 @@ beforeAll(async () => {
   owner = await sessions.mint("db-verification");
 });
 
-afterEach(async () => {
-  for (const close of closers.splice(0)) await close();
-  for (const api of running.splice(0)) await api.stop();
-});
+afterEach(
+  afterEachCleanup(() => [
+    ...closers.splice(0),
+    ...running.splice(0).map((api) => () => api.stop()),
+  ]),
+);
 
-afterAll(async () => {
-  await sessions.cleanup();
-});
+afterAll(afterAllCleanup("db verification", () => [() => sessions.cleanup()]));
 
 function withPort(base: string, port: number) {
   const url = new URL(base);

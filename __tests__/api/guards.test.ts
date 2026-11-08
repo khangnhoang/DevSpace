@@ -8,6 +8,7 @@
 // Invariants: a refused request never reaches a handler (read from the handler counter); the Auth server is asked
 //   only for a request that passed the CSRF guard.
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { afterAllCleanup } from "../helpers/api-timeout-note";
 import { apiTestEnv, startApi, type RunningApi } from "../helpers/api-process";
 import { enumerateRoutes } from "../helpers/api-routes";
 import {
@@ -38,11 +39,13 @@ beforeAll(async () => {
   user = await sessions.mint("guards");
 });
 
-afterAll(async () => {
-  await sessions.cleanup();
-  await api?.stop();
-  await proxy?.close();
-});
+afterAll(
+  afterAllCleanup("guards", () => [
+    () => sessions.cleanup(),
+    () => api?.stop(),
+    () => proxy?.close(),
+  ]),
+);
 
 const authCalls = () => proxy.count(AUTH_USER);
 

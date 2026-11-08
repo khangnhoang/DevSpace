@@ -10,6 +10,7 @@
 // Invariants: a refused token never reaches a handler; a 401 and a 503 carry no user data; a failed Auth call is
 //   never remembered.
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { afterAllCleanup } from "../helpers/api-timeout-note";
 import {
   apiTestEnv,
   freePort,
@@ -53,11 +54,13 @@ beforeAll(async () => {
   main = await startWith();
 });
 
-afterAll(async () => {
-  await sessions.cleanup();
-  for (const api of apis) await api.stop();
-  for (const proxy of proxies) await proxy.close();
-});
+afterAll(
+  afterAllCleanup("session", () => [
+    () => sessions.cleanup(),
+    ...apis.map((api) => () => api.stop()),
+    ...proxies.map((proxy) => () => proxy.close()),
+  ]),
+);
 
 type Probe = { proxy: HttpCountingProxy; api: RunningApi };
 

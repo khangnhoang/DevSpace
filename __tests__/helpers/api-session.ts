@@ -5,7 +5,6 @@ import {
   sharedRunMarker,
 } from "./fixture-ownership";
 import type { ApiStack } from "./api-process";
-import { cleanupWithDeadline } from "./api-timeout-note";
 
 const OPTIONS = {
   auth: {
@@ -90,10 +89,8 @@ export function apiSessions(stack: ApiStack) {
       const result = await fixtures.auth.admin.deleteUser(session.userId);
       if (result.error) throw new Error(result.error.message);
     },
-    cleanup: () =>
-      cleanupWithDeadline(scope.run, "api sessions cleanup", () =>
-        scope.cleanup(),
-      ),
+    // The caller's hook runs it as a step of `afterAllCleanup`, which owns the deadline around the whole cleanup.
+    cleanup: () => scope.cleanup(),
   };
 }
 

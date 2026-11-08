@@ -10,6 +10,7 @@
 //   or a schema issue.
 import { createConnection } from "node:net";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { afterAllCleanup } from "../helpers/api-timeout-note";
 import { readServerEnv } from "../../backend/src/common/env";
 import { apiTestEnv, startApi, type RunningApi } from "../helpers/api-process";
 import {
@@ -35,11 +36,13 @@ beforeAll(async () => {
   user = await sessions.mint("validation");
 });
 
-afterAll(async () => {
-  await sessions.cleanup();
-  await api?.stop();
-  await short?.stop();
-});
+afterAll(
+  afterAllCleanup("validation", () => [
+    () => sessions.cleanup(),
+    () => api?.stop(),
+    () => short?.stop(),
+  ]),
+);
 
 async function handled(target = api): Promise<number> {
   const response = await fetch(`${target.url}/api/e2e/handled`, {

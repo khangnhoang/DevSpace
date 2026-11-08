@@ -11,6 +11,7 @@
 import { createConnection } from "node:net";
 import { createHash, randomBytes } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { afterAllCleanup } from "../helpers/api-timeout-note";
 import { API_TEMPORARY_ROUTES } from "../../scripts/tm-u3-proof/routes.mjs";
 import { runProof } from "../../scripts/tm-u3-proof/run.mjs";
 import { verifyAbsent } from "../../scripts/tm-u3-proof/verify.mjs";
@@ -91,11 +92,13 @@ beforeAll(async () => {
   );
 });
 
-afterAll(async () => {
-  await sessions.cleanup();
-  for (const api of apis) await api.stop();
-  for (const proxy of proxies) await proxy.close();
-});
+afterAll(
+  afterAllCleanup("proof gate", () => [
+    () => sessions.cleanup(),
+    ...apis.map((api) => () => api.stop()),
+    ...proxies.map((proxy) => () => proxy.close()),
+  ]),
+);
 
 const authCalls = (server: Server) => server.proxy.count(AUTH_USER);
 

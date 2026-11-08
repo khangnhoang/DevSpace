@@ -59,8 +59,9 @@ const guard = join(root, "__tests__", "e2e", "server-guard.cjs").replaceAll(
 );
 const guarded = `${process.env.NODE_OPTIONS ?? ""} --require "${guard}"`.trim();
 
-// The API sees only its own map, never the app's (which holds the service role key) and never the caller's shell. The
-// writer preload in NODE_OPTIONS is kept so the process registers as a writer of the run.
+// The API starts from the caller's environment, as the Next server does, with its own map laid over it, so every variable
+// it reads is the map's. The app's service role key and every NEXT_* variable are removed, because the API never reads
+// them. The writer preload in NODE_OPTIONS is kept so the process registers as a writer of the run.
 const apiProcessEnv = { ...process.env, ...apiEnv };
 for (const name of Object.keys(process.env)) {
   if (name.startsWith("NEXT_") || name === "SUPABASE_SERVICE_ROLE_KEY")

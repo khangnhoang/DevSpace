@@ -3,7 +3,17 @@
   "build": {
     "builder": "RAILPACK",
     "buildCommand": "npm run build:api",
-    "watchPatterns": ["backend/**", "lib/schemas/**"]
+    "watchPatterns": [
+      "backend/**",
+      "lib/schemas/**",
+      "scripts/api/**",
+      "package.json",
+      "package-lock.json",
+      ".node-version",
+      "railway.json",
+      "Dockerfile.api",
+      ".dockerignore"
+    ]
   },
   "deploy": {
     "startCommand": "node dist/backend/src/main.js",

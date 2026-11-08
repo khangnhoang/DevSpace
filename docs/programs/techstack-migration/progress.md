@@ -7,12 +7,12 @@ Plan: [plan.md](plan.md). Problems: [problems.md](problems.md). Git history is t
 | Field | Value |
 | --- | --- |
 | Spec revision | TM-U2 [detail plan](implementation-plans/tm-u2-architecture-adr/plan.md) r3, approved by the Owner on 2026-11-08 after the Codex plan gate; master [plan.md](plan.md) r3. |
-| Current unit / checkpoint | TM-U2, CP1 next. |
-| Status | In progress: the plan is approved and implementation is granted. TM-U1 is complete (PR 78, PR 79). |
-| Completed evidence | None for TM-U2. TM-U1's evidence is in the milestones. |
-| Accepted deviations | None. |
-| Blockers / Owner decisions | None open; Owner decisions 14 to 17 are recorded in the TM-U2 plan. |
-| Next action | The implementor runs CP1 (spikes S1 to S5) after Main's hosted metadata snapshot. |
+| Current unit / checkpoint | TM-U2, CP2 committed locally; CP3 (Codex gate, Owner acceptance) not started. |
+| Status | In progress: ADR 0008 is written as `Proposed`. TM-U1 is complete (PR 78, PR 79). |
+| Completed evidence | CP1: spikes S1 to S5 passed locally (results in ADR 0008 appendix C); cleanup confirmed (no `devspace-local` or `tm-u2` container or volume, dev stack stopped, tree clean). CP2: ADR 0008 and its index row; `npm run docs:check` passed. |
+| Accepted deviations | One raw `supabase status` output reached a spike log file for a moment and was deleted at once (G2); no key was printed or stored. Spike S1 found that a `next.config` rewrite drops the refreshed cookie, so D5 puts the rewrite in `proxy.ts`. |
+| Blockers / Owner decisions | Open for the Owner after the ADR: the Vercel plan (Hobby is non-commercial and DevSpace takes payments, ADR 0008 D1) and the file domain (D3). Owner decisions 14 to 17 are recorded in the TM-U2 plan. |
+| Next action | Main runs the Codex gate on the ADR; the Owner accepts or amends it (CP3). |
 | Current authority | Implementation of TM-U2 on branch `docs/tm-u2-architecture-adr` with local checkpoint commits. The grant for the hosted counts and `backup:check` covered backup `20261108-1628` only and is spent. No push, PR, merge, deployment or hosted write is granted. |
 
 ## Milestones
@@ -35,4 +35,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-08 TM-U1 CP5 first drill passed on hosted backup `20261108-1628` after the block, version-pin and COPY-count fixes: 50 tables, 17 equal to the hosted counts, 12 migrations, 31 objects with MD5 compared for 31, no scratch container or volume left; hosted postgres 17.6.1.052, gotrue v2.197.0, storage-api v1.89.13 per `hosted.json` (this backup's `manifest.json` still names the stale Storage v1.80.2); backup `20261108-1622` held no dump and was retaken, and `backup:check` passed on its third run after failing on the stale Storage version and then the COPY count (9ad0ddc).
 - 2026-11-08 TM-U1 accepted deviations: Storage commands use `--experimental` and a relative destination; `supabase_migrations` is dumped to `history-schema.sql` and `history.sql`; `backup:check` rebinds the scratch database port to `127.0.0.1` after setup, reuses the generation lock in its own directory, and takes the stack versions from `hosted.json` instead of G8's copy; the AC9 and AC10/G9 corrections share one commit because they share one run flow; `npx.cmd` in the backup block and `\n`-only COPY row counts (PR 79, `365a73c`).
 - 2026-11-08 TM-U1 CP5 drill fixes merged; TM-U1 complete (PR 79, `365a73c`).
-- 2026-11-08 TM-U2 detail plan r3 approved after the Codex plan gate (this commit).
+- 2026-11-08 TM-U2 detail plan r3 approved after the Codex plan gate (e212aa6).
+- 2026-11-08 TM-U2 CP1 spikes S1 to S5 run locally and CP2 committed locally: ADR 0008 `Proposed` with D1 to D12, the cost table and the TM-U3 list (this commit).

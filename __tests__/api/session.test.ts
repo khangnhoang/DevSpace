@@ -183,7 +183,9 @@ describe("session guard (AC6)", () => {
   });
 
   describe("an Auth call that fails is 503", () => {
-    it.each([500, 502, 503, 429])(
+    // 400, 404 and 405 are what a wrong Auth path or method answers (a misconfigured SUPABASE_URL), 408 and 429 a
+    // loaded server; none of them says anything about the token, so none may sign the user out.
+    it.each([400, 404, 405, 408, 429, 500, 502, 503])(
       "[AC6] Auth answering %s gives 503, is never accepted and is never remembered",
       async (status) => {
         const live = await sessions.mint(`down-${status}`);
@@ -204,6 +206,46 @@ describe("session guard (AC6)", () => {
           calls(main),
           "the failure left nothing in the cache, so Auth is asked again",
         ).toBe(before + 2);
+      },
+    );
+
+    it.each([
+      [401, '{"message":"Invalid API key"}'],
+      [403, '{"msg":"invalid api key"}'],
+    ])(
+      "[AC6] Auth answering %s about the API's own key gives 503, not a sign-out, and is never remembered",
+      async (status, body) => {
+        const live = await sessions.mint(`wrong-key-${status}`);
+        const before = calls(main);
+        main.proxy.failWith(status, body);
+        try {
+          const response = await whoami(main, bearer(live));
+          expect(response.status).toBe(503);
+          expect(await response.json()).toEqual(UNAVAILABLE);
+        } finally {
+          main.proxy.failWith(null);
+        }
+        const recovered = await whoami(main, bearer(live));
+        expect(recovered.status).toBe(200);
+        expect(calls(main)).toBe(before + 2);
+      },
+    );
+
+    it.each([401, 403])(
+      "[AC6] Auth answering %s about the token refuses it with 401 and does not remember it",
+      async (status) => {
+        const live = await sessions.mint(`refused-${status}`);
+        const before = calls(main);
+        main.proxy.failWith(status, '{"msg":"invalid JWT"}');
+        try {
+          const response = await whoami(main, bearer(live));
+          expect(response.status).toBe(401);
+          expect(await response.json()).toEqual(UNAUTHORIZED);
+        } finally {
+          main.proxy.failWith(null);
+        }
+        expect((await whoami(main, bearer(live))).status).toBe(200);
+        expect(calls(main)).toBe(before + 2);
       },
     );
 

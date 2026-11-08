@@ -55,17 +55,19 @@ export class SessionService {
       if (!options.sensitive) this.cache.set(token, user, checked.expiresAtMs);
       return { kind: "ok", user };
     }
-    await response.body?.cancel();
-    // A refused token (bad signature, signed-out session, deleted user) is a 4xx. Rate limiting and server errors say
-    // nothing about the token, so they must not read as a refusal that a client would treat as "signed out".
-    if (
-      response.status >= 400 &&
-      response.status < 500 &&
-      response.status !== 408 &&
-      response.status !== 429
-    ) {
-      return { kind: "unauthorized" };
+    // Only a 401 or 403 refuses a token: the Auth server answers 403 for a forged, tampered, signed-out or deleted-user
+    // token (`bad_jwt`, `session_not_found`, `user_not_found`). Every other answer (a 400, 404 or 405 from a wrong
+    // endpoint, 408, 429, a 5xx) says nothing about the token, so it is 503 and is never cached. A 401 that names the
+    // API key means the API's own configuration is wrong, and must not sign every user out.
+    if (response.status === 401 || response.status === 403) {
+      const detail = await response.text().catch(() => "");
+      if (!/api key/i.test(detail)) return { kind: "unauthorized" };
+      this.logger.warn(
+        `Auth server refused the API's own key (${response.status})`,
+      );
+      return { kind: "unavailable" };
     }
+    await response.body?.cancel();
     this.logger.warn(`Auth server answered ${response.status}`);
     return { kind: "unavailable" };
   }

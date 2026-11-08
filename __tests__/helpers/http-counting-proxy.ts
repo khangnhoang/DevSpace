@@ -14,7 +14,7 @@ export type HttpCountingProxy = {
   requests: { method: string; path: string }[];
   count(path: string): number;
   // The next requests are answered with this status instead of being forwarded; null forwards again.
-  failWith(status: number | null): void;
+  failWith(status: number | null, body?: string): void;
   close(): Promise<void>;
 };
 
@@ -24,7 +24,7 @@ export async function startHttpCountingProxy(
   const target = new URL(upstream);
   const requests: { method: string; path: string }[] = [];
   const sockets = new Set<Socket>();
-  let failure: number | null = null;
+  let failure: { status: number; body: string } | null = null;
   const server: Server = createServer((incoming: IncomingMessage, outgoing) => {
     requests.push({
       method: incoming.method ?? "GET",
@@ -32,8 +32,10 @@ export async function startHttpCountingProxy(
     });
     if (failure !== null) {
       incoming.resume();
-      outgoing.writeHead(failure, { "content-type": "application/json" });
-      outgoing.end("{}");
+      outgoing.writeHead(failure.status, {
+        "content-type": "application/json",
+      });
+      outgoing.end(failure.body);
       return;
     }
     const forwarded = httpRequest(
@@ -66,8 +68,8 @@ export async function startHttpCountingProxy(
     requests,
     count: (path) =>
       requests.filter((entry) => entry.path.split("?")[0] === path).length,
-    failWith: (status) => {
-      failure = status;
+    failWith: (status, body = "{}") => {
+      failure = status === null ? null : { status, body };
     },
     close: () =>
       new Promise<void>((resolve) => {

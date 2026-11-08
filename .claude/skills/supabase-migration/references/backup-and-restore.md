@@ -38,7 +38,7 @@ Paste the whole block once and press Enter. It is a single statement, so PowerSh
 & {
   $ErrorActionPreference = 'Stop'
   function Invoke-Supabase {
-    & npx supabase @args
+    & npx.cmd supabase @args
     if ($LASTEXITCODE -ne 0) { throw "supabase $($args[0]) $($args[1]) failed (exit $LASTEXITCODE). Stop and report this line." }
   }
   if (-not (Test-Path 'supabase\.temp\project-ref')) { throw 'Run this from the repository root.' }
@@ -50,6 +50,9 @@ Paste the whole block once and press Enter. It is a single statement, so PowerSh
   Invoke-Supabase db dump --linked --data-only --use-copy -f "$b\data.sql"
   Invoke-Supabase db dump --linked --schema supabase_migrations -f "$b\history-schema.sql"
   Invoke-Supabase db dump --linked --data-only --use-copy --schema supabase_migrations -f "$b\history.sql"
+  foreach ($f in 'roles', 'schema', 'data', 'history-schema', 'history') {
+    if (-not (Test-Path "$b\$f.sql") -or (Get-Item "$b\$f.sql").Length -eq 0) { throw "$f.sql is missing or empty. Stop and report this line." }
+  }
   Write-Host "DUMP FINISHED $(Get-Date -Format 'HH:mm:ss'). Tell Main now: $b" -ForegroundColor Green
   Invoke-Supabase storage ls --linked --experimental
   $dst = Resolve-Path -Relative "$b\storage"
@@ -59,11 +62,13 @@ Paste the whole block once and press Enter. It is a single statement, so PowerSh
     gotrue   = (Get-Content 'supabase\.temp\gotrue-version' -Raw).Trim()
     storage  = (Get-Content 'supabase\.temp\storage-version' -Raw).Trim()
   }
-  @{ time = (Get-Date).ToString('o'); cli = (npx supabase --version | Select-Object -First 1); versions = $v } |
+  @{ time = (Get-Date).ToString('o'); cli = (npx.cmd supabase --version | Select-Object -First 1); versions = $v } |
     ConvertTo-Json -Depth 3 | Set-Content -Encoding utf8 "$b\manifest.json"
   Write-Host "BACKUP FINISHED: $b" -ForegroundColor Green
 }
 ```
+
+The block calls `npx.cmd`, not `npx`. In PowerShell `npx` resolves to npm's `npx.ps1`, which re-parses the text of the calling statement, so `@args` never reaches the CLI: the CLI prints its help and exits 0, and nothing is dumped. The check after the dumps refuses a missing or empty file for the same kind of silent failure.
 
 `--use-copy` writes `COPY` blocks instead of `INSERT` statements, which the check counts. Tell Main the folder as soon as `DUMP FINISHED` prints, without waiting for the Storage download: Main counts right after, and a write to the database between the dump and the count makes check (b) fail (the backup is then retaken and recounted).
 

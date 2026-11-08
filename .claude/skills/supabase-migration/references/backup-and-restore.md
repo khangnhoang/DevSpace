@@ -23,7 +23,7 @@ The backup holds personal data and password hashes. Keep it outside the reposito
 | `roles.sql`, `schema.sql`, `data.sql` | `db dump` (section 1) | Roles, schema, and the data of every schema the CLI dumps (`public`, `auth`, `storage`, ...) as `COPY` blocks |
 | `history-schema.sql`, `history.sql` | `db dump --schema supabase_migrations` | The migration history table and its rows. `db dump --data-only` leaves this schema out, so it is dumped on its own |
 | `storage/<bucket>/<object name>` | `storage cp -r` (section 1) | One folder per bucket with every object |
-| `manifest.json` | the block in section 1 | `time`, `cli` version and the hosted service `versions` |
+| `manifest.json` | the block in section 1 | `time`, `cli` version and the checkout's recorded service `versions` |
 | `hosted.json` | Main (section 3) | Exact hosted `counts`, the `migrations` versions and the hosted service `versions` |
 
 `backup:check` also writes `check-result.json` (aggregates) and, on a Storage mismatch, `check-mismatches.txt` (object names, the only place they go) into this folder. Every run replaces `check-result.json` with `incomplete` as soon as it holds the run and the Docker checks have passed (a refusal leaves the earlier result alone), so an earlier pass never stands as the latest result of a run that failed or was killed. The run is released only after the final result is published.
@@ -78,7 +78,7 @@ The Storage commands are experimental in CLI 2.121.0, so they need `--experiment
 
 `$buckets` must name every bucket the `ls` lists (the app uses `avatars`); a bucket left out fails check (d), and the fix is to add it and take the backup again. The CLI writes the objects to `<backup folder>\storage\<bucket>\<object name>`. A bucket with no objects creates no folder, which is fine.
 
-The three version files are the CLI's last record of the hosted service versions. `backup:check` pins the scratch stack to them and refuses a backup whose `hosted.json` names different versions.
+The `versions` in the manifest are the checkout's `supabase/.temp` files, which only `supabase link` writes, so they lag every hosted upgrade. They only record what the checkout believed; nothing is pinned to them (section 3).
 
 ## 3. Hosted counts and `hosted.json` (Main)
 
@@ -103,7 +103,7 @@ Write `hosted.json` into the backup folder (UTF-8, the BOM is tolerated):
 }
 ```
 
-`migrations` is the list of versions `list_migrations` returns. `counts` must name every `public` table and the three required ones; the check fails when a restored `public` table is missing from it.
+`versions` is the `remote` column of `npx supabase services`, read at the same time and never copied from `manifest.json`: the scratch stack runs these versions, and Storage and Auth create their own tables, so a version older than hosted lacks tables the dump has data for and the import fails with SQLSTATE 42P01. `migrations` is the list of versions `list_migrations` returns. `counts` must name every `public` table and the three required ones; the check fails when a restored `public` table is missing from it.
 
 ## 4. Restore and compare (Main)
 
@@ -113,7 +113,7 @@ Docker Desktop must be running. Under the Owner's grant for this backup:
 npm run backup:check -- "$env:USERPROFILE\devspace-backups\<yyyymmdd-hhmm>"
 ```
 
-It starts the scratch stack (`devspace-backup-check`, ports 56320 to 56329, pinned to the hosted service versions), lets Auth and Storage create their schemas, stops every service, republishes the database port on `127.0.0.1` only, turns server statement and error logging off, confirms the `public` schema is empty, then imports `roles.sql`, `schema.sql`, `data.sql`, `history-schema.sql` and `history.sql` with `ON_ERROR_STOP`. It passes only when all four hold; any difference is a failure, with no explained-difference pass:
+It starts the scratch stack (`devspace-backup-check`, ports 56320 to 56329, pinned to the `versions` in `hosted.json`), lets Auth and Storage create their schemas, stops every service, republishes the database port on `127.0.0.1` only, turns server statement and error logging off, confirms the `public` schema is empty, then imports `roles.sql`, `schema.sql`, `data.sql`, `history-schema.sql` and `history.sql` with `ON_ERROR_STOP`. It passes only when all four hold; any difference is a failure, with no explained-difference pass:
 
 - (a) every table in `data.sql` and `history.sql` has a restored count equal to the rows the dump holds;
 - (b) every table in `hosted.json` has a restored count equal to the hosted count, and every restored `public` table is named there;

@@ -24,7 +24,6 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
-import { createInterface } from "node:readline";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertLocalEngine, createDocker } from "../test-stack/docker.mjs";
 import { LockError, acquireLock, releaseLock } from "../test-stack/lock.mjs";
@@ -55,7 +54,6 @@ import {
   refuseBackupPath,
   validateHosted,
   validateManifest,
-  versionMismatches,
 } from "./core.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -493,24 +491,26 @@ async function isolateDatabase(engine) {
 
 // ---------- the check ----------
 
-// Not `for await` over the interface: a read error of the input stream must reject, not hang the loop.
-function scanDataFile(file) {
+// Splits on "\n" only, not with `node:readline`: readline also ends a line at U+2028 and U+2029, which COPY leaves
+// unescaped inside a value, so a row holding one would count as several.
+export function scanDataFile(file) {
   return new Promise((resolve, reject) => {
     const scanner = createCopyScanner();
     const input = createReadStream(file, "utf8");
-    const lines = createInterface({ input, crlfDelay: Infinity });
+    let partial = "";
     input.on("error", reject);
-    // The interface re-emits an input error; without a listener it is an uncaught exception with the raw path.
-    lines.on("error", reject);
-    lines.on("line", (line) => {
+    input.on("data", (chunk) => {
       try {
-        scanner.feed(line);
+        const lines = (partial + chunk).split("\n");
+        partial = lines.pop();
+        for (const line of lines) scanner.feed(line);
       } catch (error) {
         reject(error);
       }
     });
-    lines.on("close", () => {
+    input.on("end", () => {
       try {
+        if (partial) scanner.feed(partial);
         resolve(scanner.finish());
       } catch (error) {
         reject(error);
@@ -806,17 +806,12 @@ const passed = (result) =>
 async function execute(folder, hosted, engine, rootDir) {
   let prepared;
   try {
-    prepared = prepareScratchWorkdir(rootDir);
+    prepared = prepareScratchWorkdir(rootDir, hosted.versions);
   } catch (error) {
-    // Its messages name the checkout's config and version files, nothing from the backup.
+    // Its messages name the checkout's config, nothing from the backup.
     throw new SafeError(error.message);
   }
-  const mismatched = versionMismatches(prepared.versions, hosted.versions);
-  if (mismatched.length)
-    throw new Refusal(
-      `the pinned service versions differ from the backup's hosted versions (${mismatched.join(", ")}); nothing was started`,
-    );
-  say("starting the scratch stack on the pinned service versions");
+  say("starting the scratch stack on the versions in hosted.json");
   cliStart(prepared.workdir);
   await isolateDatabase(engine);
   return runChecks(folder, hosted);

@@ -1,5 +1,12 @@
 // TM-U1 AC7 to AC10: the pure parts of `backup:check` and every refusal that happens before a write.
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -21,16 +28,17 @@ import {
   REQUIRED_FILES,
   validateHosted,
   validateManifest,
-  versionMismatches,
 } from "../../scripts/backup/core.mjs";
 import {
   parseArgs,
   preflightDocker,
   preflightFiles,
   readJsonFile,
+  scanDataFile,
 } from "../../scripts/backup/check.mjs";
 import {
   generateScratchConfig,
+  prepareScratchWorkdir,
   SCRATCH_PORTS,
   SCRATCH_PROJECT_ID,
 } from "../../scripts/backup/config.mjs";
@@ -350,22 +358,25 @@ describe("backup:check metadata files (AC6, G8)", () => {
     expect(validateManifest({ cli: "2", versions: {} })[0]).toMatch(/time/);
     expect(validateManifest(null)[0]).toMatch(/not an object/);
   });
+});
 
-  it("flags a pinned service version that differs from the backup's hosted version", () => {
-    const pinned = {
-      "postgres-version": "17.6.1.052",
-      "gotrue-version": "v2.197.0",
-      "storage-version": "v1.80.2",
-    };
-    expect(versionMismatches(pinned, hosted.versions)).toEqual([]);
-    expect(
-      versionMismatches(pinned, { ...hosted.versions, gotrue: "v2.198.0" }),
-    ).toEqual(["gotrue"]);
-    expect(versionMismatches({}, hosted.versions)).toEqual([
-      "postgres",
-      "gotrue",
-      "storage",
-    ]);
+describe("backup:check reads a data file (AC7)", () => {
+  it("counts a row holding U+2028 or U+2029 as one row, and catches a truncated block", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "backup-scan-"));
+    try {
+      const whole = join(dir, "whole.sql");
+      writeFileSync(
+        whole,
+        "COPY public.t (a) FROM stdin;\none two three\nsecond\n\\.\n",
+      );
+      expect((await scanDataFile(whole)).get("public.t")).toBe(2);
+
+      const cut = join(dir, "cut.sql");
+      writeFileSync(cut, "COPY public.t (a) FROM stdin;\nonly");
+      await expect(scanDataFile(cut)).rejects.toThrow(/truncated/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 
@@ -560,6 +571,38 @@ describe("backup:check scratch config (G7, G8)", () => {
     expect(() =>
       generateScratchConfig(source.replace("shadow_port = 54320\n", "")),
     ).toThrow(/shadow_port/);
+  });
+
+  it("pins the scratch stack to the hosted.json versions and ignores the checkout's stale record and link", () => {
+    const root = mkdtempSync(join(tmpdir(), "backup-scratch-"));
+    try {
+      const checkoutTemp = join(root, "supabase", ".temp");
+      mkdirSync(checkoutTemp, { recursive: true });
+      writeFileSync(join(root, "supabase", "config.toml"), source);
+      writeFileSync(join(checkoutTemp, "storage-version"), "v1.80.2");
+      writeFileSync(join(checkoutTemp, "project-ref"), "hosted-ref");
+
+      const { workdir } = prepareScratchWorkdir(root, {
+        postgres: "17.6.1.052",
+        gotrue: "v2.197.0",
+        storage: "v1.89.13",
+      });
+
+      const pinned = join(workdir, "supabase", ".temp");
+      expect(readdirSync(pinned).sort()).toEqual([
+        "gotrue-version",
+        "postgres-version",
+        "storage-version",
+      ]);
+      expect(readFileSync(join(pinned, "storage-version"), "utf8")).toBe(
+        "v1.89.13",
+      );
+      expect(readFileSync(join(pinned, "postgres-version"), "utf8")).toBe(
+        "17.6.1.052",
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 

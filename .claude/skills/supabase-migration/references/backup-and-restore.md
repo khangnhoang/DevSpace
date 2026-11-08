@@ -97,8 +97,8 @@ Write `hosted.json` into the backup folder (UTF-8, the BOM is tolerated):
 
 Docker Desktop must be running. Under the Owner's grant for this backup:
 
-```bash
-npm run backup:check -- C:\Users\<user>\devspace-backups\<yyyymmdd-hhmm>
+```powershell
+npm run backup:check -- "$env:USERPROFILE\devspace-backups\<yyyymmdd-hhmm>"
 ```
 
 It starts the scratch stack (`devspace-backup-check`, ports 56320 to 56329, pinned to the hosted service versions), lets Auth and Storage create their schemas, stops every service, republishes the database port on `127.0.0.1` only, turns server statement and error logging off, confirms the `public` schema is empty, then imports `roles.sql`, `schema.sql`, `data.sql`, `history-schema.sql` and `history.sql` with `ON_ERROR_STOP`. It passes only when all four hold; any difference is a failure, with no explained-difference pass:

@@ -1,6 +1,6 @@
 # ADR 0008: Backend architecture and hosting for the techstack migration
 
-Date: 2026-11-08. Status: Proposed.
+Date: 2026-11-08. Status: Accepted by the Owner on 2026-11-08.
 
 ## Context
 

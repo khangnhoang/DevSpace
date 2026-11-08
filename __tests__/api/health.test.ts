@@ -116,6 +116,20 @@ describe("startup checks (AC13)", () => {
     expect(result.output).not.toContain(stack.anonKey);
   });
 
+  it("[AC13] exits non-zero and prints nothing of a malformed DATABASE_URL but its name", async () => {
+    const marker = "FAKE-SECRET-MARKER-7q";
+    const result = await runApiToExit(
+      apiTestEnv(stack, {
+        DATABASE_URL: `postgresql://devspace_api:${marker}@db.example:notaport/postgres`,
+      }),
+    );
+    expect(result.code).not.toBe(0);
+    expect(result.listened).toBe(false);
+    expect(result.output).toContain("DATABASE_URL");
+    expect(result.output).not.toContain(marker);
+    expect(result.output).not.toContain("db.example");
+  });
+
   it("[AC13] exits non-zero when the connection runs as another database user", async () => {
     const result = await runApiToExit(
       apiTestEnv(stack, { DATABASE_URL: stack.dbUrl }),

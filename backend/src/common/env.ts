@@ -52,6 +52,21 @@ function parseOrigin(name: string, value: string): string {
   return url.origin;
 }
 
+// `new URL()` throws an error whose `input` holds the string it could not parse, and Nest and main.ts print the error
+// object, so a malformed connection string (with its password) would reach the log. The value is parsed here, where
+// the error is replaced by one that names the variable and keeps nothing of the input.
+function checkDatabaseUrl(value: string) {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new EnvError("DATABASE_URL is not a valid connection URL.");
+  }
+  if (url.protocol !== "postgresql:" && url.protocol !== "postgres:") {
+    throw new EnvError("DATABASE_URL must be a postgresql:// URL.");
+  }
+}
+
 export function readServerEnv(
   env: Record<string, string | undefined> = process.env,
 ): ServerEnv {
@@ -75,6 +90,7 @@ export function readServerEnv(
     throw new EnvError("ALLOWED_ORIGINS holds no origin.");
   }
   parseOrigin("SUPABASE_URL", env.SUPABASE_URL!);
+  checkDatabaseUrl(env.DATABASE_URL!);
 
   // An unset or empty flag is off; any value but "1" is a mistake, not a quiet "off" (fail loud).
   const flag = env.API_PROOF_ENABLED?.trim() ?? "";

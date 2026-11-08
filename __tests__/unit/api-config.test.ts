@@ -61,6 +61,28 @@ describe("readServerEnv (AC13)", () => {
     },
   );
 
+  it.each([
+    "postgresql://devspace_api:FAKE-SECRET-9x@db.example:notaport/postgres",
+    "postgresql://devspace_api:FAKE-SECRET-9x@[bad host/postgres",
+    "mysql://devspace_api:FAKE-SECRET-9x@db.example/postgres",
+    "not a url FAKE-SECRET-9x",
+  ])(
+    "refuses a DATABASE_URL that is not a PostgreSQL URL, naming the variable and nothing of the value (%#)",
+    (value) => {
+      let caught: unknown;
+      try {
+        readServerEnv({ ...valid, DATABASE_URL: value });
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(EnvError);
+      const message = (caught as Error).message;
+      expect(message).toContain("DATABASE_URL");
+      expect(message).not.toContain("FAKE-SECRET-9x");
+      expect(message).not.toContain("db.example");
+    },
+  );
+
   it("refuses a PORT that is not a port and an origin that is not an http(s) origin", () => {
     expect(() => readServerEnv({ ...valid, PORT: "0" })).toThrow(EnvError);
     expect(() => readServerEnv({ ...valid, PORT: "abc" })).toThrow(EnvError);

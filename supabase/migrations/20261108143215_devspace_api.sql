@@ -41,39 +41,44 @@ begin
 end
 $$;
 
--- A role that already existed may hold a direct privilege this migration does not manage: another column or table, a
--- function, another schema. The migration manages schema public and the columns profiles.id and profiles.role only.
+-- A role that already existed may hold something this migration does not manage: a privilege on another column,
+-- table, function, schema or the database, an object it owns (whatever that object's ACL says, a NULL one included),
+-- a default privilege. The migration manages schema public and the columns profiles.id and profiles.role only.
 -- Revoking anything else silently could break a consumer nobody knows about, and leaving it would make the grants
--- below a lie, so it is a stop, as for SUPERUSER above; the message names the objects (never a secret). A REVOKE
--- removes only the grants the revoking role made, so a privilege another owner granted would survive it unseen. What
--- the role gets through PUBLIC is not direct and is not looked at here (API-R4 records it). This runs before any
+-- below a lie, so it is a stop, as for SUPERUSER above; the message names the objects (never a secret). pg_shdepend
+-- lists, for this database and the shared objects, every object that refers to the role as an ACL member ('a') or as
+-- its owner ('o'), so no object kind is chased by its own catalog. A REVOKE removes only the grants the revoking role
+-- made, so a privilege another owner granted would survive it unseen; here it is listed all the same. What the role
+-- gets through PUBLIC is not an entry of the role and is not looked at here (API-R4 records it). This runs before any
 -- revoke, because revoking a table's privileges also revokes its column privileges.
 do $$
 declare
   stray text;
 begin
-  select string_agg(item, ', ' order by item) into stray
+  select string_agg(description, ', ' order by description) into stray
   from (
-    select 'schema ' || n.nspname as item
-    from pg_namespace n, aclexplode(n.nspacl) a
-    where a.grantee = 'devspace_api'::regrole::oid and n.nspname <> 'public'
-    union
-    select 'relation ' || c.relnamespace::regnamespace || '.' || c.relname
-    from pg_class c, aclexplode(c.relacl) a
-    where a.grantee = 'devspace_api'::regrole::oid
-    union
-    select 'column ' || c.relnamespace::regnamespace || '.' || c.relname || '.' || t.attname
-    from pg_attribute t
-    join pg_class c on c.oid = t.attrelid, aclexplode(t.attacl) a
-    where a.grantee = 'devspace_api'::regrole::oid
-      and not (c.oid = 'public.profiles'::regclass and t.attname in ('id', 'role'))
-    union
-    select 'function ' || p.pronamespace::regnamespace || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')'
-    from pg_proc p, aclexplode(p.proacl) a
-    where a.grantee = 'devspace_api'::regrole::oid
-  ) holders;
+    select pg_describe_object(d.classid, d.objid, d.objsubid) as description
+    from pg_shdepend d
+    where d.refclassid = 'pg_authid'::regclass
+      and d.refobjid = 'devspace_api'::regrole::oid
+      and d.dbid in (0, (select oid from pg_database where datname = current_database()))
+      and not (
+        d.deptype = 'a'
+        and (
+          (d.classid = 'pg_namespace'::regclass and d.objid = 'public'::regnamespace::oid and d.objsubid = 0)
+          or (
+            d.classid = 'pg_class'::regclass
+            and d.objid = 'public.profiles'::regclass::oid
+            and d.objsubid in (
+              select a.attnum from pg_attribute a
+              where a.attrelid = 'public.profiles'::regclass and a.attname in ('id', 'role')
+            )
+          )
+        )
+      )
+  ) held;
   if stray is not null then
-    raise exception 'devspace_api holds privileges outside this migration: %; stop for an Owner-approved repair', stray;
+    raise exception 'devspace_api holds privileges or objects outside this migration: %; stop for an Owner-approved repair', stray;
   end if;
 end
 $$;

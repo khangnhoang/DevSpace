@@ -7,7 +7,7 @@
 // Denied paths: any other column or table, any write, CREATE TABLE and ALTER TABLE in public.
 // Invariants: effective privileges read from the catalog for public, auth and storage; the rollback is replayed
 //   inside a transaction that is rolled back, so the committed state never changes. The migration touches no object it
-//   does not grant on (API-R9, API-R8) and stops on a direct privilege it does not manage (API-R7).
+//   does not grant on (API-R9, API-R8) and stops on a privilege or an owned object it does not manage (API-R7, API-R10).
 // Known bugs: none.
 import { readFile } from "node:fs/promises";
 import pg from "pg";
@@ -376,17 +376,17 @@ describe("devspace_api role", () => {
     [
       "another column of profiles",
       "grant select (email) on public.profiles to devspace_api",
-      "public.profiles.email",
+      "column email of table profiles",
     ],
     [
       "another table",
       "grant select on public.courses to devspace_api",
-      "relation public.courses",
+      "table courses",
     ],
     [
       "a function",
       "grant execute on function public.is_admin() to devspace_api",
-      "function public.is_admin()",
+      "function is_admin()",
     ],
     [
       "another schema",
@@ -450,10 +450,55 @@ describe("devspace_api role", () => {
       async (_owner, error) => {
         expect(error, "the migration should stop").not.toBeNull();
         expect(error?.code).toBe("P0001");
-        expect(error?.message).toContain("relation public.api_r8_table");
+        expect(error?.message).toContain("table api_r8_table");
       },
     );
   });
+
+  // What the catalogs of a single object kind do not show: a privilege on the database itself, an object the role owns
+  // whose ACL is NULL (so there is nothing to list in any ACL column), and a default privilege.
+  it.each([
+    [
+      "a CREATE privilege on the database",
+      async (owner: pg.Client) => {
+        await owner.query(
+          "do $$ begin execute format('grant create on database %I to devspace_api', current_database()); end $$",
+        );
+      },
+      "database postgres",
+    ],
+    [
+      "a table it owns with a NULL ACL",
+      async (owner: pg.Client) => {
+        await owner.query("grant create on schema public to devspace_api");
+        await owner.query("grant devspace_api to current_user");
+        await owner.query("create table public.api_r10_owned (id int)");
+        await owner.query(
+          "alter table public.api_r10_owned owner to devspace_api",
+        );
+        await owner.query("revoke devspace_api from current_user");
+      },
+      "table api_r10_owned",
+    ],
+    [
+      "a default privilege",
+      async (owner: pg.Client) => {
+        await owner.query(
+          "alter default privileges in schema public grant select on tables to devspace_api",
+        );
+      },
+      "default",
+    ],
+  ])(
+    "[API-R10] stops when an existing role holds %s",
+    async (_label, prepare, object) => {
+      await replayUp(prepare, async (_owner, error) => {
+        expect(error, "the migration should stop").not.toBeNull();
+        expect(error?.code).toBe("P0001");
+        expect(error?.message).toContain(object);
+      });
+    },
+  );
 
   it("[API-R9] a new role changes only the ACL of schema public and of profiles.id and profiles.role", async () => {
     const down = withoutTransaction(

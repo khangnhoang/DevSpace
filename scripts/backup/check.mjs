@@ -505,6 +505,7 @@ export function scanDataFile(file) {
         partial = lines.pop();
         for (const line of lines) scanner.feed(line);
       } catch (error) {
+        input.destroy();
         reject(error);
       }
     });

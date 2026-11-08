@@ -23,7 +23,7 @@ The backup holds personal data and password hashes. Keep it outside the reposito
 | `roles.sql`, `schema.sql`, `data.sql` | `db dump` (section 1) | Roles, schema, and the data of every schema the CLI dumps (`public`, `auth`, `storage`, ...) as `COPY` blocks |
 | `history-schema.sql`, `history.sql` | `db dump --schema supabase_migrations` | The migration history table and its rows. `db dump --data-only` leaves this schema out, so it is dumped on its own |
 | `storage/<bucket>/<object name>` | `storage cp -r` (section 1) | One folder per bucket with every object |
-| `manifest.json` | the block in section 1 | `time`, `cli` version and the checkout's recorded service `versions` |
+| `manifest.json` | the block in section 1 | `time`, `cli` version and the hosted service `versions` |
 | `hosted.json` | Main (section 3) | Exact hosted `counts`, the `migrations` versions and the hosted service `versions` |
 
 `backup:check` also writes `check-result.json` (aggregates) and, on a Storage mismatch, `check-mismatches.txt` (object names, the only place they go) into this folder. Every run replaces `check-result.json` with `incomplete` as soon as it holds the run and the Docker checks have passed (a refusal leaves the earlier result alone), so an earlier pass never stands as the latest result of a run that failed or was killed. The run is released only after the final result is published.
@@ -32,7 +32,7 @@ The backup holds personal data and password hashes. Keep it outside the reposito
 
 Where to run it: Windows PowerShell, or a PowerShell tab of Windows Terminal, in the Owner's own window. Not Git Bash or `cmd` (the block is PowerShell), and not the Claude app's Terminal panel or an agent tool (only the Owner runs a hosted command, and the output stays out of agent sessions). First `cd` to the repository root, the checkout linked to the hosted project, and start Docker Desktop (`db dump` runs in a container).
 
-Paste the whole block once and press Enter. It is a single statement, so PowerShell reads all of it before anything runs and no pasted line can land in a password prompt. If the CLI asks for the database password, type it at that prompt; do not pass `-p` or put it in a variable or file. The block stops at the first command that fails, and the folder it leaves is not a backup: run the whole block again, which starts a new folder. Section 2 explains its Storage and manifest steps.
+Paste the whole block once and press Enter. It is a single statement, so PowerShell reads all of it before anything runs and no pasted line can land in a password prompt. If the CLI asks for the database password, type it at that prompt; do not pass `-p` or put it in a variable or file. The block stops at the first command that fails, and the folder it leaves is not a backup: run the whole block again at least a minute later, which starts a new folder (the name has minutes only, and the block refuses a folder that exists). Section 2 explains its Storage and manifest steps.
 
 ```powershell
 & {
@@ -43,6 +43,12 @@ Paste the whole block once and press Enter. It is a single statement, so PowerSh
   }
   if (-not (Test-Path 'supabase\.temp\project-ref')) { throw 'Run this from the repository root.' }
   $buckets = @('avatars')
+  $remote = @{}
+  foreach ($s in (((Invoke-Supabase services -o json) -join "`n") | ConvertFrom-Json)) { $remote[$s.name] = $s.remote }
+  $v = @{ postgres = $remote['supabase/postgres']; gotrue = $remote['supabase/gotrue']; storage = $remote['supabase/storage-api'] }
+  foreach ($k in 'postgres', 'gotrue', 'storage') { if (-not $v[$k]) { throw "No hosted version for $k. Stop and report this line." } }
+  $cli = @(Invoke-Supabase --version)[0]
+  if (-not $cli) { throw 'The CLI reported no version. Stop and report this line.' }
   $b = Join-Path $env:USERPROFILE ('devspace-backups\' + (Get-Date -Format 'yyyyMMdd-HHmm'))
   New-Item -ItemType Directory -Path "$b\storage" | Out-Null
   Invoke-Supabase db dump --linked --role-only -f "$b\roles.sql"
@@ -57,12 +63,7 @@ Paste the whole block once and press Enter. It is a single statement, so PowerSh
   Invoke-Supabase storage ls --linked --experimental
   $dst = Resolve-Path -Relative "$b\storage"
   foreach ($bucket in $buckets) { Invoke-Supabase storage cp -r --linked --experimental "ss:///$bucket" $dst }
-  $v = @{
-    postgres = (Get-Content 'supabase\.temp\postgres-version' -Raw).Trim()
-    gotrue   = (Get-Content 'supabase\.temp\gotrue-version' -Raw).Trim()
-    storage  = (Get-Content 'supabase\.temp\storage-version' -Raw).Trim()
-  }
-  @{ time = (Get-Date).ToString('o'); cli = (npx.cmd supabase --version | Select-Object -First 1); versions = $v } |
+  @{ time = (Get-Date).ToString('o'); cli = $cli; versions = $v } |
     ConvertTo-Json -Depth 3 | Set-Content -Encoding utf8 "$b\manifest.json"
   Write-Host "BACKUP FINISHED: $b" -ForegroundColor Green
 }
@@ -78,7 +79,7 @@ The Storage commands are experimental in CLI 2.121.0, so they need `--experiment
 
 `$buckets` must name every bucket the `ls` lists (the app uses `avatars`); a bucket left out fails check (d), and the fix is to add it and take the backup again. The CLI writes the objects to `<backup folder>\storage\<bucket>\<object name>`. A bucket with no objects creates no folder, which is fine.
 
-The `versions` in the manifest are the checkout's `supabase/.temp` files, which only `supabase link` writes, so they lag every hosted upgrade. They only record what the checkout believed; nothing is pinned to them (section 3).
+The `versions` in the manifest are the `remote` column of `npx supabase services`, read before the dumps. The block does not use the checkout's `supabase/.temp` version files: only `supabase link` writes them, so they lag every hosted upgrade.
 
 ## 3. Hosted counts and `hosted.json` (Main)
 
@@ -103,7 +104,7 @@ Write `hosted.json` into the backup folder (UTF-8, the BOM is tolerated):
 }
 ```
 
-`versions` is the `remote` column of `npx supabase services`, read at the same time and never copied from `manifest.json`: the scratch stack runs these versions, and Storage and Auth create their own tables, so a version older than hosted lacks tables the dump has data for and the import fails with SQLSTATE 42P01. `migrations` is the list of versions `list_migrations` returns. `counts` must name every `public` table and the three required ones; the check fails when a restored `public` table is missing from it.
+`versions` is the `remote` column of `npx supabase services`, read at the same time as the counts: the scratch stack runs these versions, and Storage and Auth create their own tables, so a version older than hosted lacks tables the dump has data for and the import fails with SQLSTATE 42P01. `migrations` is the list of versions `list_migrations` returns. `counts` must name every `public` table and the three required ones; the check fails when a restored `public` table is missing from it.
 
 ## 4. Restore and compare (Main)
 

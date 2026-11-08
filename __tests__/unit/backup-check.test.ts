@@ -339,6 +339,16 @@ describe("backup:check metadata files (AC6, G8)", () => {
       { ...hosted, versions: { postgres: "1", gotrue: "2" } },
       /storage/,
     ],
+    [
+      "a blank version",
+      { ...hosted, versions: { postgres: "1", gotrue: "2", storage: " " } },
+      /storage/,
+    ],
+    [
+      "a version with a path separator",
+      { ...hosted, versions: { postgres: "1", gotrue: "2", storage: "a/b" } },
+      /storage/,
+    ],
   ])("rejects %s", (_name, value, cause) => {
     const result = validateHosted(value);
     expect(result.hosted).toBeNull();
@@ -599,6 +609,9 @@ describe("backup:check scratch config (G7, G8)", () => {
       );
       expect(readFileSync(join(pinned, "postgres-version"), "utf8")).toBe(
         "17.6.1.052",
+      );
+      expect(readFileSync(join(pinned, "gotrue-version"), "utf8")).toBe(
+        "v2.197.0",
       );
     } finally {
       rmSync(root, { recursive: true, force: true });

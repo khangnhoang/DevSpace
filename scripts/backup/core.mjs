@@ -280,7 +280,8 @@ export function validateHosted(value) {
     problems.push("hosted.json has no versions object");
   else {
     for (const key of VERSION_KEYS) {
-      if (typeof versions[key] !== "string" || !versions[key])
+      // The value is written to a pin file the CLI builds an image tag from; nothing else checks it.
+      if (typeof versions[key] !== "string" || !/^[\w.-]+$/.test(versions[key]))
         problems.push(`hosted.json versions lacks ${key}`);
     }
   }

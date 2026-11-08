@@ -17,6 +17,7 @@ Owner decisions made after the approved plan (2026-11-08; the plan stays frozen,
 
 - **18.** The frontend stays on Vercel Hobby. This holds on the condition that DevSpace is a graduation project and collects no real money. The Owner accepts the Hobby terms risk: Vercel may disable or remove a Hobby project with or without notice ([terms](https://vercel.com/legal/terms), last updated 2026-10-19). Exit: before any real money is collected, the Owner decides again, either Pro (20 USD per seat, outside the 10 USD cap) or a move to another host.
 - **19.** Files are served from a public R2 bucket on the custom domain `devspace-assets.vocaspace.com`, on the Owner's existing Cloudflare zone `vocaspace.com`. No domain is bought (domain cost 0). Public images are not proxied through NestJS. The DevSpace bucket is separate from any VocaSpace bucket, and only files that may be public are served from it. The Owner creates the bucket and the DNS record. No agent touches VocaSpace resources (`AGENTS.md` section 4 keeps the VocaSpace project off limits).
+- **23.** (TM-U3 plan) D5 pass condition (b), a real Gemini call of the longest supported length reaching the client, moves from TM-U3 to TM-U8 and must pass on the production topology before the merge that moves Gemini to the API. TM-U3 proves the transport with a timed handler only. Railway gets no `GEMINI_API_KEY` before TM-U8.
 
 ## Decision
 

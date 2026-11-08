@@ -6,14 +6,14 @@ Plan: [plan.md](plan.md). Problems: [problems.md](problems.md). Git history is t
 
 | Field | Value |
 | --- | --- |
-| Spec revision | Master [plan.md](plan.md) r3. The TM-U2 detail plan is closed; the TM-U3 detail plan is not written yet. |
-| Current unit / checkpoint | None active. TM-U2 is complete; the next unit is TM-U3 Backend foundation (branch `feat/tm-u3-backend-foundation`), not started. |
-| Status | In progress: TM-U1 and TM-U2 are complete (PR 78, PR 79, PR 80); ADR 0008 is `Accepted`. |
+| Spec revision | Master [plan.md](plan.md) r3. TM-U3 detail plan [r7](implementation-plans/tm-u3-backend-foundation/plan.md), approved. |
+| Current unit / checkpoint | TM-U3 Backend foundation on branch `feat/tm-u3-backend-foundation`: CP1 next. |
+| Status | In progress: TM-U1 and TM-U2 are complete (PR 78, PR 79, PR 80); ADR 0008 is `Accepted`; TM-U3 is planned and approved, implementation not started. |
 | Completed evidence | TM-U1 and TM-U2 evidence is in Milestones. |
 | Accepted deviations | None for TM-U3. The TM-U2 deviations are in Milestones. |
-| Blockers / Owner decisions | None open. Owner decisions 18 and 19 are in Milestones and ADR 0008 Context; TM-U3 needs an Owner instruction for the first deploy of the new service and its settings. |
-| Next action | Main writes the TM-U3 detail plan under `planning` and runs its Codex gate. |
-| Current authority | None for TM-U3: the plan is not approved, and no implementation, commit, push, PR, merge, deployment or hosted write is granted. |
+| Blockers / Owner decisions | None open. Owner decisions 20 to 25 are in the TM-U3 plan. The first deploy and every Railway setting stay with the Owner. |
+| Next action | The implementor does CP1 to CP5 of the TM-U3 plan; Main reviews each report and the real diff. |
+| Current authority | Implementor: CP1 to CP5 on local stacks under G1, with local commits per checkpoint. Main: Railway CLI reads under G10. No push, PR, merge, deployment or hosted write is granted. |
 
 ## Milestones
 
@@ -45,3 +45,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-08 Owner decision 18: the frontend stays on Vercel Hobby on the condition that DevSpace is a graduation project collecting no real money; the Owner accepts that Vercel may disable a Hobby project without notice and decides again before real money is collected (Pro at 20 USD per seat outside the cap, or a move) (PR 80, `4646e5a`).
 - 2026-11-08 Owner decision 19: R2 is public at `devspace-assets.vocaspace.com` on the Owner's Cloudflare zone `vocaspace.com`, no domain bought, the DevSpace bucket separate from VocaSpace's, only public-allowed files served; the Owner creates the bucket and DNS record, and no agent touches VocaSpace resources (PR 80, `4646e5a`).
 - 2026-11-08 TM-U2 delivered: ADR 0008 accepted, CI passed with `db` and `e2e` skipped as docs-only; TM-U2 complete (PR 80, `4646e5a`).
+- 2026-11-08 TM-U3 detail plan r7 approved after the Codex plan gate; ADR 0008 Context records decision 23; Railway CLI 5.71.0 installed globally as machine setup for this unit (this commit).

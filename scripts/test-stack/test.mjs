@@ -18,13 +18,16 @@ const vitest = join(
 function buildApi() {
   const env = { ...process.env };
   delete env.DEVSPACE_TEST_RUN;
-  const build = spawnSync(
-    process.execPath,
-    [fileURLToPath(new URL("../api/build.mjs", import.meta.url))],
-    { env, stdio: "inherit" },
-  );
-  if (build.status !== 0)
-    throw new Error("The API build failed, so no test was started.");
+  // `dist` for the production entry point and `dist-e2e` with the test-only routes (AC20).
+  for (const flags of [[], ["--e2e"]]) {
+    const build = spawnSync(
+      process.execPath,
+      [fileURLToPath(new URL("../api/build.mjs", import.meta.url)), ...flags],
+      { env, stdio: "inherit" },
+    );
+    if (build.status !== 0)
+      throw new Error("The API build failed, so no test was started.");
+  }
 }
 
 try {

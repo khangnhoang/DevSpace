@@ -1,9 +1,12 @@
 import { Controller, Get, Inject, Res } from "@nestjs/common";
 import type { Response } from "express";
+import { Public } from "../auth/decorators";
 import { ServerEnv } from "../common/env";
 import { SERVER_ENV } from "../common/tokens";
 import { DbService } from "../db/db.service";
 
+// The only public routes of the API (AC5): a monitor and Railway call them without a session.
+@Public()
 @Controller("health")
 export class HealthController {
   constructor(

@@ -1,3 +1,5 @@
+import { REQUEST_TIMEOUT_MS, SESSION_CACHE_TTL_MS } from "./limits";
+
 // Reads the process environment once, at startup, so a missing value stops the process before it listens.
 // Names are listed here and nowhere else in the API; the Railway settings of the rollout (plan section 5, step 6)
 // are exactly the required names below. A message names a variable and never prints a value.
@@ -14,6 +16,11 @@ export type ServerEnv = {
   supabaseAnonKey: string;
   // Origins the CSRF guard accepts, as `URL.origin` values.
   allowedOrigins: string[];
+  // How long a positive session check is trusted, and how long a handler may run. They are the supported limits and
+  // no environment variable changes them: only the test-only entry point (backend/e2e/main.ts) builds a ServerEnv
+  // with shorter values, so production cannot lower them by a setting.
+  sessionCacheTtlMs: number;
+  requestTimeoutMs: number;
 };
 
 export class EnvError extends Error {}
@@ -71,5 +78,7 @@ export function readServerEnv(
     supabaseUrl: env.SUPABASE_URL!.trim().replace(/\/+$/, ""),
     supabaseAnonKey: env.SUPABASE_ANON_KEY!,
     allowedOrigins,
+    sessionCacheTtlMs: SESSION_CACHE_TTL_MS,
+    requestTimeoutMs: REQUEST_TIMEOUT_MS,
   };
 }

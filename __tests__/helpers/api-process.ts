@@ -64,9 +64,18 @@ type Spawned = {
   dispose: () => void;
 };
 
+// The production entry point, or the e2e one that adds the test-only routes (AC20). The two are built into different
+// folders, so a test that does not ask for the fixtures cannot reach them.
+function entryPoint(fixtures: boolean) {
+  return fixtures
+    ? join(root, "dist-e2e", "backend", "e2e", "main.js")
+    : join(root, "dist", "backend", "src", "main.js");
+}
+
 function spawnApi(
   env: Record<string, string | undefined>,
   port: number,
+  fixtures: boolean,
 ): Spawned {
   const dir = mkdtempSync(join(tmpdir(), "devspace-api-test-"));
   const guardFile = join(dir, "guard.jsonl");
@@ -81,31 +90,29 @@ function spawnApi(
     "ALLOWED_ORIGINS",
     "API_PROOF_ENABLED",
     "API_PROOF_USER_ID",
+    "E2E_SESSION_CACHE_TTL_MS",
+    "E2E_REQUEST_TIMEOUT_MS",
     "PORT",
     "HOST",
   ]) {
     delete inherited[name];
   }
   const guard = GUARD.replaceAll("\\", "/");
-  const child = spawn(
-    process.execPath,
-    [join(root, "dist", "backend", "src", "main.js")],
-    {
-      cwd: root,
-      env: {
-        ...inherited,
-        NODE_OPTIONS:
-          `${process.env.NODE_OPTIONS ?? ""} --require "${guard}"`.trim(),
-        E2E_GUARD_FILE: guardFile,
-        HOST: "127.0.0.1",
-        PORT: String(port),
-        ...Object.fromEntries(
-          Object.entries(env).filter(([, value]) => value !== undefined),
-        ),
-      },
-      stdio: ["ignore", "pipe", "pipe"],
+  const child = spawn(process.execPath, [entryPoint(fixtures)], {
+    cwd: root,
+    env: {
+      ...inherited,
+      NODE_OPTIONS:
+        `${process.env.NODE_OPTIONS ?? ""} --require "${guard}"`.trim(),
+      E2E_GUARD_FILE: guardFile,
+      HOST: "127.0.0.1",
+      PORT: String(port),
+      ...Object.fromEntries(
+        Object.entries(env).filter(([, value]) => value !== undefined),
+      ),
     },
-  );
+    stdio: ["ignore", "pipe", "pipe"],
+  });
   let text = "";
   child.stdout?.on("data", (chunk) => (text += String(chunk)));
   child.stderr?.on("data", (chunk) => (text += String(chunk)));
@@ -148,9 +155,10 @@ async function waitUntilListening(
 // Starts the built API (dist/backend/src/main.js, which `npm test` builds first) under the network guard.
 export async function startApi(
   env: Record<string, string | undefined>,
+  options: { fixtures?: boolean } = {},
 ): Promise<RunningApi> {
   const port = await freePort();
-  const spawned = spawnApi(env, port);
+  const spawned = spawnApi(env, port, options.fixtures ?? false);
   try {
     await waitUntilListening(port, spawned);
   } catch (error) {
@@ -184,7 +192,7 @@ export async function runApiToExit(
   env: Record<string, string | undefined>,
 ): Promise<{ code: number | null; output: string; listened: boolean }> {
   const port = await freePort();
-  const spawned = spawnApi(env, port);
+  const spawned = spawnApi(env, port, false);
   const timer = setTimeout(() => spawned.child.kill(), 30_000);
   const code = await spawned.exited;
   clearTimeout(timer);

@@ -3,6 +3,7 @@ import { DynamicModule } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import { AppModule } from "./app.module";
+import { useBodyParsers } from "./common/body-parsers";
 import { ServerEnv } from "./common/env";
 import { DbService } from "./db/db.service";
 
@@ -16,9 +17,12 @@ export async function createApp(
     AppModule.register(env, extraModules),
     {
       logger: ["error", "warn", "log"],
+      // Nest's own parsers are off: useBodyParsers registers them with the limits and the error handling of AC8, AC9.
+      bodyParser: false,
     },
   );
   app.disable("x-powered-by");
+  useBodyParsers(app);
   app.setGlobalPrefix("api");
   return app;
 }

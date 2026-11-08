@@ -39,6 +39,8 @@ export default defineConfig({
           fileParallelism: false,
           // A test may start the API (about 1 s on Windows, with the writer record) and wait on a 10 s probe window.
           testTimeout: 30_000,
+          // The hooks of a file start an API process and mint sessions through the Admin API.
+          hookTimeout: 30_000,
         },
       },
       {

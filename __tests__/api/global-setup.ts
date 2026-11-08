@@ -22,6 +22,11 @@ export default function setup(project: TestProject) {
         "The API is not built (dist/backend/src/main.js). Run npm test, which builds it before the tests.",
       );
     }
+    if (!existsSync(join(root, "dist-e2e", "backend", "e2e", "main.js"))) {
+      throw new Error(
+        "The API fixtures are not built (dist-e2e/backend/e2e/main.js). Run npm test, which builds them before the tests.",
+      );
+    }
     const { apiUrl, dbUrl, anonKey, serviceRoleKey } = readTestStack(root);
     project.provide("apiStack", { apiUrl, dbUrl, anonKey, serviceRoleKey });
   } catch (error) {

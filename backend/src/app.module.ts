@@ -1,5 +1,10 @@
 import { DynamicModule, Module } from "@nestjs/common";
+import { APP_GUARD, APP_INTERCEPTOR, DiscoveryModule } from "@nestjs/core";
+import { CsrfGuard } from "./auth/csrf.guard";
+import { SessionGuard } from "./auth/session.guard";
+import { SessionService } from "./auth/session.service";
 import { ServerEnv } from "./common/env";
+import { TimeoutInterceptor } from "./common/timeout.interceptor";
 import { SERVER_ENV } from "./common/tokens";
 import { DbService } from "./db/db.service";
 import { HealthController } from "./health/health.controller";
@@ -12,9 +17,18 @@ export class AppModule {
   ): DynamicModule {
     return {
       module: AppModule,
-      imports: extraModules,
+      imports: [DiscoveryModule, ...extraModules],
       controllers: [HealthController],
-      providers: [{ provide: SERVER_ENV, useValue: env }, DbService],
+      providers: [
+        { provide: SERVER_ENV, useValue: env },
+        DbService,
+        SessionService,
+        // Guards run in the order they are registered: the CSRF guard first, so a cross-site request is 403 before
+        // any session lookup (AC7), then the session guard, which denies every route that is not marked public (AC5).
+        { provide: APP_GUARD, useClass: CsrfGuard },
+        { provide: APP_GUARD, useClass: SessionGuard },
+        { provide: APP_INTERCEPTOR, useClass: TimeoutInterceptor },
+      ],
       exports: [SERVER_ENV, DbService],
       global: true,
     };

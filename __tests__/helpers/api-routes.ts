@@ -29,6 +29,7 @@ const out = (name) => require(path.join(root, folder, "backend", name));
     SUPABASE_URL: "http://127.0.0.1:1",
     SUPABASE_ANON_KEY: "x",
     ALLOWED_ORIGINS: "http://127.0.0.1:3100",
+    ...JSON.parse(process.env.ROUTES_EXTRA_ENV || "{}"),
   });
   const app = await createApp(env, extra);
   await app.init();
@@ -42,14 +43,23 @@ const out = (name) => require(path.join(root, folder, "backend", name));
 })().catch((error) => { console.error(error); process.exit(1); });
 `;
 
-export function enumerateRoutes(folder: "dist" | "dist-e2e"): RouteEnumeration {
+// `extraEnv` adds to the minimal environment the script gives the application, for example the proof flag.
+export function enumerateRoutes(
+  folder: "dist" | "dist-e2e",
+  extraEnv: Record<string, string> = {},
+): RouteEnumeration {
   // The script goes in through stdin: a multi-line argument does not survive Windows command-line quoting.
   const result = spawnSync(process.execPath, ["-"], {
     cwd: root,
     input: SCRIPT,
     encoding: "utf8",
     timeout: 60_000,
-    env: { ...process.env, ROUTES_ROOT: root, ROUTES_FOLDER: folder },
+    env: {
+      ...process.env,
+      ROUTES_ROOT: root,
+      ROUTES_FOLDER: folder,
+      ROUTES_EXTRA_ENV: JSON.stringify(extraEnv),
+    },
   });
   const line = result.stdout
     .split("\n")

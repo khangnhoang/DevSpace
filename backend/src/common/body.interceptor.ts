@@ -6,15 +6,22 @@ import {
   Injectable,
   NestInterceptor,
 } from "@nestjs/common";
-import { json, urlencoded } from "express";
+import { Reflector } from "@nestjs/core";
+import { json, raw, urlencoded } from "express";
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 import { from, Observable, switchMap } from "rxjs";
 import { JSON_LIMIT_BYTES } from "./limits";
+import { IS_RAW_BODY } from "./raw-body";
 import { INVALID_BODY_MESSAGE } from "./zod.pipe";
 
 const parsers: RequestHandler[] = [
   json({ limit: JSON_LIMIT_BYTES }),
   urlencoded({ limit: JSON_LIMIT_BYTES, extended: true }),
+];
+// A raw route takes every content type as bytes: the limit, the 413 and the refusal of a body shorter than its
+// Content-Length are the same parser's, so only the shape of `request.body` differs.
+const rawParsers: RequestHandler[] = [
+  raw({ type: () => true, limit: JSON_LIMIT_BYTES }),
 ];
 
 function run(
@@ -55,14 +62,23 @@ function refusal(error: unknown): unknown {
 // guards.
 @Injectable()
 export class BodyInterceptor implements NestInterceptor {
+  constructor(private readonly reflector: Reflector) {}
+
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const http = context.switchToHttp();
     const request = http.getRequest<Request>();
     const response = http.getResponse<Response>();
+    const isRaw =
+      this.reflector.getAllAndOverride<boolean>(IS_RAW_BODY, [
+        context.getHandler(),
+        context.getClass(),
+      ]) === true;
     return from(
       (async () => {
         try {
-          for (const parser of parsers) await run(parser, request, response);
+          for (const parser of isRaw ? rawParsers : parsers) {
+            await run(parser, request, response);
+          }
         } catch (error) {
           throw refusal(error);
         }

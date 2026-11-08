@@ -11,6 +11,9 @@ import { DbService } from "./db/db.service";
 export async function createApp(
   env: ServerEnv,
   extraModules: DynamicModule[] = [],
+  // Runs before the routes are registered. Only the e2e entry point passes one (its request record); the production
+  // entry point passes none.
+  configure: (app: NestExpressApplication) => void = () => {},
 ): Promise<NestExpressApplication> {
   const app = await NestFactory.create<NestExpressApplication>(
     AppModule.register(env, extraModules),
@@ -22,6 +25,7 @@ export async function createApp(
   );
   app.disable("x-powered-by");
   app.setGlobalPrefix("api");
+  configure(app);
   return app;
 }
 
@@ -29,8 +33,9 @@ export async function createApp(
 export async function startApp(
   env: ServerEnv,
   extraModules: DynamicModule[] = [],
+  configure?: (app: NestExpressApplication) => void,
 ): Promise<NestExpressApplication> {
-  const app = await createApp(env, extraModules);
+  const app = await createApp(env, extraModules, configure);
   try {
     await app.get(DbService).verifyIdentity();
     await app.listen(env.port, env.host);

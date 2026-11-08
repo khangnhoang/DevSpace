@@ -10,6 +10,10 @@ export function serverRecordPaths(root: string) {
     guard: join(dir, "guard.jsonl"),
     mail: join(dir, "mail.jsonl"),
     auth: join(dir, "auth.jsonl"),
+    // The e2e API's own record of the requests it answered (backend/e2e/main.ts).
+    api: join(dir, "api.jsonl"),
+    // What the Next server printed (stdout and stderr), so a row can tell Next's own refusal from any other failure.
+    next: join(dir, "next.log"),
   };
 }
 
@@ -26,6 +30,14 @@ export type AuthRecord = {
   status: number | "error";
   time: number;
   durationMs: number;
+};
+
+// A request the e2e API answered: its method, its path without the query and its status.
+export type ApiRecord = {
+  method: string;
+  path: string;
+  status: number;
+  time: number;
 };
 
 export function recordSize(file: string): number {

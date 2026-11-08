@@ -4,6 +4,7 @@ import {
   Get,
   Post,
   Query,
+  Req,
   UploadedFile,
   UseInterceptors,
 } from "@nestjs/common";
@@ -12,6 +13,9 @@ import {
   Sensitive,
   type SessionUser,
 } from "../src/auth/decorators";
+import { createHash } from "node:crypto";
+import type { Request } from "express";
+import { extractToken } from "../src/auth/token";
 import { uploadFile, type UploadedBytes } from "../src/common/upload";
 import { ZodPipe } from "../src/common/zod.pipe";
 import { createUserSchema } from "../../lib/schemas/user";
@@ -31,6 +35,14 @@ export class E2eController {
   @Get("whoami")
   whoami(@CurrentUser() user: SessionUser) {
     return { userId: user.id };
+  }
+
+  // A digest of the session token this request carried, so a test can tell the token the API received through the Next
+  // rewrite from the one the browser held before the refresh. It is never the token.
+  @Get("token")
+  token(@Req() request: Request) {
+    const token = extractToken(request.headers) ?? "";
+    return { tokenSha256: createHash("sha256").update(token).digest("hex") };
   }
 
   @Sensitive()

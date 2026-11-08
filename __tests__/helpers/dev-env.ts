@@ -3,6 +3,7 @@ import type { LocalStack } from "./local-stack";
 
 export const DEV_PORT = 3000;
 export const DEV_HOST = "127.0.0.1";
+export const DEV_API_PORT = 4000;
 // Same origin as the local Auth `site_url` in supabase/config.toml, so sign-up and reset redirects and cookies
 // stay on one host (the pages build their redirect from `window.location.origin`).
 export const DEV_ORIGIN = `http://${DEV_HOST}:${DEV_PORT}`;
@@ -24,10 +25,10 @@ export function buildDevEnv(stack: LocalStack): Record<string, string> {
     // Placeholders: `sendMail` fails and is logged, so no real mail leaves the machine (backlog FEAT-016).
     GMAIL_USER: "dev-placeholder@devspace.test",
     GMAIL_PASS: "dev-placeholder-not-a-password",
+    // The API `npm run dev` starts beside Next (DEV_API_PORT): `/api/*` is rewritten to it and the helper calls it.
+    API_INTERNAL_URL: `http://${DEV_HOST}:${DEV_API_PORT}`,
   };
 }
-
-export const DEV_API_PORT = 4000;
 
 // The environment of the API on the dev stack. It starts from the inherited environment, which may hold hosted
 // values, so every name the API reads is set here and never taken from the caller's shell. The database user is the

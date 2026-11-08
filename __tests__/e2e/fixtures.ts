@@ -1,15 +1,21 @@
 import { test as base, expect } from "@playwright/test";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { classifyRequest } from "../helpers/e2e-network";
 import {
   recordSize,
   recordsSince,
   serverRecordPaths,
+  type ApiRecord,
   type AuthRecord,
   type GuardRecord,
   type MailRecord,
 } from "../helpers/e2e-server";
-import { openActionCaller, type ActionCaller } from "./server-action";
+import {
+  openActionCaller,
+  type ActionCaller,
+  type ActionRefusal,
+} from "./server-action";
 import { beginFixtureScope } from "./service-role";
 import {
   noteTimeout,
@@ -37,6 +43,10 @@ declare global {
 export type ServerRecords = {
   mailsSent: () => MailRecord[];
   authCalls: () => AuthRecord[];
+  // The requests the e2e API answered since the test began (TM-U3), from its own record.
+  apiCalls: () => ApiRecord[];
+  // What the Next server printed since the test began.
+  nextLog: () => string;
 };
 
 function reportableUrl(value: string) {
@@ -51,6 +61,7 @@ export const test = base.extend<{
   owned: FixtureScope;
   serverRecords: ServerRecords;
   callAction: ActionCaller;
+  callActionRefused: ActionRefusal;
 }>({
   owned: [
     async ({}, provide, testInfo) => {
@@ -72,16 +83,28 @@ export const test = base.extend<{
     await dispose();
   },
 
+  // A call that must be refused before the action runs, from an origin the row names (server-action.ts).
+  callActionRefused: async ({}, provide) => {
+    const { refuse, dispose } = await openActionCaller();
+    await provide(refuse);
+    await dispose();
+  },
+
   serverRecords: [
     async ({ owned }, provide) => {
       const paths = serverRecordPaths(join(__dirname, "../.."));
       const guardStart = recordSize(paths.guard);
       const mailStart = recordSize(paths.mail);
       const authStart = recordSize(paths.auth);
+      const apiStart = recordSize(paths.api);
+      const nextStart = recordSize(paths.next);
 
       await provide({
         mailsSent: () => recordsSince<MailRecord>(paths.mail, mailStart),
         authCalls: () => recordsSince<AuthRecord>(paths.auth, authStart),
+        apiCalls: () => recordsSince<ApiRecord>(paths.api, apiStart),
+        nextLog: () =>
+          readFileSync(paths.next).subarray(nextStart).toString("utf8"),
       });
       await owned.cleanup();
 

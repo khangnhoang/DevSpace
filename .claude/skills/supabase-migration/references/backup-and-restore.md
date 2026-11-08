@@ -26,7 +26,7 @@ The backup holds personal data and password hashes. Keep it outside the reposito
 | `manifest.json` | the Owner (section 2) | `time`, `cli` version and the hosted service `versions` |
 | `hosted.json` | Main (section 3) | Exact hosted `counts`, the `migrations` versions and the hosted service `versions` |
 
-`backup:check` also writes `check-result.json` (aggregates) and, on a Storage mismatch, `check-mismatches.txt` (object names, the only place they go) into this folder.
+`backup:check` also writes `check-result.json` (aggregates) and, on a Storage mismatch, `check-mismatches.txt` (object names, the only place they go) into this folder. Every run replaces `check-result.json` with `incomplete` as soon as it holds the run, so an earlier pass never stands as the latest result of a run that failed or was killed.
 
 ## 1. Dump the database (Owner)
 
@@ -108,11 +108,11 @@ It starts the scratch stack (`devspace-backup-check`, ports 56320 to 56329, pinn
 - (c) the restored migration history equals the `migrations` list;
 - (d) every `storage.objects` row has a file of the same size (and the same MD5 where the stored ETag is a plain MD5) under `storage/`, and no file lacks a row.
 
-Output is aggregates only: table names, counts, totals and pass or fail. A failed step prints its name, exit code and SQLSTATE and nothing from the data. The exit code is 0 pass, 1 fail, 2 unresolved (teardown not confirmed), 3 refused before anything was written.
+Output is aggregates only: table names, counts, totals and pass or fail. A failed step prints its name, exit code and SQLSTATE and nothing from the data; an error while reading the backup (an object or file it cannot open, a JSON or SQL file it cannot parse) prints the step and an error code, never a path or content. The exit code is 0 pass, 1 fail, 2 unresolved (teardown not confirmed, `--teardown` included), 3 refused before anything was written.
 
-A refusal names its cause: a folder inside the repository or under `AppData`, a missing file, a second run holding the run record, a container of another project on a scratch port, a Docker engine that is not local. After every run, pass or fail, no `devspace-backup-check` container or volume remains.
+A refusal names its cause: a folder inside the repository or under `AppData`, a missing file, a second run or a `--teardown` while another live process holds the run, a container of another project on a scratch port, a Docker engine that is not local. After every run, pass or fail, no `devspace-backup-check` container or volume remains.
 
-If a run is killed (or the machine shuts down) its run record and containers stay. The next `backup:check` removes them first and says so. To clean up without a new check:
+If a run is killed (or the machine shuts down) its run lock and containers stay. The next `backup:check` takes the lock over and removes them first, and says so. To clean up without a new check (refused while a run is live, never tearing it down):
 
 ```powershell
 npm run backup:check -- --teardown

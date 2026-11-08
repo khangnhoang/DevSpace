@@ -52,7 +52,9 @@ export const VERSION_FILES = [
 ];
 
 export const scratchWorkdir = (root) => join(root, SCRATCH_WORKDIR_NAME);
-export const runRecordPath = (root) => join(scratchWorkdir(root), "run.json");
+// The directory of the run lock shared by a check and `--teardown` (G9). `prepareScratchWorkdir` replaces only
+// `supabase/` below the workdir, so the lock survives it.
+export const runLockDir = (root) => join(scratchWorkdir(root), "run");
 
 // [section, key, replacement TOML value]. A rule that matches nothing throws, so a renamed key in the dev config
 // cannot leave a dev value (and a dev port) in the scratch config.

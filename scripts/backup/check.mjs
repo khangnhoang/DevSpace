@@ -12,7 +12,6 @@ import {
   closeSync,
   createReadStream,
   existsSync,
-  mkdirSync,
   openSync,
   readdirSync,
   readFileSync,
@@ -27,15 +26,14 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertLocalEngine, createDocker } from "../test-stack/docker.mjs";
-import { isLive, processStart } from "../test-stack/lock.mjs";
+import { LockError, acquireLock, releaseLock } from "../test-stack/lock.mjs";
 import {
   EXCLUDED_SERVICES,
   SCRATCH_NETWORK,
   SCRATCH_PORTS,
   SCRATCH_PROJECT_ID,
   prepareScratchWorkdir,
-  runRecordPath,
-  scratchWorkdir,
+  runLockDir,
 } from "./config.mjs";
 import {
   STORAGE_DIR,
@@ -142,38 +140,58 @@ export function teardown(engine) {
   return removed;
 }
 
-// ---------- run record (G9) ----------
+// ---------- run lock (G9) ----------
 
-export function readRecord(rootDir = root) {
+// A check and `--teardown` take the same lock before their first write or Docker action. The lock is the
+// test stack's generation lock (an exclusive hard link per generation, so of two processes that read the same
+// state only one claims the next generation), kept in a directory of its own. A holder whose process is gone is
+// taken over; a live holder is never torn down by another process. The owner releases it only after its
+// teardown is confirmed, so an unconfirmed teardown leaves a lock that the next run finds stale and cleans up.
+/**
+ * `startOf` and `afterRead` are test seams: the start time of a pid, and a step that runs between reading the lock
+ * and claiming it, which is how a test makes two processes read the same state.
+ * @typedef {{ startOf?: (pid: number) => string | null, afterRead?: () => void }} RunSeams
+ * @typedef {{ teardown: (engine: any) => { containers: number, volumes: number }, execute: (folder: any, hosted: any, engine: any, rootDir: string) => Promise<any> }} RunOps
+ */
+
+/** @param {{ command?: string, rootDir?: string } & RunSeams} [options] */
+export function acquireRun({
+  command = "backup:check",
+  rootDir = root,
+  startOf,
+  afterRead,
+} = {}) {
   try {
-    return JSON.parse(readFileSync(runRecordPath(rootDir), "utf8"));
+    return acquireLock({
+      command,
+      dir: runLockDir(rootDir),
+      checkout: rootDir,
+      startOf,
+      afterRead,
+    });
   } catch (error) {
-    if (error.code === "ENOENT") return null;
-    // An unreadable record is never treated as free.
-    return { unreadable: true };
+    if (!(error instanceof LockError)) throw error;
+    // The messages of LockError name the test stack; these name this command.
+    if (error.code === "held")
+      throw new Refusal(
+        "another backup:check run (or --teardown) is in progress; wait for it to finish, nothing was changed",
+      );
+    if (error.code === "lost")
+      throw new Refusal(
+        "another backup:check run (or --teardown) took the run first; nothing was changed",
+      );
+    throw new Refusal(
+      "the backup:check run lock cannot be read; ask the Owner before removing it, nothing was changed",
+    );
   }
 }
-
-function writeRecord(rootDir = root) {
-  mkdirSync(scratchWorkdir(rootDir), { recursive: true });
-  writeFileSync(
-    runRecordPath(rootDir),
-    JSON.stringify({
-      pid: process.pid,
-      start: processStart(process.pid),
-      project: SCRATCH_PROJECT_ID,
-    }),
-  );
-}
-
-const removeRecord = (rootDir = root) =>
-  rmSync(runRecordPath(rootDir), { force: true });
 
 // ---------- refusals (AC10) ----------
 
 /**
- * Everything that must hold before anything is written. Returns the cause of the first refusal, or null, plus
- * whether a record of a dead run is waiting for its teardown. `io` replaces the file system and Docker in tests.
+ * Everything that must hold before anything is written, except the run lock (`acquireRun`, which only the run
+ * itself can take atomically). Returns the cause of the first refusal, or null. `io` replaces the file system
+ * and Docker in tests.
  */
 export function preflight({
   folder,
@@ -184,50 +202,25 @@ export function preflight({
   io,
 }) {
   const path = refuseBackupPath(folder, { root: rootDir, env, home, platform });
-  if (path) return { refusal: path, stale: false };
+  if (path) return { refusal: path };
   let present;
   try {
     present = io.listFolder(folder);
   } catch {
-    return {
-      refusal: "the backup folder does not exist or cannot be read",
-      stale: false,
-    };
+    return { refusal: "the backup folder does not exist or cannot be read" };
   }
   const missing = missingRequiredFiles(present);
   if (missing.length)
-    return {
-      refusal: `the backup folder lacks ${missing.join(", ")}`,
-      stale: false,
-    };
+    return { refusal: `the backup folder lacks ${missing.join(", ")}` };
   const manifest = validateManifest(io.readJson(join(folder, "manifest.json")));
-  if (manifest.length) return { refusal: manifest[0], stale: false };
+  if (manifest.length) return { refusal: manifest[0] };
   const { problems } = validateHosted(io.readJson(join(folder, "hosted.json")));
-  if (problems.length) return { refusal: problems[0], stale: false };
+  if (problems.length) return { refusal: problems[0] };
 
   try {
     assertLocalEngine(io.engine);
   } catch (error) {
-    return {
-      refusal: `the Docker identity check failed: ${error.message}`,
-      stale: false,
-    };
-  }
-  const record = io.record();
-  let stale = false;
-  if (record) {
-    if (record.unreadable)
-      return {
-        refusal:
-          "the run record cannot be read; run backup:check -- --teardown",
-        stale: false,
-      };
-    if (io.isLive(record))
-      return {
-        refusal: `another backup:check run (process ${record.pid}) holds the run record`,
-        stale: false,
-      };
-    stale = true;
+    return { refusal: `the Docker identity check failed: ${error.message}` };
   }
   const holders = foreignPortHolders(
     io.engine.containers(),
@@ -237,7 +230,6 @@ export function preflight({
   if (holders.length)
     return {
       refusal: `a container of another project holds a scratch port (${holders.join(", ")})`,
-      stale,
     };
   const lookalike = io.engine
     .containers()
@@ -249,9 +241,8 @@ export function preflight({
   if (lookalike)
     return {
       refusal: `container ${lookalike.name} is named like a scratch container but belongs to another project`,
-      stale,
     };
-  return { refusal: null, stale };
+  return { refusal: null };
 }
 
 // ---------- psql in the scratch container ----------
@@ -538,8 +529,8 @@ async function restoreStep(password, step, file, preamble = "") {
     );
 }
 
-// Every step below that reads the backup runs through `reading`/`scanBackupFile`, so an error of it is a step and a code.
-async function runChecks(folder, hosted, engine) {
+// Every step below that reads the backup runs through `reading`, so an error of it surfaces as a step and a code.
+async function runChecks(folder, hosted) {
   const password = passwordOf(inspectDb());
 
   for (const [name, value] of LOG_SETTINGS)
@@ -649,31 +640,35 @@ async function runChecks(folder, hosted, engine) {
   ).trim();
   const rows = await parseStorageRows(rowsJson);
   const d = await compareStorageFiles(folder, rows);
-  void engine;
   return { a, b, c, d };
 }
 
-function saveResult(folder, result, outcome) {
-  const { names, ...storage } = result.d ?? {};
+/**
+ * Writes the saved result of a run into the backup folder. Every run replaces it, so an earlier pass can never
+ * stand as the latest result of a run that failed, was killed or could not be cleaned up (AC9). Only aggregates
+ * and one safe failure line go in; object names go to `check-mismatches.txt`, which is removed when the run
+ * found none.
+ */
+export function saveResult(folder, result, outcome, failure = null) {
+  const { names, ...storage } = result?.d ?? {};
   writeFileSync(
     join(folder, "check-result.json"),
     JSON.stringify(
       {
         outcome,
-        a: result.a,
-        b: result.b,
-        c: result.c,
-        d: result.d ? storage : null,
+        failure,
+        a: result?.a ?? null,
+        b: result?.b ?? null,
+        c: result?.c ?? null,
+        d: result?.d ? storage : null,
       },
       null,
       2,
     ),
   );
-  if (names?.length)
-    writeFileSync(
-      join(folder, "check-mismatches.txt"),
-      `${names.join("\n")}\n`,
-    );
+  const mismatches = join(folder, "check-mismatches.txt");
+  if (names?.length) writeFileSync(mismatches, `${names.join("\n")}\n`);
+  else rmSync(mismatches, { force: true });
 }
 
 // ---------- entry point ----------
@@ -716,73 +711,77 @@ export function describeFailure(error) {
   return `FAIL: ${describeReadFailure(reduceError("unexpected error", error))}`;
 }
 
-function unresolvedText(error) {
-  return error instanceof SafeError
-    ? error.message
-    : describeReadFailure(reduceError("teardown", error));
-}
+const passed = (result) =>
+  !result.a.mismatched.length &&
+  !result.b.mismatched.length &&
+  result.c.equal &&
+  !result.d.mismatched;
 
-export async function main(argv) {
-  const engine = createDocker();
-  let args;
+// The default steps of a run; a test replaces them to reach the ordering and exit codes without Docker.
+async function execute(folder, hosted, engine, rootDir) {
+  let prepared;
   try {
-    args = parseArgs(argv);
-    if (args.teardown) {
-      assertLocalEngine(engine);
-      const removed = teardown(engine);
-      removeRecord();
-      say(
-        `teardown confirmed (${removed.containers} containers, ${removed.volumes} volumes removed)`,
-      );
-      return 0;
-    }
-
-    const folder = realFolder(resolve(args.folder));
-    const { refusal, stale } = preflight({
-      folder,
-      io: {
-        engine,
-        listFolder: (dir) => readdirSync(dir),
-        readJson: (file) => {
-          try {
-            return readJsonFile(file);
-          } catch {
-            return null;
-          }
-        },
-        record: () => readRecord(),
-        isLive,
-      },
-    });
-    if (refusal) throw new Refusal(refusal);
-    if (stale) {
-      const removed = teardown(engine);
-      removeRecord();
-      say(
-        `removed leftovers of an interrupted run (${removed.containers} containers, ${removed.volumes} volumes) before starting`,
-      );
-    }
-
-    const hosted = validateHosted(
-      readJsonFile(join(folder, "hosted.json")),
-    ).hosted;
-    return await run(folder, hosted, engine);
+    prepared = prepareScratchWorkdir(rootDir);
   } catch (error) {
-    say(describeFailure(error));
-    return error instanceof Refusal ? 3 : 1;
+    // Its messages name the checkout's config and version files, nothing from the backup.
+    throw new SafeError(error.message);
   }
+  const mismatched = versionMismatches(prepared.versions, hosted.versions);
+  if (mismatched.length)
+    throw new Refusal(
+      `the pinned service versions differ from the backup's hosted versions (${mismatched.join(", ")}); nothing was started`,
+    );
+  say("starting the scratch stack on the pinned service versions");
+  cliStart(prepared.workdir);
+  await isolateDatabase(engine);
+  return runChecks(folder, hosted);
 }
 
-async function run(folder, hosted, engine) {
+const defaultOps = { teardown, execute };
+
+/**
+ * One check, from taking the run to releasing it. The folder has been accepted by `preflight`. Exit codes: 0 pass,
+ * 1 fail, 2 unresolved (a teardown that is not confirmed), 3 refused before anything was written.
+ */
+/** @param {{ folder: string, hosted: any, rootDir?: string, engine: any, ops?: RunOps } & RunSeams} options */
+export async function performRun({
+  folder,
+  hosted,
+  rootDir = root,
+  engine,
+  ops = defaultOps,
+  startOf,
+  afterRead,
+}) {
+  let lock;
+  try {
+    lock = acquireRun({ command: "backup:check", rootDir, startOf, afterRead });
+  } catch (error) {
+    if (!(error instanceof Refusal)) throw error;
+    say(describeFailure(error));
+    return 3;
+  }
+  // From here the run owns the folder's saved result. It stops being a pass before anything that can fail runs.
+  try {
+    saveResult(folder, null, "incomplete");
+  } catch (error) {
+    releaseLock(lock); // nothing was started
+    say(
+      `FAIL: ${describeReadFailure(reduceError("replace the saved result", error))}`,
+    );
+    return 1;
+  }
+
   let outcome = "fail";
   let result = null;
-  let failure = null;
+  let failure = null; // what the check itself raised
+  let teardownFailure = null; // a teardown that is not confirmed
   const stop = () => {
     try {
-      teardown(engine);
-      removeRecord();
+      ops.teardown(engine);
+      releaseLock(lock);
     } catch {
-      /* the main path reports it */
+      /* the lock stays; the next run finds it stale and cleans up */
     }
   };
   const onSignal = () => {
@@ -791,49 +790,158 @@ async function run(folder, hosted, engine) {
   };
   process.on("SIGINT", onSignal);
   process.on("SIGTERM", onSignal);
+  let confirmed = false;
   try {
-    writeRecord();
-    const { workdir, versions } = prepareScratchWorkdir(root);
-    const mismatched = versionMismatches(versions, hosted.versions);
-    if (mismatched.length)
-      throw new Refusal(
-        `the pinned service versions differ from the backup's hosted versions (${mismatched.join(", ")}); nothing was started`,
-      );
-    say("starting the scratch stack on the pinned service versions");
-    cliStart(workdir);
-    await isolateDatabase(engine);
-    result = await runChecks(folder, hosted, engine);
-    const ok =
-      !result.a.mismatched.length &&
-      !result.b.mismatched.length &&
-      result.c.equal &&
-      !result.d.mismatched;
-    outcome = ok ? "pass" : "fail";
-  } catch (error) {
-    failure = error;
+    try {
+      // Leftovers of a killed run go first, before anything is started.
+      const removed = ops.teardown(engine);
+      confirmed = true;
+      if (lock.tookOver || removed.containers || removed.volumes)
+        say(
+          `removed leftovers of an interrupted run (${removed.containers} containers, ${removed.volumes} volumes) before starting`,
+        );
+    } catch (error) {
+      teardownFailure = error;
+      outcome = "unresolved";
+    }
+    if (confirmed) {
+      try {
+        result = await ops.execute(folder, hosted, engine, rootDir);
+        outcome = passed(result) ? "pass" : "fail";
+      } catch (error) {
+        failure = error;
+      }
+      confirmed = false;
+      try {
+        const removed = ops.teardown(engine);
+        confirmed = true;
+        say(
+          `teardown confirmed (${removed.containers} containers, ${removed.volumes} volumes removed)`,
+        );
+      } catch (error) {
+        outcome = "unresolved";
+        teardownFailure = error;
+      }
+    }
   } finally {
     process.off("SIGINT", onSignal);
     process.off("SIGTERM", onSignal);
-    try {
-      const removed = teardown(engine);
-      removeRecord();
-      say(
-        `teardown confirmed (${removed.containers} containers, ${removed.volumes} volumes removed)`,
-      );
-    } catch (error) {
-      outcome = "unresolved";
-      say(`UNRESOLVED: ${unresolvedText(error)}`);
-    }
   }
+  if (outcome === "unresolved") {
+    // The lock stays with this process; once it exits the next run or --teardown takes it over and cleans up.
+    say(`UNRESOLVED: ${unresolvedText(teardownFailure)}`);
+  } else if (confirmed) releaseLock(lock);
+
   if (result) {
     for (const line of formatReport(result)) say(line);
     for (const line of mismatchLines("(a)", result.a.mismatched)) say(line);
     for (const line of mismatchLines("(b)", result.b.mismatched)) say(line);
-    saveResult(folder, result, outcome);
+  }
+  const failureLine = [
+    failure && describeFailure(failure),
+    teardownFailure && `UNRESOLVED: ${unresolvedText(teardownFailure)}`,
+  ]
+    .filter(Boolean)
+    .join("; ");
+  try {
+    saveResult(folder, result, outcome, failureLine || null);
+  } catch (error) {
+    // The saved result is still the non-pass one written above, so a pass is not reported.
+    if (outcome === "pass") outcome = "fail";
+    say(`FAIL: ${describeReadFailure(reduceError("save the result", error))}`);
   }
   if (failure) say(describeFailure(failure));
   say(`result: ${outcome}`);
   return outcome === "pass" ? 0 : outcome === "unresolved" ? 2 : 1;
+}
+
+function unresolvedText(error) {
+  return error instanceof SafeError
+    ? error.message
+    : describeReadFailure(reduceError("teardown", error));
+}
+
+/** `--teardown`: takes the same run as a check, so a live run is refused and never torn down. */
+/** @param {{ rootDir?: string, engine: any, ops?: RunOps } & RunSeams} options */
+export function performTeardown({
+  rootDir = root,
+  engine,
+  ops = defaultOps,
+  startOf,
+  afterRead,
+}) {
+  let lock;
+  try {
+    lock = acquireRun({
+      command: "backup:check --teardown",
+      rootDir,
+      startOf,
+      afterRead,
+    });
+  } catch (error) {
+    if (!(error instanceof Refusal)) throw error;
+    say(describeFailure(error));
+    return 3;
+  }
+  try {
+    const removed = ops.teardown(engine);
+    releaseLock(lock);
+    say(
+      `teardown confirmed (${removed.containers} containers, ${removed.volumes} volumes removed)`,
+    );
+    return 0;
+  } catch (error) {
+    // Never `fail` (exit code 1): until removal is confirmed the scratch data may still exist.
+    say(`UNRESOLVED: ${unresolvedText(error)}`);
+    return 2;
+  }
+}
+
+export async function main(argv, { rootDir = root, engine, ops } = {}) {
+  try {
+    const docker = engine ?? createDocker();
+    const args = parseArgs(argv);
+    if (args.teardown) {
+      try {
+        assertLocalEngine(docker);
+      } catch (error) {
+        throw new Refusal(`the Docker identity check failed: ${error.message}`);
+      }
+      return performTeardown({ rootDir, engine: docker, ops });
+    }
+
+    const folder = realFolder(resolve(args.folder));
+    const { refusal } = preflight({
+      folder,
+      rootDir,
+      io: {
+        engine: docker,
+        listFolder: (dir) => readdirSync(dir),
+        readJson: (file) => {
+          try {
+            return readJsonFile(file);
+          } catch {
+            return null;
+          }
+        },
+      },
+    });
+    if (refusal) throw new Refusal(refusal);
+
+    const hosted = validateHosted(
+      readJsonFile(join(folder, "hosted.json")),
+    ).hosted;
+    return await performRun({
+      folder,
+      hosted,
+      rootDir,
+      engine: docker,
+      ops,
+    });
+  } catch (error) {
+    say(describeFailure(error));
+    return error instanceof Refusal ? 3 : 1;
+  }
 }
 
 if (

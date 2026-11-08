@@ -584,8 +584,6 @@ describe("backup:check refusals before any write (AC10)", () => {
       listFolder: () => [...REQUIRED_FILES, "storage"],
       readJson: (file: string) =>
         file.endsWith("hosted.json") ? goodHosted : goodManifest,
-      record: () => null,
-      isLive: () => false,
       ...overrides,
     };
     return preflight({
@@ -599,7 +597,7 @@ describe("backup:check refusals before any write (AC10)", () => {
   };
 
   it("passes a complete backup with nothing running", () => {
-    expect(run()).toEqual({ refusal: null, stale: false });
+    expect(run()).toEqual({ refusal: null });
   });
 
   it("refuses a folder inside the repository or under AppData, naming the cause", () => {
@@ -636,29 +634,6 @@ describe("backup:check refusals before any write (AC10)", () => {
           file.endsWith("hosted.json") ? { counts: {} } : goodManifest,
       }).refusal,
     ).toMatch(/hosted\.json/);
-  });
-
-  it("refuses a second run while a live process holds the run record", () => {
-    const result = run({
-      record: () => ({ pid: 4242, start: "s" }),
-      isLive: () => true,
-    });
-    expect(result.refusal).toMatch(/4242.*run record/);
-  });
-
-  it("flags a record of a dead run as stale, so the teardown comes first", () => {
-    expect(
-      run({ record: () => ({ pid: 4242, start: "s" }), isLive: () => false }),
-    ).toEqual({
-      refusal: null,
-      stale: true,
-    });
-  });
-
-  it("refuses a record that cannot be read", () => {
-    expect(run({ record: () => ({ unreadable: true }) }).refusal).toMatch(
-      /cannot be read/,
-    );
   });
 
   it("refuses a container of another project on a scratch port", () => {

@@ -498,6 +498,21 @@ describe("backup:check interrupted run (AC9)", () => {
     expect(lockFiles()).toEqual(["lock.1.json"]);
   });
 
+  it("unconfirmed teardown replaces a saved pass even when the names file cannot be settled", () => {
+    savePass();
+    mkdirSync(join(folder, "check-mismatches.txt"));
+    const ops = {
+      teardown: vi.fn(() => {
+        throw new SafeError("Teardown is not confirmed.");
+      }),
+      execute: vi.fn(),
+    };
+    expect(
+      interruptRun({ lock: owned(), folder, engine: {} as never, ops }),
+    ).toBe(2);
+    expect(readSaved().outcome).toBe("unresolved");
+  });
+
   it("is what a SIGINT during a run runs, and exits with its code", async () => {
     const before = process.listeners("SIGINT");
     const exit = vi
@@ -591,6 +606,49 @@ describe("backup:check Docker failures are reduced and name the resource (AC8, G
     expect(printed()).not.toContain(MARKER);
     expect(printed()).toMatch(/step replace the saved result failed/);
     expect(lockFiles()).toEqual(["lock.1.json", "released.1"]);
+  });
+
+  describe("with a names file that cannot be settled (a directory)", () => {
+    beforeEach(() => {
+      backupFolder();
+      savePass();
+      mkdirSync(join(folder, "check-mismatches.txt"));
+    });
+
+    it("stops the saved pass before the start-of-run cleanup, after a successful Docker preflight", async () => {
+      const seen: string[] = [];
+      const ops = {
+        teardown: vi.fn(() => {
+          seen.push(readSaved().outcome);
+          return removedNothing;
+        }),
+        execute: vi.fn(async () => okResult),
+      };
+      await main([folder], {
+        ...mainSeams(),
+        engine: localEngine() as never,
+        ops,
+      });
+      // The first call is the cleanup before anything starts; the pass was already replaced.
+      expect(seen[0]).toBe("incomplete");
+      expect(readSaved().outcome).not.toBe("pass");
+    });
+
+    it("exits 1 with a non-pass saved result, without the message, when the Docker query fails", async () => {
+      const ops = { teardown: vi.fn(), execute: vi.fn() };
+      const code = await main([folder], {
+        ...mainSeams(),
+        engine: failing() as never,
+        ops,
+      });
+      expect(code).toBe(1);
+      expect(readSaved().outcome).toBe("fail");
+      expect(
+        readFileSync(join(folder, "check-result.json"), "utf8"),
+      ).not.toContain(MARKER);
+      expect(printed()).not.toContain(MARKER);
+      expect(ops.teardown).not.toHaveBeenCalled();
+    });
   });
 
   it("prints a step and a code, never the message, when the Docker identity check fails during --teardown", async () => {

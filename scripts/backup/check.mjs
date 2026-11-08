@@ -708,18 +708,16 @@ async function runChecks(folder, hosted) {
 }
 
 /**
- * Writes the saved result of a run into the backup folder. Every run replaces it, so an earlier pass can never
- * stand as the latest result of a run that failed, was killed or could not be cleaned up (AC9). Only aggregates
- * and one safe failure line go in; object names go to `check-mismatches.txt`, which is removed when the run
- * found none. The names file is settled first and the result is published last, by renaming a fully written
- * temporary file over it, so a failure anywhere leaves the previous (non-pass) result and never a half-written
- * result or a stale pass.
+ * Publishes `check-result.json` in the backup folder by renaming a fully written temporary file over it, so a
+ * failure leaves the previous result untouched and never a half-written one. Every run replaces the result, so an
+ * earlier pass can never stand as the latest result of a run that failed, was killed or could not be cleaned up
+ * (AC9). Only aggregates and one safe failure line go in. It touches no other file, so every write that must
+ * stop a saved pass (the start of the run, a failed Docker query, an interrupt) uses it alone: an auxiliary file
+ * that cannot be settled cannot keep an earlier pass in place.
  */
-export function saveResult(folder, result, outcome, failure = null) {
+export function publishResult(folder, result, outcome, failure = null) {
   const { names, ...storage } = result?.d ?? {};
-  const mismatches = join(folder, "check-mismatches.txt");
-  if (names?.length) writeFileSync(mismatches, `${names.join("\n")}\n`);
-  else rmSync(mismatches, { force: true });
+  void names;
   const target = join(folder, "check-result.json");
   const temp = `${target}.tmp`;
   try {
@@ -742,6 +740,20 @@ export function saveResult(folder, result, outcome, failure = null) {
   } finally {
     rmSync(temp, { force: true });
   }
+}
+
+/**
+ * The final save of a run: object names go to `check-mismatches.txt` (the only place they go), which is removed
+ * when the run found none, and then the result is published. The names file is settled first, so a failure there
+ * leaves the non-pass result the run published when it began. A stale names file from an earlier run may stay
+ * until this save; `check-result.json` is the verdict.
+ */
+export function saveResult(folder, result, outcome, failure = null) {
+  const mismatches = join(folder, "check-mismatches.txt");
+  const names = result?.d?.names;
+  if (names?.length) writeFileSync(mismatches, `${names.join("\n")}\n`);
+  else rmSync(mismatches, { force: true });
+  publishResult(folder, result, outcome, failure);
 }
 
 // ---------- entry point ----------
@@ -826,7 +838,7 @@ export function interruptRun({ lock, folder, engine, ops = defaultOps }) {
     const line = `UNRESOLVED: ${unresolvedText(error)}`;
     say(line);
     try {
-      saveResult(folder, null, "unresolved", line);
+      publishResult(folder, null, "unresolved", line);
     } catch {
       /* the saved result is still the non-pass one written when the run began */
     }
@@ -878,7 +890,7 @@ export async function performRun({
       return 3;
     }
     try {
-      saveResult(folder, null, "fail", line);
+      publishResult(folder, null, "fail", line);
     } catch (saveError) {
       say(
         `FAIL: ${describeReadFailure(reduceError("replace the saved result", saveError))}`,
@@ -890,7 +902,7 @@ export async function performRun({
   }
   // From here the run owns the folder's saved result. It stops being a pass before anything that can fail runs.
   try {
-    saveResult(folder, null, "incomplete");
+    publishResult(folder, null, "incomplete");
   } catch (error) {
     releaseLock(lock); // nothing was started
     say(

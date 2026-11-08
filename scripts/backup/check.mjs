@@ -865,14 +865,28 @@ export async function performRun({
     say(describeFailure(error));
     return 3;
   }
-  // A Docker refusal or failure changes nothing: the saved result is left alone and the lock is released.
+  // A Docker refusal is a refusal before any write (AC10): the saved result is left alone and the lock is released.
+  // A Docker query that fails is a failed run that holds the run (AC9): the saved result stops being a pass first.
   try {
     const { refusal } = preflightDocker(engine);
     if (refusal) throw new Refusal(refusal);
   } catch (error) {
-    releaseLock(lock);
-    say(describeFailure(error));
-    return error instanceof Refusal ? 3 : 1;
+    const line = describeFailure(error);
+    if (error instanceof Refusal) {
+      releaseLock(lock);
+      say(line);
+      return 3;
+    }
+    try {
+      saveResult(folder, null, "fail", line);
+    } catch (saveError) {
+      say(
+        `FAIL: ${describeReadFailure(reduceError("replace the saved result", saveError))}`,
+      );
+    }
+    releaseLock(lock); // nothing was started
+    say(line);
+    return 1;
   }
   // From here the run owns the folder's saved result. It stops being a pass before anything that can fail runs.
   try {

@@ -567,10 +567,30 @@ describe("backup:check Docker failures are reduced and name the resource (AC8, G
     expect(code).toBe(1);
     expect(printed()).not.toContain(MARKER);
     expect(printed()).toMatch(/step docker identity check failed \(error code/);
-    // A failure to ask Docker changes nothing: the saved result stays and the run is released.
-    expect(readSaved()).toEqual({ outcome: "pass" });
+    // A failure to ask Docker is a failed run that holds the run: the earlier pass is replaced, and the run is released.
+    expect(readSaved().outcome).toBe("fail");
+    expect(readSaved().failure).toMatch(/step docker identity check failed/);
+    expect(
+      readFileSync(join(folder, "check-result.json"), "utf8"),
+    ).not.toContain(MARKER);
     expect(lockFiles()).toEqual(["lock.1.json", "released.1"]);
     expect(ops.teardown).not.toHaveBeenCalled();
+    expect(ops.execute).not.toHaveBeenCalled();
+  });
+
+  it("keeps exit code 1 and reports it reduced when the failed Docker query cannot replace the saved result", async () => {
+    // The result file is a directory, so it cannot be replaced.
+    mkdirSync(join(folder, "check-result.json"));
+    const ops = { teardown: vi.fn(), execute: vi.fn() };
+    const code = await performRun({
+      ...common(),
+      engine: failing() as never,
+      ops,
+    });
+    expect(code).toBe(1);
+    expect(printed()).not.toContain(MARKER);
+    expect(printed()).toMatch(/step replace the saved result failed/);
+    expect(lockFiles()).toEqual(["lock.1.json", "released.1"]);
   });
 
   it("prints a step and a code, never the message, when the Docker identity check fails during --teardown", async () => {

@@ -67,6 +67,8 @@ describe("buildE2eEnv", () => {
     expect(E2E_API_ORIGIN).not.toBe(E2E_ORIGIN);
     expect(env.API_INTERNAL_URL).toBe(E2E_API_ORIGIN);
     expect(env.E2E_NEXT_FIXTURES).toBe("1");
+    // The proof page is 404 without the flag (S5), and the topology rows render it.
+    expect(env.API_PROOF_ENABLED).toBe("1");
   });
 });
 

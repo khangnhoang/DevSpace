@@ -1,7 +1,7 @@
 // Usage:
-//   node scripts/tm-u3-proof/cli.mjs verify --api <API base URL> [--app <Next base URL>]
-//     No cookie. Exits non-zero unless every temporary surface answers 404 (PR 2 removes them; until then the flag
-//     must be off everywhere but a proof run).
+//   node scripts/tm-u3-proof/cli.mjs verify --api <API base URL> --app <Next base URL>
+//     No cookie. Exits non-zero unless every temporary surface answers 404 on the API and on Next, so both are named
+//     (PR 2 removes them; until then the flag must be off everywhere but a proof run).
 //   PROOF_COOKIE=<cookie header of the proof owner> node scripts/tm-u3-proof/cli.mjs run --api <base URL> [--origin <app origin>] [--skip-slow]
 //     Exercises the surfaces with that session and prints one line per check, with sizes, statuses and timings only.
 //     The cookie is read from the environment and never printed or written.
@@ -17,8 +17,13 @@ const [mode, ...args] = process.argv.slice(2);
 const api = option(args, "--api");
 if (!api || (mode !== "verify" && mode !== "run")) {
   console.error(
-    "usage: cli.mjs verify|run --api <url> [--app <url>] [--origin <origin>] [--skip-slow]",
+    "usage: cli.mjs verify --api <url> --app <url> | run --api <url> [--origin <origin>] [--skip-slow]",
   );
+  process.exit(2);
+}
+// An API that answers 404 says nothing about Next, so verify never runs on one side only.
+if (mode === "verify" && !option(args, "--app")) {
+  console.error("verify: --app is required, so that Next is checked too");
   process.exit(2);
 }
 

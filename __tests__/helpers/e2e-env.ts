@@ -28,6 +28,8 @@ export function buildE2eEnv(stack: LocalStack): Record<string, string> {
     GEMINI_API_KEY: "e2e-placeholder-not-a-key",
     NEXT_TELEMETRY_DISABLED: "1",
     API_INTERNAL_URL: E2E_API_ORIGIN,
+    // Read by app/tm-u3-proof/page.tsx: the e2e API has its proof surfaces on, so the page may call it.
+    API_PROOF_ENABLED: "1",
     // Read by next.config.ts: the page extension that makes the test-only fixture routes exist in this build only.
     E2E_NEXT_FIXTURES: "1",
   };

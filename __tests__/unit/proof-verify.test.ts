@@ -149,7 +149,8 @@ describe("the verify command", () => {
     const api = await serve((request) =>
       request.url === "/api/session" ? 401 : 404,
     );
-    const result = await run("verify", "--api", api);
+    const app = await serve(() => 404);
+    const result = await run("verify", "--api", api, "--app", app);
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("STILL REACHABLE GET");
     expect(result.stdout).toContain("/api/session -> 401");
@@ -177,9 +178,20 @@ describe("the verify command", () => {
       "verify",
       "--api",
       `http://127.0.0.1:${dead.port}`,
+      "--app",
+      `http://127.0.0.1:${dead.port}`,
     );
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("no answer");
+  });
+
+  it("exits 2 without asking anything when --app is missing: an API that answers 404 says nothing about Next", async () => {
+    // Every API route is 404, and the app would still serve the page: only a check of Next can see that.
+    const api = await serve(() => 404);
+    const result = await run("verify", "--api", api);
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("--app");
+    expect(result.stdout).not.toContain("surfaces checked");
   });
 
   it("exits 2 with a usage line when the API address is missing, and the run mode refuses to start without a cookie", async () => {

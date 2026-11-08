@@ -15,6 +15,9 @@ const CALLS = [
 ] as const;
 
 export default async function TmU3ProofPage() {
+  // The flag comes first, so the page is 404 with no API call whenever the Owner has not set it (or has removed it at
+  // the end of the proof), and also before the API's address is configured. The API's own 404 still ends the page.
+  if (process.env.API_PROOF_ENABLED !== "1") notFound();
   const results: { name: string; status: number }[] = [];
   for (const [name, path] of CALLS) {
     const response = await apiFetch(path);

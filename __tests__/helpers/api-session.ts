@@ -5,6 +5,7 @@ import {
   sharedRunMarker,
 } from "./fixture-ownership";
 import type { ApiStack } from "./api-process";
+import { cleanupWithDeadline } from "./api-timeout-note";
 
 const OPTIONS = {
   auth: {
@@ -89,7 +90,10 @@ export function apiSessions(stack: ApiStack) {
       const result = await fixtures.auth.admin.deleteUser(session.userId);
       if (result.error) throw new Error(result.error.message);
     },
-    cleanup: () => scope.cleanup(),
+    cleanup: () =>
+      cleanupWithDeadline(scope.run, "api sessions cleanup", () =>
+        scope.cleanup(),
+      ),
   };
 }
 

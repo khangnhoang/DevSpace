@@ -35,6 +35,7 @@ export default defineConfig({
           environment: "node",
           include: ["__tests__/api/**/*.test.ts"],
           globalSetup: ["__tests__/api/global-setup.ts"],
+          setupFiles: ["__tests__/api/setup.ts"],
           // The files start API processes on the shared test stack, so they never run side by side.
           fileParallelism: false,
           // A test may start the API (about 1 s on Windows, with the writer record) and wait on a 10 s probe window.

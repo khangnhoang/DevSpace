@@ -42,10 +42,15 @@ function frontendStatements(
   }
 }
 
-export async function startCountingProxy(target: {
-  host: string;
-  port: number;
-}): Promise<CountingProxy> {
+// `listenPort` fixes the port the proxy listens on (a test that starts the proxy after the application, on a port the
+// application already knows); 0 picks a free one.
+export async function startCountingProxy(
+  target: {
+    host: string;
+    port: number;
+  },
+  listenPort = 0,
+): Promise<CountingProxy> {
   const statements: string[] = [];
   const sockets = new Set<Socket>();
   let connections = 0;
@@ -74,7 +79,9 @@ export async function startCountingProxy(target: {
     client.on("close", end);
     upstream.on("close", end);
   });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  await new Promise<void>((resolve) =>
+    server.listen(listenPort, "127.0.0.1", resolve),
+  );
   const { port } = server.address() as { port: number };
   return {
     port,

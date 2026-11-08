@@ -52,6 +52,8 @@ export type RunningApi = {
   // The records of what the network guard refused since the process started.
   refusals(): GuardRecord[];
   output(): string;
+  // Resolves with the exit code when the process ends by itself (or after `stop`).
+  exited: Promise<number | null>;
   // Ends the process and fails when the guard refused anything the test did not expect.
   stop(options?: { expectRefusals?: boolean }): Promise<GuardRecord[]>;
 };
@@ -172,6 +174,7 @@ export async function startApi(
     port,
     refusals: spawned.refusals,
     output: spawned.output,
+    exited: spawned.exited,
     async stop(options = {}) {
       spawned.child.kill();
       await spawned.exited;

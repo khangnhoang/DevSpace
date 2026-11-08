@@ -56,8 +56,9 @@ export class ProofController {
   // `devspace_api` role may select. It answers `ok` and nothing from the row.
   @Get("proof/read")
   async read(@CurrentUser() user: SessionUser) {
+    const db = await this.database.connection();
     for (let round = 0; round < 2; round += 1) {
-      const rows = await this.database.db
+      const rows = await db
         .select({ id: profiles.id, role: profiles.role })
         .from(profiles)
         .where(eq(profiles.id, user.id))

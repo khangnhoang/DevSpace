@@ -6,12 +6,17 @@
 // Allowed paths: connect with the seed's local password; select id, role from profiles and see every row.
 // Denied paths: any other column or table, any write, CREATE TABLE and ALTER TABLE in public.
 // Invariants: effective privileges read from the catalog for public, auth and storage; the rollback is replayed
-//   inside a transaction that is rolled back, so the committed state never changes.
+//   inside a transaction that is rolled back, so the committed state never changes. The migration touches no object it
+//   does not grant on (API-R9, API-R8) and stops on a direct privilege it does not manage (API-R7).
 // Known bugs: none.
 import { readFile } from "node:fs/promises";
 import pg from "pg";
 import { describe, expect, inject, it } from "vitest";
-import { API_ROLE, apiDatabaseUrl } from "../helpers/api-role";
+import {
+  API_ROLE,
+  API_ROLE_LOCAL_PASSWORD,
+  apiDatabaseUrl,
+} from "../helpers/api-role";
 import { withPg } from "./helpers";
 
 const stack = inject("localStack");
@@ -333,6 +338,179 @@ describe("devspace_api role", () => {
           )
         ).rows[0].rolcanlogin,
       ).toBe(true);
+    });
+  });
+  // The migration replayed on the committed state inside a transaction that is rolled back. `prepare` runs first in the
+  // transaction and each case ends with a rollback, so nothing a case does is kept.
+  async function replayUp(
+    prepare: (owner: pg.Client) => Promise<void>,
+    check: (
+      owner: pg.Client,
+      error: { message?: string; code?: string } | null,
+    ) => Promise<void>,
+  ) {
+    const up = withoutTransaction(
+      await readFile(
+        new URL(`../../supabase/migrations/${migration}.sql`, import.meta.url),
+        "utf8",
+      ),
+    );
+    await withPg(async (owner) => {
+      await owner.query("begin");
+      try {
+        await prepare(owner);
+        await owner.query("savepoint replay");
+        const error = await owner.query(up).then(
+          () => null,
+          (caught: { message?: string; code?: string }) => caught,
+        );
+        if (error) await owner.query("rollback to savepoint replay");
+        await check(owner, error);
+      } finally {
+        await owner.query("rollback");
+      }
+    });
+  }
+
+  it.each([
+    [
+      "another column of profiles",
+      "grant select (email) on public.profiles to devspace_api",
+      "public.profiles.email",
+    ],
+    [
+      "another table",
+      "grant select on public.courses to devspace_api",
+      "relation public.courses",
+    ],
+    [
+      "a function",
+      "grant execute on function public.is_admin() to devspace_api",
+      "function public.is_admin()",
+    ],
+    [
+      "another schema",
+      "grant usage on schema api_r7_schema to devspace_api",
+      "schema api_r7_schema",
+    ],
+  ])(
+    "[API-R7] stops, naming the object, when an existing role holds a direct privilege on %s",
+    async (_label, grant, object) => {
+      await replayUp(
+        async (owner) => {
+          await owner.query("create schema api_r7_schema");
+          await owner.query(grant);
+        },
+        async (_owner, error) => {
+          expect(error, "the migration should stop").not.toBeNull();
+          expect(error?.code).toBe("P0001");
+          expect(error?.message).toContain(object);
+          expect(error?.message).not.toContain(API_ROLE_LOCAL_PASSWORD);
+        },
+      );
+    },
+  );
+
+  // A table in public that another role owns, as when an extension or a dashboard user created it. The migration's own
+  // role is no member of the owner afterwards, so it holds no right on the table.
+  async function foreignOwnedTable(owner: pg.Client, grantToApi: boolean) {
+    await owner.query("create role api_r8_owner nologin");
+    await owner.query("grant create on schema public to api_r8_owner");
+    await owner.query("grant api_r8_owner to current_user");
+    await owner.query("create table public.api_r8_table (id int)");
+    await owner.query("alter table public.api_r8_table owner to api_r8_owner");
+    if (grantToApi) {
+      await owner.query("set local role api_r8_owner");
+      await owner.query("grant select on public.api_r8_table to devspace_api");
+      await owner.query("reset role");
+    }
+    await owner.query("revoke api_r8_owner from current_user");
+  }
+
+  it("[API-R8] does not fail on a table another role owns, and gives the role nothing on it", async () => {
+    await replayUp(
+      (owner) => foreignOwnedTable(owner, false),
+      async (owner, error) => {
+        expect(error, error?.message).toBeNull();
+        expect(
+          (
+            await owner.query(
+              "select has_table_privilege($1, 'public.api_r8_table', 'SELECT,INSERT,UPDATE,DELETE') as any",
+              [API_ROLE],
+            )
+          ).rows[0].any,
+        ).toBe(false);
+      },
+    );
+  });
+
+  it("[API-R8] stops, naming the table, when another role granted the API role a privilege that this migration could not revoke", async () => {
+    await replayUp(
+      (owner) => foreignOwnedTable(owner, true),
+      async (_owner, error) => {
+        expect(error, "the migration should stop").not.toBeNull();
+        expect(error?.code).toBe("P0001");
+        expect(error?.message).toContain("relation public.api_r8_table");
+      },
+    );
+  });
+
+  it("[API-R9] a new role changes only the ACL of schema public and of profiles.id and profiles.role", async () => {
+    const down = withoutTransaction(
+      await readFile(
+        new URL(
+          `../../supabase/rollbacks/${migration}.down.sql`,
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
+    const up = withoutTransaction(
+      await readFile(
+        new URL(`../../supabase/migrations/${migration}.sql`, import.meta.url),
+        "utf8",
+      ),
+    );
+    const snapshot = async (owner: pg.Client) =>
+      new Map(
+        (
+          await owner.query(
+            `select key, acl from (
+               select 'class ' || c.relnamespace::regnamespace || '.' || c.relname as key, c.relacl::text as acl from pg_class c
+               union all select 'column ' || c2.relnamespace::regnamespace || '.' || c2.relname || '.' || t.attname, t.attacl::text
+                 from pg_attribute t join pg_class c2 on c2.oid = t.attrelid where t.attacl is not null
+               union all select 'function ' || p.oid, p.proacl::text from pg_proc p
+               union all select 'schema ' || n.nspname, n.nspacl::text from pg_namespace n
+               union all select 'default ' || d.oid, d.defaclacl::text from pg_default_acl d
+               union all select 'database ' || datname, datacl::text from pg_database
+             ) s`,
+          )
+        ).rows.map((row) => [row.key as string, row.acl as string | null]),
+      );
+    await withPg(async (owner) => {
+      await owner.query("begin");
+      try {
+        // The state the migration starts from on hosted: the role does not exist.
+        await owner.query(down);
+        const before = await snapshot(owner);
+        await owner.query(up);
+        const after = await snapshot(owner);
+        const changed = [...after.entries()]
+          .filter(([key, acl]) => before.get(key) !== acl)
+          .map(([key]) => key)
+          .sort();
+        expect(changed).toEqual([
+          "column public.profiles.id",
+          "column public.profiles.role",
+          "schema public",
+        ]);
+        expect(
+          [...before.keys()].filter((key) => !after.has(key)),
+          "no object disappeared",
+        ).toEqual([]);
+      } finally {
+        await owner.query("rollback");
+      }
     });
   });
 });

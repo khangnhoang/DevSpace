@@ -6,7 +6,7 @@ Read this before a hosted write step whose plan requires a backup, and when the 
 
 | Step | Who | Where |
 | --- | --- | --- |
-| Dump the database and download Storage (sections 1 and 2) | The Owner, in their own terminal | Repository root, output outside the repository |
+| Dump the database and download Storage (section 1) | The Owner, in their own PowerShell window | Repository root, output outside the repository |
 | Read exact hosted counts and the migration list, write `hosted.json` (section 3) | Main, under the Owner's grant for that backup | Hosted, counts only |
 | Restore into the scratch stack and compare (section 4) | Main, under the Owner's grant for that backup | Local Docker only |
 
@@ -22,49 +22,56 @@ The backup holds personal data and password hashes. Keep it outside the reposito
 | --- | --- | --- |
 | `roles.sql`, `schema.sql`, `data.sql` | `db dump` (section 1) | Roles, schema, and the data of every schema the CLI dumps (`public`, `auth`, `storage`, ...) as `COPY` blocks |
 | `history-schema.sql`, `history.sql` | `db dump --schema supabase_migrations` | The migration history table and its rows. `db dump --data-only` leaves this schema out, so it is dumped on its own |
-| `storage/<bucket>/<object name>` | `storage cp -r` (section 2) | One folder per bucket with every object |
-| `manifest.json` | the Owner (section 2) | `time`, `cli` version and the hosted service `versions` |
+| `storage/<bucket>/<object name>` | `storage cp -r` (section 1) | One folder per bucket with every object |
+| `manifest.json` | the block in section 1 | `time`, `cli` version and the hosted service `versions` |
 | `hosted.json` | Main (section 3) | Exact hosted `counts`, the `migrations` versions and the hosted service `versions` |
 
 `backup:check` also writes `check-result.json` (aggregates) and, on a Storage mismatch, `check-mismatches.txt` (object names, the only place they go) into this folder. Every run replaces `check-result.json` with `incomplete` as soon as it holds the run and the Docker checks have passed (a refusal leaves the earlier result alone), so an earlier pass never stands as the latest result of a run that failed or was killed. The run is released only after the final result is published.
 
-## 1. Dump the database (Owner)
+## 1. Take the backup in one paste (Owner)
 
-From the repository root in PowerShell, the checkout linked to the hosted project. The database password is typed at the CLI prompt for each command; do not pass `-p` or put it in a variable or file.
+Where to run it: Windows PowerShell, or a PowerShell tab of Windows Terminal, in the Owner's own window. Not Git Bash or `cmd` (the block is PowerShell), and not the Claude app's Terminal panel or an agent tool (only the Owner runs a hosted command, and the output stays out of agent sessions). First `cd` to the repository root, the checkout linked to the hosted project, and start Docker Desktop (`db dump` runs in a container).
+
+Paste the whole block once and press Enter. It is a single statement, so PowerShell reads all of it before anything runs and no pasted line can land in a password prompt. If the CLI asks for the database password, type it at that prompt; do not pass `-p` or put it in a variable or file. The block stops at the first command that fails, and the folder it leaves is not a backup: run the whole block again, which starts a new folder. Section 2 explains its Storage and manifest steps.
 
 ```powershell
-$b = Join-Path $env:USERPROFILE ("devspace-backups\" + (Get-Date -Format "yyyyMMdd-HHmm"))
-New-Item -ItemType Directory -Path "$b\storage" | Out-Null
-npx supabase db dump --linked --role-only -f "$b\roles.sql"
-npx supabase db dump --linked -f "$b\schema.sql"
-npx supabase db dump --linked --data-only --use-copy -f "$b\data.sql"
-npx supabase db dump --linked --schema supabase_migrations -f "$b\history-schema.sql"
-npx supabase db dump --linked --data-only --use-copy --schema supabase_migrations -f "$b\history.sql"
+& {
+  $ErrorActionPreference = 'Stop'
+  function Invoke-Supabase {
+    & npx supabase @args
+    if ($LASTEXITCODE -ne 0) { throw "supabase $($args[0]) $($args[1]) failed (exit $LASTEXITCODE). Stop and report this line." }
+  }
+  if (-not (Test-Path 'supabase\.temp\project-ref')) { throw 'Run this from the repository root.' }
+  $buckets = @('avatars')
+  $b = Join-Path $env:USERPROFILE ('devspace-backups\' + (Get-Date -Format 'yyyyMMdd-HHmm'))
+  New-Item -ItemType Directory -Path "$b\storage" | Out-Null
+  Invoke-Supabase db dump --linked --role-only -f "$b\roles.sql"
+  Invoke-Supabase db dump --linked -f "$b\schema.sql"
+  Invoke-Supabase db dump --linked --data-only --use-copy -f "$b\data.sql"
+  Invoke-Supabase db dump --linked --schema supabase_migrations -f "$b\history-schema.sql"
+  Invoke-Supabase db dump --linked --data-only --use-copy --schema supabase_migrations -f "$b\history.sql"
+  Write-Host "DUMP FINISHED $(Get-Date -Format 'HH:mm:ss'). Tell Main now: $b" -ForegroundColor Green
+  Invoke-Supabase storage ls --linked --experimental
+  $dst = Resolve-Path -Relative "$b\storage"
+  foreach ($bucket in $buckets) { Invoke-Supabase storage cp -r --linked --experimental "ss:///$bucket" $dst }
+  $v = @{
+    postgres = (Get-Content 'supabase\.temp\postgres-version' -Raw).Trim()
+    gotrue   = (Get-Content 'supabase\.temp\gotrue-version' -Raw).Trim()
+    storage  = (Get-Content 'supabase\.temp\storage-version' -Raw).Trim()
+  }
+  @{ time = (Get-Date).ToString('o'); cli = (npx supabase --version | Select-Object -First 1); versions = $v } |
+    ConvertTo-Json -Depth 3 | Set-Content -Encoding utf8 "$b\manifest.json"
+  Write-Host "BACKUP FINISHED: $b" -ForegroundColor Green
+}
 ```
 
-`--use-copy` writes `COPY` blocks instead of `INSERT` statements, which the check counts. Tell Main the time as soon as the last command ends: Main counts right after, and a write to the database between the dump and the count makes check (b) fail (the backup is then retaken and recounted).
+`--use-copy` writes `COPY` blocks instead of `INSERT` statements, which the check counts. Tell Main the folder as soon as `DUMP FINISHED` prints, without waiting for the Storage download: Main counts right after, and a write to the database between the dump and the count makes check (b) fail (the backup is then retaken and recounted).
 
-## 2. Download Storage and write the manifest (Owner)
+## 2. What the block does for Storage and the manifest
 
 The Storage commands are experimental in CLI 2.121.0, so they need `--experimental`. The destination must be an existing folder and a relative path: the CLI reads an absolute Windows path (`C:\...`) as a URL and fails. `Resolve-Path -Relative` gives the relative path from the repository root, so keep the backup on the repository's drive.
 
-```powershell
-npx supabase storage ls --linked --experimental
-$dst = Resolve-Path -Relative "$b\storage"
-npx supabase storage cp -r --linked --experimental ss:///avatars $dst
-```
-
-Repeat the `cp` for every bucket the `ls` lists (the app uses `avatars`). Because `$dst` exists, the CLI writes the objects to `$b\storage\<bucket>\<object name>`. A bucket with no objects creates no folder, which is fine.
-
-```powershell
-$v = @{
-  postgres = (Get-Content supabase\.temp\postgres-version -Raw).Trim()
-  gotrue   = (Get-Content supabase\.temp\gotrue-version -Raw).Trim()
-  storage  = (Get-Content supabase\.temp\storage-version -Raw).Trim()
-}
-@{ time = (Get-Date).ToString("o"); cli = (npx supabase --version | Select-Object -First 1); versions = $v } |
-  ConvertTo-Json -Depth 3 | Set-Content -Encoding utf8 "$b\manifest.json"
-```
+`$buckets` must name every bucket the `ls` lists (the app uses `avatars`); a bucket left out fails check (d), and the fix is to add it and take the backup again. The CLI writes the objects to `<backup folder>\storage\<bucket>\<object name>`. A bucket with no objects creates no folder, which is fine.
 
 The three version files are the CLI's last record of the hosted service versions. `backup:check` pins the scratch stack to them and refuses a backup whose `hosted.json` names different versions.
 

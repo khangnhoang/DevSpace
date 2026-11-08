@@ -115,15 +115,32 @@ describe("buildDevProcessEnv", () => {
 });
 
 describe("buildDevApiEnv", () => {
-  it("binds the API to loopback on port 4000 whatever the caller's shell holds", () => {
-    const env = buildDevApiEnv({
+  const env = buildDevApiEnv(
+    {
       PATH: "/usr/bin",
       HOST: "0.0.0.0",
       PORT: "8080",
-    });
+      DATABASE_URL: "postgresql://postgres:hosted@db.hosted.example/postgres",
+      SUPABASE_URL: "https://hosted-project.supabase.co",
+    },
+    stack,
+  );
+
+  it("binds the API to loopback on port 4000 whatever the caller's shell holds", () => {
     expect(env.HOST).toBe("127.0.0.1");
     expect(env.PORT).toBe(String(DEV_API_PORT));
     expect(DEV_API_PORT).toBe(4000);
     expect(env.PATH).toBe("/usr/bin");
+  });
+
+  it("connects as the API role to the local database and ignores an inherited hosted URL", () => {
+    const url = new URL(env.DATABASE_URL!);
+    expect(url.username).toBe("devspace_api");
+    expect(url.hostname).toBe("127.0.0.1");
+    expect(url.port).toBe("54322");
+    expect(env.SUPABASE_URL).toBe(stack.apiUrl);
+    expect(env.SUPABASE_ANON_KEY).toBe(stack.anonKey);
+    expect(env.ALLOWED_ORIGINS).toBe(DEV_ORIGIN);
+    expect(JSON.stringify(env)).not.toMatch(/hosted/);
   });
 });

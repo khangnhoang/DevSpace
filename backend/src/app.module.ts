@@ -1,6 +1,7 @@
 import { DynamicModule, Module } from "@nestjs/common";
 import { ServerEnv } from "./common/env";
 import { SERVER_ENV } from "./common/tokens";
+import { DbService } from "./db/db.service";
 import { HealthController } from "./health/health.controller";
 
 @Module({})
@@ -13,7 +14,9 @@ export class AppModule {
       module: AppModule,
       imports: extraModules,
       controllers: [HealthController],
-      providers: [{ provide: SERVER_ENV, useValue: env }],
+      providers: [{ provide: SERVER_ENV, useValue: env }, DbService],
+      exports: [SERVER_ENV, DbService],
+      global: true,
     };
   }
 }

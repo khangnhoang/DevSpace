@@ -50,6 +50,6 @@ process.exitCode = await superviseAll([
     name: "api",
     command: process.execPath,
     args: [join(root, "dist", "backend", "src", "main.js")],
-    env: buildDevApiEnv(process.env),
+    env: buildDevApiEnv(process.env, stack),
   },
 ]);

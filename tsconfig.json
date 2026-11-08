@@ -11,6 +11,9 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    // Node runs scripts/*.mjs on the TypeScript helpers directly, so a helper that another helper needs by value is
+    // imported with its .ts extension.
+    "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "incremental": true,
     "plugins": [

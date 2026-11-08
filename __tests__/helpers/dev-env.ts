@@ -1,3 +1,4 @@
+import { apiDatabaseUrl } from "./api-role.ts";
 import type { LocalStack } from "./local-stack";
 
 export const DEV_PORT = 3000;
@@ -29,15 +30,21 @@ export function buildDevEnv(stack: LocalStack): Record<string, string> {
 export const DEV_API_PORT = 4000;
 
 // The environment of the API on the dev stack. It starts from the inherited environment, which may hold hosted
-// values, so a name the API reads is always set here and never taken from the caller's shell.
+// values, so every name the API reads is set here and never taken from the caller's shell. The database user is the
+// API role with the local seed password (api-role.ts).
 export function buildDevApiEnv(
   inherited: Record<string, string | undefined>,
+  stack: LocalStack,
 ): Record<string, string | undefined> {
   return {
     ...inherited,
     HOST: DEV_HOST,
     PORT: String(DEV_API_PORT),
     RAILWAY_GIT_COMMIT_SHA: "dev",
+    DATABASE_URL: apiDatabaseUrl(stack.dbUrl),
+    SUPABASE_URL: stack.apiUrl,
+    SUPABASE_ANON_KEY: stack.anonKey,
+    ALLOWED_ORIGINS: DEV_ORIGIN,
   };
 }
 

@@ -26,6 +26,21 @@ export function buildDevEnv(stack: LocalStack): Record<string, string> {
   };
 }
 
+export const DEV_API_PORT = 4000;
+
+// The environment of the API on the dev stack. It starts from the inherited environment, which may hold hosted
+// values, so a name the API reads is always set here and never taken from the caller's shell.
+export function buildDevApiEnv(
+  inherited: Record<string, string | undefined>,
+): Record<string, string | undefined> {
+  return {
+    ...inherited,
+    HOST: DEV_HOST,
+    PORT: String(DEV_API_PORT),
+    RAILWAY_GIT_COMMIT_SHA: "dev",
+  };
+}
+
 // The environment handed to `next dev`. The local values override anything inherited, and an inherited AI key
 // is removed so that Next takes it only from the environment file.
 export function buildDevProcessEnv(

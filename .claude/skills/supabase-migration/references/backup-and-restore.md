@@ -10,7 +10,7 @@ Read this before a hosted write step whose plan requires a backup, and when the 
 | Read exact hosted counts and the migration list, write `hosted.json` (section 3) | Main, under the Owner's grant for that backup | Hosted, counts only |
 | Restore into the scratch stack and compare (section 4) | Main, under the Owner's grant for that backup | Local Docker only |
 
-An implementor runs no hosted command and no step of this runbook that touches a real backup. The `PreToolUse` hook (`.claude/rules.md` section 9) guards Claude sessions, not the Owner's terminal; its prompt is not a grant.
+An implementor runs no hosted command and no step of this runbook that touches a real backup.
 
 The backup holds personal data and password hashes. Keep it outside the repository and outside `AppData` (the desktop app virtualizes writes there), never paste its content, and delete old backups yourself (Owner decision 9: `%USERPROFILE%\devspace-backups\<yyyymmdd-hhmm>`).
 

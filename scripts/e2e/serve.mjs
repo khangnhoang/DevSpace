@@ -80,23 +80,40 @@ const api = spawn(
     stdio: "inherit",
   },
 );
+let apiExit = null;
 api.on("exit", (code, signal) => {
   // The API going away fails the run: the rows would otherwise meet a 502 and read it as a product failure.
-  console.error(`e2e: the API exited (${code ?? signal}).`);
+  apiExit = `${code ?? signal}`;
+  console.error(`e2e: the API exited (${apiExit}).`);
   process.exit(code || 1);
 });
 
-// Next starts only when the API answers its health route.
+// A signal that arrives while the API is still starting ends both children, and the handlers exist before any wait,
+// so an interrupted run never leaves the API behind.
+let server;
+for (const signal of ["SIGINT", "SIGTERM"])
+  process.on(signal, () => {
+    api.removeAllListeners("exit");
+    api.kill();
+    server?.kill(signal);
+    if (!server) process.exit(1);
+  });
+
+// Next starts only when the API answers its health route. Each probe has its own deadline, so a socket that accepts and
+// never answers cannot outlast the 60 seconds, and a dead API ends the wait at once.
 async function waitForApi() {
   const end = Date.now() + 60_000;
   while (Date.now() < end) {
+    if (apiExit !== null)
+      throw new Error(`e2e: the API exited (${apiExit}) before it answered.`);
     try {
       const response = await fetch(
         `http://127.0.0.1:${E2E_API_PORT}/api/health`,
+        { signal: AbortSignal.timeout(2_000) },
       );
       if (response.ok) return;
     } catch {
-      // not listening yet
+      // not listening yet, or no answer within the probe's deadline
     }
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
@@ -104,9 +121,15 @@ async function waitForApi() {
     `e2e: the API did not answer on port ${E2E_API_PORT} within 60 seconds.`,
   );
 }
-await waitForApi();
+try {
+  await waitForApi();
+} catch (error) {
+  api.removeAllListeners("exit");
+  api.kill();
+  throw error;
+}
 
-const server = spawn(
+server = spawn(
   process.execPath,
   [next, "start", "-H", "127.0.0.1", "-p", String(E2E_PORT)],
   {
@@ -136,9 +159,3 @@ server.on("exit", (code, signal) => {
   api.kill();
   process.exit(code ?? (signal ? 1 : 0));
 });
-for (const signal of ["SIGINT", "SIGTERM"])
-  process.on(signal, () => {
-    api.removeAllListeners("exit");
-    api.kill();
-    server.kill(signal);
-  });

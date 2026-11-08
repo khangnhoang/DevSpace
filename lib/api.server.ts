@@ -30,10 +30,9 @@ export async function apiFetch(
   const appOrigin = process.env.NEXT_PUBLIC_BASE_URL;
   if (!appOrigin) throw new ApiConfigError("NEXT_PUBLIC_BASE_URL is not set.");
 
-  const cookie = (await cookies())
-    .getAll()
-    .map(({ name, value }) => `${name}=${value}`)
-    .join("; ");
+  // The store's own serialization: it percent-encodes each value again. Joining the decoded values by hand would let
+  // `prefs=x%3B%20sb-demo-auth-token%3D...` turn into a second cookie that the API reads as the caller's session.
+  const cookie = (await cookies()).toString();
 
   return await fetch(new URL(path, base), {
     method: request.method ?? "GET",

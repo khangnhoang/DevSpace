@@ -58,3 +58,6 @@ next-env.d.ts
 # claude code local state
 /.claude/*.local.json
 /.claude/worktrees/
+
+# scratch Supabase workdir of backup:check (TM-U1)
+/.supabase-backup-check/

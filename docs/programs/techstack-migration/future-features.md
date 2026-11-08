@@ -47,14 +47,6 @@ Direction the Owner has set. The entries below moved here on 2026-11-08 (Owner d
   - Real provider delivery (Gmail) stays out of scope, as QE-F2 says.
 - Target program: techstack-migration (TM-U7).
 
-## TM-F6: Harness hook that blocks dangerous database commands
-
-- Status: Recorded 2026-11-01 by the Owner (QE-U3 planning); a later task after QE-U3; moved from AW-F5 (agent-workflow) on 2026-11-08, techstack-migration Owner decision 5.
-- Direction: a Claude `PreToolUse` hook in `.claude/settings.json` refuses, before it runs:
-  - a `supabase` command with `--linked`, `db push`, `link`, `--db-url` or `migration repair`;
-  - `db reset` without the test-stack `--workdir`;
-  - `psql` to a host other than `127.0.0.1`.
-  It complements the identity check in the QE-U3 test tooling. It matches command text only, so a script that calls `supabase` internally is not caught. The `AGENTS.md` section 4 rules stay the owner of permissions, and the hook enforces part of them. Settings changes need the Owner's approval (`update-config`).
-- Target program: techstack-migration (TM-U1).
-
 ## Closed
+
+- TM-F6 — Dropped: the command hook was withdrawn by Owner decision 13 of the TM-U1 detail plan (a Bash and PowerShell parser grew past its benefit, prompted on routine work, could not be shown to stop every path to hosted and binds only Claude Code); no replacement hook, wrapper or credential move is planned

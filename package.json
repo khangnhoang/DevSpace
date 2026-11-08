@@ -15,6 +15,7 @@
     "test:unit": "vitest run --project unit --project components",
     "test:e2e": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/e2e/run.mjs",
     "test:stack:stop": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-stack/stop.mjs",
+    "backup:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/backup/check.mjs",
     "docs:check-structure": "node scripts/docs/check-structure.mjs",
     "docs:check-skills": "node scripts/docs/check-skills.mjs",
     "docs:check-links": "node scripts/docs/check-links.mjs",

@@ -17,6 +17,7 @@ Roadmap, in this order: (1) agent-workflow (rules, skills, docs system), (2) inf
 - `npm test` runs every Vitest project (`unit`, `components` and `rls`) on the test stack. It needs Docker Desktop, takes the machine-wide test lock, starts the stack if it is down and resets it only when the last run was unclean, the migrations, seed or test config changed, or `--reset` is passed. It changes only the test database. See [test-quality-strategy](.claude/skills/test-quality-strategy/SKILL.md).
 - `npm run test:unit` runs the `unit` and `components` (jsdom, Testing Library) tests and needs no Docker.
 - `npm run test:stack:stop` stops the test stack and confirms that no `devspace-test` container remains. It takes the same lock, stops writer processes an interrupted run left behind and leaves the dev stack and other projects alone.
+- `npm run backup:check -- <backup folder>` restores a hosted backup the Owner took ([runbook](.claude/skills/supabase-migration/references/backup-and-restore.md)) into a scratch stack of its own (project `devspace-backup-check`, ports 56320–56329, workdir `.supabase-backup-check/`) and compares it with the hosted counts Main recorded; `-- --teardown` removes what an interrupted run left. It needs Docker Desktop, prints aggregates only, reaches nothing hosted and leaves the dev and test stacks alone. Main runs it under the Owner's grant for that backup (section 4); do not run Supabase commands on the scratch stack by hand.
 - `npm run test:e2e` runs Playwright in Chromium (learner/admin paths, payment UI/action calls, fixture deletes and dialog/failure handling) on the test stack, with the same lock, start and reset rules as `npm test`. It needs Docker Desktop and Chromium installed (`npx playwright install chromium`), changes only the test database, and overwrites `.next`, so run `npm run build` before `npm start` afterwards. See [test-quality-strategy](.claude/skills/test-quality-strategy/SKILL.md).
 
 ## Code map
@@ -89,6 +90,7 @@ Each of these is a separate grant from the Owner; one never implies another, and
 
 - commit, push, PR creation or update, merge, branch deletion. A PR creation or update grant also covers writing that PR's CI result into its body (`git-pr-workflow`, `pr-and-ci.md`), and nothing else;
 - applying a migration is two grants, *prepare* (the dry run) and *apply*, in the order `supabase-migration` ("Hosted apply") gives; any other write to the hosted database is a grant of its own;
+- restoring a hosted backup into the scratch stack: Main runs `npm run backup:check` and reads hosted counts only (`count(*)` of tables and the migration list, no rows) for one named backup. The Owner takes the backup themself in their own terminal; no agent runs a runbook step that reaches hosted;
 - CI fixing that needs a push; the grant covers only the edit, validate, commit and push actions the Owner named;
 - anything the Owner has not asked for in words.
 

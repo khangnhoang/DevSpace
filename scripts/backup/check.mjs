@@ -17,6 +17,7 @@ import {
   readFileSync,
   readSync,
   realpathSync,
+  renameSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -101,37 +102,89 @@ const projectContainers = (engine) =>
         container.name.endsWith(`_${SCRATCH_PROJECT_ID}`),
     );
 
-const projectVolumes = () =>
-  docker(["volume", "ls", "--format", "{{.Name}}"])
+const projectVolumes = (run = docker) =>
+  run(["volume", "ls", "--format", "{{.Name}}"])
     .split(/\r?\n/)
     .filter((name) => name.endsWith(`_${SCRATCH_PROJECT_ID}`));
 
-const networkExists = () =>
-  docker(["network", "ls", "--format", "{{.Name}}"])
+const networkExists = (run = docker) =>
+  run(["network", "ls", "--format", "{{.Name}}"])
     .split(/\r?\n/)
     .includes(SCRATCH_NETWORK);
 
-/** Removes every container, volume and network of the scratch project and confirms none remains (AC9, G9). */
-export function teardown(engine) {
-  assertLocalEngine(engine);
+/**
+ * The Docker identity check (AC10). Only the refusal whose text this code controls (the engine is not local) is a
+ * `Refusal`; any other failure of the engine query, whose message can carry the child's stderr, is a step and a
+ * code (AC8).
+ */
+export function checkEngine(engine) {
+  let host;
+  try {
+    host = engine.host();
+  } catch (error) {
+    throw new ReadFailure(reduceError("docker identity check", error));
+  }
+  try {
+    assertLocalEngine({ host: () => host });
+  } catch (error) {
+    throw new Refusal(`the Docker identity check failed: ${error.message}`);
+  }
+}
+
+// A removal that fails names the resource, which comes from Docker's own listing and not from the backup (G9).
+function removeResource(run, kind, name, args) {
+  try {
+    run(args);
+  } catch (error) {
+    const reason =
+      error instanceof SafeError
+        ? error.message
+        : describeReadFailure(reduceError("docker", error));
+    throw new SafeError(
+      `Teardown is not confirmed; ${kind} ${name} could not be removed (${reason}).`,
+    );
+  }
+}
+
+/**
+ * Removes every container, volume and network of the scratch project and confirms none remains (AC9, G9). `run`
+ * replaces the Docker CLI call in tests.
+ */
+export function teardown(engine, run = docker) {
+  try {
+    checkEngine(engine);
+  } catch (error) {
+    if (error instanceof Refusal) throw new SafeError(error.message);
+    throw error;
+  }
   const removed = { containers: 0, volumes: 0 };
   for (const container of projectContainers(engine)) {
     if (container.project !== SCRATCH_PROJECT_ID)
       throw new SafeError(
         `Container ${container.name} is named like a scratch container but belongs to another project; nothing was removed.`,
       );
-    docker(["rm", "-f", "-v", container.name]);
+    removeResource(run, "container", container.name, [
+      "rm",
+      "-f",
+      "-v",
+      container.name,
+    ]);
     removed.containers++;
   }
-  for (const name of projectVolumes()) {
-    docker(["volume", "rm", "-f", name]);
+  for (const name of projectVolumes(run)) {
+    removeResource(run, "volume", name, ["volume", "rm", "-f", name]);
     removed.volumes++;
   }
-  if (networkExists()) docker(["network", "rm", SCRATCH_NETWORK]);
+  if (networkExists(run))
+    removeResource(run, "network", SCRATCH_NETWORK, [
+      "network",
+      "rm",
+      SCRATCH_NETWORK,
+    ]);
   const left = [
     ...projectContainers(engine).map((c) => `container ${c.name}`),
-    ...projectVolumes().map((name) => `volume ${name}`),
-    ...(networkExists() ? [`network ${SCRATCH_NETWORK}`] : []),
+    ...projectVolumes(run).map((name) => `volume ${name}`),
+    ...(networkExists(run) ? [`network ${SCRATCH_NETWORK}`] : []),
   ];
   if (left.length)
     throw new SafeError(
@@ -151,7 +204,8 @@ export function teardown(engine) {
  * `startOf` and `afterRead` are test seams: the start time of a pid, and a step that runs between reading the lock
  * and claiming it, which is how a test makes two processes read the same state.
  * @typedef {{ startOf?: (pid: number) => string | null, afterRead?: () => void }} RunSeams
- * @typedef {{ teardown: (engine: any) => { containers: number, volumes: number }, execute: (folder: any, hosted: any, engine: any, rootDir: string) => Promise<any> }} RunOps
+ * `beforePublish` is a test seam: a step that runs after the check and its teardown, before the result is published.
+ * @typedef {{ teardown: (engine: any) => { containers: number, volumes: number }, execute: (folder: any, hosted: any, engine: any, rootDir: string) => Promise<any>, beforePublish?: () => void | Promise<void> }} RunOps
  */
 
 /** @param {{ command?: string, rootDir?: string } & RunSeams} [options] */
@@ -189,19 +243,20 @@ export function acquireRun({
 // ---------- refusals (AC10) ----------
 
 /**
- * Everything that must hold before anything is written, except the run lock (`acquireRun`, which only the run
- * itself can take atomically). Returns the cause of the first refusal, or null. `io` replaces the file system
- * and Docker in tests.
+ * The file-system refusals: a folder that may not be used, or that lacks a file or holds an invalid one. They need
+ * no Docker and no lock, so a refused folder neither takes the run nor changes the saved result. `io` replaces the
+ * file system in tests; `refusePath` is a test seam for the path rule.
  */
-export function preflight({
+export function preflightFiles({
   folder,
   rootDir = root,
   env = process.env,
   home = homedir(),
   platform = process.platform,
   io,
+  refusePath = refuseBackupPath,
 }) {
-  const path = refuseBackupPath(folder, { root: rootDir, env, home, platform });
+  const path = refusePath(folder, { root: rootDir, env, home, platform });
   if (path) return { refusal: path };
   let present;
   try {
@@ -216,14 +271,23 @@ export function preflight({
   if (manifest.length) return { refusal: manifest[0] };
   const { problems } = validateHosted(io.readJson(join(folder, "hosted.json")));
   if (problems.length) return { refusal: problems[0] };
+  return { refusal: null };
+}
 
+/**
+ * The Docker refusals (AC10): the engine is not local, a container of another project holds a scratch port, or a
+ * container is named like a scratch container but belongs to another project. Every call here is a Docker action, so
+ * it runs only once the run is owned. An unexpected Docker failure throws, already reduced for printing.
+ */
+export function preflightDocker(engine) {
   try {
-    assertLocalEngine(io.engine);
+    checkEngine(engine);
   } catch (error) {
-    return { refusal: `the Docker identity check failed: ${error.message}` };
+    if (error instanceof Refusal) return { refusal: error.message };
+    throw error;
   }
   const holders = foreignPortHolders(
-    io.engine.containers(),
+    engine.containers(),
     SCRATCH_PORT_LIST,
     SCRATCH_PROJECT_ID,
   );
@@ -231,7 +295,7 @@ export function preflight({
     return {
       refusal: `a container of another project holds a scratch port (${holders.join(", ")})`,
     };
-  const lookalike = io.engine
+  const lookalike = engine
     .containers()
     .find(
       (c) =>
@@ -647,28 +711,37 @@ async function runChecks(folder, hosted) {
  * Writes the saved result of a run into the backup folder. Every run replaces it, so an earlier pass can never
  * stand as the latest result of a run that failed, was killed or could not be cleaned up (AC9). Only aggregates
  * and one safe failure line go in; object names go to `check-mismatches.txt`, which is removed when the run
- * found none.
+ * found none. The names file is settled first and the result is published last, by renaming a fully written
+ * temporary file over it, so a failure anywhere leaves the previous (non-pass) result and never a half-written
+ * result or a stale pass.
  */
 export function saveResult(folder, result, outcome, failure = null) {
   const { names, ...storage } = result?.d ?? {};
-  writeFileSync(
-    join(folder, "check-result.json"),
-    JSON.stringify(
-      {
-        outcome,
-        failure,
-        a: result?.a ?? null,
-        b: result?.b ?? null,
-        c: result?.c ?? null,
-        d: result?.d ? storage : null,
-      },
-      null,
-      2,
-    ),
-  );
   const mismatches = join(folder, "check-mismatches.txt");
   if (names?.length) writeFileSync(mismatches, `${names.join("\n")}\n`);
   else rmSync(mismatches, { force: true });
+  const target = join(folder, "check-result.json");
+  const temp = `${target}.tmp`;
+  try {
+    writeFileSync(
+      temp,
+      JSON.stringify(
+        {
+          outcome,
+          failure,
+          a: result?.a ?? null,
+          b: result?.b ?? null,
+          c: result?.c ?? null,
+          d: result?.d ? storage : null,
+        },
+        null,
+        2,
+      ),
+    );
+    renameSync(temp, target);
+  } finally {
+    rmSync(temp, { force: true });
+  }
 }
 
 // ---------- entry point ----------
@@ -740,8 +813,39 @@ async function execute(folder, hosted, engine, rootDir) {
 const defaultOps = { teardown, execute };
 
 /**
- * One check, from taking the run to releasing it. The folder has been accepted by `preflight`. Exit codes: 0 pass,
- * 1 fail, 2 unresolved (a teardown that is not confirmed), 3 refused before anything was written.
+ * An interrupt (SIGINT, SIGTERM) of a run that holds the lock. Removal confirmed: the lock is released and the exit
+ * code is 130; the saved result stays the non-pass one written when the run began. Removal not confirmed: the lock
+ * stays with this process, the unresolved line is printed and saved where possible, and the exit code is 2.
+ * Returns the exit code.
+ * @param {{ lock: any, folder: string, engine: any, ops?: RunOps }} options
+ */
+export function interruptRun({ lock, folder, engine, ops = defaultOps }) {
+  try {
+    ops.teardown(engine);
+  } catch (error) {
+    const line = `UNRESOLVED: ${unresolvedText(error)}`;
+    say(line);
+    try {
+      saveResult(folder, null, "unresolved", line);
+    } catch {
+      /* the saved result is still the non-pass one written when the run began */
+    }
+    return 2;
+  }
+  try {
+    releaseLock(lock);
+  } catch {
+    /* a lock that stays is taken over as stale by the next run */
+  }
+  return 130;
+}
+
+/**
+ * One check, from taking the run to releasing it. The folder has been accepted by `preflightFiles`. Order: take the
+ * lock, then the Docker refusals (the first Docker action), then replace the saved result, then clean up
+ * leftovers, run, tear down, publish the result and only then release the lock, so no other run can start between
+ * the end of this one and its result file. Exit codes: 0 pass, 1 fail, 2 unresolved (a teardown that is not
+ * confirmed), 3 refused before anything was written.
  */
 /** @param {{ folder: string, hosted: any, rootDir?: string, engine: any, ops?: RunOps } & RunSeams} options */
 export async function performRun({
@@ -761,6 +865,15 @@ export async function performRun({
     say(describeFailure(error));
     return 3;
   }
+  // A Docker refusal or failure changes nothing: the saved result is left alone and the lock is released.
+  try {
+    const { refusal } = preflightDocker(engine);
+    if (refusal) throw new Refusal(refusal);
+  } catch (error) {
+    releaseLock(lock);
+    say(describeFailure(error));
+    return error instanceof Refusal ? 3 : 1;
+  }
   // From here the run owns the folder's saved result. It stops being a pass before anything that can fail runs.
   try {
     saveResult(folder, null, "incomplete");
@@ -776,18 +889,8 @@ export async function performRun({
   let result = null;
   let failure = null; // what the check itself raised
   let teardownFailure = null; // a teardown that is not confirmed
-  const stop = () => {
-    try {
-      ops.teardown(engine);
-      releaseLock(lock);
-    } catch {
-      /* the lock stays; the next run finds it stale and cleans up */
-    }
-  };
-  const onSignal = () => {
-    stop();
-    process.exit(130);
-  };
+  const onSignal = () =>
+    process.exit(interruptRun({ lock, folder, engine, ops }));
   process.on("SIGINT", onSignal);
   process.on("SIGTERM", onSignal);
   let confirmed = false;
@@ -827,10 +930,8 @@ export async function performRun({
     process.off("SIGINT", onSignal);
     process.off("SIGTERM", onSignal);
   }
-  if (outcome === "unresolved") {
-    // The lock stays with this process; once it exits the next run or --teardown takes it over and cleans up.
+  if (outcome === "unresolved")
     say(`UNRESOLVED: ${unresolvedText(teardownFailure)}`);
-  } else if (confirmed) releaseLock(lock);
 
   if (result) {
     for (const line of formatReport(result)) say(line);
@@ -843,20 +944,25 @@ export async function performRun({
   ]
     .filter(Boolean)
     .join("; ");
+  await ops.beforePublish?.();
   try {
     saveResult(folder, result, outcome, failureLine || null);
   } catch (error) {
-    // The saved result is still the non-pass one written above, so a pass is not reported.
+    // `saveResult` publishes last and atomically, so the saved result is still the non-pass one written above.
     if (outcome === "pass") outcome = "fail";
     say(`FAIL: ${describeReadFailure(reduceError("save the result", error))}`);
   }
+  // Ownership ends only after every result-file operation, and only when the teardown is confirmed. An
+  // unconfirmed one leaves the lock with this process; once it exits the next run or --teardown takes it over
+  // and cleans up.
+  if (confirmed) releaseLock(lock);
   if (failure) say(describeFailure(failure));
   say(`result: ${outcome}`);
   return outcome === "pass" ? 0 : outcome === "unresolved" ? 2 : 1;
 }
 
 function unresolvedText(error) {
-  return error instanceof SafeError
+  return error instanceof SafeError || error instanceof ReadFailure
     ? error.message
     : describeReadFailure(reduceError("teardown", error));
 }
@@ -884,6 +990,15 @@ export function performTeardown({
     return 3;
   }
   try {
+    // The identity check is the first Docker action, made with the run owned. A refusal changes nothing.
+    try {
+      checkEngine(engine);
+    } catch (error) {
+      if (!(error instanceof Refusal)) throw error;
+      releaseLock(lock);
+      say(describeFailure(error));
+      return 3;
+    }
     const removed = ops.teardown(engine);
     releaseLock(lock);
     say(
@@ -897,25 +1012,28 @@ export function performTeardown({
   }
 }
 
-export async function main(argv, { rootDir = root, engine, ops } = {}) {
+/**
+ * `startOf` and `refusePath` are test seams (see `RunSeams`, `preflightFiles`). No Docker call is made before the
+ * run is owned: the file-system refusals come first, then `performRun` and `performTeardown` take the lock.
+ * @param {string[]} argv
+ * @param {{ rootDir?: string, engine?: any, ops?: RunOps, refusePath?: typeof refuseBackupPath } & RunSeams} [options]
+ */
+export async function main(
+  argv,
+  { rootDir = root, engine, ops, startOf, refusePath } = {},
+) {
   try {
     const docker = engine ?? createDocker();
     const args = parseArgs(argv);
-    if (args.teardown) {
-      try {
-        assertLocalEngine(docker);
-      } catch (error) {
-        throw new Refusal(`the Docker identity check failed: ${error.message}`);
-      }
-      return performTeardown({ rootDir, engine: docker, ops });
-    }
+    if (args.teardown)
+      return performTeardown({ rootDir, engine: docker, ops, startOf });
 
     const folder = realFolder(resolve(args.folder));
-    const { refusal } = preflight({
+    const { refusal } = preflightFiles({
       folder,
       rootDir,
+      refusePath,
       io: {
-        engine: docker,
         listFolder: (dir) => readdirSync(dir),
         readJson: (file) => {
           try {
@@ -937,6 +1055,7 @@ export async function main(argv, { rootDir = root, engine, ops } = {}) {
       rootDir,
       engine: docker,
       ops,
+      startOf,
     });
   } catch (error) {
     say(describeFailure(error));

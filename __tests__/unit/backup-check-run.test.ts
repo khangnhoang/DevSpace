@@ -25,11 +25,20 @@ import {
   ReadFailure,
   SafeError,
   acquireRun,
+  interruptRun,
+  main,
   performRun,
   performTeardown,
+  saveResult,
   scanBackupFile,
+  teardown,
 } from "../../scripts/backup/check.mjs";
-import { runLockDir } from "../../scripts/backup/config.mjs";
+import {
+  SCRATCH_NETWORK,
+  SCRATCH_PROJECT_ID,
+  runLockDir,
+} from "../../scripts/backup/config.mjs";
+import { REQUIRED_FILES } from "../../scripts/backup/core.mjs";
 import { currentLock, processStart } from "../../scripts/test-stack/lock.mjs";
 
 const MARKER = "SECRET-MARKER-4711";
@@ -109,11 +118,16 @@ const okResult = {
   },
 };
 const removedNothing = { containers: 0, volumes: 0 };
+// A local engine with no containers; `host` and `containers` are spies so a test can count the Docker calls.
+const localEngine = (host = "npipe:////./pipe/docker_engine") => ({
+  host: vi.fn(() => host),
+  containers: vi.fn(() => [] as unknown[]),
+});
 const common = () => ({
   folder,
   hosted: {} as never,
   rootDir: root,
-  engine: {} as never,
+  engine: localEngine() as never,
   startOf,
 });
 
@@ -298,7 +312,12 @@ describe("backup:check --teardown shares the run (AC9, AC10)", () => {
     });
     const ops = { teardown: vi.fn(), execute: vi.fn() };
     expect(
-      performTeardown({ rootDir: root, engine: {} as never, ops, startOf }),
+      performTeardown({
+        rootDir: root,
+        engine: localEngine() as never,
+        ops,
+        startOf,
+      }),
     ).toBe(3);
     expect(ops.teardown).not.toHaveBeenCalled();
     expect(readRecord(root)?.runId).toBe(owner.runId);
@@ -313,7 +332,12 @@ describe("backup:check --teardown shares the run (AC9, AC10)", () => {
       execute: vi.fn(),
     };
     expect(
-      performTeardown({ rootDir: root, engine: {} as never, ops, startOf }),
+      performTeardown({
+        rootDir: root,
+        engine: localEngine() as never,
+        ops,
+        startOf,
+      }),
     ).toBe(2);
     expect(printed()).toMatch(/UNRESOLVED/);
     expect(lockFiles().some((n) => n.startsWith("released."))).toBe(false);
@@ -326,7 +350,12 @@ describe("backup:check --teardown shares the run (AC9, AC10)", () => {
       execute: vi.fn(),
     };
     expect(
-      performTeardown({ rootDir: root, engine: {} as never, ops, startOf }),
+      performTeardown({
+        rootDir: root,
+        engine: localEngine() as never,
+        ops,
+        startOf,
+      }),
     ).toBe(0);
     expect(ops.teardown).toHaveBeenCalledTimes(1);
     expect(lockFiles()).toEqual(["lock.2.json", "released.2"]);
@@ -352,5 +381,404 @@ describe("backup:check keeps backup content out of the output of a run (AC8)", (
       readFileSync(join(folder, "check-result.json"), "utf8"),
     ).not.toContain(MARKER);
     expect(printed()).toMatch(/step scan data file failed/);
+  });
+});
+
+describe("backup:check keeps the run until its result is published (AC9, G9)", () => {
+  it("refuses a second run that starts while the first publishes, so it cannot overwrite the next owner's result", async () => {
+    savePass();
+    let contender: number | undefined;
+    let savedWhileContending: string | undefined;
+    const contenderOps = { teardown: vi.fn(), execute: vi.fn() };
+    const ops = {
+      teardown: vi.fn(() => removedNothing),
+      execute: vi.fn(async () => okResult),
+      // The first run has finished its checks and its teardown and is about to publish.
+      beforePublish: async () => {
+        contender = await performRun({ ...common(), ops: contenderOps });
+        savedWhileContending = readSaved().outcome;
+      },
+    };
+    expect(await performRun({ ...common(), ops })).toBe(0);
+    expect(contender).toBe(3);
+    expect(contenderOps.teardown).not.toHaveBeenCalled();
+    expect(contenderOps.execute).not.toHaveBeenCalled();
+    // The contender wrote nothing: the first run's result is the only one, and it is the published pass.
+    expect(savedWhileContending).toBe("incomplete");
+    expect(readSaved().outcome).toBe("pass");
+    // Ownership ended only after the result was published.
+    expect(lockFiles()).toEqual(["lock.1.json", "released.1"]);
+  });
+});
+
+describe("backup:check never leaves a saved pass when the final save fails (AC9)", () => {
+  it("ends failed with a non-pass saved result when the names file cannot be settled", async () => {
+    savePass();
+    const ops = {
+      teardown: vi.fn(() => removedNothing),
+      execute: vi.fn(async () => {
+        // The names file cannot be removed: it is a directory, so the auxiliary step of the final save fails.
+        mkdirSync(join(folder, "check-mismatches.txt"));
+        return okResult;
+      }),
+    };
+    expect(await performRun({ ...common(), ops })).toBe(1);
+    expect(readSaved().outcome).toBe("incomplete");
+    expect(printed()).toMatch(/step save the result failed/);
+    expect(printed()).toMatch(/result: fail/);
+    // The teardown was confirmed, so the run is still released.
+    expect(lockFiles()).toEqual(["lock.1.json", "released.1"]);
+  });
+
+  it("publishes by rename: a failure before the publish leaves the earlier result byte for byte, and no temporary file", () => {
+    writeFileSync(
+      join(folder, "check-result.json"),
+      '{"outcome":"incomplete"}',
+    );
+    mkdirSync(join(folder, "check-mismatches.txt"));
+    expect(() => saveResult(folder, okResult, "pass")).toThrow();
+    expect(readFileSync(join(folder, "check-result.json"), "utf8")).toBe(
+      '{"outcome":"incomplete"}',
+    );
+    rmSync(join(folder, "check-mismatches.txt"), { recursive: true });
+    // A publish that fails after the temporary file was written removes it.
+    rmSync(join(folder, "check-result.json"));
+    mkdirSync(join(folder, "check-result.json"));
+    expect(() => saveResult(folder, okResult, "pass")).toThrow();
+    expect(existsSync(join(folder, "check-result.json.tmp"))).toBe(false);
+  });
+});
+
+describe("backup:check interrupted run (AC9)", () => {
+  const owned = () =>
+    acquireRun({ command: "backup:check", rootDir: root, startOf });
+
+  it("confirmed teardown: releases the run, exits 130 and saves no pass", () => {
+    writeFileSync(
+      join(folder, "check-result.json"),
+      JSON.stringify({ outcome: "incomplete" }),
+    );
+    const ops = { teardown: vi.fn(() => removedNothing), execute: vi.fn() };
+    const code = interruptRun({
+      lock: owned(),
+      folder,
+      engine: {} as never,
+      ops,
+    });
+    expect(code).toBe(130);
+    expect(readSaved().outcome).toBe("incomplete");
+    expect(lockFiles()).toEqual(["lock.1.json", "released.1"]);
+  });
+
+  it("unconfirmed teardown: keeps the run, prints UNRESOLVED, saves unresolved and exits 2", () => {
+    writeFileSync(
+      join(folder, "check-result.json"),
+      JSON.stringify({ outcome: "incomplete" }),
+    );
+    const ops = {
+      teardown: vi.fn(() => {
+        throw new SafeError(
+          "Teardown is not confirmed; container supabase_db_devspace-backup-check could not be removed (docker rm failed (exit 1)).",
+        );
+      }),
+      execute: vi.fn(),
+    };
+    const code = interruptRun({
+      lock: owned(),
+      folder,
+      engine: {} as never,
+      ops,
+    });
+    expect(code).toBe(2);
+    expect(printed()).toMatch(
+      /UNRESOLVED: Teardown is not confirmed.*supabase_db_devspace-backup-check/,
+    );
+    expect(readSaved().outcome).toBe("unresolved");
+    expect(readSaved().failure).toMatch(/^UNRESOLVED/);
+    expect(lockFiles()).toEqual(["lock.1.json"]);
+  });
+
+  it("is what a SIGINT during a run runs, and exits with its code", async () => {
+    const before = process.listeners("SIGINT");
+    const exit = vi
+      .spyOn(process, "exit")
+      .mockImplementation((() => undefined) as never);
+    let calls = 0;
+    const ops = {
+      teardown: vi.fn(() => {
+        // The first call is the start-of-run cleanup, the second is the interrupt's.
+        if (++calls === 2) throw new SafeError("Teardown is not confirmed.");
+        return removedNothing;
+      }),
+      execute: vi.fn(async () => {
+        const added = process
+          .listeners("SIGINT")
+          .filter((listener) => !before.includes(listener));
+        expect(added).toHaveLength(1);
+        (added[0] as () => void)();
+        return okResult;
+      }),
+    };
+    await performRun({ ...common(), ops });
+    expect(exit).toHaveBeenCalledWith(2);
+    expect(printed()).toMatch(/UNRESOLVED: Teardown is not confirmed/);
+    // The handlers do not outlive the run.
+    expect(process.listeners("SIGINT")).toEqual(before);
+  });
+});
+
+describe("backup:check Docker failures are reduced and name the resource (AC8, G9)", () => {
+  const backupFolder = () => {
+    for (const name of REQUIRED_FILES) writeFileSync(join(folder, name), "{}");
+    writeFileSync(
+      join(folder, "manifest.json"),
+      JSON.stringify({ time: "t", cli: "2.121.0", versions: {} }),
+    );
+    writeFileSync(
+      join(folder, "hosted.json"),
+      JSON.stringify({
+        counts: { "auth.users": 1, "auth.identities": 1, "storage.objects": 0 },
+        migrations: ["1"],
+        versions: { postgres: "1", gotrue: "2", storage: "3" },
+      }),
+    );
+  };
+  const failing = () => ({
+    host: vi.fn(() => {
+      throw new Error(`docker: error during connect ${MARKER}`);
+    }),
+    containers: vi.fn(() => [] as unknown[]),
+  });
+  const mainSeams = () => ({
+    rootDir: root,
+    startOf,
+    refusePath: () => null,
+  });
+
+  it("prints a step and a code, never the message, when the Docker identity check fails during a check", async () => {
+    backupFolder();
+    savePass();
+    const ops = { teardown: vi.fn(), execute: vi.fn() };
+    const code = await main([folder], {
+      ...mainSeams(),
+      engine: failing() as never,
+      ops,
+    });
+    expect(code).toBe(1);
+    expect(printed()).not.toContain(MARKER);
+    expect(printed()).toMatch(/step docker identity check failed \(error code/);
+    // A failure to ask Docker changes nothing: the saved result stays and the run is released.
+    expect(readSaved()).toEqual({ outcome: "pass" });
+    expect(lockFiles()).toEqual(["lock.1.json", "released.1"]);
+    expect(ops.teardown).not.toHaveBeenCalled();
+  });
+
+  it("prints a step and a code, never the message, when the Docker identity check fails during --teardown", async () => {
+    const ops = { teardown: vi.fn(), execute: vi.fn() };
+    const code = await main(["--teardown"], {
+      ...mainSeams(),
+      engine: failing() as never,
+      ops,
+    });
+    expect(code).toBe(2);
+    expect(printed()).not.toContain(MARKER);
+    expect(printed()).toMatch(
+      /UNRESOLVED: step docker identity check failed \(error code/,
+    );
+    expect(ops.teardown).not.toHaveBeenCalled();
+    // Removal is not confirmed, so the run stays owned for the next run to take over.
+    expect(lockFiles()).toEqual(["lock.1.json"]);
+  });
+
+  const scratchContainer = {
+    name: `supabase_db_${SCRATCH_PROJECT_ID}`,
+    project: SCRATCH_PROJECT_ID,
+    state: "running",
+    ports: [],
+  };
+  const dockerRun =
+    (volumes: string[], failOn: string) =>
+    (args: string[]): string => {
+      if (args.join(" ").startsWith(failOn))
+        throw new Error(`stderr ${MARKER}`);
+      if (args[0] === "volume" && args[1] === "ls") return volumes.join("\n");
+      return "";
+    };
+
+  it("names the container whose removal failed, without the child's message", () => {
+    const engine = {
+      host: () => "npipe:////./pipe/docker_engine",
+      containers: () => [scratchContainer],
+    };
+    let thrown: Error | undefined;
+    try {
+      teardown(engine as never, dockerRun([], "rm -f -v"));
+    } catch (error) {
+      thrown = error as Error;
+    }
+    expect(thrown).toBeInstanceOf(SafeError);
+    expect(thrown?.message).toContain(scratchContainer.name);
+    expect(thrown?.message).toMatch(/could not be removed/);
+    expect(thrown?.message).not.toContain(MARKER);
+  });
+
+  it("names the volume whose removal failed, without the child's message", () => {
+    const volume = `vol_${SCRATCH_PROJECT_ID}`;
+    const engine = {
+      host: () => "npipe:////./pipe/docker_engine",
+      containers: () => [],
+    };
+    let thrown: Error | undefined;
+    try {
+      teardown(engine as never, dockerRun([volume], "volume rm"));
+    } catch (error) {
+      thrown = error as Error;
+    }
+    expect(thrown).toBeInstanceOf(SafeError);
+    expect(thrown?.message).toContain(`volume ${volume}`);
+    expect(thrown?.message).not.toContain(MARKER);
+  });
+
+  it("names the network whose removal failed", () => {
+    const engine = {
+      host: () => "npipe:////./pipe/docker_engine",
+      containers: () => [],
+    };
+    const run = (args: string[]): string => {
+      if (args[0] === "network" && args[1] === "ls") return SCRATCH_NETWORK;
+      if (args[0] === "network" && args[1] === "rm")
+        throw new Error(`stderr ${MARKER}`);
+      return "";
+    };
+    expect(() => teardown(engine as never, run)).toThrow(
+      new RegExp(`network ${SCRATCH_NETWORK}`),
+    );
+  });
+});
+
+describe("backup:check makes no Docker call before it owns the run (G9, AC10)", () => {
+  const filesOk = () => {
+    for (const name of REQUIRED_FILES) writeFileSync(join(folder, name), "{}");
+    writeFileSync(
+      join(folder, "manifest.json"),
+      JSON.stringify({ time: "t", cli: "2.121.0", versions: {} }),
+    );
+    writeFileSync(
+      join(folder, "hosted.json"),
+      JSON.stringify({
+        counts: { "auth.users": 1, "auth.identities": 1, "storage.objects": 0 },
+        migrations: ["1"],
+        versions: { postgres: "1", gotrue: "2", storage: "3" },
+      }),
+    );
+  };
+  const seams = () => ({ rootDir: root, startOf, refusePath: () => null });
+  const noDocker = (engine: ReturnType<typeof localEngine>) => {
+    expect(engine.host).not.toHaveBeenCalled();
+    expect(engine.containers).not.toHaveBeenCalled();
+  };
+
+  it("refuses a check while another process owns the run, with zero Docker calls and the saved result untouched", async () => {
+    filesOk();
+    savePass();
+    const owner = acquireRun({
+      command: "backup:check",
+      rootDir: root,
+      startOf,
+    });
+    const engine = localEngine();
+    const ops = { teardown: vi.fn(), execute: vi.fn() };
+    expect(
+      await main([folder], { ...seams(), engine: engine as never, ops }),
+    ).toBe(3);
+    noDocker(engine);
+    expect(ops.teardown).not.toHaveBeenCalled();
+    expect(readSaved()).toEqual({ outcome: "pass" });
+    expect(readRecord(root)?.runId).toBe(owner.runId);
+  });
+
+  it("refuses --teardown while another process owns the run, with zero Docker calls", async () => {
+    const owner = acquireRun({
+      command: "backup:check",
+      rootDir: root,
+      startOf,
+    });
+    const engine = localEngine();
+    const ops = { teardown: vi.fn(), execute: vi.fn() };
+    expect(
+      await main(["--teardown"], {
+        ...seams(),
+        engine: engine as never,
+        ops,
+      }),
+    ).toBe(3);
+    noDocker(engine);
+    expect(ops.teardown).not.toHaveBeenCalled();
+    expect(readRecord(root)?.runId).toBe(owner.runId);
+  });
+
+  it("refuses a folder that lacks a file before the lock and before any Docker call", async () => {
+    const engine = localEngine();
+    expect(await main([folder], { ...seams(), engine: engine as never })).toBe(
+      3,
+    );
+    noDocker(engine);
+    expect(lockFiles()).toEqual([]);
+  });
+
+  it("refuses a Docker engine that is not local after taking the run, leaves the saved result alone and releases the run", async () => {
+    filesOk();
+    savePass();
+    const engine = localEngine("tcp://10.0.0.5:2375");
+    const ops = { teardown: vi.fn(), execute: vi.fn() };
+    expect(
+      await main([folder], { ...seams(), engine: engine as never, ops }),
+    ).toBe(3);
+    expect(printed()).toMatch(/Docker identity check failed/);
+    expect(readSaved()).toEqual({ outcome: "pass" });
+    expect(ops.teardown).not.toHaveBeenCalled();
+    expect(lockFiles()).toEqual(["lock.1.json", "released.1"]);
+  });
+
+  it("refuses --teardown on a Docker engine that is not local after taking the run, and releases the run", async () => {
+    const engine = localEngine("tcp://10.0.0.5:2375");
+    const ops = { teardown: vi.fn(), execute: vi.fn() };
+    expect(
+      await main(["--teardown"], {
+        ...seams(),
+        engine: engine as never,
+        ops,
+      }),
+    ).toBe(3);
+    expect(ops.teardown).not.toHaveBeenCalled();
+    expect(lockFiles()).toEqual(["lock.1.json", "released.1"]);
+  });
+
+  it("still cleans up at the next run after a stale run was taken over and then released by a Docker refusal", async () => {
+    writeStaleLock();
+    savePass();
+    expect(
+      await performRun({
+        ...common(),
+        engine: localEngine("tcp://10.0.0.5:2375") as never,
+        ops: { teardown: vi.fn(), execute: vi.fn() },
+      }),
+    ).toBe(3);
+    // The takeover was released as a clean run, so the next one no longer knows a run was interrupted ...
+    expect(lockFiles()).toEqual(["lock.2.json", "released.2"]);
+    const order: string[] = [];
+    const ops = {
+      teardown: vi.fn(() => {
+        order.push("teardown");
+        return removedNothing;
+      }),
+      execute: vi.fn(async () => {
+        order.push("execute");
+        return okResult;
+      }),
+    };
+    expect(await performRun({ ...common(), ops })).toBe(0);
+    // ... but every run removes leftovers first, whatever the lock says.
+    expect(order).toEqual(["teardown", "execute", "teardown"]);
   });
 });

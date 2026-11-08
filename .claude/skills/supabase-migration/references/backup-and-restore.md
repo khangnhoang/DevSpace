@@ -26,7 +26,7 @@ The backup holds personal data and password hashes. Keep it outside the reposito
 | `manifest.json` | the Owner (section 2) | `time`, `cli` version and the hosted service `versions` |
 | `hosted.json` | Main (section 3) | Exact hosted `counts`, the `migrations` versions and the hosted service `versions` |
 
-`backup:check` also writes `check-result.json` (aggregates) and, on a Storage mismatch, `check-mismatches.txt` (object names, the only place they go) into this folder. Every run replaces `check-result.json` with `incomplete` as soon as it holds the run, so an earlier pass never stands as the latest result of a run that failed or was killed.
+`backup:check` also writes `check-result.json` (aggregates) and, on a Storage mismatch, `check-mismatches.txt` (object names, the only place they go) into this folder. Every run replaces `check-result.json` with `incomplete` as soon as it holds the run and the Docker checks have passed (a refusal leaves the earlier result alone), so an earlier pass never stands as the latest result of a run that failed or was killed. The run is released only after the final result is published.
 
 ## 1. Dump the database (Owner)
 

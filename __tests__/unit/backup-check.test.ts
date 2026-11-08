@@ -25,7 +25,8 @@ import {
 } from "../../scripts/backup/core.mjs";
 import {
   parseArgs,
-  preflight,
+  preflightDocker,
+  preflightFiles,
   readJsonFile,
 } from "../../scripts/backup/check.mjs";
 import {
@@ -580,13 +581,13 @@ describe("backup:check refusals before any write (AC10)", () => {
 
   const run = (overrides: Record<string, unknown> = {}) => {
     const io = {
-      engine: engine(),
       listFolder: () => [...REQUIRED_FILES, "storage"],
       readJson: (file: string) =>
         file.endsWith("hosted.json") ? goodHosted : goodManifest,
       ...overrides,
     };
-    return preflight({
+    // The two halves of the refusals: the file system first (no Docker, no lock), then Docker (once the run is owned).
+    const files = preflightFiles({
       folder: (overrides.folder as string) ?? folder,
       rootDir: ROOT,
       env: WIN.env as unknown as NodeJS.ProcessEnv,
@@ -594,6 +595,8 @@ describe("backup:check refusals before any write (AC10)", () => {
       platform: "win32",
       io: io as never,
     });
+    if (files.refusal) return files;
+    return preflightDocker((overrides.engine as never) ?? engine());
   };
 
   it("passes a complete backup with nothing running", () => {

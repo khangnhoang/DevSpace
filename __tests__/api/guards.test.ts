@@ -117,6 +117,61 @@ describe("default deny (AC5)", () => {
   });
 });
 
+describe("the body is read only after the guards (AC7)", () => {
+  const MIB = 1024 * 1024;
+  // A JSON document one byte over the 4 MiB limit.
+  const oversized = `{"a":"${"x".repeat(4 * MIB + 1 - '{"a":""}'.length)}"}`;
+  const crossSite = () => ({
+    "content-type": "application/json",
+    cookie: user.cookie,
+    "sec-fetch-site": "cross-site",
+  });
+
+  it("[AC7] a cross-site cookie POST with malformed JSON is 403, not the parser's 400", async () => {
+    const before = await handled();
+    for (const body of ["{", "null", "leak-marker is not json"]) {
+      const response = await fetch(`${api.url}/api/e2e/validate`, {
+        method: "POST",
+        headers: crossSite(),
+        body,
+      });
+      expect(response.status, body).toBe(403);
+    }
+    expect(await handled()).toBe(before);
+  });
+
+  it("[AC7] a cross-site cookie POST over 4 MiB is 403, not the parser's 413", async () => {
+    const before = await handled();
+    const response = await fetch(`${api.url}/api/e2e/json`, {
+      method: "POST",
+      headers: crossSite(),
+      body: oversized,
+    });
+    expect(response.status).toBe(403);
+    expect(await handled()).toBe(before);
+  });
+
+  it("[AC7] a POST with no session and a body over 4 MiB is 401, and the body is not buffered", async () => {
+    const before = await handled();
+    const response = await fetch(`${api.url}/api/e2e/json`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: oversized,
+    });
+    expect(response.status).toBe(401);
+    expect(await handled()).toBe(before);
+  });
+
+  it("[AC7] a POST to a path with no route and a body over 4 MiB is 404, not the parser's 413", async () => {
+    const response = await fetch(`${api.url}/api/e2e/no-such-route`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...bearer(user) },
+      body: oversized,
+    });
+    expect(response.status).toBe(404);
+  });
+});
+
 type Case = {
   name: string;
   headers: Record<string, string>;

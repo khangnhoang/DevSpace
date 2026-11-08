@@ -4,6 +4,7 @@ import { CsrfGuard } from "./auth/csrf.guard";
 import { SessionGuard } from "./auth/session.guard";
 import { SessionService } from "./auth/session.service";
 import { ServerEnv } from "./common/env";
+import { BodyInterceptor } from "./common/body.interceptor";
 import { TimeoutInterceptor } from "./common/timeout.interceptor";
 import { SERVER_ENV } from "./common/tokens";
 import { DbService } from "./db/db.service";
@@ -27,6 +28,8 @@ export class AppModule {
         // any session lookup (AC7), then the session guard, which denies every route that is not marked public (AC5).
         { provide: APP_GUARD, useClass: CsrfGuard },
         { provide: APP_GUARD, useClass: SessionGuard },
+        // After the guards, before the pipes: the body is read only for a request that every guard let through.
+        { provide: APP_INTERCEPTOR, useClass: BodyInterceptor },
         { provide: APP_INTERCEPTOR, useClass: TimeoutInterceptor },
       ],
       exports: [SERVER_ENV, DbService],

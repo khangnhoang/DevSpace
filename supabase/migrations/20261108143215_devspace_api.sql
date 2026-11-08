@@ -41,14 +41,16 @@ begin
 end
 $$;
 
--- Start from nothing (supabase-migration, trap 2), then grant exactly what the health and session paths read.
+-- Start from nothing (supabase-migration, trap 2), then grant exactly what the API reads.
 revoke all on schema public from devspace_api;
 revoke all on all tables in schema public from devspace_api;
 revoke all on all sequences in schema public from devspace_api;
 revoke all on all functions in schema public from devspace_api;
 
 grant usage on schema public to devspace_api;
--- The session guard reads the caller's role from profiles; no other column or table is granted.
+-- An endpoint's permission check reads the caller's role from profiles with its own query (ADR 0008 D7); the TM-U3
+-- proof route is the first reader. The session guard asks Supabase Auth and reads no table. No other column or table
+-- is granted.
 grant select (id, role) on public.profiles to devspace_api;
 
 commit;

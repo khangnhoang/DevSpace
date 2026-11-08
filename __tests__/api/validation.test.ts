@@ -197,8 +197,29 @@ describe("size limits (AC9)", () => {
     ).toBe(before + 1);
   });
 
+  it("[AC9] a multipart text field over 64 KiB is refused with 400 (multer's field limit) and never reaches the handler", async () => {
+    const before = await handled();
+    const form = new FormData();
+    form.append("note", "x".repeat(64 * 1024 + 1));
+    form.append("file", new Blob([new Uint8Array(10)]), "file.bin");
+    const response = await fetch(`${api.url}/api/e2e/upload`, {
+      method: "POST",
+      headers: bearer(user),
+      body: form,
+    });
+    expect(response.status).toBe(400);
+    expect(await handled()).toBe(before);
+  });
+
   // Writes a request by hand so that the declared length and the bytes sent can differ.
-  function raw(declared: number, sent: string) {
+  function raw(
+    declared: number,
+    sent: string,
+    request = {
+      path: "/api/e2e/json",
+      contentType: "application/json",
+    },
+  ) {
     return new Promise<{ status: number | null; handlerRan: boolean }>(
       (resolve, reject) => {
         const socket = createConnection({ host: "127.0.0.1", port: api.port });
@@ -215,10 +236,10 @@ describe("size limits (AC9)", () => {
         });
         socket.write(
           [
-            "POST /api/e2e/json HTTP/1.1",
+            `POST ${request.path} HTTP/1.1`,
             `Host: 127.0.0.1:${api.port}`,
             `Authorization: Bearer ${user.accessToken}`,
-            "Content-Type: application/json",
+            `Content-Type: ${request.contentType}`,
             `Content-Length: ${declared}`,
             "Connection: close",
             "",
@@ -240,6 +261,28 @@ describe("size limits (AC9)", () => {
     expect(
       await handled(),
       "the truncated body never reached the handler",
+    ).toBe(before);
+  });
+
+  it("[AC9] a multipart body cut off inside the file part, shorter than its Content-Length, is refused and never handled", async () => {
+    const before = await handled();
+    const boundary = "devspace-test-boundary";
+    const partial = [
+      `--${boundary}`,
+      'Content-Disposition: form-data; name="file"; filename="file.bin"',
+      "Content-Type: application/octet-stream",
+      "",
+      "x".repeat(1000),
+    ].join("\r\n");
+    const result = await raw(partial.length + 5000, partial, {
+      path: "/api/e2e/upload",
+      contentType: `multipart/form-data; boundary=${boundary}`,
+    });
+    expect(result.handlerRan).toBe(false);
+    expect(result.status, "refused explicitly, not left hanging").toBe(400);
+    expect(
+      await handled(),
+      "the truncated upload never reached the handler",
     ).toBe(before);
   });
 

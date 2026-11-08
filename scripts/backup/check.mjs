@@ -44,12 +44,14 @@ import {
   compareMigrations,
   compareStorage,
   createCopyScanner,
+  describeReadFailure,
   foreignPortHolders,
   formatReport,
   isLoopbackOnly,
   loopbackRunArgs,
   mismatchLines,
   missingRequiredFiles,
+  reduceError,
   reduceFailure,
   refuseBackupPath,
   validateHosted,
@@ -70,6 +72,9 @@ const LOG_SETTINGS = [
 ];
 
 export class Refusal extends Error {}
+// An error whose message this file wrote from nothing the backup holds (a Docker call, a container name), so it
+// may be printed. Any other error is reduced to a step and a code (AC8, `reduceError`).
+export class SafeError extends Error {}
 
 const say = (line) => console.log(`backup:check: ${line}`);
 
@@ -83,7 +88,7 @@ function docker(args, { input } = {}) {
     stdio: ["pipe", "pipe", "pipe"],
   });
   if (result.status !== 0)
-    throw new Error(
+    throw new SafeError(
       `docker ${args[0]} failed (exit ${result.status ?? "none"})`,
     );
   return result.stdout;
@@ -114,7 +119,7 @@ export function teardown(engine) {
   const removed = { containers: 0, volumes: 0 };
   for (const container of projectContainers(engine)) {
     if (container.project !== SCRATCH_PROJECT_ID)
-      throw new Error(
+      throw new SafeError(
         `Container ${container.name} is named like a scratch container but belongs to another project; nothing was removed.`,
       );
     docker(["rm", "-f", "-v", container.name]);
@@ -131,7 +136,7 @@ export function teardown(engine) {
     ...(networkExists() ? [`network ${SCRATCH_NETWORK}`] : []),
   ];
   if (left.length)
-    throw new Error(
+    throw new SafeError(
       `Teardown is not confirmed; still present: ${left.join(", ")}.`,
     );
   return removed;
@@ -256,7 +261,9 @@ function passwordOf(inspect) {
     e.startsWith("POSTGRES_PASSWORD="),
   );
   if (!entry)
-    throw new Error("the scratch database container has no POSTGRES_PASSWORD");
+    throw new SafeError(
+      "the scratch database container has no POSTGRES_PASSWORD",
+    );
   return entry.slice("POSTGRES_PASSWORD=".length);
 }
 
@@ -297,14 +304,24 @@ function psql(password, { args = [], file, preamble = "", stdinText }) {
     child.stdout.on("data", (chunk) => (stdout = keep(stdout, chunk)));
     child.stderr.on("data", (chunk) => (stderr = keep(stderr, chunk)));
     child.stdin.on("error", () => {}); // psql stops reading after the first error
-    child.on("close", (code) => done({ code: code ?? 1, stdout, stderr }));
+    let readCode = null;
+    child.on("close", (code) =>
+      done({ code: code ?? 1, stdout, stderr, readCode }),
+    );
     if (stdinText !== undefined) {
       child.stdin.end(stdinText);
       return;
     }
     if (preamble) child.stdin.write(preamble);
-    if (file) createReadStream(file).pipe(child.stdin);
-    else child.stdin.end();
+    if (file) {
+      // A file that cannot be read stops the import; only the error code is kept (AC8), never its message.
+      const source = createReadStream(file);
+      source.on("error", (error) => {
+        readCode = reduceError("read", error).code;
+        child.kill();
+      });
+      source.pipe(child.stdin);
+    } else child.stdin.end();
   });
 }
 
@@ -317,12 +334,36 @@ async function query(password, sql) {
   return result.stdout;
 }
 
-class StepFailure extends Error {
+export class StepFailure extends Error {
   constructor(failure) {
     super(
       `step ${failure.step} failed (exit ${failure.exitCode}, SQLSTATE ${failure.sqlstate})`,
     );
     this.failure = failure;
+  }
+}
+
+// An error raised while the check reads the backup; its message is the reduced one.
+export class ReadFailure extends Error {
+  constructor(reduced) {
+    super(describeReadFailure(reduced));
+    this.reduced = reduced;
+  }
+}
+
+/** Runs one step that reads the backup and turns any error of it into a ReadFailure. */
+export async function reading(step, action) {
+  try {
+    return await action();
+  } catch (error) {
+    if (
+      error instanceof StepFailure ||
+      error instanceof ReadFailure ||
+      error instanceof Refusal ||
+      error instanceof SafeError
+    )
+      throw error;
+    throw new ReadFailure(reduceError(step, error));
   }
 }
 
@@ -397,14 +438,30 @@ async function isolateDatabase(engine) {
 
 // ---------- the check ----------
 
-async function scanDataFile(file) {
-  const scanner = createCopyScanner();
-  const lines = createInterface({
-    input: createReadStream(file, "utf8"),
-    crlfDelay: Infinity,
+// Not `for await` over the interface: a read error of the input stream must reject, not hang the loop.
+function scanDataFile(file) {
+  return new Promise((resolve, reject) => {
+    const scanner = createCopyScanner();
+    const input = createReadStream(file, "utf8");
+    const lines = createInterface({ input, crlfDelay: Infinity });
+    input.on("error", reject);
+    // The interface re-emits an input error; without a listener it is an uncaught exception with the raw path.
+    lines.on("error", reject);
+    lines.on("line", (line) => {
+      try {
+        scanner.feed(line);
+      } catch (error) {
+        reject(error);
+      }
+    });
+    lines.on("close", () => {
+      try {
+        resolve(scanner.finish());
+      } catch (error) {
+        reject(error);
+      }
+    });
   });
-  for await (const line of lines) scanner.feed(line);
-  return scanner.finish();
 }
 
 function md5Of(file) {
@@ -424,7 +481,7 @@ function md5Of(file) {
   return hash.digest("hex");
 }
 
-function storageFiles(folder) {
+function storageFiles(folder, md5 = md5Of) {
   const base = join(folder, STORAGE_DIR);
   const files = new Map();
   if (!existsSync(base)) return files;
@@ -434,7 +491,7 @@ function storageFiles(folder) {
       if (entry.isDirectory()) walk(full);
       else if (entry.isFile()) {
         const key = relative(base, full).split(sep).join("/");
-        files.set(key, { size: statSync(full).size, md5: () => md5Of(full) });
+        files.set(key, { size: statSync(full).size, md5: () => md5(full) });
       }
     }
   };
@@ -442,18 +499,46 @@ function storageFiles(folder) {
   return files;
 }
 
+/** The `storage.objects` rows the scratch database holds, from the JSON text the query returned. */
+export const parseStorageRows = (text) =>
+  reading("read storage rows", () =>
+    JSON.parse(text || "[]").map((row) => ({
+      bucket: row.b,
+      name: row.n,
+      size:
+        row.s === null || row.s === undefined || row.s === ""
+          ? null
+          : Number(row.s),
+      etag: row.e ?? null,
+    })),
+  );
+
+/** (d): compareStorage reads each file for its MD5 through the closures `storageFiles` made. `md5` is a test seam. */
+export async function compareStorageFiles(folder, rows, md5 = md5Of) {
+  const files = await reading("read storage files", () =>
+    storageFiles(folder, md5),
+  );
+  return reading("compare storage files", () => compareStorage(rows, files));
+}
+
+export const scanBackupFile = (folder, name, step) =>
+  reading(step, () => scanDataFile(join(folder, name)));
+
 async function restoreStep(password, step, file, preamble = "") {
   const result = await psql(password, {
     file,
     preamble,
     args: ["-o", "/dev/null"],
   });
+  if (result.readCode)
+    throw new ReadFailure({ step: `read ${step} file`, code: result.readCode });
   if (result.code !== 0)
     throw new StepFailure(
       reduceFailure({ step, exitCode: result.code, ...result }),
     );
 }
 
+// Every step below that reads the backup runs through `reading`/`scanBackupFile`, so an error of it is a step and a code.
 async function runChecks(folder, hosted, engine) {
   const password = passwordOf(inspectDb());
 
@@ -479,8 +564,8 @@ async function runChecks(folder, hosted, engine) {
 
   // `db dump --data-only` leaves out `supabase_migrations`, so the history is a second pair of files (the runbook).
   const dumped = new Map([
-    ...(await scanDataFile(join(folder, "data.sql"))),
-    ...(await scanDataFile(join(folder, "history.sql"))),
+    ...(await scanBackupFile(folder, "data.sql", "scan data file")),
+    ...(await scanBackupFile(folder, "history.sql", "scan history file")),
   ]);
 
   say("importing roles, schema and data");
@@ -562,16 +647,8 @@ async function runChecks(folder, hosted, engine) {
       "select coalesce(json_agg(json_build_object('b', bucket_id, 'n', name, 's', metadata->>'size', 'e', metadata->>'eTag')), '[]'::json) from storage.objects",
     )
   ).trim();
-  const rows = JSON.parse(rowsJson || "[]").map((row) => ({
-    bucket: row.b,
-    name: row.n,
-    size:
-      row.s === null || row.s === undefined || row.s === ""
-        ? null
-        : Number(row.s),
-    etag: row.e ?? null,
-  }));
-  const d = compareStorage(rows, storageFiles(folder));
+  const rows = await parseStorageRows(rowsJson);
+  const d = await compareStorageFiles(folder, rows);
   void engine;
   return { a, b, c, d };
 }
@@ -624,6 +701,27 @@ function realFolder(folder) {
   }
 }
 
+/**
+ * The one printable line of an error (AC8). Only errors whose message this file wrote are printed as they are;
+ * anything else, including every error raised while reading the backup, is a step and a code.
+ */
+export function describeFailure(error) {
+  if (error instanceof Refusal) return `refused: ${error.message}`;
+  if (
+    error instanceof StepFailure ||
+    error instanceof ReadFailure ||
+    error instanceof SafeError
+  )
+    return `FAIL: ${error.message}`;
+  return `FAIL: ${describeReadFailure(reduceError("unexpected error", error))}`;
+}
+
+function unresolvedText(error) {
+  return error instanceof SafeError
+    ? error.message
+    : describeReadFailure(reduceError("teardown", error));
+}
+
 export async function main(argv) {
   const engine = createDocker();
   let args;
@@ -670,16 +768,8 @@ export async function main(argv) {
     ).hosted;
     return await run(folder, hosted, engine);
   } catch (error) {
-    if (error instanceof Refusal) {
-      say(`refused: ${error.message}`);
-      return 3;
-    }
-    if (error instanceof StepFailure) {
-      say(`FAIL: ${error.message}`);
-      return 1;
-    }
-    say(`FAIL: ${error instanceof Error ? error.message : "unexpected error"}`);
-    return 1;
+    say(describeFailure(error));
+    return error instanceof Refusal ? 3 : 1;
   }
 }
 
@@ -732,7 +822,7 @@ async function run(folder, hosted, engine) {
       );
     } catch (error) {
       outcome = "unresolved";
-      say(`UNRESOLVED: ${error.message}`);
+      say(`UNRESOLVED: ${unresolvedText(error)}`);
     }
   }
   if (result) {
@@ -741,14 +831,7 @@ async function run(folder, hosted, engine) {
     for (const line of mismatchLines("(b)", result.b.mismatched)) say(line);
     saveResult(folder, result, outcome);
   }
-  if (failure) {
-    if (failure instanceof Refusal) say(`refused: ${failure.message}`);
-    else if (failure instanceof StepFailure) say(`FAIL: ${failure.message}`);
-    else
-      say(
-        `FAIL: ${failure instanceof Error ? failure.message : "unexpected error"}`,
-      );
-  }
+  if (failure) say(describeFailure(failure));
   say(`result: ${outcome}`);
   return outcome === "pass" ? 0 : outcome === "unresolved" ? 2 : 1;
 }

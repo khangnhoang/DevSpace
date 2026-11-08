@@ -336,6 +336,27 @@ export function reduceFailure({ step, exitCode, stdout = "", stderr = "" }) {
   return { step, exitCode, sqlstate: codes[0] ?? "unknown" };
 }
 
+/**
+ * An error raised while the check itself reads the backup (a file it cannot open, a JSON or SQL file it cannot
+ * parse) reduces to the step and an error code. The message of such an error is never used: a Node file error
+ * carries the path below the backup folder (an object name), and a parse error carries a piece of the content.
+ * @param {string} step
+ * @param {unknown} error
+ */
+export function reduceError(step, error) {
+  const code =
+    typeof error?.code === "string" && /^[A-Za-z0-9_]{1,40}$/.test(error.code)
+      ? error.code
+      : error instanceof SyntaxError
+        ? "PARSE"
+        : "UNKNOWN";
+  return { step, code };
+}
+
+/** The one line a reduced read error becomes. */
+export const describeReadFailure = ({ step, code }) =>
+  `step ${step} failed (error code ${code})`;
+
 // ---------- the scratch database container (G7) ----------
 
 const SCRATCH_DB_PORT = "5432/tcp";

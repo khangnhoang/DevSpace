@@ -5,14 +5,7 @@
 // The workdir holds a config and the three service version files, nothing else: no migrations and no seed, so
 // the `public` schema is empty before the import, and never `project-ref`, `linked-project.json` or `pooler-url`,
 // because a link would point CLI calls in that workdir at the hosted project (G8).
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 export const SCRATCH_PROJECT_ID = "devspace-backup-check";
@@ -44,12 +37,10 @@ export const EXCLUDED_SERVICES = [
   "postgres-meta",
 ];
 
-// The CLI reads the hosted service versions from `supabase/.temp` and pins its containers to them (CP2 finding).
-export const VERSION_FILES = [
-  "postgres-version",
-  "gotrue-version",
-  "storage-version",
-];
+// The CLI pins its containers to the `<service>-version` files in the workdir's `supabase/.temp` (CP2 finding). The
+// values come from the backup's `hosted.json`, never from the checkout's `.temp`: only `supabase link` writes those,
+// so they lag every hosted upgrade, and a stale Storage lacks tables the dump has data for.
+const PINNED_SERVICES = ["postgres", "gotrue", "storage"];
 
 export const scratchWorkdir = (root) => join(root, SCRATCH_WORKDIR_NAME);
 // The directory of the run lock shared by a check and `--teardown` (G9). `prepareScratchWorkdir` replaces only
@@ -99,8 +90,8 @@ export function generateScratchConfig(source) {
 }
 
 // Writes `<root>/.supabase-backup-check/supabase/{config.toml,.temp/<version files>}` and returns the workdir.
-// Throws naming the missing file when the checkout lacks a version file (G8).
-export function prepareScratchWorkdir(root) {
+// `hostedVersions` is the validated `versions` object of `hosted.json` (G8).
+export function prepareScratchWorkdir(root, hostedVersions) {
   const source = join(root, "supabase");
   const workdir = scratchWorkdir(root);
   const target = join(workdir, "supabase");
@@ -111,16 +102,11 @@ export function prepareScratchWorkdir(root) {
     join(target, "config.toml"),
     generateScratchConfig(readFileSync(join(source, "config.toml"), "utf8")),
   );
-  const versions = {};
-  for (const name of VERSION_FILES) {
-    const file = join(source, ".temp", name);
-    if (!existsSync(file)) {
-      throw new Error(
-        `supabase/.temp/${name} is missing, so the scratch stack cannot be pinned to the hosted service versions. Nothing was started.`,
-      );
-    }
-    copyFileSync(file, join(target, ".temp", name));
-    versions[name] = readFileSync(file, "utf8").trim();
+  for (const service of PINNED_SERVICES) {
+    writeFileSync(
+      join(target, ".temp", `${service}-version`),
+      hostedVersions[service],
+    );
   }
-  return { workdir, versions };
+  return { workdir };
 }

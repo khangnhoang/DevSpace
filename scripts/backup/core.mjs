@@ -280,7 +280,8 @@ export function validateHosted(value) {
     problems.push("hosted.json has no versions object");
   else {
     for (const key of VERSION_KEYS) {
-      if (typeof versions[key] !== "string" || !versions[key])
+      // The value is written to a pin file the CLI builds an image tag from; nothing else checks it.
+      if (typeof versions[key] !== "string" || !/^[\w.-]+$/.test(versions[key]))
         problems.push(`hosted.json versions lacks ${key}`);
     }
   }
@@ -301,21 +302,6 @@ export function validateManifest(value) {
   if (!value.versions || typeof value.versions !== "object")
     problems.push("manifest.json lacks versions");
   return problems;
-}
-
-/**
- * G8: the scratch stack runs the service versions the CLI pinned from `supabase/.temp`; the backup says which
- * versions hosted ran. Different versions would restore `auth` data into a schema production does not have.
- * @param {Record<string, string>} pinned `postgres-version`, `gotrue-version`, `storage-version` file contents
- * @param {Record<string, string>} hostedVersions `postgres`, `gotrue`, `storage`
- */
-export function versionMismatches(pinned, hostedVersions) {
-  const normalize = (value) => String(value).trim().replace(/^v/i, "");
-  return VERSION_KEYS.filter(
-    (key) =>
-      normalize(pinned[`${key}-version`] ?? "") !==
-      normalize(hostedVersions[key] ?? ""),
-  );
 }
 
 // ---------- error reduction (AC8) ----------

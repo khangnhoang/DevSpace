@@ -35,6 +35,8 @@ export async function measure({
   const lines = [];
   let failed = 0;
   const headers = { cookie };
+  // At-the-API spans per target and mode, kept for the Auth round trip lines at the end.
+  const spans = {};
   // `proxy.ts` runs getUser() on every request it handles, so a page that makes no API call measures that check alone.
   const targets = [
     { name: "GET /api/health", url: new URL("/api/health", apiBase).href },
@@ -97,6 +99,7 @@ export async function measure({
       const api = samples.flatMap((item) =>
         item.api === undefined ? [] : [item.api],
       );
+      (spans[target.name] ??= {})[mode] = api;
       const good = ok === samples.length;
       if (!good) failed += 1;
       lines.push(
@@ -118,6 +121,25 @@ export async function measure({
         }
       }
     }
+  }
+  // M2's `/auth/v1/user` round trip: the cold route asks Auth on every call and the warm one hits the cache, so the
+  // difference of their at-the-API p50 is the round trip. Both routes answer the proof owner (the cookie's user) only,
+  // which is why the fixture tokens of session-probe cannot supply it.
+  for (const mode of ["sequential", "concurrent"]) {
+    const cold =
+      spans["GET /api/proof/session-cold (cold cache)"]?.[mode] ?? [];
+    const warm = spans["GET /api/session (warm cache)"]?.[mode] ?? [];
+    if (cold.length === 0 || warm.length === 0) {
+      lines.push(
+        `INFO AUTH ROUND TRIP ${mode}: n/a, ${cold.length === 0 ? "/api/proof/session-cold" : "/api/session"} has no Server-Timing span`,
+      );
+      continue;
+    }
+    const coldP50 = percentile(cold, 50);
+    const warmP50 = percentile(warm, 50);
+    lines.push(
+      `INFO AUTH ROUND TRIP ${mode}: at the API without the cache p50 ${round(coldP50)} ms, p95 ${round(percentile(cold, 95))} ms; with the cache p50 ${round(warmP50)} ms, p95 ${round(percentile(warm, 95))} ms; round trip (p50 difference) ${round(coldP50 - warmP50)} ms`,
+    );
   }
   return { lines, failed };
 }

@@ -210,6 +210,47 @@ describe("measure (M1)", () => {
     ).toBe(true);
   });
 
+  it("prints the Auth round trip per mode as the p50 difference of the cold and the warm session route", async () => {
+    const { fetchImpl, now } = harness({
+      api: { "/api/proof/session-cold": 130, "/api/session": 20 },
+    });
+    const { lines } = await measure({
+      apiBase: "http://api.test",
+      origin: "http://app.test",
+      cookie: SECRET,
+      fetchImpl: fetchImpl as typeof fetch,
+      now,
+    });
+    for (const mode of ["sequential", "concurrent"]) {
+      const line = lines.find((item) =>
+        item.startsWith(`INFO AUTH ROUND TRIP ${mode}:`),
+      );
+      expect(line).toContain("without the cache p50 130 ms");
+      expect(line).toContain("with the cache p50 20 ms");
+      expect(line).toContain("round trip (p50 difference) 110 ms");
+    }
+  });
+
+  it("says n/a for the Auth round trip when either session route has no span, instead of a number", async () => {
+    const { fetchImpl, now } = harness({
+      api: { "/api/proof/session-cold": 130 },
+    });
+    const { lines } = await measure({
+      apiBase: "http://api.test",
+      origin: "http://app.test",
+      cookie: SECRET,
+      fetchImpl: fetchImpl as typeof fetch,
+      now,
+    });
+    const trips = lines.filter((item) => item.includes("AUTH ROUND TRIP"));
+    expect(trips).toHaveLength(2);
+    for (const line of trips) {
+      expect(line).toContain("n/a");
+      expect(line).toContain("/api/session has no Server-Timing span");
+      expect(line).not.toMatch(/\d+ ms/);
+    }
+  });
+
   it("fails a route that does not answer 2xx, and prints no cookie", async () => {
     const { fetchImpl, now, seen } = harness({
       status: { "/api/health/db": 503 },
@@ -246,29 +287,28 @@ describe("runSessionProbe (M2)", () => {
       seen.push(
         `${path} ${token === tokens.A ? "A" : token === tokens.B ? "B" : "?"}`,
       );
-      return new Response("{}", {
-        status: status(path, token),
-        headers: { "server-timing": "api;dur=20" },
-      });
+      // The real 404 of the proof owner check and the 401 of the session guard carry no Server-Timing header.
+      return new Response("{}", { status: status(path, token) });
     };
     return { fetchImpl: fetchImpl as typeof fetch, seen };
   }
 
-  it("live: passes when both sessions are refused 404 by the proof owner check, and reports the Auth round trip both ways", async () => {
-    const { fetchImpl } = fake((path) => (path === "/api/session" ? 200 : 404));
+  it("live: passes when both sessions are refused 404 by the proof owner check, with one request each and no timing line", async () => {
+    const { fetchImpl, seen } = fake(() => 404);
     const { lines, failed } = await runSessionProbe({
       apiBase: "http://api.test",
       step: "live",
       tokens,
-      samples: 3,
       fetchImpl,
     });
     expect(failed).toBe(0);
-    expect(lines.filter((line) => line.startsWith("PASS"))).toHaveLength(2);
-    expect(
-      lines.filter((line) => line.includes("without the cache")),
-    ).toHaveLength(2);
-    expect(lines.join("\n")).toContain("with the cache: p50 20 ms");
+    expect(lines).toHaveLength(2);
+    expect(lines.every((line) => line.startsWith("PASS"))).toBe(true);
+    expect(lines.join("\n")).not.toMatch(/ms|Server-Timing/);
+    expect(seen).toEqual([
+      "/api/proof/session-cold A",
+      "/api/proof/session-cold B",
+    ]);
   });
 
   it("live: a session that is already refused 401 fails, so a later 401 would prove nothing", async () => {
@@ -279,7 +319,6 @@ describe("runSessionProbe (M2)", () => {
       apiBase: "http://api.test",
       step: "live",
       tokens,
-      samples: 1,
       fetchImpl,
     });
     expect(failed).toBe(1);

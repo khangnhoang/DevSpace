@@ -2,16 +2,21 @@
 //   node scripts/tm-u3-proof/cli.mjs verify --api <API base URL> --app <Next base URL>
 //     No cookie. Exits non-zero unless every temporary surface answers 404 on the API and on Next, so both are named
 //     (PR 2 removes them; until then the flag must be off everywhere but a proof run).
-//   PROOF_COOKIE=<cookie header of the proof owner> node scripts/tm-u3-proof/cli.mjs run --api <base URL> [--origin <app origin>] [--skip-slow]
+//   PROOF_COOKIE=<cookie header of the proof owner> node scripts/tm-u3-proof/cli.mjs run --api <app origin> [--origin <app origin>] [--skip-slow]
+//     --api is the app origin (Vercel) for the T rows, so they go through the rewrite; a direct Railway URL there
+//     exercises a different hop. verify takes both bases; session-probe takes the API base it refuses on.
 //     Exercises the surfaces with that session and prints one line per check, with sizes, statuses and timings only.
 //     The cookie is read from the environment and never printed or written.
-//   PROOF_COOKIE=<cookie header> node scripts/tm-u3-proof/cli.mjs measure --api <base URL> --origin <app origin>
+//   PROOF_COOKIE=<cookie header> node scripts/tm-u3-proof/cli.mjs measure --api <app origin> --origin <app origin>
+//     --api is the app origin for the end-to-end budget (ADR 0008 D11: through the Vercel origin); a direct Railway URL
+//     measures a different hop. It also prints one INFO line per mode with the Auth round trip: the at-the-API p50 of
+//     the cold /api/proof/session-cold minus the warm /api/session, or n/a when a route sends no span.
 //     M1: 100 sequential and 20 concurrent requests for each of /api/health, /api/health/db, /api/session (warm),
 //     /api/proof/session-cold, the proxy.ts check alone (a page of the app) and /api/proof/read, with p50 and p95 end to
 //     end and at the API (the temporary Server-Timing header), and the D11 budgets. Timings only.
 //   PROOF_TOKEN_A=<access token> PROOF_TOKEN_B=<access token> node scripts/tm-u3-proof/cli.mjs session-probe --api <base URL> --step live|after
 //     M2, in two steps with the Owner's sign-out and deletion between them: live (both sessions refused by the proof
-//     owner check, 404, plus the Auth round trip with and without the cache), then after (both refused with 401).
+//     owner check, 404, which carries no timing), then after (both refused with 401). Statuses only.
 //   PROOF_COOKIE=<expired session cookie header> node scripts/tm-u3-proof/cli.mjs refresh-race --origin <app origin>
 //     T5: 20 parallel requests with the expired cookie, then a request with the cookies the answers set.
 //   Tokens and cookies come from the Owner's terminal environment; they are never printed or written.

@@ -6,6 +6,8 @@
 //   __tests__/e2e/api-topology.spec.ts.
 // Subject: AC10 of the TM-U3 plan; ADR 0008 D5.
 import { NextRequest, NextResponse } from "next/server";
+import { getMiddlewareMatchers } from "next/dist/build/analysis/get-page-static-info";
+import { getMiddlewareRouteMatcher } from "next/dist/shared/lib/router/utils/middleware-route-matcher";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const session = vi.hoisted(() => ({ calls: 0 }));
@@ -24,7 +26,7 @@ vi.mock("@/lib/supabase.proxy", () => ({
   },
 }));
 
-import { proxy } from "@/proxy";
+import { config, proxy } from "@/proxy";
 
 const BASE = "http://api.internal:4000";
 const get = (path: string) =>
@@ -102,10 +104,63 @@ describe("proxy with no API address", () => {
     }
   });
 
+  it("carries the cookies that getUser() refreshed, and the cache-control header, onto the 503", async () => {
+    const response = await proxy(get("/api/session"));
+    expect(response.status).toBe(503);
+    expect(response.cookies.get("sb-127-auth-token")?.value).toBe("refreshed");
+    expect(response.headers.get("set-cookie")).toContain(
+      "sb-127-auth-token=refreshed",
+    );
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+  });
+
   it("still runs getUser() and leaves every other route unchanged", async () => {
     const response = await proxy(get("/profile"));
     expect(session.calls).toBe(1);
     expect(response.status).toBe(200);
     expect(response.headers.get("x-middleware-next")).toBe("1");
+  });
+});
+
+// The matcher decides which requests reach proxy() at all, and the rows above call proxy() directly, so this is read
+// the way Next builds it (getMiddlewareMatchers) and applied to paths.
+describe("proxy matcher", () => {
+  const matches = getMiddlewareRouteMatcher(
+    getMiddlewareMatchers(config.matcher, {}),
+  );
+
+  it.each([
+    "/api",
+    "/api/health",
+    "/api/proof/echo",
+    "/api/file.png",
+    "/api/a/b.svg",
+    "/api/image.webp",
+  ])("passes %s to the proxy, an image extension included", (path) => {
+    expect(matches(path, { headers: {}, cookies: {} } as never, {})).toBe(true);
+  });
+
+  it.each(["/course/x", "/profile", "/"])(
+    "still passes the page %s",
+    (path) => {
+      expect(matches(path, { headers: {}, cookies: {} } as never, {})).toBe(
+        true,
+      );
+    },
+  );
+
+  it.each([
+    "/favicon.ico",
+    "/logo.png",
+    "/apix.png",
+    "/course/api/x.jpg",
+    "/sitemap.xml",
+    "/robots.txt",
+    "/_next/static/chunk.js",
+    "/_next/image",
+  ])("keeps %s away from the proxy, as before", (path) => {
+    expect(matches(path, { headers: {}, cookies: {} } as never, {})).toBe(
+      false,
+    );
   });
 });

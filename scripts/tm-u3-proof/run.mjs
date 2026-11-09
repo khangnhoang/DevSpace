@@ -1,16 +1,20 @@
 import { createHash, randomBytes } from "node:crypto";
+import { sendTruncatedBody, wasNotHandled } from "./truncated.mjs";
 
 const MIB = 1024 * 1024;
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
+// Valid JSON of exactly `size` bytes: `{"pad":"` and `"}` around the filler.
+const jsonOfSize = (size) => Buffer.from(`{"pad":"${"a".repeat(size - 10)}"}`);
 
-// Run mode of the proof script: what plan T1 to T5 ask of the production topology, one check per line. It prints
-// statuses, sizes, hashes and timings, never a body, a cookie or a token. `skipSlow` leaves out the three long waits
+// Run mode of the proof script: what plan T1 to T4 ask of the production topology (T5 is the refresh-race mode), one
+// check per line. It prints statuses, sizes, hashes and timings, never a body, a cookie or a token. `skipSlow` leaves out the three long waits
 // (35, 58 and 65 seconds), which take about a minute together because they run side by side.
-/** @param {{ apiBase: string, cookie: string, origin: string, skipSlow?: boolean, fetchImpl?: typeof fetch }} options */
+/** @param {{ apiBase: string, cookie: string, origin: string, appBase?: string, skipSlow?: boolean, fetchImpl?: typeof fetch }} options */
 export async function runProof({
   apiBase,
   cookie,
   origin,
+  appBase = origin,
   skipSlow = false,
   fetchImpl = fetch,
 }) {
@@ -56,14 +60,17 @@ export async function runProof({
     );
   }
 
-  // T1: the hash is over the bytes as sent: a JSON content type with whitespace a re-serializer would change, then
-  // binary that is not text at all, then exactly the limit.
+  // T1: the hash is over the bytes as sent: a JSON content type with whitespace a re-serializer would change, JSON of
+  // 1 MiB and of exactly the limit (valid JSON, so a body parser that reads it has nothing to reject), then binary that
+  // is not text at all, then exactly the limit.
   for (const [name, bytes, type] of [
     [
       "JSON as sent",
       Buffer.from('{ "b": 1,\n  "a": [1, 2,3] }'),
       "application/json",
     ],
+    ["1 MiB JSON", jsonOfSize(1 * MIB), "application/json"],
+    ["exactly 4 MiB JSON", jsonOfSize(4 * MIB), "application/json"],
     ["3 MiB binary", randomBytes(3 * MIB), "application/octet-stream"],
     ["exactly 4 MiB", randomBytes(4 * MIB), "application/octet-stream"],
   ]) {
@@ -91,6 +98,23 @@ export async function runProof({
       `status ${response.status}`,
     );
     await response.body?.cancel();
+  }
+  // T3: a body that ends before its declared length is never handled. It goes through `appBase` (the app; the origin
+  // header's value by default), so the hop that forwards it is part of what is shown.
+  {
+    const outcome = await sendTruncatedBody({
+      base: appBase,
+      path: "/api/proof/echo",
+      cookie,
+      origin,
+    });
+    check(
+      "POST /api/proof/echo truncated body is not handled",
+      wasNotHandled(outcome),
+      outcome.status === null
+        ? `connection ended without an answer (${outcome.ended})`
+        : `status ${outcome.status}`,
+    );
   }
   for (const [name, size, expected] of [
     ["2 MiB", 2 * MIB, 200],

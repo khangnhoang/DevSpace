@@ -13,6 +13,8 @@ export type HttpCountingProxy = {
   url: string;
   requests: { method: string; path: string }[];
   count(path: string): number;
+  // Every forwarded request waits this long before it is sent upstream, so the answer's latency is known.
+  setDelay(ms: number): void;
   // The next requests are answered with this status instead of being forwarded; null forwards again.
   // `cut` sends the status and a partial body, then drops the connection, so reading the body fails.
   failWith(
@@ -30,6 +32,7 @@ export async function startHttpCountingProxy(
   const requests: { method: string; path: string }[] = [];
   const sockets = new Set<Socket>();
   let failure: { status: number; body: string; cut: boolean } | null = null;
+  let delayMs = 0;
   const server: Server = createServer((incoming: IncomingMessage, outgoing) => {
     requests.push({
       method: incoming.method ?? "GET",
@@ -53,24 +56,28 @@ export async function startHttpCountingProxy(
       outgoing.end(failure.body);
       return;
     }
-    const forwarded = httpRequest(
-      {
-        host: target.hostname,
-        port: target.port,
-        method: incoming.method,
-        path: incoming.url,
-        headers: incoming.headers,
-      },
-      (response) => {
-        outgoing.writeHead(response.statusCode ?? 502, response.headers);
-        response.pipe(outgoing);
-      },
-    );
-    forwarded.on("error", () => {
-      outgoing.writeHead(502);
-      outgoing.end();
-    });
-    incoming.pipe(forwarded);
+    const forward = () => {
+      const forwarded = httpRequest(
+        {
+          host: target.hostname,
+          port: target.port,
+          method: incoming.method,
+          path: incoming.url,
+          headers: incoming.headers,
+        },
+        (response) => {
+          outgoing.writeHead(response.statusCode ?? 502, response.headers);
+          response.pipe(outgoing);
+        },
+      );
+      forwarded.on("error", () => {
+        outgoing.writeHead(502);
+        outgoing.end();
+      });
+      incoming.pipe(forwarded);
+    };
+    if (delayMs > 0) setTimeout(forward, delayMs);
+    else forward();
   });
   server.on("connection", (socket) => {
     sockets.add(socket);
@@ -83,6 +90,9 @@ export async function startHttpCountingProxy(
     requests,
     count: (path) =>
       requests.filter((entry) => entry.path.split("?")[0] === path).length,
+    setDelay: (ms) => {
+      delayMs = ms;
+    },
     failWith: (status, body = "{}", options = {}) => {
       failure =
         status === null ? null : { status, body, cut: options.cut === true };

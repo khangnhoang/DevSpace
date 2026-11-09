@@ -20,6 +20,7 @@ import { uploadFile, type UploadedBytes } from "../common/upload";
 import { DbService } from "../db/db.service";
 import { profiles } from "../db/schema";
 import { ProofOwnerGuard } from "./proof-owner.guard";
+import { ProofTimingInterceptor } from "./proof-timing";
 
 // The only durations `slow` accepts: below the 60-second limit with margin (35), just under it (58), and past it (65),
 // which must end with the explicit 504 (AC9, plan T4). Any other value is a mistake, not a longer wait.
@@ -36,6 +37,7 @@ const digest = (bytes: Buffer) => ({
 // the proof owner (ProofOwnerGuard). Responses carry the user id, a length and a hash, or `ok`: never a row, a body or
 // a token.
 @UseGuards(ProofOwnerGuard)
+@UseInterceptors(ProofTimingInterceptor)
 @Controller()
 export class ProofController {
   constructor(private readonly database: DbService) {}

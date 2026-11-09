@@ -327,6 +327,72 @@ describe("flag on: the proof owner (T1 to T5)", () => {
     expect(await response.json()).toEqual({ ok: true });
   });
 
+  const apiMs = (response: Response) =>
+    Number(
+      /^api;dur=(\d+(?:\.\d+)?)$/.exec(
+        response.headers.get("server-timing") ?? "",
+      )?.[1],
+    );
+
+  it("[M1] a temporary route answers Server-Timing, and its span starts before the session guard", async () => {
+    // Auth answers 300 ms late: the span includes the guard's call only if it starts before the guard.
+    on.proxy.setDelay(300);
+    try {
+      const response = await call(
+        on,
+        { method: "GET", path: "/api/proof/session-cold" },
+        bearer(owner),
+      );
+      expect(response.status).toBe(200);
+      expect(
+        apiMs(response),
+        response.headers.get("server-timing") ?? "no header",
+      ).toBeGreaterThanOrEqual(290);
+    } finally {
+      on.proxy.setDelay(0);
+    }
+  });
+
+  it("[M1] the two-query read answers Server-Timing too, and a warm session is faster than a cold one", async () => {
+    const read = await call(
+      on,
+      { method: "GET", path: "/api/proof/read" },
+      bearer(owner),
+    );
+    expect(read.status).toBe(200);
+    expect(apiMs(read)).toBeGreaterThan(0);
+    on.proxy.setDelay(300);
+    try {
+      await call(on, { method: "GET", path: "/api/session" }, bearer(owner));
+      const warm = await call(
+        on,
+        { method: "GET", path: "/api/session" },
+        bearer(owner),
+      );
+      expect(warm.status).toBe(200);
+      expect(apiMs(warm), "a cache hit never waits for Auth").toBeLessThan(250);
+    } finally {
+      on.proxy.setDelay(0);
+    }
+  });
+
+  it("[M1] a signed-in session that is not the owner gets a 404 with no Server-Timing header, like an unknown path", async () => {
+    const refused = await call(
+      on,
+      { method: "GET", path: "/api/proof/read" },
+      bearer(other),
+    );
+    const unknown = await fetch(`${on.api.url}/api/proof/nothing-here`, {
+      headers: bearer(other),
+    });
+    // The header must not tell the two apart; the bodies differ today (the guard's 404 and Nest's own), which this
+    // timing change neither adds nor claims to fix.
+    expect(refused.status).toBe(404);
+    expect(unknown.status).toBe(404);
+    expect(refused.headers.has("server-timing")).toBe(false);
+    expect(unknown.headers.has("server-timing")).toBe(false);
+  });
+
   const echo = (body: BodyInit, headers: Record<string, string> = {}) =>
     call(
       on,
@@ -538,16 +604,39 @@ describe("flag on: the proof owner (T1 to T5)", () => {
     expect(over.tookMs).toBeLessThan(63_000);
   }, 120_000);
 
-  it("[T5] the run mode of the proof script passes every check against this API", async () => {
+  // The run mode is the plan's script for T1 to T4 against a deployed topology; this row runs it against this API. It
+  // asserts the exact inventory of checks, so a row that is dropped from the script fails here (a script that prints
+  // fewer rows would still print no FAIL). T5 (the refresh race) and M1 and M2 are other modes, run through the app.
+  it("[run mode] the proof script reports exactly the planned T1 to T4 checks, all passing, against this API", async () => {
     const outcome = await runProof({
       apiBase: on.api.url,
       cookie: owner.cookie,
       origin: ORIGIN,
+      appBase: on.api.url,
       skipSlow: true,
     });
+    const names = outcome.lines.map((line) =>
+      line.replace(/^(PASS|FAIL) /, "").replace(/ \(.*\)$/, ""),
+    );
+    expect(names).toEqual([
+      "GET /api/session",
+      "GET /api/proof/session-cold",
+      "GET /api/proof/read answers ok",
+      "POST /api/proof/echo JSON as sent",
+      "POST /api/proof/echo 1 MiB JSON",
+      "POST /api/proof/echo exactly 4 MiB JSON",
+      "POST /api/proof/echo 3 MiB binary",
+      "POST /api/proof/echo exactly 4 MiB",
+      "POST /api/proof/echo 4 MiB + 1 is 413",
+      "POST /api/proof/echo truncated body is not handled",
+      "POST /api/proof/upload 2 MiB",
+      "POST /api/proof/upload 2 MiB + 1 is 413",
+      "GET /api/proof/stream arrives over time",
+    ]);
     expect(outcome.lines.filter((line) => line.startsWith("FAIL"))).toEqual([]);
     expect(outcome.failed).toBe(0);
-    expect(outcome.lines.length).toBeGreaterThanOrEqual(10);
-    expect(outcome.lines.join("\n")).not.toContain(owner.accessToken);
+    expect(outcome.lines.join(String.fromCharCode(10))).not.toContain(
+      owner.accessToken,
+    );
   });
 });

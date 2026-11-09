@@ -14,7 +14,10 @@
 //     30-second cache entry is refilled unsampled, after waiting for it to expire, once 20 seconds of samples have used it), /api/proof/session-cold, a page with no API
 //     call (the proxy.ts check plus delivery of the page) and /api/proof/read (every sample must answer ok), with p50
 //     and p95 end to end and at the API (the temporary Server-Timing header), and the D11 budgets. A temporary route
-//     without exactly one span on a successful sample fails its batch. Timings only.
+//     without exactly one span on a successful sample fails its batch, as does a failed priming call or an answer that
+//     replaces the session cookie (the token expired mid-run: sign in again and rerun). The run takes several minutes
+//     (the warm session route waits for its 30-second cache entry to expire before each fill) and needs a recently
+//     signed-in session. Timings only.
 //     It also prints one INFO line per mode estimating the added Auth cost (the at-the-API p50 of the cold
 //     /api/proof/session-cold minus the warm /api/session; an estimate, not a timed /auth/v1/user round trip).
 //   PROOF_TOKEN_A=<access token> PROOF_TOKEN_B=<access token> node scripts/tm-u3-proof/cli.mjs session-probe --api <base URL> --step live|after

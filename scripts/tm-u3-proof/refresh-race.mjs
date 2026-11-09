@@ -24,6 +24,17 @@ function readSetCookie(line) {
   return { name: pair.slice(0, at).trim(), value, deletion };
 }
 
+// The Supabase session cookie and its chunks (`sb-<ref>-auth-token`, `sb-<ref>-auth-token.0`, ...). Any other cookie
+// (a preference, a tracker) says nothing about a refresh.
+const SESSION_COOKIE = /^sb-.+-auth-token(\.\d+)?$/;
+
+export function isSessionCookieReplacement(line) {
+  const cookie = readSetCookie(line);
+  return (
+    cookie !== null && !cookie.deletion && SESSION_COOKIE.test(cookie.name)
+  );
+}
+
 function applySetCookie(jar, lines) {
   for (const line of lines) {
     const cookie = readSetCookie(line);
@@ -52,26 +63,23 @@ export async function runRefreshRace({
     );
   };
   const url = new URL(SESSION_PATH, origin).href;
-  const ask = async (header) => {
+  // A browser stores the cookies of an answer when its headers arrive, before the body is consumed, so `onHeaders` runs
+  // between the two and the jar follows header arrival order, not launch order or body order.
+  const ask = async (header, onHeaders) => {
     const response = await fetchImpl(url, {
       headers: { cookie: header },
       redirect: "manual",
     });
+    const setCookies = response.headers.getSetCookie();
+    onHeaders?.(setCookies);
     await response.arrayBuffer();
-    return {
-      status: response.status,
-      setCookies: response.headers.getSetCookie(),
-    };
+    return { status: response.status, setCookies };
   };
 
-  // A browser stores the cookies of an answer when it arrives, so the jar follows arrival order, not launch order.
   const jar = parseCookieHeader(cookie);
   const answers = await Promise.all(
     Array.from({ length: parallel }, () =>
-      ask(cookie).then((answer) => {
-        applySetCookie(jar, answer.setCookies);
-        return answer;
-      }),
+      ask(cookie, (setCookies) => applySetCookie(jar, setCookies)),
     ),
   );
   const counts = new Map();
@@ -88,15 +96,12 @@ export async function runRefreshRace({
 
   // Without a refresh there was no contention to survive, so 200 everywhere proves nothing.
   const refreshed = answers.filter(({ setCookies }) =>
-    setCookies.some((line) => {
-      const cookie = readSetCookie(line);
-      return cookie !== null && !cookie.deletion;
-    }),
+    setCookies.some(isSessionCookieReplacement),
   ).length;
   check(
     "T5 at least one answer replaced a session cookie, so a refresh really ran",
     refreshed > 0,
-    `${refreshed} of ${answers.length} answers replaced a cookie`,
+    `${refreshed} of ${answers.length} answers replaced a session cookie`,
   );
   const follow = await ask(toHeader(jar));
   check(

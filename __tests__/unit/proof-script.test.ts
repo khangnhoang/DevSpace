@@ -8,6 +8,7 @@
 //   fails when a live session is not 404 or a closed one is not 401; the refresh race follows up with the cookies the
 //   answers set; a truncated body is never reported as handled; no line holds a cookie or a token.
 import { spawn } from "node:child_process";
+import { EventEmitter } from "node:events";
 import { createServer, type Server } from "node:http";
 import {
   createServer as netServer,
@@ -68,12 +69,16 @@ describe("measure (M1)", () => {
       string,
       number | string | null | ((call: number) => number | undefined)
     >;
-    status?: Record<string, number>;
+    status?: Record<string, number | ((call: number) => number)>;
     body?: Record<string, string>;
+    // A Set-Cookie line an answer carries, by call number: the refresh proxy.ts does when the token has expired.
+    cookie?: Record<string, (call: number) => string | undefined>;
     sessionCache?: boolean;
+    // When the entry that an earlier run left in the cache was filled, in ms relative to the start of this run.
+    cacheFilledAt?: number;
   }) {
     let clock = 0;
-    let filledAt = Number.NEGATIVE_INFINITY;
+    let filledAt = options.cacheFilledAt ?? Number.NEGATIVE_INFINITY;
     const calls: Record<string, number> = {};
     const slept: number[] = [];
     const seen: { path: string; cookie: string | null }[] = [];
@@ -106,10 +111,16 @@ describe("measure (M1)", () => {
       if (typeof span === "number")
         headers.set("server-timing", `api;dur=${span}`);
       if (typeof span === "string") headers.set("server-timing", span);
+      const cookie = options.cookie?.[path]?.(calls[path]);
+      if (cookie) headers.append("set-cookie", cookie);
+      const status = options.status?.[path] ?? 200;
       return new Response(
         options.body?.[path] ??
           (path === "/api/proof/read" ? '{"ok":true}' : "{}"),
-        { status: options.status?.[path] ?? 200, headers },
+        {
+          status: typeof status === "function" ? status(calls[path]) : status,
+          headers,
+        },
       );
     };
     const sleep = async (ms: number) => {
@@ -126,6 +137,7 @@ describe("measure (M1)", () => {
       origin: "http://app.test",
       cookie: SECRET,
       fetchImpl: fetchImpl as typeof fetch,
+      sleep: async () => {},
       now,
     });
     const count = (path: string) =>
@@ -148,6 +160,7 @@ describe("measure (M1)", () => {
       origin: "http://app.test",
       cookie: SECRET,
       fetchImpl: fetchImpl as typeof fetch,
+      sleep: async () => {},
       now,
     });
     const read = lines.find((line) =>
@@ -178,6 +191,7 @@ describe("measure (M1)", () => {
       origin: "http://app.test",
       cookie: SECRET,
       fetchImpl: within.fetchImpl as typeof fetch,
+      sleep: async () => {},
       now: within.now,
     });
     expect(ok.failed).toBe(0);
@@ -198,6 +212,7 @@ describe("measure (M1)", () => {
       origin: "http://app.test",
       cookie: SECRET,
       fetchImpl: slowApi.fetchImpl as typeof fetch,
+      sleep: async () => {},
       now: slowApi.now,
     });
     expect(bad.failed).toBeGreaterThan(0);
@@ -218,6 +233,7 @@ describe("measure (M1)", () => {
       origin: "http://app.test",
       cookie: SECRET,
       fetchImpl: between.fetchImpl as typeof fetch,
+      sleep: async () => {},
       now: between.now,
     });
     expect(info.failed).toBe(0);
@@ -240,6 +256,7 @@ describe("measure (M1)", () => {
       origin: "http://app.test",
       cookie: SECRET,
       fetchImpl: fetchImpl as typeof fetch,
+      sleep: async () => {},
       now,
     });
     expect(failed).toBeGreaterThan(0);
@@ -360,6 +377,84 @@ describe("measure (M1)", () => {
     expect(Math.min(...h.slept)).toBeGreaterThan(0);
   });
 
+  it("waits for an entry left by an earlier run to expire before the first prime, so the warm samples stay warm", async () => {
+    // An earlier run left an entry that is nearly expired when the first prime comes.
+    const h = harness({
+      ms: { "/api/session": 1000 },
+      sessionCache: true,
+      // The two health batches before it take 220 ms, so the entry (30 s) ends at 300 ms: the prime at 220 ms is a hit
+      // on an entry that dies before the first sample. Ten samples make the p95 the slowest one.
+      cacheFilledAt: -29_700,
+    });
+    const { lines, failed } = await measure({
+      ...opts(h),
+      sequential: 10,
+      concurrent: 2,
+    });
+    expect(failed).toBe(0);
+    expect(h.slept.length).toBeGreaterThan(0);
+    expect(
+      lines.find((item) =>
+        item.includes("MEASURE GET /api/session (warm cache) sequential"),
+      ),
+    ).toContain("at the API p50 20 ms, p95 20 ms");
+  });
+
+  it("fails the batch when a priming call is not a valid 2xx with one span", async () => {
+    const refused = await measure(
+      opts(
+        harness({
+          status: { "/api/session": (call) => (call === 1 ? 500 : 200) },
+        }),
+      ),
+    );
+    expect(refused.failed).toBe(1);
+    expect(
+      refused.lines.find((item) =>
+        item.startsWith("FAIL MEASURE GET /api/session"),
+      ),
+    ).toContain("1 priming call(s) failed");
+    const spanless = await measure(
+      opts(
+        harness({
+          api: { "/api/session": (call) => (call === 1 ? undefined : 10) },
+        }),
+      ),
+    );
+    expect(spanless.failed).toBe(1);
+    expect(
+      spanless.lines.find((item) =>
+        item.startsWith("FAIL MEASURE GET /api/session"),
+      ),
+    ).toContain("priming call(s) failed");
+  });
+
+  it("fails a batch whose answer replaced the session cookie, on every target, and tells the Owner to sign in again", async () => {
+    for (const path of ["/api/health", "/api/proof/read", "/login"]) {
+      const { lines, failed } = await measure(
+        opts(
+          harness({
+            cookie: {
+              [path]: (call) =>
+                call === 30 ? "sb-p-auth-token.0=renewed; Path=/" : undefined,
+            },
+          }),
+        ),
+      );
+      expect(failed, path).toBe(1);
+      const line = lines.find((item) => item.startsWith("FAIL MEASURE"));
+      expect(line, path).toContain(path);
+      expect(line, path).toContain("sign in again and rerun");
+    }
+  });
+
+  it("does not fail a batch over a cookie that is not the session cookie", async () => {
+    const { failed } = await measure(
+      opts(harness({ cookie: { "/api/health": () => "prefs=1; Path=/" } })),
+    );
+    expect(failed).toBe(0);
+  });
+
   it("fails a route that does not answer 2xx, and prints no cookie", async () => {
     const { fetchImpl, now, seen } = harness({
       status: { "/api/health/db": 503 },
@@ -369,6 +464,7 @@ describe("measure (M1)", () => {
       origin: "http://app.test",
       cookie: SECRET,
       fetchImpl: fetchImpl as typeof fetch,
+      sleep: async () => {},
       now,
     });
     expect(failed).toBeGreaterThan(0);
@@ -487,13 +583,13 @@ describe("runRefreshRace (T5)", () => {
   it("sends 20 requests with the expired cookie, then one with the cookies the answers set", async () => {
     const { fetchImpl, sent } = fake({
       refresh: (header) =>
-        header.includes("access=expired")
-          ? ["access=fresh; Path=/; HttpOnly", "refresh=next; Path=/"]
+        header.includes("sb-p-auth-token=expired")
+          ? ["sb-p-auth-token=fresh; Path=/; HttpOnly", "refresh=next; Path=/"]
           : [],
     });
     const { lines, failed } = await runRefreshRace({
       origin,
-      cookie: "access=expired; refresh=old",
+      cookie: "sb-p-auth-token=expired; refresh=old",
       fetchImpl,
     });
     expect(failed).toBe(0);
@@ -501,22 +597,24 @@ describe("runRefreshRace (T5)", () => {
     expect(
       sent
         .slice(0, 20)
-        .every((header) => header === "access=expired; refresh=old"),
+        .every((header) => header === "sb-p-auth-token=expired; refresh=old"),
     ).toBe(true);
-    expect(sent[20]).toBe("access=fresh; refresh=next");
-    expect(lines.join("\n")).toContain("20 of 20 answers replaced a cookie");
+    expect(sent[20]).toBe("sb-p-auth-token=fresh; refresh=next");
+    expect(lines.join("\n")).toContain(
+      "20 of 20 answers replaced a session cookie",
+    );
   });
 
   it("fails when the follow-up is refused: the refresh race left the session unusable", async () => {
     const { fetchImpl } = fake({
       refresh: (header) =>
-        header === "access=expired; refresh=old"
-          ? ["refresh=burnt; Path=/"]
+        header === "sb-p-auth-token=expired; refresh=old"
+          ? ["sb-p-auth-token=burnt; Path=/"]
           : null,
     });
     const { lines, failed } = await runRefreshRace({
       origin,
-      cookie: "access=expired; refresh=old",
+      cookie: "sb-p-auth-token=expired; refresh=old",
       fetchImpl,
     });
     expect(failed).toBe(1);
@@ -530,11 +628,11 @@ describe("runRefreshRace (T5)", () => {
     const fetchImpl = (async () =>
       new Response("{}", {
         status: ++calls === 7 ? 401 : 200,
-        headers: { "set-cookie": "a=fresh; Path=/" },
+        headers: { "set-cookie": "sb-p-auth-token=fresh; Path=/" },
       })) as typeof fetch;
     const { failed, lines } = await runRefreshRace({
       origin,
-      cookie: `a=${SECRET}`,
+      cookie: `sb-p-auth-token=${SECRET}`,
       fetchImpl,
     });
     expect(failed).toBe(1);
@@ -546,7 +644,7 @@ describe("runRefreshRace (T5)", () => {
     const { fetchImpl } = fake({ refresh: () => [] });
     const { lines, failed } = await runRefreshRace({
       origin,
-      cookie: "access=expired; refresh=old",
+      cookie: "sb-p-auth-token=expired; refresh=old",
       fetchImpl,
     });
     expect(failed).toBe(1);
@@ -557,11 +655,14 @@ describe("runRefreshRace (T5)", () => {
 
   it("does not count a Set-Cookie that only deletes a cookie as a refresh", async () => {
     const { fetchImpl } = fake({
-      refresh: () => ["access=; Path=/", "refresh=x; Path=/; Max-Age=0"],
+      refresh: () => [
+        "sb-p-auth-token=; Path=/",
+        "refresh=x; Path=/; Max-Age=0",
+      ],
     });
     const { failed } = await runRefreshRace({
       origin,
-      cookie: "access=expired; refresh=old",
+      cookie: "sb-p-auth-token=expired; refresh=old",
       fetchImpl,
     });
     expect(failed).toBe(1);
@@ -581,16 +682,69 @@ describe("runRefreshRace (T5)", () => {
       await new Promise((resolve) => setTimeout(resolve, (21 - call) * 5));
       return new Response("{}", {
         status: 200,
-        headers: { "set-cookie": `access=fresh-${call}; Path=/` },
+        headers: { "set-cookie": `sb-p-auth-token=fresh-${call}; Path=/` },
       });
     }) as typeof fetch;
     const { failed } = await runRefreshRace({
       origin,
-      cookie: "access=expired; refresh=old",
+      cookie: "sb-p-auth-token=expired; refresh=old",
       fetchImpl,
     });
     expect(failed).toBe(0);
-    expect(sent[20]).toBe("access=fresh-1; refresh=old");
+    expect(sent[20]).toBe("sb-p-auth-token=fresh-1; refresh=old");
+  });
+
+  it("counts a chunk of the session cookie as a refresh, and a cookie that is not the session as none", async () => {
+    const chunk = fake({ refresh: () => ["sb-p-auth-token.1=part; Path=/"] });
+    const ok = await runRefreshRace({
+      origin,
+      cookie: "sb-p-auth-token=expired",
+      fetchImpl: chunk.fetchImpl,
+    });
+    expect(ok.failed).toBe(0);
+    const unrelated = fake({ refresh: () => ["prefs=1; Path=/"] });
+    const bad = await runRefreshRace({
+      origin,
+      cookie: "sb-p-auth-token=expired",
+      fetchImpl: unrelated.fetchImpl,
+    });
+    expect(bad.failed).toBe(1);
+    expect(bad.lines.find((line) => line.startsWith("FAIL"))).toContain(
+      "replaced a session cookie",
+    );
+  });
+
+  it("applies the cookies when the headers arrive, before the body: reversed header and body order", async () => {
+    const sent: string[] = [];
+    let launched = 0;
+    const fetchImpl = (async (
+      _url: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      sent.push(new Headers(init?.headers).get("cookie") ?? "");
+      const call = ++launched;
+      if (call > 20) return new Response("{}", { status: 200 });
+      // The headers of request n arrive after those of n - 1, but the bodies arrive in the opposite order.
+      await new Promise((resolve) => setTimeout(resolve, call));
+      const body = new ReadableStream({
+        async start(controller) {
+          await new Promise((resolve) => setTimeout(resolve, (21 - call) * 5));
+          controller.enqueue(new TextEncoder().encode("{}"));
+          controller.close();
+        },
+      });
+      return new Response(body, {
+        status: 200,
+        headers: { "set-cookie": `sb-p-auth-token=fresh-${call}; Path=/` },
+      });
+    }) as typeof fetch;
+    const { failed } = await runRefreshRace({
+      origin,
+      cookie: "sb-p-auth-token=expired; refresh=old",
+      fetchImpl,
+    });
+    expect(failed).toBe(0);
+    expect(sent[20]).toBe("sb-p-auth-token=fresh-20; refresh=old");
   });
 
   it("drops a cookie the answers empty or expire", async () => {
@@ -707,6 +861,79 @@ describe("sendTruncatedBody (T3)", () => {
     });
     expect(outcome).toEqual({ status: null, ended: "not-sent" });
     expect(wasNotHandled(outcome)).toBe(false);
+  });
+
+  // A socket that connects and then fails the way the test says; no network is involved.
+  function fakeSocket(behaviour: {
+    writeError?: boolean;
+    answerFirst?: string;
+  }) {
+    const socket = new EventEmitter() as EventEmitter & {
+      write: (data: unknown, callback?: (error?: Error) => void) => boolean;
+      end: () => void;
+      destroy: () => void;
+    };
+    let writes = 0;
+    socket.write = (_data, callback) => {
+      writes += 1;
+      // The head is queued at once; the body write is the last one and decides the outcome.
+      if (writes === 2) {
+        queueMicrotask(() => {
+          if (behaviour.answerFirst)
+            socket.emit("data", Buffer.from(behaviour.answerFirst));
+          if (behaviour.writeError) {
+            const error = new Error("EPIPE");
+            callback?.(error);
+            socket.emit("error", error);
+          } else {
+            callback?.();
+            socket.emit("error", new Error("ECONNRESET"));
+          }
+        });
+      }
+      return true;
+    };
+    socket.end = () => {};
+    socket.destroy = () => {};
+    queueMicrotask(() => socket.emit("connect"));
+    return socket;
+  }
+
+  it("keeps an error before the request was flushed as not-sent, with no status read", async () => {
+    const outcome = await sendTruncatedBody({
+      base: "http://127.0.0.1:1",
+      path: "/echo",
+      cookie: SECRET,
+      origin: "http://app.test",
+      connect: () => fakeSocket({ writeError: true }) as never,
+    });
+    expect(outcome).toEqual({ status: null, ended: "not-sent" });
+    expect(wasNotHandled(outcome)).toBe(false);
+  });
+
+  it("counts an error after the request was flushed as a refusal, and an error after a status line was read too", async () => {
+    const flushed = await sendTruncatedBody({
+      base: "http://127.0.0.1:1",
+      path: "/echo",
+      cookie: SECRET,
+      origin: "http://app.test",
+      connect: () => fakeSocket({}) as never,
+    });
+    expect(flushed).toEqual({ status: null, ended: "reset" });
+    expect(wasNotHandled(flushed)).toBe(true);
+    const answered = await sendTruncatedBody({
+      base: "http://127.0.0.1:1",
+      path: "/echo",
+      cookie: SECRET,
+      origin: "http://app.test",
+      connect: () =>
+        fakeSocket({
+          writeError: true,
+          answerFirst: "HTTP/1.1 413 Too Large\r\n\r\n",
+        }) as never,
+    });
+    expect(answered).toEqual({ status: 413, ended: "reset" });
+    expect(wasNotHandled(answered)).toBe(true);
   });
 
   it("counts a connection the server resets after the request was written as a refusal", async () => {

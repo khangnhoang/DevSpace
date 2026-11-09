@@ -1,3 +1,5 @@
+import { isSessionCookieReplacement } from "./refresh-race.mjs";
+
 // Measure mode (plan M1): latency of the hops one request can take, from the machine that runs it. Prints counts,
 // statuses and milliseconds only, never a body, a cookie or a token.
 export const BUDGET_NOW = { apiP95: 300, endToEndP95: 600 }; // ADR 0008 D11, database in Sydney (TM-U3 to TM-U10)
@@ -99,18 +101,34 @@ export async function measure({
     });
     const text = await response.text();
     const status = response.status;
+    const spans = parseApiSpans(response.headers.get("server-timing"));
     return {
       status,
       endToEnd: now() - started,
-      spans: parseApiSpans(response.headers.get("server-timing")),
+      spans,
+      // The script keeps sending the cookie it was given, so an answer that replaces the session cookie means the
+      // token expired mid-run and every later sample belongs to a session the script is no longer using.
+      replaced: response.headers
+        .getSetCookie()
+        .some(isSessionCookieReplacement),
       valid:
         status >= 200 && status < 300 && (!target.expectOk || answeredOk(text)),
+      // A priming call must look like a sample: a valid 2xx, and one span where the route sends one.
+      usable:
+        status >= 200 &&
+        status < 300 &&
+        (!target.expectOk || answeredOk(text)) &&
+        (!target.span || spans.length === 1),
     };
   }
 
+  // The cache may hold an entry from an earlier run that is about to expire, so the run starts as if a priming call
+  // had just ended: the first one waits for expiry like the later ones.
+  const startedAt = now();
   for (const target of targets) {
     let primedAt = Number.NEGATIVE_INFINITY;
-    let primeEnded = Number.NEGATIVE_INFINITY;
+    let primeEnded = startedAt;
+    const prime = { failed: 0, replaced: 0 };
     // Unsampled: it fills the cache for the warm route and is not a measurement. When the last fill is older than the
     // warm window it waits for that entry to expire first, so this call is a miss that refills rather than a hit.
     const keepWarm = async () => {
@@ -118,13 +136,17 @@ export async function measure({
       const wait = EXPIRY_WAIT_MS - (now() - primeEnded);
       if (wait > 0) await sleep(wait);
       primedAt = now();
-      await sample(target);
+      const result = await sample(target);
       primeEnded = now();
+      if (!result.usable) prime.failed += 1;
+      if (result.replaced) prime.replaced += 1;
     };
     for (const [mode, count] of [
       ["sequential", sequential],
       ["concurrent", concurrent],
     ]) {
+      prime.failed = 0;
+      prime.replaced = 0;
       if (target.prime) await keepWarm();
       const samples = [];
       if (mode === "sequential") {
@@ -144,11 +166,28 @@ export async function measure({
       const e2e = samples.map((item) => item.endToEnd);
       const api = withSpan.map((item) => item.spans[0]);
       const spansOk = !target.span || withSpan.length === valid.length;
-      const good = valid.length === samples.length && spansOk;
+      const replaced =
+        samples.filter((item) => item.replaced).length + prime.replaced;
+      const good =
+        valid.length === samples.length &&
+        spansOk &&
+        prime.failed === 0 &&
+        replaced === 0;
       if (!good) failed += 1;
       if (good) (spans[target.name] ??= {})[mode] = api;
+      const problems = [
+        spansOk
+          ? ""
+          : `, ${valid.length - withSpan.length} without exactly one Server-Timing span`,
+        prime.failed === 0
+          ? ""
+          : `, ${prime.failed} priming call(s) failed (not a valid 2xx with one span)`,
+        replaced === 0
+          ? ""
+          : `, the session cookie was replaced ${replaced} time(s): the token expired during the run, sign in again and rerun`,
+      ].join("");
       lines.push(
-        `${good ? "PASS" : "FAIL"} MEASURE ${target.name} ${mode} n=${samples.length} ok=${valid.length}${spansOk ? "" : `, ${valid.length - withSpan.length} without exactly one Server-Timing span`}: end to end p50 ${round(percentile(e2e, 50))} ms, p95 ${round(percentile(e2e, 95))} ms; at the API ${api.length === 0 ? "n/a" : `p50 ${round(percentile(api, 50))} ms, p95 ${round(percentile(api, 95))} ms`}`,
+        `${good ? "PASS" : "FAIL"} MEASURE ${target.name} ${mode} n=${samples.length} ok=${valid.length}${problems}: end to end p50 ${round(percentile(e2e, 50))} ms, p95 ${round(percentile(e2e, 95))} ms; at the API ${api.length === 0 ? "n/a" : `p50 ${round(percentile(api, 50))} ms, p95 ${round(percentile(api, 95))} ms`}`,
       );
       if (target.budget && good) {
         const apiP95 = percentile(api, 95);

@@ -4,9 +4,10 @@ import tls from "node:tls";
 // Proof T3: sends a request that declares `declared` bytes of body, delivers `sent` of them and then closes its own
 // side of the connection, which `fetch` cannot do. The answer is read until the connection ends. Returns the status
 // line's code (null when none came) and how the exchange ended, never a header or a body. An exchange that ends before
-// the request was written (a connection, DNS or TLS failure, or a timeout while connecting) is `not-sent`: it says
-// nothing about the server.
-/** @param {{ base: string, path: string, cookie: string, origin: string, declared?: number, sent?: number, timeoutMs?: number }} options */
+// the request was flushed to the socket (a connection, DNS or TLS failure, a write failure, or a timeout while
+// connecting) is `not-sent`: it says nothing about the server, unless a status line was already read, which is an
+// explicit answer.
+/** @param {{ base: string, path: string, cookie: string, origin: string, declared?: number, sent?: number, timeoutMs?: number, connect?: (secure: boolean, host: string, port: number) => import("node:net").Socket }} options */
 export function sendTruncatedBody({
   base,
   path,
@@ -15,6 +16,11 @@ export function sendTruncatedBody({
   declared = 4096,
   sent = 1024,
   timeoutMs = 15_000,
+  // The socket factory is a parameter so a test can make a write fail after the connection is up.
+  connect = (secure, host, port) =>
+    secure
+      ? tls.connect({ host, port, servername: host })
+      : net.connect({ host, port }),
 }) {
   for (const value of [path, cookie, origin]) {
     if (/[\r\n]/.test(value))
@@ -32,11 +38,12 @@ export function sendTruncatedBody({
       settled = true;
       clearTimeout(timer);
       socket.destroy();
-      resolve({ status, ended: written ? ended : "not-sent" });
+      resolve({
+        status,
+        ended: written || status !== null ? ended : "not-sent",
+      });
     };
-    const socket = secure
-      ? tls.connect({ host: url.hostname, port, servername: url.hostname })
-      : net.connect({ host: url.hostname, port });
+    const socket = connect(secure, url.hostname, port);
     const timer = setTimeout(() => finish("timeout"), timeoutMs);
     socket.on("data", (chunk) => {
       if (status === null) {
@@ -51,9 +58,11 @@ export function sendTruncatedBody({
         `POST ${path} HTTP/1.1\r\nHost: ${url.host}\r\ncookie: ${cookie}\r\norigin: ${origin}\r\n` +
           `content-type: application/octet-stream\r\ncontent-length: ${declared}\r\nconnection: close\r\n\r\n`,
       );
-      socket.write(Buffer.alloc(sent, 0x61));
+      // `write` only queues: the request counts as sent once the last chunk was flushed without an error.
+      socket.write(Buffer.alloc(sent, 0x61), (error) => {
+        if (!error) written = true;
+      });
       socket.end();
-      written = true;
     });
   });
 }

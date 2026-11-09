@@ -20,6 +20,7 @@ Every entry below moved here on 2026-11-08 (Owner decision 5 in the plan) with i
 - Problem: Historical finding pending revalidation: Auth uses the implicit flow; should move to PKCE.
 - Evidence: Legacy P8; severity Low; discovery-era Planned: migration; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0. The historical H1 plan section 4.2 describes PKCE; this conversion does not revalidate Auth behavior or establish closure of the older record.
 - Direction: Retain the original migration follow-up; no new Auth implementation or claim of completion is made here.
+- Update (2026-11-09, master plan r5): TM-U9 is dropped, so no unit owns this entry. It moves to the backlog at program close unless the Owner drops it.
 - Exit condition: The migration follow-up verifies the intended Auth flow and its compatibility.
 
 ### TM-P3: Email links depend on the requesting browser
@@ -28,6 +29,7 @@ Every entry below moved here on 2026-11-08 (Owner decision 5 in the plan) with i
 - Problem: Email links open only in the browser that requested them (PKCE); should move to `token_hash` + `verifyOtp` through a server route.
 - Evidence: Legacy P14; severity Low; discovery-era Planned: later; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Later work moves email links to token_hash plus verifyOtp through a server route; include TM-P4.
+- Update (2026-11-09, master plan r5): TM-U9 is dropped, so no unit owns this entry. It moves to the backlog at program close unless the Owner drops it.
 - Exit condition: Confirmation/recovery links work through the intended server route without depending on the originating browser.
 
 ### TM-P4: Confirmation without a code verifier shows an error
@@ -36,6 +38,7 @@ Every entry below moved here on 2026-11-08 (Owner decision 5 in the plan) with i
 - Problem: Opening the signup confirmation link in a browser/tab without the code verifier → the `/auth/error` page, even though the email is confirmed and sign-in works. The root cause is TM-P3 (legacy P14).
 - Evidence: Legacy P18; severity Low; discovery-era Planned: with P14; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Handle with TM-P3, the recorded root cause.
+- Update (2026-11-09, master plan r5): TM-U9 is dropped, so no unit owns this entry. It moves to the backlog at program close unless the Owner drops it.
 - Exit condition: A valid confirmation link opened without the original verifier completes with correct feedback.
 
 ### TM-P5: Auth locks can stall multiple local tabs
@@ -44,6 +47,7 @@ Every entry below moved here on 2026-11-08 (Owner decision 5 in the plan) with i
 - Problem: Several `localhost` tabs open: `supabase-js` shares `navigator.locks`, auth operations wait on the lock forever → one stuck tab makes the other tabs spin on sign-in. Closing all tabs fixes it. Library behavior, not caused by H1.
 - Evidence: Legacy P19; severity Low; discovery-era Planned: monitor; preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
 - Direction: Monitor the library behavior; closing all localhost tabs is the recorded workaround, not a permanent fix.
+- Update (2026-11-09, master plan r5): TM-U9 is dropped, so no unit owns this entry. It moves to the backlog at program close unless the Owner drops it.
 - Exit condition: The multi-tab lock problem is resolved or the Owner accepts a documented library-level limitation.
 
 ### TM-P6: Quiz results and completion are not stored
@@ -68,6 +72,7 @@ Every entry below moved here on 2026-11-08 (Owner decision 5 in the plan) with i
 - Problem: `/login` renders its forms for a visitor who already has a session, so a signed-in user can sign in again with another account without signing out first. Nothing redirects a signed-in visitor away from the page.
 - Evidence: Owner QA of AF-U4 on the dev stack, 2026-11-03. `proxy.ts` has no rule for `/login`, and the page at `186530e` (before AF-U4) did not check the session either, so the behavior predates AF-U4.
 - Direction: small fix: redirect a signed-in visitor from `/login` to `/` (or the safe `next` path) on the server, and add an e2e row for a signed-in actor. Decide whether "sign in as another account" should instead be offered through an explicit sign-out.
+- Update (2026-11-09, master plan r5): TM-U9 is dropped, so no unit owns this entry. It moves to the backlog at program close unless the Owner drops it.
 - Exit condition: a signed-in user who opens `/login` is sent away, or the page offers a deliberate sign-out first; an e2e row asserts it.
 
 ### TM-P9: an admin can change their own role and lose admin access at once
@@ -139,16 +144,9 @@ Every entry below moved here on 2026-11-08 (Owner decision 5 in the plan) with i
 - Update (2026-11-09): the rollout did not decide it: R2 passed through the session pooler with `sslmode=require`, and neither a CA file nor `verify-full` was tried. It stays open for the Owner.
 - Exit condition: the hosted connection verifies the server certificate, or the Owner accepts the risk as it is.
 
-### TM-P17: the D5 transport contract did not pass through Vercel for large bodies
-
-- Status: Open (2026-11-09, TM-U3 rollout, Owner decision 28).
-- Problem: through the Vercel origin, JSON of 4 MiB and a multipart upload of 2 MiB answered 502 in one of two runs, and JSON of 1 MiB passed in both runs only after a stalled attempt. Straight to Railway the same 13 rows passed in one run, each body in under 1 second. The API never answered 5xx: Vercel answered 502 about 2 seconds in, and Railway logged 499 with partial bytes received. Binary of 4 MiB through Vercel failed in both runs and is an unsupported limit. The mechanism inside Vercel is not known.
-- Evidence: T1 on 2026-11-09, run 1 at 11:21 UTC (JSON 4 MiB and multipart 2 MiB 502; JSON 1 MiB passed after a 22-second stall) and run 2 at 11:29 UTC (both passed; JSON 1 MiB again after a stall). Railway received 205 to 364 KB of the failed bodies and 754 and 827 KB of the stalled 1 MiB bodies. The over-limit requests of 4 MiB + 1 and 2 MiB + 1 arrived in full, so size alone does not explain it. Vercel's documentation lists a 4 MB maximum request body for Routing Middleware, which is below the 4 MiB contract and does not explain the stalls at 1 to 3 MiB (read in the rollout; not re-read here).
-- Direction: the paths TM-U5 (avatar upload), TM-U8 (course images, Gemini) and TM-U10 move behind the rewrite stay blocked until the D5 transport contract passes on the production topology (ADR 0008 D5). No cause is claimed here; the first of those units plans how to re-prove the path.
-- Exit condition: the D5 transport contract passes on the production topology for the paths TM-U5, TM-U8 and TM-U10 move, or the Owner changes the path.
-
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.
 
+- TM-P17 — Resolved 2026-11-09: no upload moves behind the Vercel rewrite, because uploads stay straight to Supabase Storage (master plan decision 10); the T1 figures stay in ADR 0008 D5 and binary bodies of 4 MiB through Vercel stay unsupported (master plan r5).
 - TM-P14 — Resolved 2026-11-09: no `x-middleware-rewrite` header on a deployed anonymous `/api/health` response, and the Owner accepts that reading (Owner decision 30, `e651698`).

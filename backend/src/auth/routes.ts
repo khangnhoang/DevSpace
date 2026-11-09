@@ -16,7 +16,7 @@ function join(...parts: string[]): string {
 }
 
 // Every route the application registers, with whether it is public. The default-deny test reads this to show that
-// the public set is exactly the two health routes (AC5).
+// the public set is exactly the named routes (AC5, TM-U4 AC4).
 export function listRoutes(app: INestApplication, prefix = "api"): RouteInfo[] {
   const discovery = app.get(DiscoveryService);
   const reflector = app.get(Reflector);

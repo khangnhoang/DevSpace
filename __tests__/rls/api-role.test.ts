@@ -8,6 +8,10 @@
 // Invariants: effective privileges read from the catalog for public, auth and storage; the rollback is replayed
 //   inside a transaction that is rolled back, so the committed state never changes. The migration touches no object it
 //   does not grant on (API-R9, API-R8) and stops on a privilege or an owned object it does not manage (API-R7, API-R10).
+//   TM-U4 (first slice) adds column grants on courses and lessons in migration 20261109145730_tm_u4_api_home_course_read
+//   (API-R11, API-R12). The replays of the TM-U3 migration and rollback (API-R5 to API-R10) start from a state where
+//   those grants are undone inside their own transaction (`undoHomeGrants`): replaying TM-U3 on top of them would stop
+//   on the new grants, and its rollback's DROP ROLE would refuse, so a "stops" row could pass for the wrong reason.
 // Known bugs: none.
 import { readFile } from "node:fs/promises";
 import pg from "pg";
@@ -21,6 +25,17 @@ import { withPg } from "./helpers";
 
 const stack = inject("localStack");
 const migration = "20261108143215_devspace_api";
+const homeMigration = "20261109145730_tm_u4_api_home_course_read";
+
+const HOME_COURSE_COLUMNS = [
+  "description",
+  "id",
+  "image_url",
+  "name",
+  "price",
+  "slug",
+];
+const HOME_LESSON_COLUMNS = ["course_id", "id", "slug"];
 
 // Functions of public, auth and storage that devspace_api can execute through PUBLIC, recorded on the local stack
 // (CLI 2.121.0 images). A difference is a change of effective privilege: read it before editing this list.
@@ -84,6 +99,47 @@ async function refused(client: pg.Client, sql: string) {
 
 function withoutTransaction(sql: string) {
   return sql.replace(/^begin;\s*$/m, "").replace(/^commit;\s*$/m, "");
+}
+
+async function readBody(folder: "migrations" | "rollbacks", name: string) {
+  return withoutTransaction(
+    await readFile(
+      new URL(`../../supabase/${folder}/${name}`, import.meta.url),
+      "utf8",
+    ),
+  );
+}
+
+const homeUp = () => readBody("migrations", `${homeMigration}.sql`);
+const homeDown = () => readBody("rollbacks", `${homeMigration}.down.sql`);
+
+async function homeColumns(owner: pg.Client) {
+  return (
+    await owner.query(
+      `select c.relname || '.' || a.attname as column
+       from pg_attribute a join pg_class c on c.oid = a.attrelid
+       where c.relnamespace = 'public'::regnamespace and c.relname in ('courses', 'lessons')
+         and a.attnum > 0 and not a.attisdropped
+         and has_column_privilege($1, c.oid, a.attnum, 'SELECT,INSERT,UPDATE,REFERENCES')
+       order by 1`,
+      [API_ROLE],
+    )
+  ).rows.map((row) => row.column as string);
+}
+
+// The state the TM-U3 migration was written for: TM-U4's column grants are undone, in the caller's transaction. It
+// checks both ends, so a rollback that stopped working or a committed state that lost the grants fails here, not in
+// a replay that would then prove something else.
+async function undoHomeGrants(owner: pg.Client) {
+  expect(
+    (await homeColumns(owner)).length,
+    "the committed state holds the TM-U4 grants before they are undone",
+  ).toBe(HOME_COURSE_COLUMNS.length + HOME_LESSON_COLUMNS.length);
+  await owner.query(await homeDown());
+  expect(
+    await homeColumns(owner),
+    "no grant on courses or lessons remains once TM-U4's rollback ran",
+  ).toEqual([]);
 }
 
 describe("devspace_api role", () => {
@@ -161,7 +217,7 @@ describe("devspace_api role", () => {
     await asApi(async (client) => {
       await refused(client, "select email from public.profiles");
       await refused(client, "select * from public.profiles");
-      await refused(client, "select id from public.courses");
+      await refused(client, "select id from public.enrollments");
       await refused(client, "select id from public.payments");
       await refused(client, "select id from auth.users");
       await refused(client, "select id from storage.objects");
@@ -201,6 +257,8 @@ describe("devspace_api role", () => {
         [API_ROLE],
       );
       expect(columns.rows.map((row) => row.column)).toEqual([
+        ...HOME_COURSE_COLUMNS.map((column) => `public.courses.${column}`),
+        ...HOME_LESSON_COLUMNS.map((column) => `public.lessons.${column}`),
         "public.profiles.id",
         "public.profiles.role",
       ]);
@@ -285,6 +343,7 @@ describe("devspace_api role", () => {
     await withPg(async (owner) => {
       await owner.query("begin");
       try {
+        await undoHomeGrants(owner);
         await owner.query(body);
         expect(
           (
@@ -318,6 +377,7 @@ describe("devspace_api role", () => {
     await withPg(async (owner) => {
       await owner.query("begin");
       try {
+        await undoHomeGrants(owner);
         await owner.query(body);
         const after = await owner.query(
           "select rolcanlogin, rolbypassrls from pg_roles where rolname = $1",
@@ -358,6 +418,7 @@ describe("devspace_api role", () => {
     await withPg(async (owner) => {
       await owner.query("begin");
       try {
+        await undoHomeGrants(owner);
         await prepare(owner);
         await owner.query("savepoint replay");
         const error = await owner.query(up).then(
@@ -380,8 +441,8 @@ describe("devspace_api role", () => {
     ],
     [
       "another table",
-      "grant select on public.courses to devspace_api",
-      "table courses",
+      "grant select on public.payments to devspace_api",
+      "table payments",
     ],
     [
       "a function",
@@ -545,6 +606,7 @@ describe("devspace_api role", () => {
       await owner.query("begin");
       try {
         // The state the migration starts from on hosted: the role does not exist.
+        await undoHomeGrants(owner);
         await owner.query(down);
         const before = await snapshot(owner);
         await owner.query(up);
@@ -561,6 +623,143 @@ describe("devspace_api role", () => {
         expect(
           [...before.keys()].filter((key) => !after.has(key)),
           "no object disappeared",
+        ).toEqual([]);
+      } finally {
+        await owner.query("rollback");
+      }
+    });
+  });
+
+  it("[API-R11] replaying the TM-U3 migration on the state that holds TM-U4's grants stops, naming both tables", async () => {
+    // Why the replays above undo the grants first: without that, the stop below is all they would see.
+    const up = await readBody("migrations", `${migration}.sql`);
+    await withPg(async (owner) => {
+      await owner.query("begin");
+      try {
+        expect(await homeColumns(owner)).not.toEqual([]);
+        const error = await owner.query(up).then(
+          () => null,
+          (caught: { message?: string; code?: string }) => caught,
+        );
+        expect(error, "the migration should stop").not.toBeNull();
+        expect(error?.code).toBe("P0001");
+        expect(error?.message).toContain("table courses");
+        expect(error?.message).toContain("table lessons");
+      } finally {
+        await owner.query("rollback");
+      }
+    });
+  });
+
+  it("[API-R12] [AC5] reads exactly the home columns of courses and lessons, and is refused on every other column and every write", async () => {
+    const counts = await withPg(async (owner) => ({
+      courses: (
+        await owner.query("select count(*)::int as n from public.courses")
+      ).rows[0].n as number,
+      lessons: (
+        await owner.query("select count(*)::int as n from public.lessons")
+      ).rows[0].n as number,
+    }));
+    expect(counts.courses, "the seed holds courses").toBeGreaterThanOrEqual(2);
+    expect(counts.lessons, "the seed holds lessons").toBeGreaterThanOrEqual(4);
+    await asApi(async (client) => {
+      const courses = await client.query(
+        `select ${HOME_COURSE_COLUMNS.join(", ")} from public.courses`,
+      );
+      expect(courses.rows).toHaveLength(counts.courses);
+      const lessons = await client.query(
+        `select ${HOME_LESSON_COLUMNS.join(", ")} from public.lessons`,
+      );
+      expect(lessons.rows).toHaveLength(counts.lessons);
+
+      for (const column of ["created_at", "instructor_id"]) {
+        await refused(client, `select ${column} from public.courses`);
+      }
+      await refused(client, "select * from public.courses");
+      // Named in a row with the granted columns, so a grant of the whole table or of one extra column fails here.
+      for (const column of [
+        "content",
+        "video_url",
+        "title",
+        "chapter_id",
+        "order_index",
+        "created_at",
+        "has_video",
+        "word_count",
+      ]) {
+        await refused(client, `select id, ${column} from public.lessons`);
+      }
+      await refused(client, "select * from public.lessons");
+      await refused(client, "update public.courses set price = 0");
+      await refused(client, "update public.lessons set slug = 'x'");
+      await refused(client, "update public.courses set id = id");
+      await refused(
+        client,
+        "insert into public.courses (name, slug) values ('x', 'x')",
+      );
+      await refused(
+        client,
+        "insert into public.lessons (title, slug, course_id) values ('x', 'x', 1)",
+      );
+      await refused(client, "delete from public.courses");
+      await refused(client, "delete from public.lessons");
+      await refused(client, "truncate public.courses");
+      await refused(client, "truncate public.lessons");
+    });
+  });
+
+  it("[API-R13] [AC5] TM-U4's rollback restores the TM-U3 grants exactly, and its migration restores its own", async () => {
+    const snapshot = async (owner: pg.Client) =>
+      new Map(
+        (
+          await owner.query(
+            `select 'column ' || c.relnamespace::regnamespace || '.' || c.relname || '.' || t.attname as key, t.attacl::text as acl
+             from pg_attribute t join pg_class c on c.oid = t.attrelid
+             where t.attacl is not null and c.relnamespace = 'public'::regnamespace
+             union all select 'class ' || c.relname, c.relacl::text from pg_class c where c.relnamespace = 'public'::regnamespace
+             union all select 'schema ' || n.nspname, n.nspacl::text from pg_namespace n`,
+          )
+        ).rows.map((row) => [row.key as string, row.acl as string | null]),
+      );
+    const differing = (
+      a: Map<string, string | null>,
+      b: Map<string, string | null>,
+    ) =>
+      [...new Set([...a.keys(), ...b.keys()])]
+        .filter((key) => (a.get(key) ?? null) !== (b.get(key) ?? null))
+        .sort();
+    const expectedChanged = [
+      ...HOME_COURSE_COLUMNS.map((column) => `column public.courses.${column}`),
+      ...HOME_LESSON_COLUMNS.map((column) => `column public.lessons.${column}`),
+    ].sort();
+    await withPg(async (owner) => {
+      await owner.query("begin");
+      try {
+        const committed = await snapshot(owner);
+        await owner.query(await homeDown());
+        const afterDown = await snapshot(owner);
+        expect(differing(committed, afterDown)).toEqual(expectedChanged);
+        expect(await homeColumns(owner)).toEqual([]);
+        const tm3 = await owner.query(
+          `select a.attname from pg_attribute a
+           where a.attrelid = 'public.profiles'::regclass and a.attnum > 0
+             and has_column_privilege($1, a.attrelid, a.attnum, 'SELECT') order by 1`,
+          [API_ROLE],
+        );
+        expect(tm3.rows.map((row) => row.attname)).toEqual(["id", "role"]);
+        expect(
+          (
+            await owner.query(
+              "select has_schema_privilege($1, 'public', 'USAGE') as usage",
+              [API_ROLE],
+            )
+          ).rows[0].usage,
+        ).toBe(true);
+
+        await owner.query(await homeUp());
+        expect(
+          differing(committed, await snapshot(owner)),
+          "the migration puts back exactly what the rollback took",
         ).toEqual([]);
       } finally {
         await owner.query("rollback");

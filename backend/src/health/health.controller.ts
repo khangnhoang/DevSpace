@@ -5,7 +5,8 @@ import { ServerEnv } from "../common/env";
 import { SERVER_ENV } from "../common/tokens";
 import { DbService } from "../db/db.service";
 
-// The only public routes of the API (AC5): a monitor and Railway call them without a session.
+// The health routes: a monitor and Railway call them without a session. The other public route is
+// `GET /api/courses/home` (TM-U4); a test names the whole public set.
 @Public()
 @Controller("health")
 export class HealthController {

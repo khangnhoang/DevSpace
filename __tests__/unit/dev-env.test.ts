@@ -60,7 +60,6 @@ describe("buildDevEnv", () => {
 
   it("points Next at the API that `npm run dev` starts, on the loopback address", () => {
     expect(env.API_INTERNAL_URL).toBe(`http://127.0.0.1:${DEV_API_PORT}`);
-    expect(env.API_PROOF_ENABLED, "the proof page stays off in dev").toBe("0");
   });
 
   it("holds no empty value and no AI key", () => {
@@ -148,19 +147,4 @@ describe("buildDevApiEnv", () => {
     expect(env.ALLOWED_ORIGINS).toBe(DEV_ORIGIN);
     expect(JSON.stringify(env)).not.toMatch(/hosted/);
   });
-
-  it.each(["1", "0", ""])(
-    "never lets an inherited API_PROOF_ENABLED=%j or API_PROOF_USER_ID reach the dev API",
-    (flag) => {
-      const contaminated = buildDevApiEnv(
-        {
-          API_PROOF_ENABLED: flag,
-          API_PROOF_USER_ID: "00000000-0000-0000-0000-000000000001",
-        },
-        stack,
-      );
-      expect(contaminated).not.toHaveProperty("API_PROOF_ENABLED");
-      expect(contaminated).not.toHaveProperty("API_PROOF_USER_ID");
-    },
-  );
 });

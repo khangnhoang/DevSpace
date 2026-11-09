@@ -1,5 +1,5 @@
 # Fallback build of the API for Railway, used only if Railpack cannot build on Node 26 (TM-U3 plan R1). To use it, set
-# "builder": "DOCKERFILE" and "dockerfilePath": "Dockerfile.api" in railway.json; the default is Railpack. The image
+# the service variable RAILWAY_DOCKERFILE_PATH=Dockerfile.api in the Railway dashboard; the default is Railpack. The image
 # holds `dist` and the production dependencies only. Railway passes RAILWAY_GIT_COMMIT_SHA as a build argument and a
 # runtime variable, and the process reads it at runtime for /api/health.
 FROM node:26-slim AS build

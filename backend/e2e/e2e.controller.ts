@@ -14,8 +14,11 @@ import {
   type SessionUser,
 } from "../src/auth/decorators";
 import { createHash } from "node:crypto";
+import { eq } from "drizzle-orm";
 import type { Request } from "express";
 import { extractToken } from "../src/auth/token";
+import { DbService } from "../src/db/db.service";
+import { profiles } from "../src/db/schema";
 import { uploadFile, type UploadedBytes } from "../src/common/upload";
 import { ZodPipe } from "../src/common/zod.pipe";
 import { createUserSchema } from "../../lib/schemas/user";
@@ -26,6 +29,8 @@ import { createUserSchema } from "../../lib/schemas/user";
 export class E2eController {
   // Counts the handlers that ran, so a test can show that a refused request never reached one.
   private handled = 0;
+
+  constructor(private readonly database: DbService) {}
 
   @Get("private")
   privateRoute() {
@@ -49,6 +54,24 @@ export class E2eController {
   @Get("sensitive")
   sensitive(@CurrentUser() user: SessionUser) {
     return { userId: user.id };
+  }
+
+  // The permanent check of AC13 (`db-verification.test.ts`) needs a route that is the first caller of the pool: it reads
+  // the caller's own `profiles.id, role`, the only columns `devspace_api` may select, twice in a row, and answers `ok`
+  // with nothing from the row.
+  @Sensitive()
+  @Get("db-read")
+  async dbRead(@CurrentUser() user: SessionUser) {
+    const db = await this.database.connection();
+    for (let round = 0; round < 2; round += 1) {
+      const rows = await db
+        .select({ id: profiles.id, role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, user.id))
+        .limit(1);
+      if (rows.length !== 1) return { ok: false };
+    }
+    return { ok: true };
   }
 
   @Get("handled")

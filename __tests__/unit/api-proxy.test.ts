@@ -51,9 +51,9 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("proxy rewrite", () => {
   it("rewrites /api/* to the API with the path and query unchanged", async () => {
-    const response = await proxy(get("/api/proof/read?a=1&b=2"));
+    const response = await proxy(get("/api/example/read?a=1&b=2"));
     expect(response.headers.get("x-middleware-rewrite")).toBe(
-      `${BASE}/api/proof/read?a=1&b=2`,
+      `${BASE}/api/example/read?a=1&b=2`,
     );
   });
 
@@ -69,7 +69,7 @@ describe("proxy rewrite", () => {
   });
 
   it("returns the refreshed cookie to the browser on the rewritten response", async () => {
-    const response = await proxy(get("/api/session"));
+    const response = await proxy(get("/api/example"));
     expect(response.cookies.get("sb-127-auth-token")?.value).toBe("refreshed");
     expect(response.headers.get("set-cookie")).toContain(
       "sb-127-auth-token=refreshed",
@@ -78,7 +78,7 @@ describe("proxy rewrite", () => {
   });
 
   it("forwards the refreshed cookie, not the stale one, to the API", async () => {
-    const response = await proxy(get("/api/session"));
+    const response = await proxy(get("/api/example"));
     const overridden =
       response.headers.get("x-middleware-override-headers") ?? "";
     expect(overridden.split(",")).toContain("cookie");
@@ -106,7 +106,7 @@ describe("proxy with no API address", () => {
   beforeEach(() => vi.stubEnv("API_INTERNAL_URL", ""));
 
   it("answers 503 on /api/* and leaves a body-less response", async () => {
-    for (const path of ["/api/health", "/api/proof/echo", "/api"]) {
+    for (const path of ["/api/health", "/api/example/echo", "/api"]) {
       const response = await proxy(get(path));
       expect(response.status, path).toBe(503);
       expect(response.headers.get("x-middleware-rewrite"), path).toBeNull();
@@ -114,7 +114,7 @@ describe("proxy with no API address", () => {
   });
 
   it("carries the cookies that getUser() refreshed, and the cache-control header, onto the 503", async () => {
-    const response = await proxy(get("/api/session"));
+    const response = await proxy(get("/api/example"));
     expect(response.status).toBe(503);
     expect(response.cookies.get("sb-127-auth-token")?.value).toBe("refreshed");
     expect(response.headers.get("set-cookie")).toContain(
@@ -141,7 +141,7 @@ describe("proxy matcher", () => {
   it.each([
     "/api",
     "/api/health",
-    "/api/proof/echo",
+    "/api/example/echo",
     "/api/file.png",
     "/api/a/b.svg",
     "/api/image.webp",

@@ -1,6 +1,6 @@
 # TM-U3 detail plan — Backend foundation
 
-Revision: r7, 2026-11-08. Owner approval: r7 on 2026-11-08 after the Codex plan gate PASS. Master plan: [plan.md](../../plan.md) (Units row TM-U3, section 5 step 4). Architecture: [ADR 0008](../../../../adr/0008-backend-architecture-and-hosting.md).
+Revision: r8, 2026-11-09. Owner approval: r8 on 2026-11-09 (rollout step 7 gains the check of `NEXT_PUBLIC_BASE_URL`, which the Codex implementation gate found missing); r7 was approved on 2026-11-08 after the Codex plan gate PASS. Master plan: [plan.md](../../plan.md) (Units row TM-U3, section 5 step 4). Architecture: [ADR 0008](../../../../adr/0008-backend-architecture-and-hosting.md).
 
 ## 1. Binding Spec
 
@@ -181,7 +181,7 @@ Rollout runbook, in order (every grant separate, `AGENTS.md` section 4):
 4. Owner: in the hosted SQL editor, sets `LOGIN` and a generated password on `devspace_api`. Main re-reads `rolcanlogin` only.
 5. Owner merges or grants the merge of PR 1. Vercel deploys as usual; `/api/*` answers 503 until step 7.
 6. Owner, as the instruction for the first deploy: creates the Railway project and service `devspace-api` in Singapore with the GitHub connection, restart policy, health path `/api/health`, hard limit 10 USD and email alert at 7 USD; sets `DATABASE_URL` (session pooler, user `devspace_api.<project-ref>`), `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `ALLOWED_ORIGINS`, `API_PROOF_ENABLED=1` and `API_PROOF_USER_ID` (the Owner's own user id). R1 and R2.
-7. Owner on Vercel: function region `sin1`, `API_INTERNAL_URL`, `API_PROOF_ENABLED=1`, then redeploys production.
+7. Owner on Vercel: function region `sin1`, `API_INTERNAL_URL`, `API_PROOF_ENABLED=1`; confirms that `NEXT_PUBLIC_BASE_URL` is the production origin and equals an entry of Railway's `ALLOWED_ORIGINS` (the server helper throws without it, and a different origin fails the CSRF guard), then redeploys production.
 8. Owner runs P1 to P4, T1 to T5 and M1 to M3; Main records aggregates in State.
 9. Proof cleanup, on pass, failure or interruption: the Owner removes `API_PROOF_ENABLED` and `API_PROOF_USER_ID` on Railway and `API_PROOF_ENABLED` on Vercel, redeploys both and runs the script's verify mode, which must pass; a 401 or 200 means the flag is still on. Cleanup is not a pass: a failed row stays failed, and a failed P row or a failed budget stops the unit here.
 10. Owner sets the two uptime keyword monitors and the dated usage checks of ADR 0008 appendix A.

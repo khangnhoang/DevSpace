@@ -310,17 +310,18 @@ test.describe("page renders never write through the API (AC11)", () => {
     // About twenty pages, some of them heavy (the editor of /try_it), each rendered once.
     test.setTimeout(240_000);
     const routes = renderedRoutes();
-    expect(routes, "the manifest lists the temporary proof page too").toContain(
-      "/tm-u3-proof",
-    );
+    expect(
+      routes,
+      "the manifest lists the fixture page, which reads",
+    ).toContain("/e2e-fixture");
     for (const route of routes) {
       await page.goto(route, { waitUntil: "load" });
     }
     const calls = serverRecords.apiCalls();
     expect(
       calls.map((call) => call.path),
-      "the proof page rendered and called the API, so the record is live",
-    ).toContain("/api/proof/read");
+      "the fixture page rendered and called the API, so the record is live",
+    ).toContain("/api/e2e/whoami");
     expect(calls.filter((call) => call.method !== "GET")).toEqual([]);
   });
 });

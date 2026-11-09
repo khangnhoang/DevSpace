@@ -1,8 +1,10 @@
 // Test plan
 // Goal: the API never queries through a connection whose role was not verified, whichever path reaches the pool first.
 // Layer: api (the production build as a process on the test stack, under the network guard).
-// Subject: S2 of the TM-U3 correction round, AC13 (startup checks), AC4 (health), ADR 0008 D2 and D7.
-// Data: one fixture user, the proof owner, created and deleted through the local Admin API.
+// Subject: S2 of the TM-U3 correction round, AC13 (startup checks), AC4 (health), ADR 0008 D2 and D7. The first two rows
+//   reach the pool through the test-only route `/api/e2e/db-read` of the fixture build (AC20); the third needs no fixture
+//   and runs on the production build.
+// Data: one fixture user, created and deleted through the local Admin API.
 // Invariants: a database that cannot be asked is a 503 with no detail and the process keeps serving; a connection that
 //   runs as another role ends the process with a non-zero code from the handler path and from the probe path, and no
 //   statement of the handler reaches the database.
@@ -59,14 +61,11 @@ function withPort(base: string, port: number) {
 
 // The API boots against a port nobody listens on, with the connection string of the test stack's own owner role (not
 // `devspace_api`). Nothing has been checked then, because the database could not be asked.
-async function bootWithDatabaseDown() {
+async function bootWithDatabaseDown(fixtures: boolean) {
   const port = await freePort();
   const api = await startApi(
-    apiTestEnv(stack, {
-      DATABASE_URL: withPort(stack.dbUrl, port),
-      API_PROOF_ENABLED: "1",
-      API_PROOF_USER_ID: owner.userId,
-    }),
+    apiTestEnv(stack, { DATABASE_URL: withPort(stack.dbUrl, port) }),
+    { fixtures },
   );
   running.push(api);
   return { api, port };
@@ -85,8 +84,8 @@ async function bringDatabaseBack(port: number): Promise<CountingProxy> {
 
 describe("a connection is verified before the first query (S2)", () => {
   it("[S2] answers 503 with no detail while the database cannot be asked, and /api/health stays up", async () => {
-    const { api } = await bootWithDatabaseDown();
-    const response = await fetch(`${api.url}/api/proof/read`, {
+    const { api } = await bootWithDatabaseDown(true);
+    const response = await fetch(`${api.url}/api/e2e/db-read`, {
       headers: bearer(owner),
     });
     expect(response.status).toBe(503);
@@ -96,11 +95,11 @@ describe("a connection is verified before the first query (S2)", () => {
     expect((await fetch(`${api.url}/api/health`)).status).toBe(200);
   });
 
-  it("[S2] a database that comes back as another role ends the process before /api/proof/read queries it", async () => {
-    const { api, port } = await bootWithDatabaseDown();
+  it("[S2] a database that comes back as another role ends the process before /api/e2e/db-read queries it", async () => {
+    const { api, port } = await bootWithDatabaseDown(true);
     const proxy = await bringDatabaseBack(port);
     // No health probe ran: the handler is the first caller to need the pool.
-    const response = await fetch(`${api.url}/api/proof/read`, {
+    const response = await fetch(`${api.url}/api/e2e/db-read`, {
       headers: bearer(owner),
     }).catch(() => null);
     expect(response?.status ?? 0, "the handler must not answer").not.toBe(200);
@@ -113,7 +112,7 @@ describe("a connection is verified before the first query (S2)", () => {
   });
 
   it("[S2] the health probe path ends the process too, not a quiet false", async () => {
-    const { api, port } = await bootWithDatabaseDown();
+    const { api, port } = await bootWithDatabaseDown(false);
     await bringDatabaseBack(port);
     const response = await fetch(`${api.url}/api/health/db`).catch(() => null);
     expect(response?.status ?? 0).not.toBe(200);

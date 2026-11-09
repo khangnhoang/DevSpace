@@ -472,11 +472,20 @@ describe("devspace_api role", () => {
       async (owner: pg.Client) => {
         await owner.query("grant create on schema public to devspace_api");
         await owner.query("grant devspace_api to current_user");
+        // Created by the role itself, so the table is owned by it and, with no GRANT ever made, has a NULL ACL.
+        await owner.query("set local role devspace_api");
         await owner.query("create table public.api_r10_owned (id int)");
-        await owner.query(
-          "alter table public.api_r10_owned owner to devspace_api",
-        );
+        await owner.query("reset role");
         await owner.query("revoke devspace_api from current_user");
+        const state = await owner.query(
+          `select c.relacl is null as acl_is_null, r.rolname as owner
+           from pg_class c join pg_roles r on r.oid = c.relowner
+           where c.oid = 'public.api_r10_owned'::regclass`,
+        );
+        expect(
+          state.rows,
+          "the precondition: owned by the API role, ACL NULL",
+        ).toEqual([{ acl_is_null: true, owner: API_ROLE }]);
       },
       "table api_r10_owned",
     ],

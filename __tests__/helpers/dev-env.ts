@@ -35,12 +35,14 @@ export function buildDevEnv(stack: LocalStack): Record<string, string> {
 
 // The environment of the API on the dev stack. It starts from the inherited environment, which may hold hosted
 // values, so every name the API reads is set here and never taken from the caller's shell. The database user is the
-// API role with the local seed password (api-role.ts).
+// API role with the local seed password (api-role.ts). The two proof variables are removed, not set: an inherited "1"
+// would turn the temporary routes on, and the API refuses any other value but "1" (so a "0" would stop it), which makes
+// "unset" the only off state.
 export function buildDevApiEnv(
   inherited: Record<string, string | undefined>,
   stack: LocalStack,
 ): Record<string, string | undefined> {
-  return {
+  const env = {
     ...inherited,
     HOST: DEV_HOST,
     PORT: String(DEV_API_PORT),
@@ -50,6 +52,9 @@ export function buildDevApiEnv(
     SUPABASE_ANON_KEY: stack.anonKey,
     ALLOWED_ORIGINS: DEV_ORIGIN,
   };
+  delete env.API_PROOF_ENABLED;
+  delete env.API_PROOF_USER_ID;
+  return env;
 }
 
 // The environment handed to `next dev`. The local values override anything inherited, and an inherited AI key

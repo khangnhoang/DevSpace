@@ -9,16 +9,20 @@
 //     The cookie is read from the environment and never printed or written.
 //   PROOF_COOKIE=<cookie header> node scripts/tm-u3-proof/cli.mjs measure --api <app origin> --origin <app origin>
 //     --api is the app origin for the end-to-end budget (ADR 0008 D11: through the Vercel origin); a direct Railway URL
-//     measures a different hop. It also prints one INFO line per mode with the Auth round trip: the at-the-API p50 of
-//     the cold /api/proof/session-cold minus the warm /api/session, or n/a when a route sends no span.
-//     M1: 100 sequential and 20 concurrent requests for each of /api/health, /api/health/db, /api/session (warm),
-//     /api/proof/session-cold, the proxy.ts check alone (a page of the app) and /api/proof/read, with p50 and p95 end to
-//     end and at the API (the temporary Server-Timing header), and the D11 budgets. Timings only.
+//     measures a different hop.
+//     M1: 100 sequential and 20 concurrent requests for each of /api/health, /api/health/db, /api/session (warm; the
+//     30-second cache entry is refilled unsampled, after waiting for it to expire, once 20 seconds of samples have used it), /api/proof/session-cold, a page with no API
+//     call (the proxy.ts check plus delivery of the page) and /api/proof/read (every sample must answer ok), with p50
+//     and p95 end to end and at the API (the temporary Server-Timing header), and the D11 budgets. A temporary route
+//     without exactly one span on a successful sample fails its batch. Timings only.
+//     It also prints one INFO line per mode estimating the added Auth cost (the at-the-API p50 of the cold
+//     /api/proof/session-cold minus the warm /api/session; an estimate, not a timed /auth/v1/user round trip).
 //   PROOF_TOKEN_A=<access token> PROOF_TOKEN_B=<access token> node scripts/tm-u3-proof/cli.mjs session-probe --api <base URL> --step live|after
 //     M2, in two steps with the Owner's sign-out and deletion between them: live (both sessions refused by the proof
 //     owner check, 404, which carries no timing), then after (both refused with 401). Statuses only.
 //   PROOF_COOKIE=<expired session cookie header> node scripts/tm-u3-proof/cli.mjs refresh-race --origin <app origin>
-//     T5: 20 parallel requests with the expired cookie, then a request with the cookies the answers set.
+//     T5: 20 parallel requests with the expired cookie, then a request with the cookies the answers set, applied in the
+//     order the answers arrive. Fails unless at least one answer replaced a session cookie (a refresh really happened).
 //   Tokens and cookies come from the Owner's terminal environment; they are never printed or written.
 import { measure } from "./measure.mjs";
 import { runRefreshRace } from "./refresh-race.mjs";

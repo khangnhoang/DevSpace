@@ -3,24 +3,44 @@
 export const BUDGET_NOW = { apiP95: 300, endToEndP95: 600 }; // ADR 0008 D11, database in Sydney (TM-U3 to TM-U10)
 export const BUDGET_AFTER_TM_U11 = { apiP95: 150, endToEndP95: 400 };
 
+// The session cache keeps an entry 30 seconds after the call that missed and a hit does not extend it (session-cache.ts),
+// so a warm sample is only warm for a while after a miss, and a refill call made while the entry is still alive is a hit
+// that changes nothing. Warm sampling therefore stops after WARM_WINDOW_MS, waits until the entry is certainly gone
+// (EXPIRY_WAIT_MS after the last priming call ended) and refills it with an unsampled call.
+const WARM_WINDOW_MS = 20_000;
+const EXPIRY_WAIT_MS = 31_000;
+
 export function percentile(values, p) {
   if (values.length === 0) return Number.NaN;
   const sorted = [...values].sort((a, b) => a - b);
   return sorted[Math.max(0, Math.ceil((p / 100) * sorted.length) - 1)];
 }
 
-// The span the temporary routes report (`Server-Timing: api;dur=<ms>`); undefined for any other route.
+// Every span the temporary routes report (`Server-Timing: api;dur=<ms>`); empty for any other route.
+export function parseApiSpans(header) {
+  return [...(header ?? "").matchAll(/(?:^|,\s*)api;dur=(\d+(?:\.\d+)?)/g)].map(
+    (match) => Number(match[1]),
+  );
+}
+
 export function parseApiMs(header) {
-  const match = /(?:^|,\s*)api;dur=(\d+(?:\.\d+)?)/.exec(header ?? "");
-  return match ? Number(match[1]) : undefined;
+  return parseApiSpans(header)[0];
 }
 
 const round = (value) =>
   Number.isNaN(value) ? "n/a" : String(Math.round(value));
 
+const answeredOk = (text) => {
+  try {
+    return JSON.parse(text)?.ok === true;
+  } catch {
+    return false;
+  }
+};
+
 /**
  * @param {{ apiBase: string, origin: string, cookie: string, sequential?: number, concurrent?: number,
- *   proxyPath?: string, fetchImpl?: typeof fetch, now?: () => number }} options
+ *   proxyPath?: string, fetchImpl?: typeof fetch, now?: () => number, sleep?: (ms: number) => Promise<void> }} options
  */
 export async function measure({
   apiBase,
@@ -31,13 +51,16 @@ export async function measure({
   proxyPath = "/login",
   fetchImpl = fetch,
   now = () => performance.now(),
+  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 }) {
   const lines = [];
   let failed = 0;
   const headers = { cookie };
-  // At-the-API spans per target and mode, kept for the Auth round trip lines at the end.
+  // At-the-API spans per target and mode, kept for the Auth cost estimate at the end; only complete batches are kept.
   const spans = {};
-  // `proxy.ts` runs getUser() on every request it handles, so a page that makes no API call measures that check alone.
+  // `span: true` marks the temporary routes, which always send exactly one span; a sample without it fails the batch.
+  // `expectOk` marks the route whose 200 can still be the shorter `{ ok: false }` path.
+  // A page that makes no API call is not getUser() in isolation: it is the proxy.ts check plus delivery of the page.
   const targets = [
     { name: "GET /api/health", url: new URL("/api/health", apiBase).href },
     {
@@ -48,62 +71,84 @@ export async function measure({
       name: "GET /api/session (warm cache)",
       url: new URL("/api/session", apiBase).href,
       prime: true,
+      span: true,
     },
     {
       name: "GET /api/proof/session-cold (cold cache)",
       url: new URL("/api/proof/session-cold", apiBase).href,
+      span: true,
     },
     {
-      name: `GET ${proxyPath} (the proxy.ts check alone)`,
+      name: `GET ${proxyPath} (page with no API call: the proxy.ts check plus delivery)`,
       url: new URL(proxyPath, origin).href,
     },
     {
       name: "GET /api/proof/read (two queries)",
       url: new URL("/api/proof/read", apiBase).href,
       budget: true,
+      span: true,
+      expectOk: true,
     },
   ];
 
-  async function sample(url) {
+  async function sample(target) {
     const started = now();
-    const response = await fetchImpl(url, { headers, redirect: "manual" });
-    await response.arrayBuffer();
+    const response = await fetchImpl(target.url, {
+      headers,
+      redirect: "manual",
+    });
+    const text = await response.text();
+    const status = response.status;
     return {
-      status: response.status,
+      status,
       endToEnd: now() - started,
-      api: parseApiMs(response.headers.get("server-timing")),
+      spans: parseApiSpans(response.headers.get("server-timing")),
+      valid:
+        status >= 200 && status < 300 && (!target.expectOk || answeredOk(text)),
     };
   }
 
   for (const target of targets) {
-    if (target.prime) await sample(target.url); // the first call fills the cache; it is not a sample
+    let primedAt = Number.NEGATIVE_INFINITY;
+    let primeEnded = Number.NEGATIVE_INFINITY;
+    // Unsampled: it fills the cache for the warm route and is not a measurement. When the last fill is older than the
+    // warm window it waits for that entry to expire first, so this call is a miss that refills rather than a hit.
+    const keepWarm = async () => {
+      if (now() - primedAt <= WARM_WINDOW_MS) return;
+      const wait = EXPIRY_WAIT_MS - (now() - primeEnded);
+      if (wait > 0) await sleep(wait);
+      primedAt = now();
+      await sample(target);
+      primeEnded = now();
+    };
     for (const [mode, count] of [
       ["sequential", sequential],
       ["concurrent", concurrent],
     ]) {
+      if (target.prime) await keepWarm();
       const samples = [];
       if (mode === "sequential") {
-        for (let index = 0; index < count; index += 1)
-          samples.push(await sample(target.url));
+        for (let index = 0; index < count; index += 1) {
+          if (target.prime) await keepWarm();
+          samples.push(await sample(target));
+        }
       } else {
         samples.push(
           ...(await Promise.all(
-            Array.from({ length: count }, () => sample(target.url)),
+            Array.from({ length: count }, () => sample(target)),
           )),
         );
       }
-      const ok = samples.filter(
-        (item) => item.status >= 200 && item.status < 300,
-      ).length;
+      const valid = samples.filter((item) => item.valid);
+      const withSpan = valid.filter((item) => item.spans.length === 1);
       const e2e = samples.map((item) => item.endToEnd);
-      const api = samples.flatMap((item) =>
-        item.api === undefined ? [] : [item.api],
-      );
-      (spans[target.name] ??= {})[mode] = api;
-      const good = ok === samples.length;
+      const api = withSpan.map((item) => item.spans[0]);
+      const spansOk = !target.span || withSpan.length === valid.length;
+      const good = valid.length === samples.length && spansOk;
       if (!good) failed += 1;
+      if (good) (spans[target.name] ??= {})[mode] = api;
       lines.push(
-        `${good ? "PASS" : "FAIL"} MEASURE ${target.name} ${mode} n=${samples.length} ok=${ok}: end to end p50 ${round(percentile(e2e, 50))} ms, p95 ${round(percentile(e2e, 95))} ms; at the API ${api.length === 0 ? "n/a" : `p50 ${round(percentile(api, 50))} ms, p95 ${round(percentile(api, 95))} ms`}`,
+        `${good ? "PASS" : "FAIL"} MEASURE ${target.name} ${mode} n=${samples.length} ok=${valid.length}${spansOk ? "" : `, ${valid.length - withSpan.length} without exactly one Server-Timing span`}: end to end p50 ${round(percentile(e2e, 50))} ms, p95 ${round(percentile(e2e, 95))} ms; at the API ${api.length === 0 ? "n/a" : `p50 ${round(percentile(api, 50))} ms, p95 ${round(percentile(api, 95))} ms`}`,
       );
       if (target.budget && good) {
         const apiP95 = percentile(api, 95);
@@ -122,23 +167,23 @@ export async function measure({
       }
     }
   }
-  // M2's `/auth/v1/user` round trip: the cold route asks Auth on every call and the warm one hits the cache, so the
-  // difference of their at-the-API p50 is the round trip. Both routes answer the proof owner (the cookie's user) only,
-  // which is why the fixture tokens of session-probe cannot supply it.
+  // M2's added Auth cost: the cold route asks Auth on every call and the warm one hits the cache, so the difference of
+  // their at-the-API p50 estimates what the `/auth/v1/user` call adds. It is an estimate, not a timed round trip. Both
+  // routes answer the proof owner (the cookie's user) only, which is why the fixture tokens of session-probe cannot
+  // supply it. A route whose batch failed has no estimate; its FAIL line above says why.
   for (const mode of ["sequential", "concurrent"]) {
-    const cold =
-      spans["GET /api/proof/session-cold (cold cache)"]?.[mode] ?? [];
-    const warm = spans["GET /api/session (warm cache)"]?.[mode] ?? [];
-    if (cold.length === 0 || warm.length === 0) {
+    const cold = spans["GET /api/proof/session-cold (cold cache)"]?.[mode];
+    const warm = spans["GET /api/session (warm cache)"]?.[mode];
+    if (!cold?.length || !warm?.length) {
       lines.push(
-        `INFO AUTH ROUND TRIP ${mode}: n/a, ${cold.length === 0 ? "/api/proof/session-cold" : "/api/session"} has no Server-Timing span`,
+        `INFO AUTH COST ESTIMATE ${mode}: n/a, a session route has no complete Server-Timing batch (see the FAIL line)`,
       );
       continue;
     }
     const coldP50 = percentile(cold, 50);
     const warmP50 = percentile(warm, 50);
     lines.push(
-      `INFO AUTH ROUND TRIP ${mode}: at the API without the cache p50 ${round(coldP50)} ms, p95 ${round(percentile(cold, 95))} ms; with the cache p50 ${round(warmP50)} ms, p95 ${round(percentile(warm, 95))} ms; round trip (p50 difference) ${round(coldP50 - warmP50)} ms`,
+      `INFO AUTH COST ESTIMATE ${mode}: at the API without the cache p50 ${round(coldP50)} ms, p95 ${round(percentile(cold, 95))} ms; with the cache p50 ${round(warmP50)} ms, p95 ${round(percentile(warm, 95))} ms; estimated added Auth cost (p50 difference, not a directly timed /auth/v1/user round trip) ${round(coldP50 - warmP50)} ms`,
     );
   }
   return { lines, failed };

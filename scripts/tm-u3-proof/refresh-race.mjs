@@ -12,21 +12,24 @@ function parseCookieHeader(header) {
   return jar;
 }
 
-// Applies the Set-Cookie lines of one answer: a cookie that is emptied or has no life left is dropped.
+// Reads one Set-Cookie line: a cookie that is emptied or has no life left is a deletion, anything else a replacement.
+function readSetCookie(line) {
+  const [pair, ...attributes] = line.split(";");
+  const at = pair.indexOf("=");
+  if (at <= 0) return null;
+  const value = pair.slice(at + 1).trim();
+  const deletion =
+    value === "" ||
+    attributes.some((attribute) => /^\s*max-age\s*=\s*0\s*$/i.test(attribute));
+  return { name: pair.slice(0, at).trim(), value, deletion };
+}
+
 function applySetCookie(jar, lines) {
   for (const line of lines) {
-    const [pair, ...attributes] = line.split(";");
-    const at = pair.indexOf("=");
-    if (at <= 0) continue;
-    const name = pair.slice(0, at).trim();
-    const value = pair.slice(at + 1).trim();
-    const gone =
-      value === "" ||
-      attributes.some((attribute) =>
-        /^\s*max-age\s*=\s*0\s*$/i.test(attribute),
-      );
-    if (gone) jar.delete(name);
-    else jar.set(name, value);
+    const cookie = readSetCookie(line);
+    if (!cookie) continue;
+    if (cookie.deletion) jar.delete(cookie.name);
+    else jar.set(cookie.name, cookie.value);
   }
 }
 
@@ -61,8 +64,15 @@ export async function runRefreshRace({
     };
   };
 
+  // A browser stores the cookies of an answer when it arrives, so the jar follows arrival order, not launch order.
+  const jar = parseCookieHeader(cookie);
   const answers = await Promise.all(
-    Array.from({ length: parallel }, () => ask(cookie)),
+    Array.from({ length: parallel }, () =>
+      ask(cookie).then((answer) => {
+        applySetCookie(jar, answer.setCookies);
+        return answer;
+      }),
+    ),
   );
   const counts = new Map();
   for (const { status } of answers)
@@ -76,16 +86,23 @@ export async function runRefreshRace({
     summary,
   );
 
-  const jar = parseCookieHeader(cookie);
-  for (const { setCookies } of answers) applySetCookie(jar, setCookies);
-  const refreshed = answers.filter(
-    ({ setCookies }) => setCookies.length > 0,
+  // Without a refresh there was no contention to survive, so 200 everywhere proves nothing.
+  const refreshed = answers.filter(({ setCookies }) =>
+    setCookies.some((line) => {
+      const cookie = readSetCookie(line);
+      return cookie !== null && !cookie.deletion;
+    }),
   ).length;
+  check(
+    "T5 at least one answer replaced a session cookie, so a refresh really ran",
+    refreshed > 0,
+    `${refreshed} of ${answers.length} answers replaced a cookie`,
+  );
   const follow = await ask(toHeader(jar));
   check(
     "T5 the session is still usable afterwards with the cookies the answers set",
     follow.status === 200,
-    `status ${follow.status}; ${refreshed} of ${answers.length} answers set cookies`,
+    `status ${follow.status}`,
   );
   return { lines, failed };
 }

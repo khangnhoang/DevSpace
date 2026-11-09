@@ -3,7 +3,9 @@ import tls from "node:tls";
 
 // Proof T3: sends a request that declares `declared` bytes of body, delivers `sent` of them and then closes its own
 // side of the connection, which `fetch` cannot do. The answer is read until the connection ends. Returns the status
-// line's code (null when none came) and how the exchange ended, never a header or a body.
+// line's code (null when none came) and how the exchange ended, never a header or a body. An exchange that ends before
+// the request was written (a connection, DNS or TLS failure, or a timeout while connecting) is `not-sent`: it says
+// nothing about the server.
 /** @param {{ base: string, path: string, cookie: string, origin: string, declared?: number, sent?: number, timeoutMs?: number }} options */
 export function sendTruncatedBody({
   base,
@@ -24,12 +26,13 @@ export function sendTruncatedBody({
   return new Promise((resolve) => {
     let status = null;
     let settled = false;
+    let written = false;
     const finish = (ended) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       socket.destroy();
-      resolve({ status, ended });
+      resolve({ status, ended: written ? ended : "not-sent" });
     };
     const socket = secure
       ? tls.connect({ host: url.hostname, port, servername: url.hostname })
@@ -50,12 +53,14 @@ export function sendTruncatedBody({
       );
       socket.write(Buffer.alloc(sent, 0x61));
       socket.end();
+      written = true;
     });
   });
 }
 
 // A body that never completed is not handled when the server refuses it (4xx or 5xx) or ends the exchange without an
-// answer; a 2xx or 3xx means it was acted on, and a connection left hanging shows no verdict at all.
+// answer; a 2xx or 3xx means it was acted on, and a connection left hanging or never used shows no verdict at all.
 export const wasNotHandled = (outcome) =>
   outcome.ended !== "timeout" &&
+  outcome.ended !== "not-sent" &&
   (outcome.status === null || outcome.status >= 400);

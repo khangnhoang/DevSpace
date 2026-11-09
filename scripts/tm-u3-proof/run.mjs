@@ -111,9 +111,11 @@ export async function runProof({
     check(
       "POST /api/proof/echo truncated body is not handled",
       wasNotHandled(outcome),
-      outcome.status === null
-        ? `connection ended without an answer (${outcome.ended})`
-        : `status ${outcome.status}`,
+      outcome.ended === "not-sent"
+        ? "not verified: the request was never sent (connection failed)"
+        : outcome.status === null
+          ? `connection ended without an answer (${outcome.ended})`
+          : `status ${outcome.status}`,
     );
   }
   for (const [name, size, expected] of [

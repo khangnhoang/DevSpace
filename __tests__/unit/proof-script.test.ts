@@ -52,13 +52,30 @@ describe("percentile and parseApiMs", () => {
 });
 
 describe("measure (M1)", () => {
-  // A clock the fake fetch advances: a call to `path` takes `ms[path]` ms end to end.
+  // What the temporary routes send on a 2xx: one span. `api` overrides it per path: a number, null (no header), a raw
+  // header string, or a function of the call number. Health and the page never send a span.
+  const DEFAULT_SPAN: Record<string, number> = {
+    "/api/session": 10,
+    "/api/proof/session-cold": 10,
+    "/api/proof/read": 10,
+  };
+  // A clock the fake fetch advances: a call to `path` takes `ms[path]` ms end to end. With `sessionCache`, /api/session
+  // behaves like the real cache: a miss (cold, 130 ms at the API) fills an entry that lives 30 s and a hit (20 ms) does
+  // not extend it.
   function harness(options: {
     ms?: Record<string, number>;
-    api?: Record<string, number>;
+    api?: Record<
+      string,
+      number | string | null | ((call: number) => number | undefined)
+    >;
     status?: Record<string, number>;
+    body?: Record<string, string>;
+    sessionCache?: boolean;
   }) {
     let clock = 0;
+    let filledAt = Number.NEGATIVE_INFINITY;
+    const calls: Record<string, number> = {};
+    const slept: number[] = [];
     const seen: { path: string; cookie: string | null }[] = [];
     const fetchImpl = async (
       url: string | URL | Request,
@@ -69,19 +86,37 @@ describe("measure (M1)", () => {
         path,
         cookie: new Headers(init?.headers).get("cookie"),
       });
+      calls[path] = (calls[path] ?? 0) + 1;
       // Overlapping calls share the time they wait: a call ends `ms` after it started, whatever else is in flight.
       const start = clock;
       await Promise.resolve();
       clock = Math.max(clock, start + (options.ms?.[path] ?? 10));
+      const configured =
+        options.api && path in options.api
+          ? options.api[path]
+          : DEFAULT_SPAN[path];
+      let span: number | string | null | undefined =
+        typeof configured === "function" ? configured(calls[path]) : configured;
+      if (options.sessionCache && path === "/api/session") {
+        const hit = start - filledAt <= 30_000;
+        if (!hit) filledAt = start;
+        span = hit ? 20 : 130;
+      }
       const headers = new Headers();
-      if (options.api?.[path] !== undefined)
-        headers.set("server-timing", `api;dur=${options.api[path]}`);
-      return new Response("{}", {
-        status: options.status?.[path] ?? 200,
-        headers,
-      });
+      if (typeof span === "number")
+        headers.set("server-timing", `api;dur=${span}`);
+      if (typeof span === "string") headers.set("server-timing", span);
+      return new Response(
+        options.body?.[path] ??
+          (path === "/api/proof/read" ? '{"ok":true}' : "{}"),
+        { status: options.status?.[path] ?? 200, headers },
+      );
     };
-    return { fetchImpl, now: () => clock, seen };
+    const sleep = async (ms: number) => {
+      slept.push(ms);
+      clock += ms;
+    };
+    return { fetchImpl, now: () => clock, sleep, slept, seen };
   }
 
   it("takes 100 sequential and 20 concurrent samples of each route, the session route primed first", async () => {
@@ -124,6 +159,13 @@ describe("measure (M1)", () => {
       line.includes("MEASURE GET /api/health sequential"),
     );
     expect(health).toContain("at the API n/a");
+    // The page makes no API call, so it is the proxy.ts check plus delivery, not getUser() alone, and sends no span.
+    const page = lines.find((line) =>
+      line.includes(
+        "MEASURE GET /login (page with no API call: the proxy.ts check plus delivery) sequential",
+      ),
+    );
+    expect(page).toContain("at the API n/a");
   });
 
   it("fails when the p95 of the read route is over the budget of TM-U3 to TM-U10, and only informs about the later one", async () => {
@@ -210,45 +252,112 @@ describe("measure (M1)", () => {
     ).toBe(true);
   });
 
-  it("prints the Auth round trip per mode as the p50 difference of the cold and the warm session route", async () => {
-    const { fetchImpl, now } = harness({
-      api: { "/api/proof/session-cold": 130, "/api/session": 20 },
-    });
-    const { lines } = await measure({
-      apiBase: "http://api.test",
-      origin: "http://app.test",
-      cookie: SECRET,
-      fetchImpl: fetchImpl as typeof fetch,
-      now,
-    });
+  const opts = (h: ReturnType<typeof harness>) => ({
+    apiBase: "http://api.test",
+    origin: "http://app.test",
+    cookie: SECRET,
+    fetchImpl: h.fetchImpl as typeof fetch,
+    now: h.now,
+    sleep: h.sleep,
+  });
+
+  it("prints the added Auth cost per mode as an estimate: the p50 difference of the cold and the warm session route", async () => {
+    const { lines, failed } = await measure(
+      opts(
+        harness({
+          api: { "/api/proof/session-cold": 130, "/api/session": 20 },
+        }),
+      ),
+    );
+    expect(failed).toBe(0);
     for (const mode of ["sequential", "concurrent"]) {
       const line = lines.find((item) =>
-        item.startsWith(`INFO AUTH ROUND TRIP ${mode}:`),
+        item.startsWith(`INFO AUTH COST ESTIMATE ${mode}:`),
       );
       expect(line).toContain("without the cache p50 130 ms");
       expect(line).toContain("with the cache p50 20 ms");
-      expect(line).toContain("round trip (p50 difference) 110 ms");
+      expect(line).toContain(
+        "estimated added Auth cost (p50 difference, not a directly timed /auth/v1/user round trip) 110 ms",
+      );
     }
   });
 
-  it("says n/a for the Auth round trip when either session route has no span, instead of a number", async () => {
-    const { fetchImpl, now } = harness({
-      api: { "/api/proof/session-cold": 130 },
-    });
-    const { lines } = await measure({
-      apiBase: "http://api.test",
-      origin: "http://app.test",
-      cookie: SECRET,
-      fetchImpl: fetchImpl as typeof fetch,
-      now,
-    });
-    const trips = lines.filter((item) => item.includes("AUTH ROUND TRIP"));
-    expect(trips).toHaveLength(2);
-    for (const line of trips) {
+  it("fails a session route that sends no span, and prints no estimate for it", async () => {
+    const { lines, failed } = await measure(
+      opts(harness({ api: { "/api/proof/session-cold": null } })),
+    );
+    expect(failed).toBe(2);
+    expect(
+      lines.filter(
+        (item) =>
+          item.startsWith("FAIL MEASURE GET /api/proof/session-cold") &&
+          item.includes("without exactly one Server-Timing span"),
+      ),
+    ).toHaveLength(2);
+    const estimates = lines.filter((item) =>
+      item.includes("AUTH COST ESTIMATE"),
+    );
+    expect(estimates).toHaveLength(2);
+    for (const line of estimates) {
       expect(line).toContain("n/a");
-      expect(line).toContain("/api/session has no Server-Timing span");
       expect(line).not.toMatch(/\d+ ms/);
     }
+  });
+
+  it("fails when /api/proof/read answers 200 with ok:false, the shorter path, and gives that batch no budget verdict", async () => {
+    const { lines, failed } = await measure(
+      opts(harness({ body: { "/api/proof/read": '{"ok":false}' } })),
+    );
+    expect(failed).toBe(2);
+    expect(
+      lines.filter(
+        (item) =>
+          item.startsWith("FAIL MEASURE GET /api/proof/read") &&
+          item.includes("ok=0"),
+      ),
+    ).toHaveLength(2);
+    expect(lines.some((item) => item.includes("BUDGET"))).toBe(false);
+  });
+
+  it("fails a batch that lost some of its spans, so one span cannot stand for n=100", async () => {
+    const { lines, failed } = await measure(
+      opts(
+        harness({
+          api: { "/api/proof/read": (call) => (call === 5 ? undefined : 40) },
+        }),
+      ),
+    );
+    expect(failed).toBe(1);
+    expect(
+      lines.find((item) => item.startsWith("FAIL MEASURE GET /api/proof/read")),
+    ).toContain("1 without exactly one Server-Timing span");
+  });
+
+  it("fails a sample that carries two api spans", async () => {
+    const { failed } = await measure(
+      opts(
+        harness({
+          api: { "/api/proof/read": "api;dur=10, api;dur=20" },
+        }),
+      ),
+    );
+    expect(failed).toBe(2);
+  });
+
+  it("keeps the warm session samples warm over a long sequential phase: it waits for the 30 s entry to expire, refills it unsampled and goes on", async () => {
+    const h = harness({
+      ms: { "/api/session": 1000 },
+      sessionCache: true,
+    });
+    const { lines, failed } = await measure(opts(h));
+    expect(failed).toBe(0);
+    const warm = lines.find((item) =>
+      item.includes("MEASURE GET /api/session (warm cache) sequential"),
+    );
+    expect(warm).toContain("at the API p50 20 ms, p95 20 ms");
+    expect(h.slept.length).toBeGreaterThan(0);
+    // Waiting out the entry is what makes the refill a miss; a refill while it is alive would be a hit.
+    expect(Math.min(...h.slept)).toBeGreaterThan(0);
   });
 
   it("fails a route that does not answer 2xx, and prints no cookie", async () => {
@@ -395,7 +504,7 @@ describe("runRefreshRace (T5)", () => {
         .every((header) => header === "access=expired; refresh=old"),
     ).toBe(true);
     expect(sent[20]).toBe("access=fresh; refresh=next");
-    expect(lines.join("\n")).toContain("20 of 20 answers set cookies");
+    expect(lines.join("\n")).toContain("20 of 20 answers replaced a cookie");
   });
 
   it("fails when the follow-up is refused: the refresh race left the session unusable", async () => {
@@ -421,6 +530,7 @@ describe("runRefreshRace (T5)", () => {
     const fetchImpl = (async () =>
       new Response("{}", {
         status: ++calls === 7 ? 401 : 200,
+        headers: { "set-cookie": "a=fresh; Path=/" },
       })) as typeof fetch;
     const { failed, lines } = await runRefreshRace({
       origin,
@@ -430,6 +540,57 @@ describe("runRefreshRace (T5)", () => {
     expect(failed).toBe(1);
     expect(lines.find((line) => line.startsWith("FAIL"))).toContain("401 x1");
     expect(lines.join("\n")).not.toContain(SECRET);
+  });
+
+  it("fails when every answer is 200 and none replaced a cookie: no refresh ran, so nothing was shown", async () => {
+    const { fetchImpl } = fake({ refresh: () => [] });
+    const { lines, failed } = await runRefreshRace({
+      origin,
+      cookie: "access=expired; refresh=old",
+      fetchImpl,
+    });
+    expect(failed).toBe(1);
+    expect(lines.find((line) => line.startsWith("FAIL"))).toContain(
+      "replaced a session cookie",
+    );
+  });
+
+  it("does not count a Set-Cookie that only deletes a cookie as a refresh", async () => {
+    const { fetchImpl } = fake({
+      refresh: () => ["access=; Path=/", "refresh=x; Path=/; Max-Age=0"],
+    });
+    const { failed } = await runRefreshRace({
+      origin,
+      cookie: "access=expired; refresh=old",
+      fetchImpl,
+    });
+    expect(failed).toBe(1);
+  });
+
+  it("applies the cookies in the order the answers arrive, not the order the requests were launched", async () => {
+    const sent: string[] = [];
+    let launched = 0;
+    const fetchImpl = (async (
+      _url: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      sent.push(new Headers(init?.headers).get("cookie") ?? "");
+      const call = ++launched;
+      if (call > 20) return new Response("{}", { status: 200 });
+      // Request 1 answers last, request 20 first.
+      await new Promise((resolve) => setTimeout(resolve, (21 - call) * 5));
+      return new Response("{}", {
+        status: 200,
+        headers: { "set-cookie": `access=fresh-${call}; Path=/` },
+      });
+    }) as typeof fetch;
+    const { failed } = await runRefreshRace({
+      origin,
+      cookie: "access=expired; refresh=old",
+      fetchImpl,
+    });
+    expect(failed).toBe(0);
+    expect(sent[20]).toBe("access=fresh-1; refresh=old");
   });
 
   it("drops a cookie the answers empty or expire", async () => {
@@ -533,9 +694,45 @@ describe("sendTruncatedBody (T3)", () => {
     expect(outcome).toEqual({ status: null, ended: "timeout" });
   });
 
+  it("says not-sent when the connection fails before the request is written, and that is not a refusal", async () => {
+    const probe = netServer();
+    await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
+    const port = (probe.address() as AddressInfo).port;
+    await new Promise((resolve) => probe.close(resolve));
+    const outcome = await sendTruncatedBody({
+      base: `http://127.0.0.1:${port}`,
+      path: "/echo",
+      cookie: SECRET,
+      origin: "http://app.test",
+    });
+    expect(outcome).toEqual({ status: null, ended: "not-sent" });
+    expect(wasNotHandled(outcome)).toBe(false);
+  });
+
+  it("counts a connection the server resets after the request was written as a refusal", async () => {
+    const server = netServer((socket) => {
+      socket.on("error", () => {});
+      socket.on("data", () => socket.destroy());
+    });
+    servers.push(server);
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
+    const outcome = await sendTruncatedBody({
+      base: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
+      path: "/echo",
+      cookie: SECRET,
+      origin: "http://app.test",
+    });
+    expect(["reset", "closed"]).toContain(outcome.ended);
+    expect(wasNotHandled(outcome)).toBe(true);
+  });
+
   it.each([
     [{ status: null, ended: "closed" }, true],
+    // Only after the request was written: a failure before that is "not-sent".
     [{ status: null, ended: "reset" }, true],
+    [{ status: null, ended: "not-sent" }, false],
     [{ status: 400, ended: "answered" }, true],
     [{ status: 413, ended: "answered" }, true],
     [{ status: 502, ended: "answered" }, true],

@@ -6,9 +6,18 @@
 //   __tests__/e2e/api-topology.spec.ts.
 // Subject: AC10 of the TM-U3 plan; ADR 0008 D5.
 import { NextRequest, NextResponse } from "next/server";
-import { getMiddlewareMatchers } from "next/dist/build/analysis/get-page-static-info";
+import * as pageStaticInfo from "next/dist/build/analysis/get-page-static-info";
 import { getMiddlewareRouteMatcher } from "next/dist/shared/lib/router/utils/middleware-route-matcher";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// Next builds the matchers of a proxy with this function; the package exports it at runtime but its type declarations
+// leave it out, so it is typed here by what the route matcher below takes.
+const { getMiddlewareMatchers } = pageStaticInfo as unknown as {
+  getMiddlewareMatchers: (
+    matcher: unknown,
+    nextConfig: object,
+  ) => Parameters<typeof getMiddlewareRouteMatcher>[0];
+};
 
 const session = vi.hoisted(() => ({ calls: 0 }));
 vi.mock("@/lib/supabase.proxy", () => ({

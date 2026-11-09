@@ -42,7 +42,7 @@ export function buildDevApiEnv(
   inherited: Record<string, string | undefined>,
   stack: LocalStack,
 ): Record<string, string | undefined> {
-  const env = {
+  const env: Record<string, string | undefined> = {
     ...inherited,
     HOST: DEV_HOST,
     PORT: String(DEV_API_PORT),

@@ -146,4 +146,4 @@ Known, explained exclusions: none recorded.
 
 ## Not covered
 
-Restoring into hosted, restoring Storage objects into a stack, signing in as a restored user (the first drill of that is TM-U9's), scheduled or off-site backups, and encryption of the folder are outside this runbook.
+Restoring into hosted, restoring Storage objects into a stack, signing in as a restored user, scheduled or off-site backups, and encryption of the folder are outside this runbook.

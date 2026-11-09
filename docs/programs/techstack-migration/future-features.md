@@ -6,7 +6,7 @@ Direction the Owner has set. The entries below moved here on 2026-11-08 (Owner d
 
 - Status: Deferred (2026-11-05, raised by the Owner while reviewing SE-U2); moved from SE-F1 (security-engineering) on 2026-11-08, techstack-migration Owner decision 5.
 - Direction: Add an account-settings entry point where a signed-in user supplies the current password, a new password and its confirmation. Enforce current-password verification at the Auth API and provide a link to the existing forgot-password flow when the user cannot supply it. The app currently has a recovery page only. SE-P1 and [SE-U2](../security-engineering/implementation-plans/se-u2-password-recovery/plan.md) protect that recovery flow and the Auth boundary; the new account-settings interface is a separate feature. Schedule under the roadmap when the Owner selects it.
-- Target program: techstack-migration (TM-U9).
+- Target program: none. TM-U9 is dropped (master plan r5), so this moves to the backlog at program close unless the Owner drops it.
 
 ## TM-F2: Admins only reset another user's avatar to the default
 
@@ -18,7 +18,7 @@ Direction the Owner has set. The entries below moved here on 2026-11-08 (Owner d
 
 - Status: Planned (2026-11-07, requested by the Owner after SE-U4 production QA; the Owner decided on 2026-11-07 to do it in the techstack migration): outstanding work that must be done, not dropped. List it whenever the Owner asks what work remains; moved from SE-F3 (security-engineering) on 2026-11-08, techstack-migration Owner decision 5.
 - Direction: Today the admin types the new account's password in the create form (`app/admin/users/_components/UserFormDialog.tsx`, `createNewUser` in `app/action/user.ts`), so the admin knows it. Replace this so the admin never sees a password: either send the new user an invite or set-password link from Supabase Auth (preferred, no password travels by mail), or generate a random password of at least 8 characters on the server and mail it, requiring a change at first sign-in. One shared password for every new account is rejected: anyone who learns it can sign in to any account that has not changed it.
-- Target program: techstack-migration (TM-U9).
+- Target program: techstack-migration (TM-U8, on Supabase Auth; TM-U9 is dropped by master plan r5).
 
 ## TM-F4: Schema review for the techstack migration
 
@@ -34,7 +34,7 @@ Direction the Owner has set. The entries below moved here on 2026-11-08 (Owner d
   - `notifications`: the only writer is `app/action/enroll.ts` (`sendAdminNotification`), application code with no trigger, which notifies every admin of a free-course enrollment and swallows an insert error; a paid enrollment approved in `payment.ts` sends only an email, and no code notifies a learner, whose header has no bell. `title` is a fixed sentence per kind and `type` is written but never read (the admin bell in `HeaderAdmin.tsx` shows `title`, `message` and `link`). Direction for the migration: one notification service in the backend that every event calls (enrollment, payment approved, a reply to a comment); `type` names the event, the UI derives title, icon and link from `type` and a reference payload (for example `data jsonb` with `course_id` or `comment_id`), so `title`, the stored text and the stored link can go. A state such as an incomplete profile is computed when shown, not stored as a notification. A learner bell and reply notifications are new features of that work, not schema fixes.
   - User deletion (Owner, 2026-11-07, while planning security-engineering SE-U1): `payments` and `enrollments` reference `auth.users` with `on delete cascade`, so `deleteUserAccount` (`auth.admin.deleteUser`) erases a user's order and enrollment history and revenue figures with it. Direction: soft-delete users instead, so payments and enrollments stay readable after the account is deleted and the figures stay correct; decide the foreign keys that replace the cascades, whether a deleted user can sign in, and how their personal data is removed or masked. Done during or right after the NestJS migration, not before it; SE-U1's release of a deleted pending order's coupon use then only guards direct deletes.
   - Coupon reservation against overselling is already decided in security-hotfix `plan-h2.md` (D1, B12, B13) and is not part of this entry.
-- Target program: techstack-migration (TM-U12; the notification items without new tables in TM-U6). The `profiles.role` check was delivered by security-engineering SE-U3 (SE-P7, PR #69).
+- Target program: techstack-migration for the notification items without new tables (TM-U6) and the course slug rule (TM-U8, TM-P12). TM-U12 is dropped (master plan r5), so the other items move to the backlog at program close unless the Owner drops them. The `profiles.role` check was delivered by security-engineering SE-U3 (SE-P7, PR #69).
 
 ## TM-F5: Assert mail content through a local Mailpit
 

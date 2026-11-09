@@ -317,6 +317,19 @@ describe("flag on: the proof owner (T1 to T5)", () => {
     }
   });
 
+  it("[M1] /api/proof/read asks Auth on every call, so the D11 budget row includes the session check", async () => {
+    const before = authCalls(on);
+    for (let index = 1; index <= 3; index += 1) {
+      const response = await call(
+        on,
+        { method: "GET", path: "/api/proof/read" },
+        bearer(owner),
+      );
+      expect(response.status).toBe(200);
+      expect(authCalls(on) - before).toBe(index);
+    }
+  });
+
   it("[T2] /api/proof/read reads the caller's own row twice through the API role and answers only ok", async () => {
     const response = await call(
       on,

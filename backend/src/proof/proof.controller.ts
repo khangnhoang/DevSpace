@@ -56,6 +56,9 @@ export class ProofController {
 
   // Two reads one after the other on the pooled connection, each of the caller's own row and only the columns the
   // `devspace_api` role may select. It answers `ok` and nothing from the row.
+  // @Sensitive: ADR 0008 D11 budgets an uncached request, which pays two session checks, so the M1 budget row must
+  // ask Auth on every call instead of using the 30-second session cache after its first sample.
+  @Sensitive()
   @Get("proof/read")
   async read(@CurrentUser() user: SessionUser) {
     const db = await this.database.connection();

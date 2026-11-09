@@ -1,0 +1,20 @@
+{
+  // rootDir is the repository root so that lib/schemas compiles beside the API:
+  // dist/backend/src/main.js and dist/lib/schemas/*. A `paths` alias is not rewritten by tsc, so every import is relative.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "rootDir": "..",
+    "outDir": "../dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "forceConsistentCasingInFileNames": true,
+    "sourceMap": true
+  },
+  "include": ["src/**/*.ts", "../lib/schemas/*.ts"]
+}

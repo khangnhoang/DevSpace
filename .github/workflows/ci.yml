@@ -56,6 +56,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx tsc --noEmit
+      # The API workspace: its production and its e2e tsconfig (TM-U3).
+      - run: npm run typecheck:api
 
   build:
     runs-on: ubuntu-latest
@@ -75,6 +77,18 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # The API's production build (`dist`), which holds no test-only route.
+      - run: npm run build:api
+      # TM-U3 AC20: the fixtures exist in the e2e builds only, so neither production output names one.
+      - run: |
+          if grep -q "e2e-fixture" .next/app-path-routes-manifest.json; then
+            echo "the production Next build lists a test fixture route" >&2
+            exit 1
+          fi
+          if [ -e dist/backend/e2e ]; then
+            echo "the production API build holds the test-only fixtures" >&2
+            exit 1
+          fi
 
   docs:
     runs-on: ubuntu-latest
@@ -112,10 +126,13 @@ jobs:
       # database, so the fresh runner needs no reset. The rls project reads the API URL and keys from the test
       # stack only. A failing test, a known bug that stopped reproducing, or a setup failure fails the job.
       - run: npm test
+      # The generated Drizzle schema of the API must equal what the migrations produce (ADR 0008 D9). It reuses the
+      # test stack that `npm test` just left running.
+      - run: npm run api:schema:check
 
   # Blocking (infrastructure D20). Playwright smoke against its own local Supabase stack, same service list as
   # `db`; no hosted secret or connection. `npm run test:e2e` starts the test stack, reads its URL and keys from
-  # `supabase status`, builds the app with them and serves it on port 3100.
+  # `supabase status`, builds the app with them and serves it on port 3100, beside the e2e build of the API on 3101.
   e2e:
     # Same skip condition as `db`.
     needs: changes
@@ -155,3 +172,5 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      # The API workspace has its own ESLint config (TM-U3); it must report 0 problems, warnings included.
+      - run: npm run lint:api

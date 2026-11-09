@@ -11,6 +11,9 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    // Node runs scripts/*.mjs on the TypeScript helpers directly, so a helper that another helper needs by value is
+    // imported with its .ts extension.
+    "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "incremental": true,
     "plugins": [
@@ -30,5 +33,6 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  // backend/ is its own package with a CommonJS target and decorators (backend/tsconfig.json); dist* is build output.
+  "exclude": ["node_modules", "backend", "dist", "dist-e2e"]
 }

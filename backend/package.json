@@ -1,0 +1,29 @@
+{
+  "name": "devspace-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DevSpace NestJS API (ADR 0008). Built from the repository root with rootDir at the root, see tsconfig.json.",
+  "scripts": {
+    "build": "node ../scripts/api/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.e2e.json --noEmit",
+    "start": "node ../dist/backend/src/main.js",
+    "lint": "eslint --max-warnings 0"
+  },
+  "dependencies": {
+    "@nestjs/common": "12.4.0",
+    "@nestjs/core": "12.4.0",
+    "@nestjs/platform-express": "12.4.0",
+    "drizzle-orm": "0.45.4",
+    "express": "^5.3.0",
+    "pg": "^8.23.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.6",
+    "drizzle-kit": "0.31.11",
+    "typescript": "^5",
+    "typescript-eslint": "^8.72.1"
+  }
+}

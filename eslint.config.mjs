@@ -17,6 +17,10 @@ const eslintConfig = defineConfig([
     "test-results/**",
     // Monaco copied from node_modules at install (git-ignored): minified third-party code.
     "public/monaco/**",
+    // The API is its own package with its own config (backend/eslint.config.mjs, `npm run lint:api`); dist* is build output.
+    "backend/**",
+    "dist/**",
+    "dist-e2e/**",
   ]),
 ]);
 

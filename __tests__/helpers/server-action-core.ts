@@ -2,7 +2,11 @@
 // server reference manifest of the build under test, and reading the flight response. Both rely on Next 16.4.3
 // internals (`next` is locked by `package-lock.json`); a format they do not know fails with a message instead of a guess.
 
-type ManifestEntry = { workers?: Record<string, unknown>; filename?: string; exportedName?: string };
+type ManifestEntry = {
+  workers?: Record<string, unknown>;
+  filename?: string;
+  exportedName?: string;
+};
 export type ServerReferenceManifest = { node?: Record<string, ManifestEntry> };
 
 // Page workers of the actions the rows call, and a URL that renders that page. A POST with the action ID
@@ -12,6 +16,8 @@ const WORKER_URLS: Record<string, string> = {
   "app/admin/transactions/page": "/admin/transactions",
   "app/admin/users/page": "/admin/users",
   "app/admin/lessons/page": "/admin/lessons",
+  // The test-only fixture page (page.e2e.tsx), which exists in the e2e build only (TM-U3 AC20).
+  "app/e2e-fixture/page": "/e2e-fixture",
 };
 
 export function findAction(
@@ -21,7 +27,8 @@ export function findAction(
 ): { id: string; path: string } {
   const label = `${filename}#${exportedName}`;
   const matches = Object.entries(manifest.node ?? {}).filter(
-    ([, entry]) => entry.filename === filename && entry.exportedName === exportedName,
+    ([, entry]) =>
+      entry.filename === filename && entry.exportedName === exportedName,
   );
   if (matches.length !== 1) {
     throw new Error(
@@ -32,13 +39,21 @@ export function findAction(
   const workers = Object.keys(entry.workers ?? {});
   const worker = workers.find((name) => name in WORKER_URLS);
   if (!worker) {
-    throw new Error(`server action ${label} has no known page worker (workers: ${workers.join(", ") || "none"})`);
+    throw new Error(
+      `server action ${label} has no known page worker (workers: ${workers.join(", ") || "none"})`,
+    );
   }
   return { id, path: WORKER_URLS[worker] };
 }
 
-export type ActionResponse = { status: number; location?: string | null; body: string };
-export type ActionOutcome = { kind: "result"; value: unknown } | { kind: "redirect"; status: number; location: string };
+export type ActionResponse = {
+  status: number;
+  location?: string | null;
+  body: string;
+};
+export type ActionOutcome =
+  | { kind: "result"; value: unknown }
+  | { kind: "redirect"; status: number; location: string };
 
 // Flight values are JSON, except that a string starting with `$` is a reference (`$$` escapes a literal `$`).
 // The payment actions return plain objects, so any other reference is a format this reader does not know.
@@ -46,12 +61,15 @@ function decodeFlight(value: unknown): unknown {
   if (typeof value === "string") {
     if (value === "$undefined") return undefined;
     if (value.startsWith("$$")) return value.slice(1);
-    if (value.startsWith("$")) throw new Error(`unknown flight reference "${value}"`);
+    if (value.startsWith("$"))
+      throw new Error(`unknown flight reference "${value}"`);
     return value;
   }
   if (Array.isArray(value)) return value.map(decodeFlight);
   if (value !== null && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, decodeFlight(entry)]));
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, decodeFlight(entry)]),
+    );
   }
   return value;
 }
@@ -59,11 +77,16 @@ function decodeFlight(value: unknown): unknown {
 export function readActionResponse(response: ActionResponse): ActionOutcome {
   const { status, body } = response;
   if (status >= 300 && status < 400) {
-    if (!response.location) throw new Error(`cannot read the server action response: HTTP ${status} without a location`);
+    if (!response.location)
+      throw new Error(
+        `cannot read the server action response: HTTP ${status} without a location`,
+      );
     return { kind: "redirect", status, location: response.location };
   }
   if (status !== 200) {
-    throw new Error(`cannot read the server action response: HTTP ${status}: ${body.slice(0, 200)}`);
+    throw new Error(
+      `cannot read the server action response: HTTP ${status}: ${body.slice(0, 200)}`,
+    );
   }
 
   const rows = new Map<string, string>();
@@ -72,20 +95,31 @@ export function readActionResponse(response: ActionResponse): ActionOutcome {
     if (match) rows.set(match[1], match[2]);
   }
   const root = rows.get("0");
-  if (root === undefined) throw new Error(`cannot read the server action response: no root row in ${body.slice(0, 200)}`);
+  if (root === undefined)
+    throw new Error(
+      `cannot read the server action response: no root row in ${body.slice(0, 200)}`,
+    );
 
   let reference: unknown;
   try {
     reference = (JSON.parse(root) as { a?: unknown }).a;
   } catch {
-    throw new Error(`cannot read the server action response: the root row is not JSON: ${root.slice(0, 200)}`);
+    throw new Error(
+      `cannot read the server action response: the root row is not JSON: ${root.slice(0, 200)}`,
+    );
   }
-  const match = typeof reference === "string" ? /^\$@([0-9a-f]+)$/.exec(reference) : null;
+  const match =
+    typeof reference === "string" ? /^\$@([0-9a-f]+)$/.exec(reference) : null;
   const row = match ? rows.get(match[1]) : undefined;
   if (row === undefined) {
-    throw new Error(`cannot read the server action response: the root row points at no result row (${String(reference)})`);
+    throw new Error(
+      `cannot read the server action response: the root row points at no result row (${String(reference)})`,
+    );
   }
-  if (row.startsWith("E")) throw new Error(`the server action threw (the server answered an error row): ${row.slice(0, 200)}`);
+  if (row.startsWith("E"))
+    throw new Error(
+      `the server action threw (the server answered an error row): ${row.slice(0, 200)}`,
+    );
 
   try {
     return { kind: "result", value: decodeFlight(JSON.parse(row)) };

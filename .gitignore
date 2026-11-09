@@ -31,6 +31,9 @@
 
 # production
 /build
+# API build output (scripts/api/build.mjs)
+/dist/
+/dist-e2e/
 
 # misc
 .DS_Store

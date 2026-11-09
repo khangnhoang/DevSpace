@@ -121,6 +121,30 @@ Every entry below moved here on 2026-11-08 (Owner decision 5 in the plan) with i
 - Direction: use ``.ilike("name", `%${escaped}%`)`` with `%`, `_` and `\` escaped, and return early on blank input; add a unit or e2e row with a query containing `,`.
 - Exit condition: a query with filter characters searches for the literal text and cannot add a filter.
 
+### TM-P14: the `x-middleware-rewrite` response header carries the API's internal address to the browser
+
+- Status: Open (2026-11-09, found at TM-U3 CP4 by the implementor, reviewed by Main).
+- Problem: for a request that `proxy.ts` rewrites to `/api/*`, Next adds `x-middleware-rewrite: <API_INTERNAL_URL>/api/...` to the response, so the absolute internal address reaches the browser. This holds on `next start` (the e2e build, port 3100) and in `next dev`. Whether Vercel strips the header on its edge is not known.
+- Evidence: `curl -i http://127.0.0.1:3100/api/health` on a plain `npm run build` served with the e2e environment shows `x-middleware-rewrite: http://127.0.0.1:3101/api/health`; `npm run dev` shows the same with port 4000. AC10 and row T9 of `__tests__/e2e/api-topology.spec.ts` cover only the browser bundle and the files under `.next/static`, so they pass.
+- Direction: the address is not a secret boundary, because ADR 0008 treats the API as a public service and every route carries its own guard. During the TM-U3 rollout proofs, read the response headers of a deployed `/api/health` through the Vercel app and decide then whether to leave it, or to handle it in `proxy.ts` (a rewrite header that Next itself reads is not removed lightly). Do not change `proxy.ts` before that read.
+- Exit condition: the header of a deployed response is recorded and the Owner accepts it, or it no longer carries an internal address.
+
+### TM-P15: a 504 from the API does not cancel its handler, and a stalled request body is not bound by the 60-second limit
+
+- Status: Open (2026-11-09, found by the TM-U3 Codex gate on the implementation; recorded by the implementor).
+- Problem: the request limit is an rxjs `timeout` on the handler's stream (`backend/src/common/timeout.interceptor.ts`). When it fires the client gets a 504, but the handler keeps running: its database writes and outbound calls are not cancelled and may still commit. A later unit must not read a 504 as "the write did not happen". The body of a request is read by the body interceptor before that stream starts, so a client that opens a request and stops sending its body is bounded by Node's default `http.Server` `requestTimeout` (300 seconds), not by the 60-second limit.
+- Evidence: `timeout.interceptor.ts` and `backend/src/common/limits.ts` (read at `42a865f`); the `proof-gate` rows for the 35, 58 and 65 second waits assert the 504 and the status codes, not a cancelled handler. The 300-second default is Node's documented value; no row measures it.
+- Direction: when a unit adds a write or an outbound call behind a route, give it its own idempotency or an abort signal tied to the request, and treat a 504 as unknown outcome. Decide at the TM-U3 rollout proofs whether to set `requestTimeout` on the server explicitly.
+- Exit condition: a 504 is documented in the API contract as an unknown outcome and the longest wait a request body can cause is set and proven, or the Owner accepts both as they are.
+
+### TM-P16: `sslmode=require` is mapped to encryption without server verification
+
+- Status: Open (2026-11-09, found by the TM-U3 Codex gate on the implementation; recorded by the implementor).
+- Problem: `poolConfig` (`backend/src/db/pool.ts`) turns `sslmode=require` into `ssl: { rejectUnauthorized: false }`, because node-postgres reads `require` as `verify-full` and the pooler's certificate chain is not in Node's store. The connection to the hosted database is encrypted, but the server's certificate is not checked, so a machine in the path could answer as the database.
+- Evidence: `backend/src/db/pool.ts` and the `poolConfig` row of `__tests__/unit/api-config.test.ts` (read at `42a865f`); the Owner's hosted connection string carries `sslmode=require` as the Supabase dashboard writes it.
+- Direction: at the rollout, consider `sslmode=verify-full` with the Supabase CA certificate supplied to the pool, and a row that a wrong certificate is refused. Not changed now: the hosted URL and the CA file are the Owner's settings.
+- Exit condition: the hosted connection verifies the server certificate, or the Owner accepts the risk as it is.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

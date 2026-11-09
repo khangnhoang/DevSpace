@@ -1,0 +1,12 @@
+# Only Dockerfile.api uses this (the fallback API image); the Next app deploys through Vercel.
+node_modules
+.next
+dist
+dist-e2e
+.git
+.env*
+.supabase-test
+test-results
+playwright-report
+__tests__/e2e/.auth
+__tests__/e2e/.server

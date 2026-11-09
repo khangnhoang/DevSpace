@@ -2,13 +2,21 @@
   "name": "my-w3schools",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "backend"
+  ],
   "scripts": {
     "dev": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/dev/local.mjs",
     "monaco:copy": "node scripts/monaco/copy-vs.mjs",
     "postinstall": "npm run monaco:copy",
     "build": "next build",
     "start": "next start",
+    "build:api": "npm run build --workspace backend",
+    "typecheck:api": "npm run typecheck --workspace backend",
     "lint": "eslint --max-warnings 0",
+    "lint:api": "npm run lint --workspace backend",
+    "api:schema:pull": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/api/schema.mjs",
+    "api:schema:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/api/schema.mjs --check",
     "format": "prettier --write --ignore-unknown",
     "format:check": "prettier --check --ignore-unknown",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-stack/test.mjs",

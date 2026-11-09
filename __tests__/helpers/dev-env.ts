@@ -1,7 +1,9 @@
+import { apiDatabaseUrl } from "./api-role.ts";
 import type { LocalStack } from "./local-stack";
 
 export const DEV_PORT = 3000;
 export const DEV_HOST = "127.0.0.1";
+export const DEV_API_PORT = 4000;
 // Same origin as the local Auth `site_url` in supabase/config.toml, so sign-up and reset redirects and cookies
 // stay on one host (the pages build their redirect from `window.location.origin`).
 export const DEV_ORIGIN = `http://${DEV_HOST}:${DEV_PORT}`;
@@ -23,7 +25,36 @@ export function buildDevEnv(stack: LocalStack): Record<string, string> {
     // Placeholders: `sendMail` fails and is logged, so no real mail leaves the machine (backlog FEAT-016).
     GMAIL_USER: "dev-placeholder@devspace.test",
     GMAIL_PASS: "dev-placeholder-not-a-password",
+    // The API `npm run dev` starts beside Next (DEV_API_PORT): `/api/*` is rewritten to it and the helper calls it.
+    API_INTERNAL_URL: `http://${DEV_HOST}:${DEV_API_PORT}`,
+    // The proof page is 404 unless this is exactly "1". The dev API does not enable the proof surfaces either, and an
+    // empty value would be refilled from the environment file, so the value is an explicit "off".
+    API_PROOF_ENABLED: "0",
   };
+}
+
+// The environment of the API on the dev stack. It starts from the inherited environment, which may hold hosted
+// values, so every name the API reads is set here and never taken from the caller's shell. The database user is the
+// API role with the local seed password (api-role.ts). The two proof variables are removed, not set: an inherited "1"
+// would turn the temporary routes on, and the API refuses any other value but "1" (so a "0" would stop it), which makes
+// "unset" the only off state.
+export function buildDevApiEnv(
+  inherited: Record<string, string | undefined>,
+  stack: LocalStack,
+): Record<string, string | undefined> {
+  const env: Record<string, string | undefined> = {
+    ...inherited,
+    HOST: DEV_HOST,
+    PORT: String(DEV_API_PORT),
+    RAILWAY_GIT_COMMIT_SHA: "dev",
+    DATABASE_URL: apiDatabaseUrl(stack.dbUrl),
+    SUPABASE_URL: stack.apiUrl,
+    SUPABASE_ANON_KEY: stack.anonKey,
+    ALLOWED_ORIGINS: DEV_ORIGIN,
+  };
+  delete env.API_PROOF_ENABLED;
+  delete env.API_PROOF_USER_ID;
+  return env;
 }
 
 // The environment handed to `next dev`. The local values override anything inherited, and an inherited AI key

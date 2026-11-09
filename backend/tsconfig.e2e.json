@@ -1,0 +1,7 @@
+{
+  // The test-only build (AC20): the production sources plus backend/e2e, written to dist-e2e so the fixtures can never
+  // end up in dist. `npm test` and `npm run test:e2e` build it; the production build never reads this file.
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "outDir": "../dist-e2e" },
+  "include": ["src/**/*.ts", "e2e/**/*.ts", "../lib/schemas/*.ts"]
+}

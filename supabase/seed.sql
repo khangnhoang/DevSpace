@@ -117,3 +117,8 @@ select setval(pg_get_serial_sequence('public.notes', 'id'), (select max(id) from
 select setval(pg_get_serial_sequence('public.user_progress', 'id'), (select max(id) from public.user_progress));
 select setval(pg_get_serial_sequence('public.notifications', 'id'), (select max(id) from public.notifications));
 select setval(pg_get_serial_sequence('public.comments', 'id'), (select max(id) from public.comments));
+
+-- techstack-migration TM-U3 (ADR 0008 D7): the API role is created NOLOGIN by its migration. `migration up` does not
+-- rerun this seed, so the one-time local login is also a documented dev-stack step. Invented value, valid only on the
+-- local stacks; hosted gets its LOGIN and password from the Owner, never from here.
+alter role devspace_api login password 'localapipassword123';

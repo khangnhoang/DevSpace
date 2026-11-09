@@ -21,16 +21,9 @@ export type ServerEnv = {
   // with shorter values, so production cannot lower them by a setting.
   sessionCacheTtlMs: number;
   requestTimeoutMs: number;
-  // The temporary proof surfaces of TM-U3 (plan 1.2, removed by PR 2). Off unless API_PROOF_ENABLED is exactly "1";
-  // when off, the proof module is not registered, so every proof route is the router's own 404 for every caller.
-  // `proofUserId` is the one session the routes answer; unset, they answer 404 to every session.
-  proofEnabled: boolean;
-  proofUserId: string | null;
 };
 
 export class EnvError extends Error {}
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const REQUIRED = [
   "DATABASE_URL",
@@ -92,16 +85,6 @@ export function readServerEnv(
   parseOrigin("SUPABASE_URL", env.SUPABASE_URL!);
   checkDatabaseUrl(env.DATABASE_URL!);
 
-  // An unset or empty flag is off; any value but "1" is a mistake, not a quiet "off" (fail loud).
-  const flag = env.API_PROOF_ENABLED?.trim() ?? "";
-  if (flag !== "" && flag !== "1") {
-    throw new EnvError("API_PROOF_ENABLED must be 1 or unset.");
-  }
-  const proofUser = env.API_PROOF_USER_ID?.trim() ?? "";
-  if (proofUser !== "" && !UUID.test(proofUser)) {
-    throw new EnvError("API_PROOF_USER_ID must be a user id (UUID) or unset.");
-  }
-
   return {
     // Railway must reach the process from outside; the local launchers pass HOST=127.0.0.1 explicitly.
     host: env.HOST || "0.0.0.0",
@@ -113,7 +96,5 @@ export function readServerEnv(
     allowedOrigins,
     sessionCacheTtlMs: SESSION_CACHE_TTL_MS,
     requestTimeoutMs: REQUEST_TIMEOUT_MS,
-    proofEnabled: flag === "1",
-    proofUserId: proofUser === "" ? null : proofUser.toLowerCase(),
   };
 }

@@ -1,11 +1,11 @@
 // Test plan
-// Goal: the two-server topology of TM-U3 works as ADR 0008 D5 says (AC10, AC11, AC19 through Next): `/api/*` is rewritten
+// Goal: the two-server topology of TM-U3 works as ADR 0008 D5 says (AC10, AC11 through Next): `/api/*` is rewritten
 //   to the API with the cookie that getUser() refreshed, the server-side helper reaches the API with the app's Origin,
 //   a cross-origin write is refused by the API and by Next, and a page render never writes through the API.
 // Layer: e2e. Next on 3100 and the e2e build of the API on 3101, both under the server guard. The rows use the
 //   test-only fixtures (page.e2e.tsx and its action in the e2e Next build, backend/e2e in the e2e API build): they exist
-//   in no production build (AC20) and stay after PR 2.
-// Subject: AC10, AC11, AC16, AC19 of the TM-U3 plan.
+//   in no production build (AC20).
+// Subject: AC10, AC11, AC16 of the TM-U3 plan.
 // Data: the saved student session (read-only here) and one fixture user whose session is refreshed (a refresh rotates
 //   the refresh token, which would revoke a saved session another row still uses). The API's own request record says
 //   which calls reached it.
@@ -323,45 +323,6 @@ test.describe("page renders never write through the API (AC11)", () => {
       "the fixture page rendered and called the API, so the record is live",
     ).toContain("/api/e2e/whoami");
     expect(calls.filter((call) => call.method !== "GET")).toEqual([]);
-  });
-});
-
-test.describe("the temporary proof page (AC19)", () => {
-  test.use({ storageState: authFile("student") });
-
-  test("[T7] /tm-u3-proof renders for the proof owner and calls the API with GET only", async ({
-    page,
-    serverRecords,
-  }) => {
-    const response = await page.goto("/tm-u3-proof");
-    expect(response?.status()).toBe(200);
-    await expect(page.getByText("session: 200")).toBeVisible();
-    await expect(page.getByText("session-cold: 200")).toBeVisible();
-    await expect(page.getByText("read: 200")).toBeVisible();
-    expect(
-      serverRecords
-        .apiCalls()
-        .map((call) => `${call.method} ${call.path} ${call.status}`),
-    ).toEqual([
-      "GET /api/session 200",
-      "GET /api/proof/session-cold 200",
-      "GET /api/proof/read 200",
-    ]);
-  });
-});
-
-test.describe("the temporary proof page for a session that is not the proof owner (AC19)", () => {
-  test.use({ storageState: authFile("learner") });
-
-  test("[T8] /tm-u3-proof is 404 because the API answers 404", async ({
-    page,
-    serverRecords,
-  }) => {
-    const response = await page.goto("/tm-u3-proof");
-    expect(response?.status()).toBe(404);
-    expect(
-      serverRecords.apiCalls().map((call) => `${call.path} ${call.status}`),
-    ).toEqual(["/api/session 404"]);
   });
 });
 

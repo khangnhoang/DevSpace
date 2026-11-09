@@ -5,7 +5,6 @@ import {
   E2E_API_ORIGIN,
   E2E_ORIGIN,
   E2E_PORT,
-  E2E_PROOF_USER_ID,
   buildE2eApiEnv,
   buildE2eEnv,
 } from "../helpers/e2e-env";
@@ -67,8 +66,6 @@ describe("buildE2eEnv", () => {
     expect(E2E_API_ORIGIN).not.toBe(E2E_ORIGIN);
     expect(env.API_INTERNAL_URL).toBe(E2E_API_ORIGIN);
     expect(env.E2E_NEXT_FIXTURES).toBe("1");
-    // The proof page is 404 without the flag (S5), and the topology rows render it.
-    expect(env.API_PROOF_ENABLED).toBe("1");
   });
 });
 
@@ -80,8 +77,6 @@ describe("buildE2eApiEnv", () => {
     expect(read.allowedOrigins).toEqual([E2E_ORIGIN]);
     expect(read.port).toBe(Number(new URL(E2E_API_ORIGIN).port));
     expect(read.host).toBe("127.0.0.1");
-    expect(read.proofEnabled).toBe(true);
-    expect(read.proofUserId).toBe(E2E_PROOF_USER_ID);
   });
 
   it("connects as the API role to the test stack's database and holds no hosted value", () => {

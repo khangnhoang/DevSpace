@@ -9,7 +9,6 @@ import { TimeoutInterceptor } from "./common/timeout.interceptor";
 import { SERVER_ENV } from "./common/tokens";
 import { DbService } from "./db/db.service";
 import { HealthController } from "./health/health.controller";
-import { ProofModule } from "./proof/proof.module";
 
 @Module({})
 export class AppModule {
@@ -19,12 +18,7 @@ export class AppModule {
   ): DynamicModule {
     return {
       module: AppModule,
-      // The proof module is added only with the flag, so a build without it has no proof route to enumerate or reach.
-      imports: [
-        DiscoveryModule,
-        ...(env.proofEnabled ? [ProofModule.register()] : []),
-        ...extraModules,
-      ],
+      imports: [DiscoveryModule, ...extraModules],
       controllers: [HealthController],
       providers: [
         { provide: SERVER_ENV, useValue: env },

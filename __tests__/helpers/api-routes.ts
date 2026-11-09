@@ -43,7 +43,6 @@ const out = (name) => require(path.join(root, folder, "backend", name));
 })().catch((error) => { console.error(error); process.exit(1); });
 `;
 
-// `extraEnv` adds to the minimal environment the script gives the application, for example the proof flag.
 export function enumerateRoutes(
   folder: "dist" | "dist-e2e",
   extraEnv: Record<string, string> = {},

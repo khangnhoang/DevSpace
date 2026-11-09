@@ -1,6 +1,6 @@
 # TM-U3 detail plan — Backend foundation
 
-Revision: r8, 2026-11-09. Owner approval: r8 on 2026-11-09 (rollout step 7 gains the check of `NEXT_PUBLIC_BASE_URL`, which the Codex implementation gate found missing); r7 was approved on 2026-11-08 after the Codex plan gate PASS. Master plan: [plan.md](../../plan.md) (Units row TM-U3, section 5 step 4). Architecture: [ADR 0008](../../../../adr/0008-backend-architecture-and-hosting.md).
+Revision: r9, 2026-11-09. Owner approval: r9 on 2026-11-09 after the Codex plan gate PASS, which applies the production results to the acceptance and defines PR 2 (Owner decisions 26 to 31). r8 was approved on 2026-11-09 (rollout step 7 gains the check of `NEXT_PUBLIC_BASE_URL`, which the Codex implementation gate found missing); r7 was approved on 2026-11-08 after the Codex plan gate PASS. Master plan: [plan.md](../../plan.md) (Units row TM-U3, section 5 step 4). Architecture: [ADR 0008](../../../../adr/0008-backend-architecture-and-hosting.md).
 
 ## 1. Binding Spec
 
@@ -33,7 +33,7 @@ Local, test and CI (PR 1):
 | AC19 | With `API_PROOF_ENABLED` unset, every temporary surface of section 1.2 answers 404 on the API and on Next. With it set, a temporary API route answers 404 to a live session whose user id is not `API_PROOF_USER_ID`, and to every session when that variable is unset, and `/tm-u3-proof` answers 404 whenever the API answers it 404. The verify mode of `scripts/tm-u3-proof/`, which takes no cookie, exits non-zero unless every temporary route answers 404. |
 | AC20 | The through-Next rows of AC11 run on test-only fixtures (a Next route with its server action, and API routes) that exist only in the e2e build and the e2e API entry point. A production `next build` route list and the backend `dist` hold none of them, and they stay after PR 2. |
 
-Production, after PR 1 merged (the Owner signs in; Main records aggregates only). Rows P1 to P4 are the ADR's authenticated proof and block completion. Rows T1 to T5 keep their transport path blocked when they fail; they do not block completion.
+Production, after PR 1 merged (the Owner signs in; Main records aggregates only). Rows P1 and P2 are the part of the ADR's authenticated proof that blocks completion. Rows P3, P4, T5 and M2 moved to TM-U5 (decision 27) and are not TM-U3 acceptance. Rows T1 to T4 keep their transport path blocked when they fail; they do not block completion. M1 and M3 are settled by decisions 26 and 29.
 
 | ID | Observable result on the production topology |
 | --- | --- |
@@ -41,27 +41,27 @@ Production, after PR 1 merged (the Owner signs in; Main records aggregates only)
 | R2 | `/api/health/db` answers `"ok":true` from Railway, through the Supabase session pooler over IPv4, connected as `devspace_api`. |
 | P1 | The browser session cookie reaches the API through the rewrite: `GET /api/session` returns the caller's own user id only, and no cookie is 401. |
 | P2 | The temporary Server Component's forwarded request is authenticated. |
-| P3 | After the cookie's `expires_at` is set in the past, an `/api` call leaves the browser cookie updated, with no page load. |
-| P4 | A cross-site POST carrying the cookie, from an origin the Owner serves locally, is refused 403 or arrives without the cookie. |
-| T1 | JSON of 1 MiB, 4 MiB, and a multipart upload of a 2 MiB file arrive byte-identical, by hash compared at the API. |
+| P3 | After the cookie's `expires_at` is set in the past, an `/api` call leaves the browser cookie updated, with no page load. Moved to TM-U5 (decision 27). |
+| P4 | A cross-site POST carrying the cookie, from an origin the Owner serves locally, is refused 403 or arrives without the cookie. Moved to TM-U5 (decision 27). |
+| T1 | JSON of 1 MiB, 4 MiB, and a multipart upload of a 2 MiB file arrive byte-identical, by hash compared at the API. Not passed (decision 28). |
 | T2 | A 58-second response from a timed handler completes and reaches the client. This proves transport only: ADR 0008 D5 pass condition (b), a real Gemini call, stays pending and moves to TM-U8 (Owner decision 23). |
 | T3 | Over each limit the request is refused explicitly, a truncated body is refused, and a handler still running at 60 seconds is ended with the explicit error. |
 | T4 | A 35-second response and a streamed response are exercised and their behavior is recorded. |
-| T5 | 20 parallel requests with an expired cookie leave the session usable, or the failure is recorded and goes to the Owner before TM-U4. |
-| M1 | From the Owner's machine in Vietnam, 100 sequential and 20 concurrent requests each for `/api/health`, `/api/health/db`, `/api/session` with a cold and a warm cache, the `proxy.ts` check alone and the two-query read, with p50 and p95 against both D11 budgets: end to end from the script, and at the API from a `Server-Timing` value on the temporary routes, whose span starts before the session guard and ends after the last query. Cold-cache samples use the temporary sensitive route, which skips the cache. |
-| M2 | On the hosted HS256 project the script sends a fixture session's access token to `/api/proof/session-cold`, which skips the cache, before and after the change, using two fixture sessions. While live, each passes the session guard and gets 404 from the proof owner check, which shows the refusal is a real change. The same token gets 401 from the session guard after one session is signed out and after the other's account is deleted. The `/auth/v1/user` round trip from Singapore is recorded with and without the cache. |
-| M3 | Whether a `proxy.ts` pass counts against the Hobby invocation cap is read from the Vercel usage page before and after a counted batch of calls. |
-| E1 | PR 2 is merged: no temporary surface, flag or script of section 1.2 remains, and a search for `tm-u3-proof`, `API_PROOF_ENABLED` and `API_PROOF_USER_ID` finds nothing outside plans and State. The AC20 fixtures and their rows remain. |
+| T5 | 20 parallel requests with an expired cookie leave the session usable, or the failure is recorded and goes to the Owner. Moved to TM-U5 (decision 27). |
+| M1 | From the Owner's machine in Vietnam, 100 sequential and 20 concurrent requests each for `/api/health`, `/api/health/db`, `/api/session` with a cold and a warm cache, the `proxy.ts` check alone and the two-query read, with p50 and p95 against both D11 budgets: end to end from the script, and at the API from a `Server-Timing` value on the temporary routes, whose span starts before the session guard and ends after the last query. Cold-cache samples use the temporary sensitive route, which skips the cache. Failed the D11 budget (decision 26). |
+| M2 | On the hosted HS256 project the script sends a fixture session's access token to `/api/proof/session-cold`, which skips the cache, before and after the change, using two fixture sessions. While live, each passes the session guard and gets 404 from the proof owner check, which shows the refusal is a real change. The same token gets 401 from the session guard after one session is signed out and after the other's account is deleted. The `/auth/v1/user` round trip from Singapore is recorded with and without the cache. Moved to TM-U5 (decision 27). |
+| M3 | Whether a `proxy.ts` pass counts against the Hobby invocation cap is read from the Vercel usage page before and after a counted batch of calls. Inconclusive; does not block (decision 29). |
+| E1 | PR 2 is merged: no temporary surface, flag or script of section 1.2 remains, and a search for `tm-u3-proof`, `API_PROOF_ENABLED` and `API_PROOF_USER_ID` finds nothing outside plans and State. `railway.json` is gone (decision 31). The AC20 fixtures and their rows remain, and the two permanent checks of CP6a still pass. |
 | E2 | A backup the Owner takes after `devspace_api` has `LOGIN` passes `backup:check`, which imports its `roles.sql`. |
 
 ### 1.2 Scope and non-goals
 
-- In scope (implementor): `backend/`, the workspace wiring, the dev launcher, the `proxy.ts` rewrite, the server helper, the `devspace_api` migration and its rollback, the local role password, Drizzle generation, the `api` Vitest project and API guard, e2e with two servers, CI, `railway.json` and the fallback Dockerfile, instruction files, tests, State in checkpoint commits, and the removal in PR 2.
+- In scope (implementor): `backend/`, the workspace wiring, the dev launcher, the `proxy.ts` rewrite, the server helper, the `devspace_api` migration and its rollback, the local role password, Drizzle generation, the `api` Vitest project and API guard, e2e with two servers, CI, the fallback `Dockerfile.api`, instruction files, tests, State in checkpoint commits, and the removal in PR 2.
 - Temporary surfaces, each behind `API_PROOF_ENABLED=1`, the API routes open only to the session of `API_PROOF_USER_ID` (Owner decision 24), and each removed by PR 2: `GET /api/session` (user id only); `GET /api/proof/session-cold` (the same, marked sensitive so it skips the cache); `GET /api/proof/read` (two sequential Drizzle reads of the caller's own `profiles.id, role`, returns only `ok`); `POST /api/proof/echo` and `POST /api/proof/upload` (return only length and SHA-256); `GET /api/proof/slow` (35, 58 or 65 seconds only); `GET /api/proof/stream`; `app/tm-u3-proof/page.tsx`; `scripts/tm-u3-proof/`.
 - Test-only fixtures, which stay (AC20): the Next route and server action, and the API routes, that the through-Next rows drive.
 - In scope (Main): hosted metadata, read-only Railway CLI use under G10, the Codex gates, hosted apply, the postflight, `backup:check`, recording results.
 - In scope (Owner): the backup; the hosted `LOGIN` and password of `devspace_api`; `railway login` and `railway link`, in the Owner's own terminal; every Railway, Vercel and uptime-monitor setting; the first deploy; signing in for the proofs; the usage reads.
-- Non-goals: moving any operation or screen to the API (TM-U4 onward); changing the supported limits later units may re-prove; Better Auth and `jose`; the R2 bucket; `GEMINI_API_KEY` on Railway (no Gemini code exists in the API until TM-U8; the long-call proof is a timed handler, Owner decision 23); rate limiting; closing any TM-P or TM-F entry; modernizing `@supabase/ssr`.
+- Non-goals: moving any operation or screen to the API (TM-U4 onward); changing the supported limits later units may re-prove; Better Auth and `jose`; the R2 bucket; `GEMINI_API_KEY` on Railway (no Gemini code exists in the API until TM-U8; the long-call proof is a timed handler, Owner decision 23); rate limiting; closing any TM-P or TM-F entry other than TM-P14 (decision 30); modernizing `@supabase/ssr`.
 
 ### 1.3 Execution guardrails
 
@@ -87,6 +87,13 @@ Production, after PR 1 merged (the Owner signs in; Main records aggregates only)
 - 23 (2026-11-08) ADR 0008 D5 pass condition (b), a real Gemini call of the longest supported length reaching the client, moves from TM-U3 to TM-U8: it must pass on the production topology before the merge that moves Gemini to the API. TM-U3 records the 58-second transport result only. Railway gets no `GEMINI_API_KEY` before TM-U8.
 - 24 (2026-11-08) While the flag is on, the temporary API routes accept only the session of the user id in `API_PROOF_USER_ID`, and any other session gets 404. The proof window closes only when the script's verify mode passes.
 - 25 (2026-11-08) The Railway CLI is installed globally and the Owner signs in to it. During TM-U3, and only then, agents use it under G10: read operations for deployment, diagnosis, monitoring and cost, with no secret value read or printed. Changes to Railway production need a separate Owner grant.
+
+- 26 (2026-11-09) M1 failed the ADR 0008 D11 budget. No region or database moves. 300 and 600 ms stay as targets, and ADR 0008 is amended with the breakdown. The gate moves to TM-U4: its first slice reads through the server helper and is measured on production, and the page's p95 may rise by at most 200 ms over the same page before the move (a number set here, no vendor source). Browser calls to `/api/*` stay over budget until re-measured.
+- 27 (2026-11-09) P3, P4, T5 and M2 are required before TM-U5's first session route reaches production, and run there on real routes. TM-U3 closes with them unproven on production, covered by local tests only.
+- 28 (2026-11-09) T1 is recorded as not passed: through Vercel the contract rows passed in 1 of 2 runs. The upload path stays blocked for TM-U5, TM-U8 and TM-U10 until re-proven, as ADR 0008 D5 says, with no further investigation now. Binary 4 MiB through Vercel is an unsupported limit, investigated only if a feature depends on it. JSON 4 MiB and file 2 MiB are unchanged (decision 20).
+- 29 (2026-11-09) M3 is inconclusive: the Hobby plan exposes no usable reading (`vercel usage`, `vercel metrics`, runtime and request logs, the dashboard). It does not block TM-U3. Whether a `proxy.ts` pass counts against the invocation cap stays not proven, and the monthly usage check of ADR 0008 appendix A stays.
+- 30 (2026-11-09) TM-P14 closes: the header is absent on an anonymous deployed response, and the Owner accepts that reading.
+- 31 (2026-11-09) `railway.json` is removed: Railway Config as Code accepts no new service since 2026-08-28 and stops reading files on 2026-12-01. The service's settings live in the Railway dashboard, and the Dockerfile fallback is the variable `RAILWAY_DOCKERFILE_PATH=Dockerfile.api`. No `.railway/railway.ts` in this unit.
 
 ## 2. Repository facts
 
@@ -115,15 +122,17 @@ Baseline: `9af09be`, checked 2026-11-08.
 - The API tests start the Nest app in-process on a loopback port, and the guard reuses the logic of `server-guard.cjs` — may change if AC15 holds.
 - The API database URL is built from the local stack's status by replacing the user and password — may change if G3 holds.
 - The migration creates the role only when absent, in case a local reset keeps roles; the rollback revokes before dropping — may change if a replay and the rollback both pass.
-- `railway.json` sets the build and start commands and watch paths `backend/**` and `lib/schemas/**`, the build installs the backend workspace only, and the commit comes from `RAILWAY_GIT_COMMIT_SHA` — may change if R1 holds; a different identifier needs only that `/api/health` reports the merged commit.
+- The Railway dashboard sets the build and start commands and watch paths `backend/**` and `lib/schemas/**`, and the commit comes from `RAILWAY_GIT_COMMIT_SHA` — may change if R1 holds; a different identifier needs only that `/api/health` reports the merged commit.
 - `sslmode=require` on the pooler URL and `pg` idle timeouts — may change if R2 and AC13 hold.
 - The Next fixture uses a page extension that `next.config.ts` adds only when the e2e build sets its variable, and the API fixtures live in a separate entry point outside the production `tsconfig`. That variable is set non-empty by `buildE2eEnv` for both the build and the server, is absent in production, and the completeness check of `e2e-env.test.ts` is extended to `next.config.ts` — may change if AC16 and AC20 hold.
 - The pooler URL has the shape `postgresql://devspace_api.<project-ref>:<password>@<pooler-host>:5432/postgres` — may change if R2 and AC13 hold; the value lives only in the Railway setting.
 - Multipart is parsed with the Express layer Nest ships — may change if AC9 holds, under the Add a package procedure.
+- CP6a adds a session-guarded route to `backend/e2e/e2e.controller.ts` that reads through `DbService`, starts the two `db-verification` rows on the `dist-e2e` build, and adds a Server Component under `app/e2e-fixture` that reads through the helper on GET, so T6 has a live API record — may change if CP6a's rows hold and nothing is added to a production build.
+- `backend/src/common/raw-body.ts` has `/api/proof/echo` as its only user and goes with it, unless a remaining route uses it — may change if E1 and AC9 hold.
 
 ## 4. Checkpoints
 
-The implementor does CP1 to CP5 on `feat/tm-u3-backend-foundation`, and CP6 on `chore/tm-u3-remove-proof` after the rollout. The plan file ships in PR 1.
+The implementor does CP1 to CP5 on `feat/tm-u3-backend-foundation`, and CP6a to CP6c on `chore/tm-u3-remove-proof` after the rollout, branched from `d1ea4b0`. r9 ships in PR 2.
 
 | CP | Outcome | Verification |
 | --- | --- | --- |
@@ -132,7 +141,9 @@ The implementor does CP1 to CP5 on `feat/tm-u3-backend-foundation`, and CP6 on `
 | CP3 | Default-deny, session guard, CSRF guard, validation pipe, limits. | AC5 to AC9 in the `api` project, each guard proven by a mutation that makes its row fail. |
 | CP4 | Rewrite, server helper, temporary surfaces, test-only fixtures, the `callAction` extension, e2e with two servers, CI. | AC10, AC11, AC16, AC17, AC19, AC20; each through-Next row proven by a mutation that makes it fail; `npm run test:e2e`; a production build's route list holds no fixture. |
 | CP5 | Instruction files, dependency rows, final regression. | AC18; `npm test` and `npm run test:e2e` unfiltered; `tsc` of both packages; lint; both builds; `npm run docs:check`. |
-| CP6 | PR 2 removes every temporary surface and the rows that test only those surfaces. The AC20 fixtures and the through-Next rows stay. State moves to TM-U4 and names the pending Gemini gate for TM-U8. | E1; the CP5 commands; a list mapping each removed row to the temporary surface it tested, so no guarantee of AC5 to AC11 loses its row. |
+| CP6a | The two permanent checks stop leaning on temporary surfaces, with the temporary surfaces still present: the `[S2]` rows of `__tests__/api/db-verification.test.ts` read through a test-only route, and T6 of `__tests__/e2e/api-topology.spec.ts` proves its record live on a test-only page. | Both rows pass and each fails under a mutation (the role check before the first query removed; a non-GET call added to the fixture render). A production route list and `dist` hold no new fixture. |
+| CP6b | Every temporary surface of section 1.2, its flags and the code only it used are removed, with the rows that test only those surfaces. The AC20 fixtures and the through-Next rows stay. | E1's search, extended with `RawBody`, `IS_RAW_BODY`, `ProofModule`, `proofEnabled` and `proofUserId`; a list mapping each removed row to the temporary surface it tested, so no guarantee of AC5 to AC11 loses its row; `npm test`, `npm run test:e2e`, `tsc` of both packages, both lints, both builds. |
+| CP6c | `railway.json` is deleted and the comment of `Dockerfile.api` and the two mentions in `AGENTS.md` corrected; `AGENTS.md` and `test-quality-strategy` no longer describe temporary surfaces, and `server-actions` (Limits) no longer names raw bodies if CP6b removed them. In `problems.md`: TM-P14 resolved (decision 30); new entry TM-P17 for T1 with the numbers of both runs, the 4 MB Routing Middleware limit in Vercel's docs and the blocked paths; a dated update on TM-P15 and TM-P16 that the rollout did not decide them. State records the backups, the apply, the merge and the R, P, T, M and E results as aggregates, moves to TM-U4 and names the pending gates (decisions 26 and 27, and the Gemini gate for TM-U8), and the lagging "(this commit)" gets its hash. | `npm run docs:check`; the CP6b commands reused only if the last edit cannot affect them. |
 
 Verification allocation:
 
@@ -143,6 +154,7 @@ Verification allocation:
 | Pipe and limits (AC8, AC9) | `api` | status, generic body, no handler side effect | `__tests__/api/validation.test.ts` (new) | none |
 | Health and startup (AC4, AC13) | `api` | probe count under concurrent callers; exit code | `__tests__/api/health.test.ts` (new) | unreachable database simulated by a closed loopback port |
 | Proof gates (AC19) | `api`, `e2e` and `unit` | 404 per surface with the flag off; 404 for another live session and with the user id unset, on the API and on the page; 200 for the named user; verify mode fails on any status but 404 | `__tests__/api/proof-gate.test.ts` and `__tests__/unit/proof-verify.test.ts` (new; removed whole by PR 2), and the AC19 rows of `__tests__/e2e/api-topology.spec.ts` (PR 2 removes only those rows; the file and its AC10, AC11 and AC20 rows stay) | a second seed session minted through the Admin API |
+| A connection is verified before the first query, and page renders never write through the API, after PR 2 (AC13, AC11) | `api` and `e2e` | as today, on test-only surfaces | the `[S2]` rows of `__tests__/api/db-verification.test.ts`, T6 of `__tests__/e2e/api-topology.spec.ts` | the AC20 fixture builds |
 | Role (AC12) | `rls` | allowed read, each denied read, write and DDL | `__tests__/rls/api-role.test.ts` (new) | local role password |
 | Rewrite, cookie refresh, helper, server action refusal, no mutation on GET (AC10, AC11, AC20) | `e2e` | browser state and API record | `__tests__/e2e/api-topology.spec.ts` (new) | API request record under `__tests__/e2e/.server/`; bounded `callAction` extension: the fixture's worker in `WORKER_URLS`, a caller-chosen `Origin`, and a narrow expected-refusal path, while every unexpected 5xx and guard record still fails |
 | Role replay and connection (AC12) | `rls` | attributes and a real login after a reset | `__tests__/rls/api-role.test.ts` | seed password |
@@ -158,7 +170,7 @@ Residual manual matrix (no automated substitute: the real Vercel, Railway and Su
 | 3 | Owner | Read the Vercel usage before and after a counted batch | M3 | Vercel dashboard | Only the Owner has the dashboard |
 | 4 | Owner | Open the home page, a course and a lesson after PR 1 and after PR 2 | Unchanged | Own account | Smoke of live production |
 
-Readiness: automated rows use the seed and owned fixtures. Rows 1 to 4 are blocked until the rollout reaches them, and block E1.
+Readiness: automated rows use the seed and owned fixtures. Rows 1 and 2 ran as far as decisions 26 to 28 require, and row 3 ended inconclusive (decision 29). Row 4 after PR 2's merge is the last manual check: TM-U3 completes when E1, E2, the rollout step 10 monitors and row 4 hold.
 
 ## 5. Risks, rollout and rollback
 
@@ -166,10 +178,10 @@ Readiness: automated rows use the seed and owned fixtures. Rows 1 to 4 are block
 | --- | --- |
 | The workspace changes the Vercel build or hoists a different version of a root dependency. | CP1's lockfile diff; PR 1's Vercel preview exposes it before merge; D4 names the fix. |
 | Railway has no Node 26 build. | R1 is the first production step; the fallback Dockerfile ships in PR 1. |
-| Vercel's external rewrite drops cookies, changes bodies or times out. | P1 to P4 stop the unit; T1 to T5 keep only their path blocked; D5 names the route-handler fallback, which needs a new plan revision. |
-| The latency budget fails with two session checks per request. | M1 separates each hop; D11 names the moves, and the Owner decides them. |
+| Vercel's external rewrite drops cookies, changes bodies or times out. | P1 and P2 stop the unit; T1 to T4 keep only their path blocked; D5 names the route-handler fallback, which needs a new plan revision. |
+| The latency budget fails with two session checks per request. | M1 separated the hops it could, not the `proxy.ts` check; decision 26 settles the failure and moves the gate to TM-U4. |
 | The API is public and a route ships without authentication. | AC5's route enumeration; G5. |
-| 20 concurrent refreshes revoke the Owner's session on production. | T5 runs last; the Owner signs in again; a failure is recorded, not hidden. |
+| 20 concurrent refreshes revoke the Owner's session on production. | T5 moved to TM-U5 (decision 27), which plans it with the Owner signing in again. |
 | `backup:check` meets a new login role, whose dump adds to `roles.sql`. | E2 proves it inside this unit, at rollout step 11, before TM-U4's first hosted write; a failure is fixed in PR 2 or stops the unit. |
 | The temporary surfaces outlive the proofs or a failed proof, or another account uses them while the flag is on. | Rollout step 9 runs on pass, failure and interruption and ends with the scripted check. Owner decision 24 limits them to one user. Decision 21: TM-U3 cannot complete before PR 2. |
 
@@ -180,16 +192,16 @@ Rollout runbook, in order (every grant separate, `AGENTS.md` section 4):
 3. Main: prepare and apply the migration, two grants (`supabase-migration`, Hosted apply), then the postflight of role attributes and grants by metadata and simulated role.
 4. Owner: in the hosted SQL editor, sets `LOGIN` and a generated password on `devspace_api`. Main re-reads `rolcanlogin` only.
 5. Owner merges or grants the merge of PR 1. Vercel deploys as usual; `/api/*` answers 503 until step 7.
-6. Owner, as the instruction for the first deploy: creates the Railway project and service `devspace-api` in Singapore with the GitHub connection, restart policy, health path `/api/health`, hard limit 10 USD and email alert at 7 USD; sets `DATABASE_URL` (session pooler, user `devspace_api.<project-ref>`), `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `ALLOWED_ORIGINS`, `API_PROOF_ENABLED=1` and `API_PROOF_USER_ID` (the Owner's own user id). R1 and R2.
+6. Owner, as the instruction for the first deploy: creates the Railway project and service `devspace-api` in Singapore with the GitHub connection, restart policy, health path `/api/health`, hard limit 10 USD and email alert at 7 USD, and the build, start and watch-path settings in the dashboard (decision 31); sets `DATABASE_URL` (session pooler, user `devspace_api.<project-ref>`), `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `ALLOWED_ORIGINS`, `API_PROOF_ENABLED=1` and `API_PROOF_USER_ID` (the Owner's own user id). R1 and R2.
 7. Owner on Vercel: function region `sin1`, `API_INTERNAL_URL`, `API_PROOF_ENABLED=1`; confirms that `NEXT_PUBLIC_BASE_URL` is the production origin and equals an entry of Railway's `ALLOWED_ORIGINS` (the server helper throws without it, and a different origin fails the CSRF guard), then redeploys production.
-8. Owner runs P1 to P4, T1 to T5 and M1 to M3; Main records aggregates in State.
-9. Proof cleanup, on pass, failure or interruption: the Owner removes `API_PROOF_ENABLED` and `API_PROOF_USER_ID` on Railway and `API_PROOF_ENABLED` on Vercel, redeploys both and runs the script's verify mode, which must pass; a 401 or 200 means the flag is still on. Cleanup is not a pass: a failed row stays failed, and a failed P row or a failed budget stops the unit here.
+8. Owner runs P1, P2, T1 to T4, M1 and M3; Main records aggregates in State.
+9. Proof cleanup, on pass, failure or interruption: the Owner removes `API_PROOF_ENABLED` and `API_PROOF_USER_ID` on Railway and `API_PROOF_ENABLED` on Vercel, redeploys both and runs the script's verify mode, which must pass; a 401 or 200 means the flag is still on. Cleanup is not a pass: a failed row stays failed, and a failed P row stops the unit here, and the failed budget is settled by decision 26.
 10. Owner sets the two uptime keyword monitors and the dated usage checks of ADR 0008 appendix A.
 11. Owner takes a new backup; Main runs `backup:check` on it, under a grant for that backup (E2).
 12. Main: PR 2 under its own grants; after its merge, E1 and manual row 4.
 13. After 7 days the Owner reads the Railway usage (Owner decision 22). Main reads it with `railway usage` only while TM-U3 is still open (G10) or under a new Owner grant.
 
-- Stop when: a guard cannot meet AC5 to AC9 without changing an ADR decision; a `lib/schemas` module does not compile for the backend; a P row fails; the budget fails; any step needs a permission this plan does not name. Return to Main, which asks the Owner.
+- Stop when: a guard cannot meet AC5 to AC9 without changing an ADR decision; a `lib/schemas` module does not compile for the backend; P1 or P2 fails; CP6a cannot keep the guarantee of a permanent check; any step needs a permission this plan does not name. Return to Main, which asks the Owner.
 - Rollback: before step 5, close PR 1 and run the migration's `.down.sql` under a new grant after setting the role back to `NOLOGIN`. After step 5, the frontend is unaffected by a failed API because no screen calls it: pause the Railway service or unset `API_INTERNAL_URL`, and revert PR 1 under a new grant. The `sin1` region returns by the same Vercel setting. The hosted role stays harmless with `NOLOGIN` until a later migration removes it.
 
 ## 6. Progress

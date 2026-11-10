@@ -13,11 +13,8 @@ import type {
   DBProfile,
   DashboardCourse,
   AdminCourseData,
-  CourseDetail,
   ExerciseData,
-  LessonItem,
   ProfileData,
-  Instructor,
 } from "@/lib/types";
 import {
   pickContinueLessonSlug,
@@ -523,158 +520,17 @@ export async function editExercise(
   return { error };
 }
 
-interface DetailLessonRow {
-  id: number;
-  title: string;
-  slug: string;
-  has_video: boolean | null;
-  word_count: number | null;
-  exercises: { count: number }[];
-}
-interface DetailChapterRow {
-  id: number;
-  title: string;
-  lessons?: DetailLessonRow[] | null;
-}
-
-// wordCount comes from the generated lessons.word_count column (null = no content).
-function estimateTime(wordCount: number | null, hasVideo: boolean): number {
-  if (hasVideo) return 600;
-  if (!wordCount) return 60;
-  return Math.max(60, Math.ceil((wordCount / 200) * 60));
-}
-
-export async function getFullCourseDetail(
-  slug: string,
-): Promise<CourseDetail | null> {
-  const { data: course } = await supabase
-    .from("courses")
-    .select(
-      `
-      id, name, slug, description, image_url, price,
-      instructors (
-        id, bio, job_title,
-        profiles:profile_cards ( full_name, avatar_url )
-      )
-    `,
-    )
-    .eq("slug", slug)
-    .single();
-
-  if (!course) {
-    console.error("Lỗi khi lấy khóa học");
-    return null;
-  }
-
-  const instructorData = Array.isArray(course.instructors)
-    ? course.instructors[0]
-    : course.instructors;
-
-  const profileData =
-    instructorData && Array.isArray(instructorData.profiles)
-      ? instructorData.profiles[0]
-      : instructorData?.profiles;
-
-  // Map lại đúng chuẩn interface Instructor
-  const formattedInstructor: Instructor | null = instructorData
-    ? {
-        id: instructorData.id,
-        bio: instructorData.bio,
-        job_title: instructorData.job_title,
-        profiles: (profileData as Instructor["profiles"]) || null,
-      }
-    : null;
-
-  const { data: chapter } = await supabase
-    .from("chapters")
-    .select(
-      "id, title, order_index, lessons (id, title, slug, has_video, word_count, exercises (count))",
-    )
-    .eq("course_id", course.id)
-    .order("order_index", { ascending: true })
-    .order("id", { referencedTable: "lessons", ascending: true });
-
-  let totalSeconds = 0;
-  let lessonCount = 0;
-
-  const formattedChapters = (chapter || []).map((ch: DetailChapterRow) => ({
-    id: ch.id,
-    title: ch.title,
-    lessons: (ch.lessons || []).map((l: DetailLessonRow): LessonItem => {
-      lessonCount++;
-      const hasVideo = !!l.has_video;
-      const duration = estimateTime(l.word_count, hasVideo);
-      totalSeconds += duration;
-      const hasExercise = l.exercises?.[0]?.count > 0;
-
-      return {
-        id: l.id,
-        title: l.title,
-        slug: l.slug,
-        type: hasVideo ? "video" : "reading",
-        duration_display: `${Math.floor(duration / 60)
-          .toString()
-          .padStart(2, "0")}:${(duration % 60).toString().padStart(2, "0")}`,
-        has_exercise: hasExercise,
-      };
-    }),
-  }));
-
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-
-  return {
-    id: course.id,
-    name: course.name,
-    slug: course.slug,
-    description: course.description || "",
-    image_url: course.image_url || "",
-    price: course.price,
-    price_text:
-      course.price === 0
-        ? "Miễn phí"
-        : new Intl.NumberFormat("vi-VN", {
-            style: "currency",
-            currency: "VND",
-          }).format(course.price ?? 0),
-    stats: {
-      level: "cơ bản",
-      lesson_count: lessonCount,
-      duration: hours > 0 ? `${hours} giờ ${minutes} phút` : `${minutes} phút`,
-      accessibility: "Học mọi lúc, mọi nơi",
-    },
-    learning_outcomes: [
-      "Kiến thức nền tảng",
-      "Tư duy logic",
-      "Thực hành dự án",
-      "Giải quyết vấn đề",
-    ],
-    chapters: formattedChapters,
-    instructors: formattedInstructor,
-  };
-}
-
-export async function checkHasEnroll(slug: string, userId: string | null) {
+export async function checkHasEnroll(courseId: number, userId: string | null) {
   if (!userId) return false;
-
-  const { data: course } = await supabase
-    .from("courses")
-    .select("id")
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (!course) return false;
-
-  const { data: enrollment } = await supabase
+  const { data: enrollment, error } = await supabase
     .from("enrollments")
     .select("id")
     .eq("user_id", userId)
-    .eq("course_id", course.id)
+    .eq("course_id", courseId)
     .maybeSingle();
-
+  if (error) throw error;
   return !!enrollment;
 }
-
 export async function getLastAccessedLessonSlug(
   userId: string,
   courseId: number, // Nhận courseId luôn cho đỡ phải query lại từ slug

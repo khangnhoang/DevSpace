@@ -667,7 +667,7 @@ export async function createUserFixture(variant?: string) {
   return { id: data.user.id, email, label, password };
 }
 // QE-U6: a free course with `count` reviews, each by its own new user (reviews are unique per user and course), so a
-// visitor sees more reviews than one page. `reviews[0]` is the newest: created_at is set explicitly, an hour apart.
+// visitor sees more reviews than one page. The two oldest share a timestamp and sort by descending ID.
 // The scope deletes the reviews, then the users and the course.
 export async function createCourseWithReviewsFixture(count: number) {
   const slug = `e2e-course-${scope().tag}`;
@@ -682,6 +682,7 @@ export async function createCourseWithReviewsFixture(count: number) {
     },
   );
   const reviews: { content: string; rating: number }[] = [];
+  const now = Date.now();
   for (let i = 0; i < count; i++) {
     const user = await createUserFixture(`r${i + 1}`);
     const review = {
@@ -699,12 +700,15 @@ export async function createCourseWithReviewsFixture(count: number) {
           user_id: user.id,
           course_id: course.id,
           ...review,
-          created_at: new Date(Date.now() - i * 3_600_000).toISOString(),
+          created_at: new Date(
+            now - Math.min(i, Math.max(0, count - 2)) * 3_600_000,
+          ).toISOString(),
         })
         .select("id"),
     );
     reviews.push(review);
   }
+  if (reviews.length >= 2) reviews.push(...reviews.splice(-2).reverse());
   return { ...course, slug, reviews };
 }
 // The seed student's review of the paid course as it is stored before the row edits it. It is the same selector as

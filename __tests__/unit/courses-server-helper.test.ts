@@ -16,7 +16,7 @@ vi.mock("@/lib/api.server", () => ({
 }));
 
 import { ApiConfigError } from "@/lib/api.server";
-import { getHomeCourses } from "@/lib/courses.server";
+import { getCourseDetail, getHomeCourses } from "@/lib/courses.server";
 
 const error = vi.spyOn(console, "error").mockImplementation(() => {});
 const logged = () => JSON.stringify(error.mock.calls);
@@ -27,6 +27,29 @@ beforeEach(() => {
   error.mockClear();
 });
 afterEach(() => vi.clearAllMocks());
+
+describe("getCourseDetail", () => {
+  it("keeps legacy slug characters in an encoded query on a fixed path", async () => {
+    const slug = "lập trình C++ .. bài một";
+    apiFetch.mockResolvedValue(Response.json({ id: 1, slug }));
+    expect(await getCourseDetail(slug)).toEqual({
+      status: "found",
+      course: { id: 1, slug },
+    });
+    const path = apiFetch.mock.calls[0][0] as string;
+    expect(path).not.toMatch(/\.\.|\+/);
+    const url = new URL(path, "http://localhost");
+    expect(url.pathname).toBe("/api/courses/detail");
+    expect(url.searchParams.get("slug")).toBe(slug);
+  });
+
+  it("distinguishes a missing course from an unavailable API", async () => {
+    apiFetch.mockResolvedValueOnce(new Response(null, { status: 404 }));
+    apiFetch.mockResolvedValueOnce(new Response(null, { status: 503 }));
+    expect(await getCourseDetail("missing")).toEqual({ status: "missing" });
+    expect(await getCourseDetail("example")).toEqual({ status: "unavailable" });
+  });
+});
 
 describe("getHomeCourses", () => {
   it("returns the list the API sent", async () => {

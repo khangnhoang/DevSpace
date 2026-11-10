@@ -313,16 +313,146 @@ test.describe("course review form", () => {
     ).toBeVisible();
   }
 
+  test("retries enrollment lookup without enabling the purchase action on failure", async ({
+    page,
+  }) => {
+    await page.route(
+      "**/rest/v1/enrollments*",
+      (route) =>
+        route.fulfill({
+          status: 403,
+          json: { message: "Fixture enrollment lookup denied", code: "42501" },
+        }),
+      { times: 1 },
+    );
+    await page.goto(COURSE_URL);
+    await expect(
+      page.getByText("Không thể kiểm tra trạng thái khóa học."),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Mua khóa học ngay" }),
+    ).toHaveCount(0);
+    await page.getByRole("button", { name: "Thử lại kiểm tra" }).click();
+    await expect(
+      page.getByRole("button", { name: "Tiếp tục học ngay" }),
+    ).toBeEnabled();
+  });
+
+  test("ignores a late append after a review write and retries the failed refresh", async ({
+    page,
+  }) => {
+    const stored = fixtureLabel("E2E đánh giá trước khi tải lại");
+    const updated = fixtureLabel("E2E đánh giá sau khi tải lại");
+    await createStudentReviewFixture(2, stored);
+    const firstPage = "**/api/courses/reviews?*page=0";
+    await page.route(
+      firstPage,
+      async (route) => {
+        const response = await route.fetch();
+        await route.fulfill({
+          response,
+          json: { ...(await response.json()), hasMore: true },
+        });
+      },
+      { times: 1 },
+    );
+    await page.addInitScript(() => {
+      const fetchOriginal = window.fetch.bind(window);
+      window.fetch = async (input, options) => {
+        const url = new URL(
+          input instanceof Request ? input.url : input,
+          location.origin,
+        );
+        if (
+          url.pathname !== "/api/courses/reviews" ||
+          url.searchParams.get("page") !== "1"
+        ) {
+          return fetchOriginal(input, options);
+        }
+        // A response already in transit can resolve even after the UI abandons its request.
+        document.documentElement.dataset.reviewAppend = "waiting";
+        await new Promise<void>((resolve) =>
+          window.addEventListener("release-review-append", () => resolve(), {
+            once: true,
+          }),
+        );
+        const stale = {
+          reviews: [
+            {
+              id: -1,
+              rating: 1,
+              content: "Stale review append",
+              created_at: null,
+              profiles: null,
+            },
+          ],
+          hasMore: true,
+        };
+        const response = Response.json(stale);
+        response.json = async () => {
+          requestAnimationFrame(() => {
+            document.documentElement.dataset.reviewAppend = "delivered";
+          });
+          return stale;
+        };
+        return response;
+      };
+    });
+    await page.goto(COURSE_URL);
+    await expect(page.getByText(stored, { exact: true })).toBeVisible();
+    await expect(textbox(page)).toHaveValue(stored);
+    await page
+      .getByRole("button", { name: "Xem thêm đánh giá cũ hơn" })
+      .click();
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-review-append",
+      "waiting",
+    );
+
+    await page.route(firstPage, (route) => route.abort(), { times: 1 });
+    await textbox(page).fill(updated);
+    await page.getByRole("button", { name: "Cập nhật đánh giá" }).click();
+    await expect(page.getByText("Không thể tải đánh giá.")).toBeVisible();
+    await expect(page.getByText(stored, { exact: true })).toBeVisible();
+    await page.evaluate(() =>
+      window.dispatchEvent(new Event("release-review-append")),
+    );
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-review-append",
+      "delivered",
+    );
+    await expect(page.getByText("Stale review append")).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Thử lại", exact: true }).click();
+    await expect(page.getByText(updated, { exact: true })).toBeVisible();
+    await expect(page.getByText(stored, { exact: true })).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Xem thêm đánh giá cũ hơn" }),
+    ).toHaveCount(0);
+    expect(await studentReviews()).toEqual([{ rating: 2, content: updated }]);
+  });
+
   test("[F2] submits a rating with trimmed text, writes one review row and lists it", async ({
     page,
   }) => {
     await reserveStudentReview();
     const text = fixtureLabel("E2E đánh giá");
     await openReviewForm(page);
+    await expect(page.getByText("Chưa có đánh giá nào.")).toBeVisible();
 
     await page.getByRole("button", { name: "4 sao" }).click();
     await textbox(page).fill(`  ${text}  `);
+    const refresh = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/courses/reviews" &&
+        new URL(response.url()).searchParams.get("page") === "0" &&
+        response.ok(),
+    );
     await page.getByRole("button", { name: "Gửi đánh giá" }).click();
+    const reviewPage = await (await refresh).json();
+    expect(reviewPage.reviews).toContainEqual(
+      expect.objectContaining({ rating: 4, content: text }),
+    );
 
     await expect(page.getByText("Đánh giá thành công!")).toBeVisible();
     await expect(page.getByText(text, { exact: true })).toBeVisible();
@@ -360,13 +490,24 @@ test.describe("course review form", () => {
       page.getByRole("heading", { name: "Chỉnh sửa đánh giá của bạn" }),
     ).toBeVisible();
     await expect(textbox(page)).toHaveValue(stored);
+    await expect(page.getByText(stored, { exact: true })).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Cập nhật đánh giá" }),
     ).toBeVisible();
 
     const text = fixtureLabel("E2E đánh giá mới");
     await textbox(page).fill(text);
+    const refresh = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/courses/reviews" &&
+        new URL(response.url()).searchParams.get("page") === "0" &&
+        response.ok(),
+    );
     await page.getByRole("button", { name: "Cập nhật đánh giá" }).click();
+    const reviewPage = await (await refresh).json();
+    expect(reviewPage.reviews).toContainEqual(
+      expect.objectContaining({ rating: 2, content: text }),
+    );
 
     await expect(page.getByText("Đánh giá thành công!")).toBeVisible();
     await expect(page.getByText(text, { exact: true })).toBeVisible();

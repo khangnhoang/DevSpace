@@ -50,6 +50,7 @@ type Item = {
 let api: RunningApi;
 let noLessons: string;
 let reversed: string;
+let duplicateSlug: string;
 const extra: RunningApi[] = [];
 
 beforeAll(async () => {
@@ -58,6 +59,11 @@ beforeAll(async () => {
   reversed = scope.label("TM-U4 course with a reversed lesson");
   const lessonA = scope.label("TM-U4 lesson A, lower id, later in order");
   const lessonB = scope.label("TM-U4 lesson B, higher id, first in order");
+  duplicateSlug = `trùng slug ${scope.tag}`;
+  const duplicates = [
+    scope.label("TM-U4 duplicate A"),
+    scope.label("TM-U4 duplicate B"),
+  ];
   await scope.reserve("courses", { name: noLessons });
   await scope.reserve("courses", { name: reversed });
   await scope.reserve("lessons", { title: lessonA });
@@ -67,6 +73,10 @@ beforeAll(async () => {
     if (error)
       throw new Error(`fixture insert into ${table}: ${error.message}`);
   };
+  for (const name of duplicates) {
+    await scope.reserve("courses", { name });
+    await insert("courses", { name, slug: duplicateSlug });
+  }
   await insert("courses", {
     name: noLessons,
     slug: `tm-u4-none-${scope.tag}`,
@@ -83,17 +93,37 @@ beforeAll(async () => {
     .eq("name", reversed)
     .single();
   const courseId = (data as { id: number }).id;
+  const chapterNames = [
+    scope.label("TM-U4 later chapter"),
+    scope.label("TM-U4 first chapter"),
+  ];
+  for (const [index, title] of chapterNames.entries()) {
+    await scope.reserve("chapters", { title });
+    await insert("chapters", {
+      course_id: courseId,
+      title,
+      order_index: 2 - index,
+    });
+  }
+  const chapter = await scope.db
+    .from("chapters")
+    .select("id")
+    .eq("title", chapterNames[1])
+    .single();
+  if (chapter.error) throw new Error(chapter.error.message);
   // Inserted in this order, so lesson A has the lower id and the higher order_index.
   await insert("lessons", {
     title: lessonA,
     slug: `tm-u4-lesson-a-${scope.tag}`,
     course_id: courseId,
+    chapter_id: chapter.data.id,
     order_index: 5,
   });
   await insert("lessons", {
     title: lessonB,
     slug: `tm-u4-lesson-b-${scope.tag}`,
     course_id: courseId,
+    chapter_id: chapter.data.id,
     order_index: 1,
   });
   api = await startApi(apiTestEnv(stack));
@@ -186,5 +216,162 @@ describe("GET /api/courses/home with the database down (AC3)", () => {
       /postgres|ECONNREFUSED|127\.0\.0\.1|devspace_api/i,
     );
     expect((await fetch(`${down.url}/api/health`)).status).toBe(200);
+    for (const path of [
+      "detail?slug=lam-quen-voi-html",
+      "reviews?courseId=1&page=0",
+    ]) {
+      const result = await fetch(`${down.url}/api/courses/${path}`);
+      expect(result.status).toBe(503);
+      expect(await result.text()).not.toMatch(
+        /postgres|ECONNREFUSED|127\.0\.0\.1|devspace_api/i,
+      );
+    }
+  });
+});
+
+describe("public course detail and reviews", () => {
+  it("returns the seed course outline without private lesson fields", async () => {
+    const response = await fetch(
+      `${api.url}/api/courses/detail?slug=lam-quen-voi-html`,
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(Object.keys(body).sort()).toEqual([
+      "chapters",
+      "description",
+      "id",
+      "image_url",
+      "instructors",
+      "name",
+      "price",
+      "price_text",
+      "slug",
+      "stats",
+    ]);
+    expect(body).toMatchObject({
+      id: 1,
+      price_text: "Miễn phí",
+      stats: { lesson_count: expect.any(Number) },
+    });
+    expect(body.chapters.length).toBeGreaterThan(0);
+    const outline = body.chapters.flatMap(
+      (chapter: { lessons: unknown[] }) => chapter.lessons,
+    );
+    expect(outline.length).toBeGreaterThan(0);
+    for (const lesson of outline) {
+      expect(Object.keys(lesson as object).sort()).toEqual([
+        "duration_display",
+        "id",
+        "slug",
+        "title",
+        "type",
+      ]);
+    }
+  });
+
+  it("keeps chapter order, lesson ID order and an empty chapter", async () => {
+    const response = await fetch(
+      `${api.url}/api/courses/detail?slug=tm-u4-reversed-${sessions.scope.tag}`,
+    );
+    expect(response.status).toBe(200);
+    const { chapters } = await response.json();
+    expect(chapters).toEqual([
+      {
+        id: expect.any(Number),
+        title: expect.stringContaining("TM-U4 first chapter"),
+        lessons: [
+          expect.objectContaining({
+            slug: `tm-u4-lesson-a-${sessions.scope.tag}`,
+          }),
+          expect.objectContaining({
+            slug: `tm-u4-lesson-b-${sessions.scope.tag}`,
+          }),
+        ],
+      },
+      {
+        id: expect.any(Number),
+        title: expect.stringContaining("TM-U4 later chapter"),
+        lessons: [],
+      },
+    ]);
+  });
+
+  it("pages tied reviews by ID and only exposes public profile fields", async () => {
+    const course = (await home()).find((item) => item.name === reversed)!;
+    const inserted: number[] = [];
+    for (let index = 0; index < 6; index++) {
+      const author = await sessions.mint(`review-${index}`);
+      await sessions.scope.reserve("reviews", {
+        course_id: course.id,
+        user_id: author.userId,
+      });
+      const result = await sessions.scope.db
+        .from("reviews")
+        .insert({
+          course_id: course.id,
+          user_id: author.userId,
+          rating: 5,
+          content: `Public review ${index}`,
+          created_at: "2026-01-01T00:00:00Z",
+        })
+        .select("id")
+        .single();
+      if (result.error) throw new Error(result.error.message);
+      inserted.push(result.data.id);
+    }
+    const url = `${api.url}/api/courses/reviews?courseId=${course.id}&page=`;
+    const first = await fetch(url + "0");
+    const last = await fetch(url + "1");
+    expect(first.status).toBe(200);
+    expect(last.status).toBe(200);
+    const firstPage = await first.json();
+    const lastPage = await last.json();
+    expect(firstPage.hasMore).toBe(true);
+    expect(lastPage.hasMore).toBe(false);
+    const rows = [...firstPage.reviews, ...lastPage.reviews];
+    expect(rows.map((row) => row.id)).toEqual(inserted.reverse());
+    for (const review of rows) {
+      expect(Object.keys(review).sort()).toEqual([
+        "content",
+        "created_at",
+        "id",
+        "profiles",
+        "rating",
+      ]);
+      expect(Object.keys(review.profiles).sort()).toEqual([
+        "avatar_url",
+        "full_name",
+      ]);
+    }
+  });
+
+  it("rejects a missing or ambiguous course without selecting an arbitrary match", async () => {
+    for (const slug of ["not-a-devspace-course", duplicateSlug]) {
+      const response = await fetch(
+        `${api.url}/api/courses/detail?slug=${encodeURIComponent(slug)}`,
+      );
+      expect(response.status).toBe(404);
+    }
+  });
+
+  it("returns an empty page and rejects invalid input before querying", async () => {
+    const course = (await home()).find((item) => item.name === noLessons)!;
+    const empty = await fetch(
+      `${api.url}/api/courses/reviews?courseId=${course.id}&page=0`,
+    );
+    expect(empty.status).toBe(200);
+    expect(await empty.json()).toEqual({ reviews: [], hasMore: false });
+    for (const path of [
+      "detail",
+      "reviews?courseId=1&page=10",
+      "reviews?courseId=-1&page=0",
+      "reviews?courseId=1&page=0&page=1",
+    ]) {
+      const response = await fetch(`${api.url}/api/courses/${path}`);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        message: "Dữ liệu không hợp lệ.",
+      });
+    }
   });
 });

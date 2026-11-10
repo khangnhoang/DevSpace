@@ -1,5 +1,12 @@
-import { Controller, Get } from "@nestjs/common";
+import { Controller, Get, Query } from "@nestjs/common";
+import {
+  courseDetailQuery,
+  courseReviewsQuery,
+  type CourseDetailQuery,
+  type CourseReviewsQuery,
+} from "../../../lib/schemas/public-courses";
 import { Public } from "../auth/decorators";
+import { ZodPipe } from "../common/zod.pipe";
 import { CoursesService } from "./courses.service";
 
 @Controller("courses")
@@ -12,5 +19,20 @@ export class CoursesController {
   @Get("home")
   home() {
     return this.courses.listHome();
+  }
+
+  @Public()
+  @Get("detail")
+  detail(@Query(new ZodPipe(courseDetailQuery)) { slug }: CourseDetailQuery) {
+    return this.courses.detail(slug);
+  }
+
+  @Public()
+  @Get("reviews")
+  reviews(
+    @Query(new ZodPipe(courseReviewsQuery))
+    { courseId, page }: CourseReviewsQuery,
+  ) {
+    return this.courses.listReviews(courseId, page);
   }
 }

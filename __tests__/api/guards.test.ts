@@ -58,27 +58,33 @@ async function handled(): Promise<number> {
 }
 
 describe("default deny (AC5)", () => {
-  it("[AC5] [TM-U4 AC4] the production build registers exactly /api/health, /api/health/db and /api/courses/home, all public", () => {
+  it("[AC5] the production build registers exactly the public health and course routes", () => {
     const routes = enumerateRoutes("dist");
     expect(routes.declared).toEqual([
+      { method: "GET", path: "/api/courses/detail", public: true },
       { method: "GET", path: "/api/courses/home", public: true },
+      { method: "GET", path: "/api/courses/reviews", public: true },
       { method: "GET", path: "/api/health", public: true },
       { method: "GET", path: "/api/health/db", public: true },
     ]);
     expect(routes.registered.sort()).toEqual([
+      "GET /api/courses/detail",
       "GET /api/courses/home",
+      "GET /api/courses/reviews",
       "GET /api/health",
       "GET /api/health/db",
     ]);
   });
 
-  it("[AC5] with the test-only routes added, the public set is still exactly the three named routes", () => {
+  it("[AC5] adding test-only routes does not change the public set", () => {
     const routes = enumerateRoutes("dist-e2e");
     const publicRoutes = routes.declared
       .filter((route) => route.public)
       .map((route) => `${route.method} ${route.path}`);
     expect(publicRoutes).toEqual([
+      "GET /api/courses/detail",
       "GET /api/courses/home",
+      "GET /api/courses/reviews",
       "GET /api/health",
       "GET /api/health/db",
     ]);
@@ -99,7 +105,12 @@ describe("default deny (AC5)", () => {
   it("[AC5] every registered route that is not public refuses a request with no session, and the public ones answer", async () => {
     const routes = enumerateRoutes("dist-e2e").declared;
     for (const route of routes) {
-      const response = await fetch(`${api.url}${route.path}`, {
+      const query =
+        {
+          "/api/courses/detail": "?slug=lam-quen-voi-html",
+          "/api/courses/reviews": "?courseId=1&page=0",
+        }[route.path] ?? "";
+      const response = await fetch(`${api.url}${route.path}${query}`, {
         method: route.method,
         headers: { "content-type": "application/json" },
         body: route.method === "GET" ? undefined : "{}",

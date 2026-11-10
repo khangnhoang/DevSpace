@@ -26,6 +26,7 @@ import { withPg } from "./helpers";
 const stack = inject("localStack");
 const migration = "20261108143215_devspace_api";
 const homeMigration = "20261109145730_tm_u4_api_home_course_read";
+const detailMigration = "20261110101429_tm_u4_api_course_detail_reviews";
 
 const HOME_COURSE_COLUMNS = [
   "description",
@@ -36,6 +37,14 @@ const HOME_COURSE_COLUMNS = [
   "slug",
 ];
 const HOME_LESSON_COLUMNS = ["course_id", "id", "slug"];
+const DETAIL_COLUMNS = {
+  chapters: ["course_id", "id", "order_index", "title"],
+  courses: ["instructor_id"],
+  instructors: ["bio", "id", "job_title", "user_id"],
+  lessons: ["chapter_id", "has_video", "title", "word_count"],
+  profile_cards: ["avatar_url", "full_name", "id"],
+  reviews: ["content", "course_id", "created_at", "id", "rating", "user_id"],
+};
 
 // Functions of public, auth and storage that devspace_api can execute through PUBLIC, recorded on the local stack
 // (CLI 2.121.0 images). A difference is a change of effective privilege: read it before editing this list.
@@ -112,6 +121,8 @@ async function readBody(folder: "migrations" | "rollbacks", name: string) {
 
 const homeUp = () => readBody("migrations", `${homeMigration}.sql`);
 const homeDown = () => readBody("rollbacks", `${homeMigration}.down.sql`);
+const detailUp = () => readBody("migrations", `${detailMigration}.sql`);
+const detailDown = () => readBody("rollbacks", `${detailMigration}.down.sql`);
 
 async function homeColumns(owner: pg.Client) {
   return (
@@ -131,6 +142,7 @@ async function homeColumns(owner: pg.Client) {
 // checks both ends, so a rollback that stopped working or a committed state that lost the grants fails here, not in
 // a replay that would then prove something else.
 async function undoHomeGrants(owner: pg.Client) {
+  await owner.query(await detailDown());
   expect(
     (await homeColumns(owner)).length,
     "the committed state holds the TM-U4 grants before they are undone",
@@ -256,12 +268,26 @@ describe("devspace_api role", () => {
          order by 1`,
         [API_ROLE],
       );
-      expect(columns.rows.map((row) => row.column)).toEqual([
-        ...HOME_COURSE_COLUMNS.map((column) => `public.courses.${column}`),
-        ...HOME_LESSON_COLUMNS.map((column) => `public.lessons.${column}`),
-        "public.profiles.id",
-        "public.profiles.role",
-      ]);
+      expect(columns.rows.map((row) => row.column)).toEqual(
+        [
+          ...HOME_COURSE_COLUMNS.map((column) => `public.courses.${column}`),
+          ...HOME_LESSON_COLUMNS.map((column) => `public.lessons.${column}`),
+          ...Object.entries(DETAIL_COLUMNS).flatMap(([table, names]) =>
+            names.map((name) => `public.${table}.${name}`),
+          ),
+          "public.profiles.id",
+          "public.profiles.role",
+        ].sort(),
+      );
+      const columnWrites = await owner.query(
+        `select c.relname, a.attname
+         from pg_attribute a join pg_class c on c.oid = a.attrelid
+         where c.relnamespace = 'public'::regnamespace
+           and a.attnum > 0 and not a.attisdropped
+           and has_column_privilege($1, c.oid, a.attnum, 'INSERT,UPDATE,REFERENCES,SELECT WITH GRANT OPTION')`,
+        [API_ROLE],
+      );
+      expect(columnWrites.rows).toEqual([]);
 
       const tables = await owner.query(
         `select n.nspname || '.' || c.relname as relation
@@ -651,7 +677,7 @@ describe("devspace_api role", () => {
     });
   });
 
-  it("[API-R12] [AC5] reads exactly the home columns of courses and lessons, and is refused on every other column and every write", async () => {
+  it("[API-R12] reads the allowed course columns and refuses private lesson data and writes", async () => {
     const counts = await withPg(async (owner) => ({
       courses: (
         await owner.query("select count(*)::int as n from public.courses")
@@ -672,20 +698,14 @@ describe("devspace_api role", () => {
       );
       expect(lessons.rows).toHaveLength(counts.lessons);
 
-      for (const column of ["created_at", "instructor_id"]) {
-        await refused(client, `select ${column} from public.courses`);
-      }
+      await refused(client, "select created_at from public.courses");
       await refused(client, "select * from public.courses");
       // Named in a row with the granted columns, so a grant of the whole table or of one extra column fails here.
       for (const column of [
         "content",
         "video_url",
-        "title",
-        "chapter_id",
         "order_index",
         "created_at",
-        "has_video",
-        "word_count",
       ]) {
         await refused(client, `select id, ${column} from public.lessons`);
       }
@@ -705,6 +725,15 @@ describe("devspace_api role", () => {
       await refused(client, "delete from public.lessons");
       await refused(client, "truncate public.courses");
       await refused(client, "truncate public.lessons");
+      for (const [table, columns] of Object.entries(DETAIL_COLUMNS)) {
+        await client.query(
+          `select ${columns.join(", ")} from public.${table} limit 1`,
+        );
+      }
+      await refused(client, "select role from public.profile_cards");
+      await refused(client, "select * from public.exercises");
+      await refused(client, "update public.reviews set rating = 1");
+      await refused(client, "update public.profile_cards set full_name = 'x'");
     });
   });
 
@@ -736,9 +765,18 @@ describe("devspace_api role", () => {
       await owner.query("begin");
       try {
         const committed = await snapshot(owner);
+        await owner.query(await detailDown());
+        const beforeDetail = await snapshot(owner);
+        expect(differing(committed, beforeDetail)).toEqual(
+          Object.entries(DETAIL_COLUMNS)
+            .flatMap(([table, columns]) =>
+              columns.map((column) => `column public.${table}.${column}`),
+            )
+            .sort(),
+        );
         await owner.query(await homeDown());
         const afterDown = await snapshot(owner);
-        expect(differing(committed, afterDown)).toEqual(expectedChanged);
+        expect(differing(beforeDetail, afterDown)).toEqual(expectedChanged);
         expect(await homeColumns(owner)).toEqual([]);
         const tm3 = await owner.query(
           `select a.attname from pg_attribute a
@@ -757,6 +795,8 @@ describe("devspace_api role", () => {
         ).toBe(true);
 
         await owner.query(await homeUp());
+        expect(differing(beforeDetail, await snapshot(owner))).toEqual([]);
+        await owner.query(await detailUp());
         expect(
           differing(committed, await snapshot(owner)),
           "the migration puts back exactly what the rollback took",

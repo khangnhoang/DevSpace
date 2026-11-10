@@ -26,7 +26,7 @@ import { toast } from "sonner";
 import { createPendingPayment } from "@/app/action/payment";
 import { enrollCourse } from "@/app/action/enroll";
 import CoursePaymentModal from "@/app/components/CoursePaymentModal";
-import { User } from "@supabase/supabase-js";
+import { isAuthSessionMissingError, type User } from "@supabase/supabase-js";
 import Image from "next/image";
 import VideoModal from "@/app/components/VideoModal";
 import CustomAvatar from "@/app/components/CustomAvatar";
@@ -74,6 +74,7 @@ const CourseReviews = ({
   const [loadingReviews, setLoadingReviews] = useState(true);
   const [failedPage, setFailedPage] = useState<number | null>(null);
   const reviewRequest = useRef<AbortController | null>(null);
+  const reviewActive = useRef(false);
 
   const fetchReviews = useCallback(
     async (pageIndex: number) => {
@@ -130,12 +131,14 @@ const CourseReviews = ({
   }, [courseId, reset]);
 
   useEffect(() => {
+    reviewActive.current = true;
     let cancelled = false;
     void Promise.resolve().then(() => {
       if (!cancelled) return fetchReviews(0);
     });
     return () => {
       cancelled = true;
+      reviewActive.current = false;
       reviewRequest.current?.abort();
       reviewRequest.current = null;
     };
@@ -189,6 +192,7 @@ const CourseReviews = ({
         { onConflict: "user_id, course_id" },
       );
 
+      if (!reviewActive.current) return;
       if (error) {
         toast.error("Lỗi: " + error.message);
       } else {
@@ -404,7 +408,10 @@ export default function CourseDetailClient({
 }) {
   const router = useRouter();
   const [currentPaymentId, setCurrentPaymentId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [accessStatus, setAccessStatus] = useState<
+    "loading" | "ready" | "failed"
+  >("loading");
+  const [accessAttempt, setAccessAttempt] = useState(0);
   const [expandedChapters, setExpandedChapters] = useState<number[]>(() =>
     course.chapters.slice(0, 1).map((chapter) => chapter.id),
   );
@@ -453,7 +460,9 @@ export default function CourseDetailClient({
       try {
         const {
           data: { user },
+          error,
         } = await supabase.auth.getUser();
+        if (error && !isAuthSessionMissingError(error)) throw error;
         const enrolled = await checkHasEnroll(course.id, user?.id ?? null);
         const pending =
           user && !enrolled
@@ -462,16 +471,16 @@ export default function CourseDetailClient({
         if (cancelled) return;
         setHasEnrolled(enrolled);
         setHasPendingPayment(pending);
-        setLoading(false);
+        setAccessStatus("ready");
       } catch {
-        if (!cancelled) toast.error("Không thể kiểm tra trạng thái khóa học");
+        if (!cancelled) setAccessStatus("failed");
       }
     };
     void loadAccess();
     return () => {
       cancelled = true;
     };
-  }, [course.id]);
+  }, [course.id, accessAttempt]);
   const handleContinueLearning = async () => {
     if (!course || !hasEnrolled) return;
     setIsEnrolling(true);
@@ -786,36 +795,57 @@ export default function CourseDetailClient({
             )}
           </div>
 
-          <button
-            onClick={
-              hasEnrolled ? handleContinueLearning : handleEnrollmentClick
-            }
-            disabled={isEnrolling || loading || hasPendingPayment}
-            className={`px-4 py-3 rounded-full cursor-pointer transition-all w-full font-bold text-lg flex justify-center items-center
+          {accessStatus === "failed" ? (
+            <div
+              className="flex flex-col items-center gap-2 text-sm text-gray-300"
+              role="status"
+            >
+              <p>Không thể kiểm tra trạng thái khóa học.</p>
+              <button
+                type="button"
+                className="min-h-8 text-blue-400 underline hover:text-blue-300"
+                onClick={() => {
+                  setAccessStatus("loading");
+                  setAccessAttempt((attempt) => attempt + 1);
+                }}
+              >
+                Thử lại kiểm tra
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={
+                hasEnrolled ? handleContinueLearning : handleEnrollmentClick
+              }
+              disabled={
+                isEnrolling || accessStatus === "loading" || hasPendingPayment
+              }
+              className={`px-4 py-3 rounded-full cursor-pointer transition-all w-full font-bold text-lg flex justify-center items-center
               ${
                 isEnrolling || hasPendingPayment
                   ? "bg-gray-600 cursor-not-allowed text-gray-300"
                   : "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transform hover:-translate-y-0.5"
               }
             `}
-          >
-            {loading ? (
-              "Đang kiểm tra trạng thái..."
-            ) : isEnrolling ? (
-              <>
-                <Loader2 className="animate-spin mr-2" size={24} /> Đang xử
-                lý...
-              </>
-            ) : hasEnrolled ? (
-              "Tiếp tục học ngay"
-            ) : hasPendingPayment ? (
-              "Đang chờ duyệt thanh toán..."
-            ) : course.price === 0 ? (
-              "Đăng ký học ngay"
-            ) : (
-              "Mua khóa học ngay"
-            )}
-          </button>
+            >
+              {accessStatus === "loading" ? (
+                "Đang kiểm tra trạng thái..."
+              ) : isEnrolling ? (
+                <>
+                  <Loader2 className="animate-spin mr-2" size={24} /> Đang xử
+                  lý...
+                </>
+              ) : hasEnrolled ? (
+                "Tiếp tục học ngay"
+              ) : hasPendingPayment ? (
+                "Đang chờ duyệt thanh toán..."
+              ) : course.price === 0 ? (
+                "Đăng ký học ngay"
+              ) : (
+                "Mua khóa học ngay"
+              )}
+            </button>
+          )}
 
           <div className="flex flex-col gap-3 mt-2 text-sm text-gray-300 border-t border-gray-700 pt-4">
             <div className="flex gap-3 items-center">

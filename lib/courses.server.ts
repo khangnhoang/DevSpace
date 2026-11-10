@@ -51,8 +51,11 @@ export async function getCourseDetail(
 > {
   await connection();
   try {
-    // Keep the route fixed. apiFetch rejects literal ".." even in a query, and legacy slugs can contain dots.
-    const value = encodeURIComponent(slug).replaceAll(".", "%2E");
+    // apiFetch allows percent escapes in query values and rejects raw punctuation and dot pairs.
+    const value = encodeURIComponent(slug).replace(
+      /[.!'()*]/g,
+      (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
+    );
     const response = await apiFetch(`/api/courses/detail?slug=${value}`);
     if (response.status === 404) return { status: "missing" };
     if (response.ok) {

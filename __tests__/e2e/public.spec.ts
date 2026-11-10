@@ -189,6 +189,51 @@ test.describe("anonymous visitor", () => {
     ).toHaveLength(2);
   });
 
+  test("cancels a pending review page when navigating to another course", async ({
+    page,
+  }) => {
+    const course = await createCourseWithReviewsFixture(6);
+    await page.goto(`/course/${course.slug}`);
+    const more = page.getByRole("button", { name: "Xem thêm đánh giá cũ hơn" });
+    await expect(more).toBeVisible();
+    const started = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    await page.route(
+      "**/api/courses/reviews?*page=1",
+      async (route) => {
+        started.resolve();
+        await release.promise;
+        await route.abort().catch(() => {});
+      },
+      { times: 1 },
+    );
+    const abandoned = page
+      .waitForEvent(
+        "requestfailed",
+        (request) =>
+          new URL(request.url()).searchParams.get("courseId") ===
+            String(course.id) &&
+          new URL(request.url()).searchParams.get("page") === "1",
+      )
+      .catch(() => null);
+    try {
+      await more.click();
+      await started.promise;
+      await page
+        .locator("header")
+        .getByRole("link", { name: "DevSpace" })
+        .click();
+      await page.locator('a[href="/course/lam-quen-voi-html"]').first().click();
+      await expect(
+        page.getByRole("heading", { name: "Làm quen với HTML", exact: true }),
+      ).toBeVisible();
+      expect(await abandoned).not.toBeNull();
+      await expect(page.getByText(/E2E đánh giá số/)).toHaveCount(0);
+    } finally {
+      release.resolve();
+    }
+  });
+
   test.describe("try-it page", () => {
     // Every request the editor makes, with the origin it went to and the status it got (undefined: no response).
     function recordMonaco(page: Page) {

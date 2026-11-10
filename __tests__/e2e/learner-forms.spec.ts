@@ -319,10 +319,21 @@ test.describe("course review form", () => {
     await reserveStudentReview();
     const text = fixtureLabel("E2E đánh giá");
     await openReviewForm(page);
+    await expect(page.getByText("Chưa có đánh giá nào.")).toBeVisible();
 
     await page.getByRole("button", { name: "4 sao" }).click();
     await textbox(page).fill(`  ${text}  `);
+    const refresh = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/courses/reviews" &&
+        new URL(response.url()).searchParams.get("page") === "0" &&
+        response.ok(),
+    );
     await page.getByRole("button", { name: "Gửi đánh giá" }).click();
+    const reviewPage = await (await refresh).json();
+    expect(reviewPage.reviews).toContainEqual(
+      expect.objectContaining({ rating: 4, content: text }),
+    );
 
     await expect(page.getByText("Đánh giá thành công!")).toBeVisible();
     await expect(page.getByText(text, { exact: true })).toBeVisible();
@@ -360,13 +371,24 @@ test.describe("course review form", () => {
       page.getByRole("heading", { name: "Chỉnh sửa đánh giá của bạn" }),
     ).toBeVisible();
     await expect(textbox(page)).toHaveValue(stored);
+    await expect(page.getByText(stored, { exact: true })).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Cập nhật đánh giá" }),
     ).toBeVisible();
 
     const text = fixtureLabel("E2E đánh giá mới");
     await textbox(page).fill(text);
+    const refresh = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/courses/reviews" &&
+        new URL(response.url()).searchParams.get("page") === "0" &&
+        response.ok(),
+    );
     await page.getByRole("button", { name: "Cập nhật đánh giá" }).click();
+    const reviewPage = await (await refresh).json();
+    expect(reviewPage.reviews).toContainEqual(
+      expect.objectContaining({ rating: 2, content: text }),
+    );
 
     await expect(page.getByText("Đánh giá thành công!")).toBeVisible();
     await expect(page.getByText(text, { exact: true })).toBeVisible();

@@ -92,7 +92,6 @@ export interface LessonItem {
   title: string;
   slug: string;
   duration_display: string;
-  has_exercise: boolean;
   type?: "video" | "reading";
 }
 
@@ -104,11 +103,11 @@ export interface ChapterItem {
 
 export interface Instructor {
   id: number;
-  bio: string;
-  job_title: string;
+  bio: string | null;
+  job_title: string | null;
   profiles: {
-    full_name: string;
-    avatar_url: string;
+    full_name: string | null;
+    avatar_url: string | null;
   } | null;
 }
 
@@ -118,18 +117,28 @@ export interface CourseDetail {
   slug: string;
   description: string;
   image_url: string;
-  price: number;
+  price: number | null;
   price_text: string;
   stats: {
-    level: string;
     lesson_count: number;
     duration: string;
-    accessibility: string;
   };
-  learning_outcomes: string[];
   chapters: ChapterItem[];
   instructors: Instructor | null;
 }
+
+export type PublicCourseReview = {
+  id: number;
+  rating: number | null;
+  content: string | null;
+  created_at: string | null;
+  profiles: { full_name: string | null; avatar_url: string | null } | null;
+};
+
+export type PublicCourseReviewPage = {
+  reviews: PublicCourseReview[];
+  hasMore: boolean;
+};
 
 // Dùng cho Admin
 export interface DashboardStats {

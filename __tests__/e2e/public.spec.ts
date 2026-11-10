@@ -76,15 +76,42 @@ test.describe("anonymous visitor", () => {
     await expect(skeleton).toHaveCount(0);
   });
 
-  test("[S2] sees the course name and both lessons of a free course", async ({
+  test("[S2] reads the public course outline through NestJS", async ({
     page,
+    serverRecords,
   }) => {
+    const legacy: string[] = [];
+    page.on("request", (request) => {
+      if (
+        /\/rest\/v1\/(courses|chapters|lessons|reviews)/.test(request.url())
+      ) {
+        legacy.push(request.url());
+      }
+    });
     await page.goto("/course/lam-quen-voi-html");
     await expect(
       page.getByRole("heading", { name: "Làm quen với HTML" }),
     ).toBeVisible();
     await expect(page.getByText("Cấu trúc một trang HTML")).toBeVisible();
     await expect(page.getByText("Tiêu đề và đoạn văn")).toBeVisible();
+    await expect(page.getByText("Chưa có đánh giá nào.")).toBeVisible();
+    expect(serverRecords.apiCalls()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: "/api/courses/detail", status: 200 }),
+        expect.objectContaining({ path: "/api/courses/reviews", status: 200 }),
+      ]),
+    );
+    expect(legacy).toEqual([]);
+  });
+
+  test("shows the missing-course state for an unknown slug", async ({
+    page,
+  }) => {
+    await page.goto("/course/not-a-devspace-course");
+    await expect(page.getByText("Không tìm thấy khóa học")).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Quay về trang chủ" }),
+    ).toHaveAttribute("href", "/");
   });
 
   test("[S3] is sent to the login page from /admin", async ({ page }) => {
@@ -132,9 +159,9 @@ test.describe("anonymous visitor", () => {
     ).toBeVisible();
   });
 
-  // M3 paging: the course page reads reviews through `.range()` ordered by created_at, newest first, five a page.
-  test("[S10] a course with more reviews than a page lists the five newest, loads the older one on request and then hides the button", async ({
+  test("[S10] retries the same review page through NestJS and hides load more at the end", async ({
     page,
+    serverRecords,
   }) => {
     const course = await createCourseWithReviewsFixture(6);
     const contents = course.reviews.map((review) => review.content);
@@ -145,9 +172,21 @@ test.describe("anonymous visitor", () => {
     await expect(listed).toHaveText(contents.slice(0, 5));
     await expect(more).toBeVisible();
 
+    await page.route(
+      "**/api/courses/reviews?*page=1",
+      (route) => route.abort(),
+      { times: 1 },
+    );
     await more.click();
+    await expect(listed).toHaveText(contents.slice(0, 5));
+    await page.getByRole("button", { name: "Thử lại" }).click();
     await expect(listed).toHaveText(contents);
     await expect(more).toHaveCount(0);
+    expect(
+      serverRecords
+        .apiCalls()
+        .filter((call) => call.path === "/api/courses/reviews"),
+    ).toHaveLength(2);
   });
 
   test.describe("try-it page", () => {

@@ -120,11 +120,11 @@ Every entry below moved here on 2026-11-08 (Owner decision 5 in the plan) with i
 
 ### TM-P13: the Header search puts the typed text into a PostgREST filter unescaped
 
-- Status: Open (2026-11-07, found by Main while planning QE-U6; outside it); moved from BL-P20 (the backlog) on 2026-11-08, techstack-migration Owner decision 5.
+- Status: Open and deferred (Owner decision 15, 2026-11-10). The legacy Header search is outside the migration. Found on 2026-11-07 and moved from BL-P20 under decision 5.
 - Problem: `searchLesson` (`lib/supabase.ts:228`) builds ``.or(`name.ilike.%${query}%`)`` from the search box, so a query containing `,`, `)` or a filter keyword can change or break the filter; it also runs the query before checking for blank input.
 - Evidence: read at `259f123`; not reproduced. The browser client runs as anon or the user under RLS, so the reach is limited to rows RLS already allows.
 - Direction: use ``.ilike("name", `%${escaped}%`)`` with `%`, `_` and `\` escaped, and return early on blank input; add a unit or e2e row with a query containing `,`.
-- Exit condition: a query with filter characters searches for the literal text and cannot add a filter.
+- Exit condition: the legacy search is removed, or a query with filter characters searches for literal text and cannot add a filter.
 
 ### TM-P15: a 504 from the API does not cancel its handler, and a stalled request body is not bound by the 60-second limit
 

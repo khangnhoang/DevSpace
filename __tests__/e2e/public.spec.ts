@@ -4,6 +4,8 @@
 // component test could cover. "client-only -> <file>" is a QE-F8 move candidate under __tests__/unit/components/.
 // The audit changes no row, assertion or timeout.
 //   [S1] persistence: the public home lists the seed courses
+//   [S1b] persistence: the home render reads the list from the API once and sends the browser nowhere near the Data API
+//   [S1c] layout: the skeleton streams before the slow list arrives, then the cards replace it
 //   [S2] persistence: a free course and its lessons are public
 //   [S3] permission, redirect: /admin sends an anonymous visitor to /login
 //   [S4] permission, redirect: a lesson sends an anonymous visitor to /login
@@ -16,6 +18,7 @@
 //   [S6] client-only -> SignInForm.test.tsx (the form renders its fields)
 import type { Page } from "@playwright/test";
 import { tryItHref } from "../../lib/try-it";
+import { E2E_ORIGIN } from "../helpers/e2e-env";
 import { expect, test } from "./fixtures";
 import { createCourseWithReviewsFixture } from "./service-role";
 
@@ -25,6 +28,52 @@ test.describe("anonymous visitor", () => {
     await page.goto("/");
     await expect(page.getByText("Làm quen với HTML").first()).toBeVisible();
     await expect(page.getByText("JavaScript căn bản").first()).toBeVisible();
+  });
+
+  // TM-U4 AC6: the list is read by the Next server through the API, so the API's request record shows one call for the
+  // render and the browser never asks the Data API for courses or lessons.
+  test("[S1b] a render of the home page reads the course list from the API once, and the browser sends no course or lesson request to the Data API", async ({
+    page,
+    serverRecords,
+  }) => {
+    const dataApi: string[] = [];
+    page.on("request", (request) => {
+      if (/\/rest\/v1\/(courses|lessons)/.test(request.url()))
+        dataApi.push(request.url());
+    });
+    await page.goto("/");
+    await expect(page.getByText("Làm quen với HTML").first()).toBeVisible();
+    await expect(page.getByText("JavaScript căn bản").first()).toBeVisible();
+    // Everything the page asked for has settled once its cards are visible: the list was read before they rendered.
+    expect(serverRecords.apiCalls()).toEqual([
+      expect.objectContaining({
+        method: "GET",
+        path: "/api/courses/home",
+        status: 200,
+      }),
+    ]);
+    expect(dataApi, "the list does not come from the browser").toEqual([]);
+  });
+
+  // TM-U4 AC8: the e2e API holds the answer of this one read for as long as the cookie says (backend/e2e/main.ts), and the
+  // Next server forwards the visitor's cookies, so the fallback is on screen while the data is still on its way.
+  test("[S1c] while a slow course list is being read the visitor sees the banner and six card skeletons, and no course card; the cards replace them", async ({
+    page,
+  }) => {
+    await page
+      .context()
+      .addCookies([
+        { name: "e2e-api-delay-ms", value: "4000", url: E2E_ORIGIN },
+      ]);
+    await page.goto("/", { waitUntil: "commit" });
+    const skeleton = page.getByTestId("home-skeleton");
+    await expect(skeleton).toBeVisible();
+    await expect(skeleton.locator(".animate-pulse")).toHaveCount(7);
+    await expect(page.getByRole("heading", { level: 2 })).toHaveCount(0);
+    await expect(page.getByText("Làm quen với HTML").first()).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(skeleton).toHaveCount(0);
   });
 
   test("[S2] sees the course name and both lessons of a free course", async ({

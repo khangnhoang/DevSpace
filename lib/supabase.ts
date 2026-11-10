@@ -12,7 +12,6 @@ import type {
   DBChapter,
   DBProfile,
   DashboardCourse,
-  HomeCourseData,
   AdminCourseData,
   CourseDetail,
   ExerciseData,
@@ -198,31 +197,6 @@ export async function getUserDashboardData(
     (progressData || []) as DashboardProgress[],
     (enrollmentData || []) as DashboardEnrollment[],
   );
-}
-
-export async function getDashboardData(): Promise<HomeCourseData[]> {
-  const { data: courses, error } = await supabase
-    .from("courses")
-    .select("id, name, slug, description, image_url, price, lessons (slug, id)")
-    .order("id", { ascending: true })
-    .order("id", { referencedTable: "lessons", ascending: true });
-
-  if (error) {
-    console.error("Lỗi lấy khóa học ", error.message);
-    return [];
-  }
-
-  // Ép kiểu sang DBCourse có kèm relation lessons
-  const safeCourses = (courses || []) as unknown as DBCourse[];
-
-  return safeCourses.map((course) => {
-    const firstLesson = course.lessons?.[0];
-
-    return {
-      ...course,
-      firstLessonSlug: firstLesson?.slug || null,
-    };
-  });
 }
 
 export async function searchLesson(query: string) {

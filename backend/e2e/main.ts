@@ -45,6 +45,34 @@ function requestRecord(): ((app: NestExpressApplication) => void) | undefined {
   };
 }
 
+// Holds the answer of the home course list for the number of milliseconds the cookie `e2e-api-delay-ms` names (TM-U4 AC8). The Next server
+// forwards the visitor's cookies to the API, so a browser row can make this one read slow and watch the page show its
+// fallback first, which Playwright cannot do to a server-side request any other way. A cap keeps a stray cookie from
+// hanging a run, and src/ has nothing like it.
+const SLOW_HOME_CAP_MS = 10_000;
+
+function slowHome(app: NestExpressApplication) {
+  app.use((request: Request, _response: Response, next: NextFunction) => {
+    const match = /(?:^|;\s*)e2e-api-delay-ms=(\d+)/.exec(
+      request.headers.cookie ?? "",
+    );
+    if (
+      request.method !== "GET" ||
+      !match ||
+      !request.path.endsWith("/courses/home")
+    ) {
+      next();
+      return;
+    }
+    setTimeout(() => next(), Math.min(Number(match[1]), SLOW_HOME_CAP_MS));
+  });
+}
+
+function configure(app: NestExpressApplication) {
+  slowHome(app);
+  requestRecord()?.(app);
+}
+
 async function main() {
   const env = readServerEnv();
   await startApp(
@@ -57,7 +85,7 @@ async function main() {
       requestTimeoutMs: shorter("E2E_REQUEST_TIMEOUT_MS", env.requestTimeoutMs),
     },
     [E2eModule.register()],
-    requestRecord(),
+    configure,
   );
 }
 

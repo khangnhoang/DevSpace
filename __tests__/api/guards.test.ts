@@ -58,24 +58,30 @@ async function handled(): Promise<number> {
 }
 
 describe("default deny (AC5)", () => {
-  it("[AC5] the production build registers exactly /api/health and /api/health/db, both public", () => {
+  it("[AC5] [TM-U4 AC4] the production build registers exactly /api/health, /api/health/db and /api/courses/home, all public", () => {
     const routes = enumerateRoutes("dist");
     expect(routes.declared).toEqual([
+      { method: "GET", path: "/api/courses/home", public: true },
       { method: "GET", path: "/api/health", public: true },
       { method: "GET", path: "/api/health/db", public: true },
     ]);
     expect(routes.registered.sort()).toEqual([
+      "GET /api/courses/home",
       "GET /api/health",
       "GET /api/health/db",
     ]);
   });
 
-  it("[AC5] with the test-only routes added, the public set is still exactly the two health routes", () => {
+  it("[AC5] with the test-only routes added, the public set is still exactly the three named routes", () => {
     const routes = enumerateRoutes("dist-e2e");
     const publicRoutes = routes.declared
       .filter((route) => route.public)
       .map((route) => `${route.method} ${route.path}`);
-    expect(publicRoutes).toEqual(["GET /api/health", "GET /api/health/db"]);
+    expect(publicRoutes).toEqual([
+      "GET /api/courses/home",
+      "GET /api/health",
+      "GET /api/health/db",
+    ]);
 
     const privateRoutes = routes.declared.filter((route) => !route.public);
     expect(

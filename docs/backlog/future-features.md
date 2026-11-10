@@ -8,6 +8,12 @@ Direction the Owner has set that is outside the current scope. Work that is in s
 - Direction: give the seed courses invented images so the local stack shows them: image files in the repo uploaded on start through `[storage.buckets.<name>] objects_path` in `supabase/config.toml` (or into a bucket the baseline already has, such as `avatars`), and seed `image_url` values pointing at them (`supabase/seed.sql:39-41` sets none today). The bucket the code uploads to already exists (`supabase/migrations/20261021000000_baseline.sql:1420`), so no migration is needed for it. Also note that the local home page fetches an external placeholder image (`placehold.co`) through `/_next/image`; seed images remove that fetch. `db reset`, `npm test` and `npm run test:e2e` stay green (`test-quality-strategy`, Test data).
 - Target program: none yet (backlog; small task).
 
+## BL-F13: Gate frontend production promotion on API readiness
+
+- Status: Deferred by the Owner (2026-11-10). Continue the NestJS migration using the existing rollout order first.
+- Direction: stage the Vercel production build and keep the current frontend live until it is ready and Railway serves the required API version and passes a smoke check of the new endpoints. Apply the gate to frontend releases with a new backend dependency, including features added after the migration. Verify that the gate holds `devspace-lms.vercel.app` on the current Vercel plan, including when Railway is late or fails. Review [ADR 0008](../adr/0008-backend-architecture-and-hosting.md) before changing rollout policy.
+- Target program: none yet.
+
 ## Closed
 
 - BL-F6 — Moved to [quality-engineering](../programs/quality-engineering/future-features.md)

@@ -1,5 +1,6 @@
 -- TM-U4 / ADR 0008 D7: add only the reads for the public detail and review routes.
 -- The API role bypasses RLS, so private lesson and profile data and all writes stay outside these grants.
+-- Apply and verify these additive grants before merging the backend PR.
 begin;
 
 grant select (instructor_id) on public.courses to devspace_api;

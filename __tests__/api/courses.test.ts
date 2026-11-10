@@ -59,6 +59,7 @@ beforeAll(async () => {
   reversed = scope.label("TM-U4 course with a reversed lesson");
   const lessonA = scope.label("TM-U4 lesson A, lower id, later in order");
   const lessonB = scope.label("TM-U4 lesson B, higher id, first in order");
+  const legacyLesson = scope.label("TM-U4 lesson linked by chapter only");
   duplicateSlug = `trùng slug ${scope.tag}`;
   const duplicates = [
     scope.label("TM-U4 duplicate A"),
@@ -68,6 +69,7 @@ beforeAll(async () => {
   await scope.reserve("courses", { name: reversed });
   await scope.reserve("lessons", { title: lessonA });
   await scope.reserve("lessons", { title: lessonB });
+  await scope.reserve("lessons", { title: legacyLesson });
   const insert = async (table: string, row: Record<string, unknown>) => {
     const { error } = await scope.db.from(table).insert(row);
     if (error)
@@ -125,6 +127,14 @@ beforeAll(async () => {
     course_id: courseId,
     chapter_id: chapter.data.id,
     order_index: 1,
+  });
+  // The legacy outline embeds by chapter_id even for an independently assigned course_id.
+  await insert("lessons", {
+    title: legacyLesson,
+    slug: `tm-u4-lesson-legacy-${scope.tag}`,
+    course_id: 1,
+    chapter_id: chapter.data.id,
+    order_index: 2,
   });
   api = await startApi(apiTestEnv(stack));
 });
@@ -286,6 +296,9 @@ describe("public course detail and reviews", () => {
           expect.objectContaining({
             slug: `tm-u4-lesson-b-${sessions.scope.tag}`,
           }),
+          expect.objectContaining({
+            slug: `tm-u4-lesson-legacy-${sessions.scope.tag}`,
+          }),
         ],
       },
       {
@@ -328,6 +341,8 @@ describe("public course detail and reviews", () => {
     const lastPage = await last.json();
     expect(firstPage.hasMore).toBe(true);
     expect(lastPage.hasMore).toBe(false);
+    expect(firstPage.reviews).toHaveLength(5);
+    expect(lastPage.reviews).toHaveLength(1);
     const rows = [...firstPage.reviews, ...lastPage.reviews];
     expect(rows.map((row) => row.id)).toEqual(inserted.reverse());
     for (const review of rows) {

@@ -5,11 +5,8 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from "@nestjs/common";
-import { and, desc, eq, sql } from "drizzle-orm";
-import {
-  LAST_REVIEW_PAGE,
-  REVIEWS_PER_PAGE,
-} from "../../../lib/schemas/public-courses";
+import { desc, eq, sql } from "drizzle-orm";
+import { REVIEWS_PER_PAGE } from "../../../lib/schemas/public-courses";
 import { DbService } from "../db/db.service";
 import {
   chapters,
@@ -19,6 +16,7 @@ import {
   profileCards,
   reviews,
 } from "../db/schema";
+import { hasNextReviewPage } from "./review-pagination";
 
 // Keys are the ones the home page already reads (HomeCourseData in lib/supabase.ts); the JSON types match what
 // PostgREST sent: bigint ids are numbers, price is an integer.
@@ -133,13 +131,7 @@ export class CoursesService {
           },
         })
         .from(chapters)
-        .leftJoin(
-          lessons,
-          and(
-            eq(lessons.chapterId, chapters.id),
-            eq(lessons.courseId, chapters.courseId),
-          ),
-        )
+        .leftJoin(lessons, eq(lessons.chapterId, chapters.id))
         .where(eq(chapters.courseId, course.id))
         .orderBy(chapters.orderIndex, chapters.id, lessons.id);
 
@@ -219,7 +211,7 @@ export class CoursesService {
             ...review,
             profiles: profileCard(profiles),
           })),
-        hasMore: page < LAST_REVIEW_PAGE && rows.length > REVIEWS_PER_PAGE,
+        hasMore: hasNextReviewPage(page, rows.length),
       };
     } catch (error) {
       this.unavailable("course reviews", error);

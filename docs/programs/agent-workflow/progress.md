@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | Owner-assigned small task (2026-11-05), charter decision 4: correct the five instruction-audit findings and add same-condition comparison to the audit reference. No initiative plan. |
-| Current unit / checkpoint | None active. |
-| Status | The instruction audit corrections and the same-condition comparison procedure merged in [PR 67](https://github.com/khangnhoang/DevSpace/pull/67). |
-| Completed evidence | Local docs checks and independent diff review passed; the CI docs, lint, typecheck and build jobs passed. CI skipped the database and e2e jobs for the docs-only diff. |
+| Spec revision | [AW-U14 plan](implementation-plans/aw-u14-durable-skills/plan.md) r4, approved by the Owner on 2026-11-14. |
+| Current unit / checkpoint | AW-U14, CP0 (feasibility, by Main). |
+| Status | Not started. The plan passed the Codex plan gate (four rounds, PASS on r3 and r4). |
+| Completed evidence | `npm run docs:check` passed on the plan and the charter row. No implementation evidence yet. |
 | Accepted deviations | None. |
 | Blockers / Owner decisions | none. |
-| Next action | The Owner selects the next Agent Workflow item. |
-| Current authority | None active. |
+| Next action | Main runs CP0, then hands CP1 to CP4 to one implementor session. |
+| Current authority | Implement AW-U14 r4 with local commits per checkpoint; Main's one read-only hosted migration-list read of CP0 (b). Push, PR and merge are not granted. |
 
 ## Milestones
 

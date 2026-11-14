@@ -11,7 +11,7 @@ Use when a task touches tables, columns, constraints, indexes, migrations or rol
 
 Do not use for UI work with no database dependency. For server action contracts use `server-actions`; for ordering and PR split use `planning`.
 
-Database behavior is changed by a migration file, never by dashboard SQL left as the final state. This is a high-risk area, so the Codex gate applies (`AGENTS.md` section 3).
+Database behavior is changed by a migration file, never by dashboard SQL left as the final state. Which Codex reviews apply to the plan, the diff and the migration before it is applied is owned by `AGENTS.md` sections 2 and 3.
 
 ## Hard rules
 

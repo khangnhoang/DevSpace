@@ -28,7 +28,7 @@ Doc shape (master plan, detail plan, progress, problems) belongs to `program-doc
 8. **Acceptance** as actor + action + condition + expected result ("A learner cannot read paid lesson content without enrolling"), never "the feature works".
 9. **Verification and manual QA.** Allocate observable guarantees to assertions, layers, existing/new test locations and prerequisites under [test-quality-strategy](../test-quality-strategy/SKILL.md#select-checks-from-the-contract); use only current commands from its [command table](../test-quality-strategy/SKILL.md#which-command-for-which-change). Name bounded fixture/helper extensions or concrete blockers with their resolution. Plan residual manual scenarios with individual reasons (`frontend-workflow`), retaining explicit Owner QA and approved feature minima. When the plan has a hosted rollout, keep Main's simulated-role SQL postflight (`supabase-migration`); a policy/grant change plans RLS tests. Name what cannot be checked. For data/role-dependent verification, read [qa-matrix.md](references/qa-matrix.md) and write the allocation and residual QA matrix.
 10. **Risks** with impact, mitigation and the earliest checkpoint that exposes them. Expose high-risk assumptions early within a valid order.
-11. **Self-review** the plan (method in `code-review`), then report with a `Tự review` block. A large or high-risk plan goes to the Codex gate; the migration in it is Codex-gated before it is applied.
+11. **Self-review** the plan (method in `code-review`), then report with a `Tự review` block. Whether the plan goes to the Codex gate, and the review of a migration before it is applied, follow `AGENTS.md` sections 2 and 3.
 
 ## Git and approval
 
@@ -60,5 +60,5 @@ Implementation starting during discovery; paths or contracts proposed before ins
 - [ ] facts, assumptions, conflicts and questions are separate; Spec, facts and hypotheses are separate
 - [ ] only Owner-controlled decisions were put to the Owner, before writing
 - [ ] scope, exclusions, dependency order, acceptance, verification, manual QA and risks are explicit
-- [ ] migrations and permission changes are marked Codex-gated
+- [ ] work that `AGENTS.md` sections 2 and 3 gate is marked as gated
 - [ ] self-review done; no git action beyond what the Owner granted

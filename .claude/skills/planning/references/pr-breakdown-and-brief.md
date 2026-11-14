@@ -16,7 +16,7 @@ Parallel only when prerequisites are met, contracts are stable, file and state o
 
 ## Brief for the implementor session
 
-The plan file is the source of truth and wins on any conflict. The brief names it and adds only what the plan lacks. Do not restate the plan's scope or acceptance in new words.
+The plan file is the source of truth and wins over the brief on any conflict; it does not win over shared authority (`AGENTS.md`, `docs/agent-loops.md`). The brief names it and adds only what the plan lacks. Do not restate the plan's scope or acceptance in new words.
 
 Include:
 

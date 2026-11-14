@@ -8,7 +8,7 @@ Pick the strategy the dependency graph needs: vertical (one complete safe behavi
 
 For each PR record: title and outcome; depends on; must merge before; parallel-safe or not; scope and out of scope; expected and untouched files or domains; binding guardrails; hypotheses; acceptance; automated checks; manual QA; risks; completion criteria.
 
-Split a PR into checkpoints only when it helps review or resume. Each checkpoint finishes one logical increment with its own acceptance and verification, and leaves the repo coherent. Do not separate an implementation from its direct regression coverage just to get more checkpoints.
+Split a PR into checkpoints only when it helps review or resume. Each checkpoint finishes one logical increment with its own acceptance and verification, and leaves the repo coherent. Do not separate an implementation from its direct regression coverage just to get more checkpoints. Size a checkpoint by outcome, risk, verification, fault isolation and recovery before splitting or grouping, and give each an observable result; the first checkpoint of a feature that spans several shows the core behavior as a small working path.
 
 ## Parallel work
 
@@ -16,7 +16,7 @@ Parallel only when prerequisites are met, contracts are stable, file and state o
 
 ## Brief for the implementor session
 
-The plan file is the source of truth and wins on any conflict. The brief names it and adds only what the plan lacks. Do not restate the plan's scope or acceptance in new words.
+The plan file is the source of truth and wins over the brief on any conflict; it does not win over shared authority (`AGENTS.md`, `docs/agent-loops.md`). The brief names it and adds only what the plan lacks. Do not restate the plan's scope or acceptance in new words.
 
 Include:
 
@@ -28,6 +28,12 @@ Include:
 - concerns the plan does not cover, stated as a risk to prove with the expected result;
 - the report: per checkpoint the changed files and why, the checks run with exact results, a `Tự review` block, deviations from the plan, remaining risks, the commit list.
 
-The implementor stops and reports on any mismatch with the plan, a missing decision, or a finding that needs the Owner; it does not ask the Owner itself.
+What the implementor does with a discovery:
+
+- a detail that keeps the Spec is implemented and reported, and recorded as an accepted deviation when it departs from a hypothesis (`program-docs`, State has one owner);
+- a discovery that would change the Spec, an Owner decision or a permission stops the work and returns to Main, and the plan is revised before work resumes;
+- an unrelated finding is not fixed; it is reported to Main for recording (`AGENTS.md` section 5).
+
+The implementor also stops and reports on a mismatch with the plan or a missing decision; it does not ask the Owner itself.
 
 In the Claude environment, check and fix session effort as `.claude/rules.md` section 2 (Roles and sessions) says.

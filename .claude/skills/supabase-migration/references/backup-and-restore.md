@@ -83,7 +83,7 @@ The `versions` in the manifest are the `remote` column of `npx supabase services
 
 ## 3. Hosted counts and `hosted.json` (Main)
 
-Under the Owner's grant for this backup, and right after the dump, Main reads counts only (Owner decision 12): every `public` table, `auth.users`, `auth.identities` and `storage.objects`, plus `list_migrations`. No row is read.
+Under the Owner's grant for this backup, and right after the dump, Main reads counts only (Owner decision 12): every `public` table, `auth.users`, `auth.identities` and `storage.objects`, plus the migration list (`npx supabase migration list --linked`, a read-only metadata read). No row is read.
 
 ```sql
 select tablename from pg_tables where schemaname = 'public' order by 1;
@@ -104,7 +104,7 @@ Write `hosted.json` into the backup folder (UTF-8, the BOM is tolerated):
 }
 ```
 
-`versions` is the `remote` column of `npx supabase services`, read at the same time as the counts: the scratch stack runs these versions, and Storage and Auth create their own tables, so a version older than hosted lacks tables the dump has data for and the import fails with SQLSTATE 42P01. `migrations` is the list of versions `list_migrations` returns. `counts` must name every `public` table and the three required ones; the check fails when a restored `public` table is missing from it.
+`versions` is the `remote` column of `npx supabase services`, read at the same time as the counts: the scratch stack runs these versions, and Storage and Auth create their own tables, so a version older than hosted lacks tables the dump has data for and the import fails with SQLSTATE 42P01. `migrations` is the list of versions `npx supabase migration list --linked` shows in its remote column. `counts` must name every `public` table and the three required ones; the check fails when a restored `public` table is missing from it.
 
 ## 4. Restore and compare (Main)
 
@@ -138,11 +138,9 @@ npm run backup:check -- --teardown
 | (a) | The import dropped rows (an error masked by a trigger, a constraint) | Treat the backup as unusable; report the table names and counts |
 | (b), one table off by a few | A write between the dump and the hosted count | Retake the backup and recount; the Owner may choose a quiet time |
 | (b), a restored table not in `hosted.json` | A table was added after Main wrote the counts file | Recount including the table |
-| (c) | The history dump is stale or `list_migrations` changed | Retake `history.sql`, recount |
+| (c) | The history dump is stale or the hosted migration list changed | Retake `history.sql`, recount |
 | (d) | A download was interrupted, or an object changed | Redownload that bucket; `check-mismatches.txt` lists the object names |
-| A step failed | A role or extension in the dump the scratch stack does not have | Record the SQLSTATE and the statement class here as a known exclusion only after the Owner agrees; an unexplained error fails the drill |
-
-Known, explained exclusions: none recorded.
+| A step failed | A role or extension in the dump the scratch stack does not have | Record the SQLSTATE and the statement class as a known exclusion in the owning program's records, only after the Owner agrees (this reference holds no list); an unexplained error fails the drill |
 
 ## Not covered
 

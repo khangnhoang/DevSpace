@@ -15,13 +15,14 @@ One line each: number, date, decision. The decisions of each initiative stay in 
 2. (2026-10-23) The evergreen candidates are recorded in AW-F2 with their opening conditions and are not opened; performance skills are a deferred future feature of this program, AW-F3 (U3 D9).
 3. (2026-10-25) A `skill-authoring` skill owns how skills and references are written and maintained, the procedural rules of `.claude/rules.md` section 8 move into it, and `npm run docs:check` checks skill shape; this replaces the D4 reason for dropping FEAT-009 (U5 D1 to D3).
 4. (2026-11-05) Instruction audits compare requirements under the same conditions; the audit follow-up allows Playwright CLI manual QA on the dev stack while E2E debugging stays inside the managed test run.
+5. (2026-11-14) Skills cite no problem or feature identifier and `npm run docs:check` enforces it; a program's exception to the Codex gate lives in that program's plan as an Owner decision, not in `AGENTS.md`; the implementor stays a separate session (AW-U14 D1 to D3).
 
 ## 3. Invariants
 
 Each initiative keeps these; the rule itself lives with its owner.
 
 - One owner per rule, with links elsewhere (`skill-authoring`, Choosing where an instruction goes) — prevents copies that drift apart.
-- A skill holds no rollout or progress state and gives no steps for what is not on `main` (`skill-authoring`, What a skill holds), and no skill widens a permission (`AGENTS.md` section 8) — prevents agents running tools that do not exist, editing skills on every unit, or reading a skill as a grant.
+- A skill holds no rollout or progress state and gives no steps for what is not on `main` (`skill-authoring`, What a skill holds), and no skill widens a permission (`AGENTS.md` section 8) — prevents agents running tools that do not exist, editing skills on every unit, or reading a skill as a grant. A skill cites no problem or feature entry and holds no inventory or dated fact, checked by rule `skill-work-id` — prevents a pointer that goes stale when an entry closes.
 - Every Codex brief starts with a "Read first" list (`code-review`, Codex) — prevents Codex reviewing against its own defaults.
 - `npm run docs:check` enforces only what `program-docs` and its templates state (`program-docs`, Verify) and what `skill-authoring` states as required (`skill-authoring`, Shape and Choosing where an instruction goes, including the bounded import contract) — prevents the check and the skill disagreeing.
 
@@ -44,6 +45,7 @@ At most one initiative has an open plan at a time. A closed initiative keeps its
 | AW-U11 [Codex app callback and receipt handoffs](implementation-plans/aw-u11-codex-callbacks/plan.md) | `chore/aw-p4-callback-receipts` | AW-P4: app-chat result/receipt handoffs with verified feasibility; preserve Claude Code, OpenCode and Codex CLI execution paths. | AW-F4 delivered (PR #41) | Owner approved r2, plan commit and implementation 2026-11-01; CP0 feasibility and independent review precede operational rollout |
 | AW-U12 [CLI-first tooling and repository-controlled delivery](implementation-plans/aw-u12-cli-first/plan.md) | `chore/aw-p3-cli-first` | AW-P3: current machine CLI tooling, supported CLI-first selection and existing repository delivery authority; PR #44 docs catch-up. | AW-U11 delivered (PR #44) | Owner approved r2, plan commit and implementation 2026-11-01, with local checkpoint/correction commits; Medium, no automatic Codex gate |
 | AW-U13 [Skills hold no rollout state](implementation-plans/aw-u13-skills-hold-no-state/plan.md) | `chore/skills-hold-no-state` | Skills hold rules, procedures, pitfalls and stable example pointers, no rollout or progress state; `skill-authoring` and the two invariants say so. | none; lands before AF-U6 CP3 | Merged in PR 62 (`c58839b`) on 2026-11-04; Medium, docs only; Codex diff gate at the Owner's request |
+| AW-U14 [Durable skills and early feasibility in plans](implementation-plans/aw-u14-durable-skills/plan.md) | `chore/aw-u14-durable-skills` | Skills cite no problem or feature entry and `docs:check` enforces it; the 2026-11-14 audit findings are corrected; early feasibility, unit sizing and root-cause rules move from memory into `planning`, `code-review` and `AGENTS.md`. | none (AW-U13 merged) | Owner approval of the plan after the Codex plan gate; Medium |
 
 ## 5. Opening an initiative
 

@@ -144,6 +144,14 @@ Every entry below moved here on 2026-11-08 (Owner decision 5 in the plan) with i
 - Update (2026-11-09): the rollout did not decide it: R2 passed through the session pooler with `sslmode=require`, and neither a CA file nor `verify-full` was tried. It stays open for the Owner.
 - Exit condition: the hosted connection verifies the server certificate, or the Owner accepts the risk as it is.
 
+### TM-P18: no frontend procedure for a page that reads through the API
+
+- Status: Open (2026-11-14, found by the instruction audit of AW-U14; recorded by the implementor).
+- Problem: `frontend-design` and `frontend-workflow` describe pages that read with the Supabase clients and server actions. No skill tells an agent how a page or component reads data through the API (`lib/api.server.ts`, the `/api/*` rewrite in `proxy.ts`): where the call sits, how a refused or failed call reaches the UI state, and what the page test fakes. Each frontend unit that moves a read would invent it.
+- Evidence: a search of `.claude/skills/` for `api.server` and `API_INTERNAL_URL` finds only `server-actions/SKILL.md`, which covers the controller side (read at `2ddfce8`). Tooling-specific skill content that a unit adds together with its tooling stays with this program (agent-workflow charter, Boundary).
+- Direction: the first frontend unit that moves a page's read behind the API adds the procedure to `frontend-workflow` in the same change, from the page it moves.
+- Exit condition: `frontend-workflow` holds the procedure for a page that reads through the API, and a unit's plan cites it.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

@@ -11,14 +11,14 @@ Read this before planning, running or reporting the residual manual scenarios se
 
 ## What the local stack cannot show
 
-Local dev mail uses Gmail placeholders, so a send fails and is logged (BL-F5); seed courses have no images until BL-F4. The dev launcher already supports the Owner's AI key from the environment file; missing/expired credentials leave real-provider quality unverified. Agents do not inspect that file (`AGENTS.md` section 4). Guarded E2E uses a placeholder AI key and blocks external calls; it can assert application behavior at controlled boundaries and recorded mail intent, not real delivery/provider quality. Do not infer live access or permission from local configuration.
+Local dev mail uses Gmail placeholders, so a send fails and is logged; seed courses carry no images unless `supabase/seed.sql` adds them. The dev launcher already supports the Owner's AI key from the environment file; missing/expired credentials leave real-provider quality unverified. Agents do not inspect that file (`AGENTS.md` section 4). Guarded E2E uses a placeholder AI key and blocks external calls; it can assert application behavior at controlled boundaries and recorded mail intent, not real delivery/provider quality. Do not infer live access or permission from local configuration.
 
 When acceptance needs live provider/delivery or deployed image checks, name the exact remaining scenario and its authorized environment. For Vercel, the Owner signs in and hosted reads/writes follow `AGENTS.md` section 4; unrun checks remain pending. Which database previews use is unverified, so preview checks count as hosted.
 
 ## Run the pass
 
 - Use the supported browser structure/text inspection for structure and text, not screenshots, unless the question is visual.
-- Inspect console messages for errors and warnings; inspect network requests for the calls and their status (an unexpected 4xx or an unfiltered payload is a finding). A paid-content check includes looking at the page data and the network response, not only at what is rendered (P13).
+- Inspect console messages for errors and warnings; inspect network requests for the calls and their status (an unexpected 4xx or an unfiltered payload is a finding). A paid-content check includes looking at the page data and the network response, not only at what is rendered.
 - Toasts (`sonner`) disappear in seconds. To capture one, trigger the action and read the page text or the toast element immediately after, or read the console; report what you saw, and mark it pending if it was missed.
 - Drive the selected matrix scenarios with supported browser interaction controls. Inspect applicable primary/destructive flows, loading/failure recovery, empty/long data and permission variants without mechanically repeating automated assertions.
 - Responsive: use viewport resizing for 375px mobile, tablet and desktop (also 320px if no minimum is defined). Check no horizontal overflow (`document.documentElement.scrollWidth <= clientWidth`), wrapping text and buttons, table overflow, dialog fit, and tap targets. Reset the size with the desktop preset when finished.

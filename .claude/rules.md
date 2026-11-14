@@ -13,6 +13,7 @@ Model and effort choices, including Main's current chat selection, are owned by 
 - Start one implementor session with `start_session`, selecting the model and effort from the table, with `use_worktree: false` unless the plan says otherwise.
 - `start_session` caps effort at Main's own, so check with `get_session` and use `set_session_effort` to apply the selected effort before real work. If it cannot be applied, report the blocker.
 - Send corrections to that same session with `SendMessage`.
+- An agent definition outside the repository, at user level (`~/.claude/agents`), does not replace this implementor session: the planned-flow implementor stays a separate session the Owner can inspect.
 
 Shared responsibilities, single-writer ownership and review applicability: `AGENTS.md` sections 2–3. These bindings do not assign roles to agents merely by product name.
 

@@ -2,7 +2,7 @@
 
 Read this when verification depends on data, user roles or hosted state. Skip it otherwise.
 
-Selection belongs to [test-quality-strategy](../../test-quality-strategy/SKILL.md#select-checks-from-the-contract). The current local stack has a minimal invented seed (three users and two courses); Vitest `rls` and Playwright API/action fixtures exercise real boundaries, and browser E2E includes U1 deletes/failures as well as rendering and payments. Existing coverage is not a ceiling. Write the allocation before implementation's final checkpoint; do not send every uncovered assertion to manual QA.
+Selection belongs to [test-quality-strategy](../../test-quality-strategy/SKILL.md#select-checks-from-the-contract). The local stack holds a minimal invented seed (`supabase/seed.sql`); Vitest `rls` and Playwright API/action fixtures exercise real boundaries, and browser E2E covers deletes and failures as well as rendering and payments; the `rls` project and the specs under `__tests__/e2e/` show what exists. Existing coverage is not a ceiling. Write the allocation before implementation's final checkpoint; do not send every uncovered assertion to manual QA.
 
 ## Verification allocation
 

@@ -7,12 +7,12 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | [AW-U14 plan](implementation-plans/aw-u14-durable-skills/plan.md) r4, approved by the Owner on 2026-11-14. |
-| Current unit / checkpoint | AW-U14, CP2 done locally (AC4 to AC7, AC10, AC12); CP3 next. |
+| Current unit / checkpoint | AW-U14, CP3 done locally (AC8, AC9); CP4 next. |
 | Status | In progress. CP0 passed (the scan reproduces the audit list; the hosted migration list reads through the CLI without a password). The plan passed the Codex plan gate (four rounds, PASS on r3 and r4). |
 | Completed evidence | CP1: the `skill-work-id` rule and its tests (17 of 17, one mutation per new test), 32 reported identifiers plus one exemption removed or exempted, `docs:check` and `lint` pass. |
 | Accepted deviations | None. |
 | Blockers / Owner decisions | none. |
-| Next action | CP3: AC8 and AC9, then CP4. |
+| Next action | CP4: records, AC11 and AC13, final regression. |
 | Current authority | Implement AW-U14 r4 with local commits per checkpoint; Main's one read-only hosted migration-list read of CP0 (b). Push, PR and merge are not granted. |
 
 ## Milestones

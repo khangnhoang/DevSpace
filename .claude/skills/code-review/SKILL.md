@@ -36,7 +36,7 @@ Verdicts: `Approved` (all behavior, evidence, scope and docs complete; no Critic
 
 Verification status per claim: `Verified`, `Partially verified`, `Not verified`, `Blocked`. Say what changed, which risk each check covers, what was skipped. Passing tests are evidence, not proof of completeness. Do not invent defects or rubber-stamp.
 
-Plan review: fidelity to the Owner's request and scope; current repo reality; dependencies and assumption evidence; implementable without inventing material decisions; acceptance that can be observed; permissions, rollback and stop routes; migrations marked Codex-gated.
+Plan review: fidelity to the Owner's request and scope; current repo reality; dependencies and assumption evidence; implementable without inventing material decisions; acceptance that can be observed; permissions, rollback and stop routes; work that `AGENTS.md` sections 2 and 3 gate marked as gated. For a plan with several units or checkpoints also check each unit's size, the order against real prerequisites, that the first checkpoint shows the core behavior, where each feasibility assumption is tested, and that every required behavior has an owner and a reachable verification. Label verification evidence by kind (static read, command, test, manual, hosted read), and say when the environment it ran in limits it.
 
 ## Self-review
 

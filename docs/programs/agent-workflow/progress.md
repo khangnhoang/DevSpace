@@ -7,12 +7,12 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | [AW-U14 plan](implementation-plans/aw-u14-durable-skills/plan.md) r4, approved by the Owner on 2026-11-14. |
-| Current unit / checkpoint | AW-U14, CP4 done locally; all checkpoints implemented, awaiting Main review. |
+| Current unit / checkpoint | AW-U14, CP4 done locally; Main review correction applied, awaiting re-review. |
 | Status | Implemented locally, nothing pushed. The plan passed the Codex plan gate (four rounds, PASS on r3 and r4). |
 | Completed evidence | Final regression on the last code state: `tsc` 0, `npm test` 81 files and 1344 tests passed, `npm run test:e2e` 183 passed, `npm run build` 0, `npm run lint` 0, `docs:check` and `docs:check:test` (100 tests) pass; `skill-work-id` has one mutation per new test. |
 | Accepted deviations | None. |
 | Blockers / Owner decisions | none. |
-| Next action | Main reviews the diff `32da15a..HEAD`, then delivery under the Owner's grants. |
+| Next action | Main re-reviews the correction on top of `99561b9`, then delivery under the Owner's grants. |
 | Current authority | Implement AW-U14 r4 with local commits per checkpoint; Main's one read-only hosted migration-list read of CP0 (b). Push, PR and merge are not granted. |
 
 ## Milestones
@@ -132,3 +132,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-14 AW-U14 CP1: `docs:check` rule `skill-work-id` with tests, the rule text in `skill-authoring`, every reported identifier removed with its rule kept, the audit's false and stale statements corrected, the hosted migration list read through the CLI (`aef4394`).
 - 2026-11-14 AW-U14 CP2: the gate-exemption rule in `AGENTS.md` section 2, the root-cause rule in Tool selection, the user-level agent definition rule in `.claude/rules.md`, placeholder examples, version numbers that repeat a package file removed from `dependency-updates` (`129620e`).
 - 2026-11-14 AW-U14 CP3: assumption evidence, feasibility checks, unit sizing and discovery routing in `planning` and its references, multi-unit plan checks in `code-review` (`2ddfce8`).
+- 2026-11-14 AW-U14 CP4: charter decision and invariant, State, the AW-F6 split entry and the techstack-migration problem for the missing API-read procedure; final regression passed (`99561b9`).
+- 2026-11-14 AW-U14 Main review correction: three inventory and state statements in `qa-matrix.md`, `rls-test-design.md` and `backup-and-restore.md` reworded as rules naming their stable sources (this commit).

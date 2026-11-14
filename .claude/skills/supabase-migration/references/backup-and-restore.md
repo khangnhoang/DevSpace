@@ -140,7 +140,7 @@ npm run backup:check -- --teardown
 | (b), a restored table not in `hosted.json` | A table was added after Main wrote the counts file | Recount including the table |
 | (c) | The history dump is stale or the hosted migration list changed | Retake `history.sql`, recount |
 | (d) | A download was interrupted, or an object changed | Redownload that bucket; `check-mismatches.txt` lists the object names |
-| A step failed | A role or extension in the dump the scratch stack does not have | Record the SQLSTATE and the statement class here as a known exclusion only after the Owner agrees; an unexplained error fails the drill |
+| A step failed | A role or extension in the dump the scratch stack does not have | Record the SQLSTATE and the statement class as a known exclusion in the owning program's records, only after the Owner agrees (this reference holds no list); an unexplained error fails the drill |
 
 ## Not covered
 

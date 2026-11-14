@@ -15,13 +15,14 @@ One line each: number, date, decision. The decisions of each initiative stay in 
 2. (2026-10-23) The evergreen candidates are recorded in AW-F2 with their opening conditions and are not opened; performance skills are a deferred future feature of this program, AW-F3 (U3 D9).
 3. (2026-10-25) A `skill-authoring` skill owns how skills and references are written and maintained, the procedural rules of `.claude/rules.md` section 8 move into it, and `npm run docs:check` checks skill shape; this replaces the D4 reason for dropping FEAT-009 (U5 D1 to D3).
 4. (2026-11-05) Instruction audits compare requirements under the same conditions; the audit follow-up allows Playwright CLI manual QA on the dev stack while E2E debugging stays inside the managed test run.
+5. (2026-11-14) Skills cite no problem or feature identifier and `npm run docs:check` enforces it; a program's exception to the Codex gate lives in that program's plan as an Owner decision, not in `AGENTS.md`; the implementor stays a separate session (AW-U14 D1 to D3).
 
 ## 3. Invariants
 
 Each initiative keeps these; the rule itself lives with its owner.
 
 - One owner per rule, with links elsewhere (`skill-authoring`, Choosing where an instruction goes) — prevents copies that drift apart.
-- A skill holds no rollout or progress state and gives no steps for what is not on `main` (`skill-authoring`, What a skill holds), and no skill widens a permission (`AGENTS.md` section 8) — prevents agents running tools that do not exist, editing skills on every unit, or reading a skill as a grant.
+- A skill holds no rollout or progress state and gives no steps for what is not on `main` (`skill-authoring`, What a skill holds), and no skill widens a permission (`AGENTS.md` section 8) — prevents agents running tools that do not exist, editing skills on every unit, or reading a skill as a grant. A skill cites no problem or feature entry and holds no inventory or dated fact, checked by rule `skill-work-id` — prevents a pointer that goes stale when an entry closes.
 - Every Codex brief starts with a "Read first" list (`code-review`, Codex) — prevents Codex reviewing against its own defaults.
 - `npm run docs:check` enforces only what `program-docs` and its templates state (`program-docs`, Verify) and what `skill-authoring` states as required (`skill-authoring`, Shape and Choosing where an instruction goes, including the bounded import contract) — prevents the check and the skill disagreeing.
 

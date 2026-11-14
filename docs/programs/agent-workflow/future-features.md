@@ -20,6 +20,12 @@ Direction the Owner has set that is outside the scope of the current initiative.
 - Direction: skill rules and a way to verify that code is correct and performant, for example N+1 queries, unbounded queries and RLS policy patterns. The scope is decided when it is planned.
 - Target program: agent-workflow
 
+## AW-F6: Split test-quality-strategy into references
+
+- Status: Recorded 2026-11-14 (AW-U14 AC13); not started. `.claude/skills/test-quality-strategy/SKILL.md` had 204 lines on the final tree of AW-U14, above the signal of about 200 lines in `skill-authoring` (Shape).
+- Direction: move its situational sections (for example the test stack, API tests and the e2e rows) into references, each linked with a read condition, before the next change that adds content to that skill.
+- Target program: agent-workflow
+
 ## Closed
 
 - AW-F4 — Done: shared execution boundaries and role-to-model/effort selection delivered; runtime agent compliance remains unverified (PR #41)

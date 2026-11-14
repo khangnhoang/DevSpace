@@ -7,12 +7,12 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | [AW-U14 plan](implementation-plans/aw-u14-durable-skills/plan.md) r4, approved by the Owner on 2026-11-14. |
-| Current unit / checkpoint | AW-U14, CP3 done locally (AC8, AC9); CP4 next. |
-| Status | In progress. CP0 passed (the scan reproduces the audit list; the hosted migration list reads through the CLI without a password). The plan passed the Codex plan gate (four rounds, PASS on r3 and r4). |
-| Completed evidence | CP1: the `skill-work-id` rule and its tests (17 of 17, one mutation per new test), 32 reported identifiers plus one exemption removed or exempted, `docs:check` and `lint` pass. |
+| Current unit / checkpoint | AW-U14, CP4 done locally; all checkpoints implemented, awaiting Main review. |
+| Status | Implemented locally, nothing pushed. The plan passed the Codex plan gate (four rounds, PASS on r3 and r4). |
+| Completed evidence | Final regression on the last code state: `tsc` 0, `npm test` 81 files and 1344 tests passed, `npm run test:e2e` 183 passed, `npm run build` 0, `npm run lint` 0, `docs:check` and `docs:check:test` (100 tests) pass; `skill-work-id` has one mutation per new test. |
 | Accepted deviations | None. |
 | Blockers / Owner decisions | none. |
-| Next action | CP4: records, AC11 and AC13, final regression. |
+| Next action | Main reviews the diff `32da15a..HEAD`, then delivery under the Owner's grants. |
 | Current authority | Implement AW-U14 r4 with local commits per checkpoint; Main's one read-only hosted migration-list read of CP0 (b). Push, PR and merge are not granted. |
 
 ## Milestones
@@ -129,3 +129,6 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-04 AW-U13 merged after green CI: skills hold rules, procedures, pitfalls and stable example pointers, no rollout or progress state (PR 62, `c58839b`).
 - 2026-11-05 Small audit follow-up corrects the instruction conflicts and template/input guidance, and adds same-condition comparison to the read-only audit procedure (`fd4e650`).
 - 2026-11-05 Instruction audit follow-up merged: five findings corrected and the audit reference now compares instructions that apply under the same conditions (PR 67, `3d21627`).
+- 2026-11-14 AW-U14 CP1: `docs:check` rule `skill-work-id` with tests, the rule text in `skill-authoring`, every reported identifier removed with its rule kept, the audit's false and stale statements corrected, the hosted migration list read through the CLI (`aef4394`).
+- 2026-11-14 AW-U14 CP2: the gate-exemption rule in `AGENTS.md` section 2, the root-cause rule in Tool selection, the user-level agent definition rule in `.claude/rules.md`, placeholder examples, version numbers that repeat a package file removed from `dependency-updates` (`129620e`).
+- 2026-11-14 AW-U14 CP3: assumption evidence, feasibility checks, unit sizing and discovery routing in `planning` and its references, multi-unit plan checks in `code-review` (`2ddfce8`).

@@ -14,7 +14,7 @@ Read this before implementing or reviewing an async mutation, optimistic update,
 ## Forms
 
 - Required versus optional fields are visible; field errors sit next to the field; server errors are shown separately from local checks.
-- Keep what the user typed after a recoverable failure. Trim text and normalize a blank optional value to `null` where the persistence contract requires it (P16). The request still follows the receiver's input shape: a server action may take a string and normalize it itself; follow [server-actions, Core rules](../../server-actions/SKILL.md#core-rules) instead of sending the form schema's parsed output unchanged.
+- Keep what the user typed after a recoverable failure. Trim text and normalize a blank optional value to `null` where the persistence contract requires it. The request still follows the receiver's input shape: a server action may take a string and normalize it itself; follow [server-actions, Core rules](../../server-actions/SKILL.md#core-rules) instead of sending the form schema's parsed output unchanged.
 - Do not send or trust server-owned fields (user id, role, price, status); the server derives them.
 - Keyboard and mobile: labels, enter-to-submit where natural, proper input types.
 - Dynamic lists: stable keys (not the array index when items are removed or reordered), keep values on add and remove, keep errors by the item, and submit the intended order. A removal that loses data confirms first (`frontend-design`).

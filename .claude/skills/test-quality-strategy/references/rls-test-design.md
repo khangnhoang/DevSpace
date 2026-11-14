@@ -5,7 +5,7 @@ Read this when you write or review an rls test, change the seed for one, or debu
 ## Actors and requests
 
 - Send the request under test as the actor, through the local API with `@supabase/supabase-js`: `anon` (no session), `learner`, `student`, `admin` from `__tests__/rls/helpers.ts`. Each actor signs in once per run in the global setup (the local Auth limit is 30 sign-ins per 5 minutes); a test never signs in again.
-- A sign-up test (the only one is P12) uses `newAnonClient()`: `signUp` keeps the new session in memory even with sessions off, and a shared client would then send that user's token. Delete the user afterwards, even on failure.
+- A sign-up test, which is the one case that needs a client without a shared session, uses `newAnonClient()`: `signUp` keeps the new session in memory even with sessions off, and a shared client would then send that user's token. Delete the user afterwards, even on failure.
 - A function that returns `trigger` cannot be called through the API; read the catalog through `withPg` (for example `has_function_privilege`).
 
 ## The service role

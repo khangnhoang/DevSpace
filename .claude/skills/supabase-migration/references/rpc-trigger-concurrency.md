@@ -6,7 +6,7 @@ Read this when adding, changing or reviewing an RPC, trigger, SQL helper, lock, 
 
 Use an RPC when an operation must be atomic, permission-sensitive or concurrency-safe in the database; not to hide ordinary CRUD. Before writing one:
 
-1. Inspect existing RPCs and helpers (the snapshot lists definitions). Note that the code may call an RPC that does not exist on the database (P5).
+1. Inspect existing RPCs and helpers (the snapshot lists definitions). Check that every RPC the code calls is defined in the migrations; a call to a missing one fails at runtime.
 2. Decide whether `security definer` is needed. If so, set a fixed `search_path` (for example `set search_path = public`), check the caller's permission and the row's current state inside the function, and revoke execute from `public, anon, authenticated` before granting it to the intended role.
 3. Make a retryable transition idempotent and avoid duplicate side effects.
 4. Return only what the caller needs.
@@ -27,7 +27,7 @@ For counters, reservations, payments, webhooks, enrollment and status changes:
 - never call an external service inside the lock;
 - make retries safe and plan relevant duplicate/competing requests through [test-quality-strategy](../../test-quality-strategy/SKILL.md#coverage-model); identify contenders and assert the final persisted invariant. Sequential retry and stale-tab interaction do not prove concurrency; independent requests/connections and controlled synchronization may be needed.
 
-DevSpace cases: coupon use counts and reservation (P5, P6), approving or rejecting a payment together with its enrollment (P25), duplicate submit.
+DevSpace cases: coupon use counts and reservation, approving or rejecting a payment together with its enrollment, duplicate submit.
 
 ## Verification details
 

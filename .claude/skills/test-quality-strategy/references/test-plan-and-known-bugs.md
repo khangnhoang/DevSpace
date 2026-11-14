@@ -24,7 +24,7 @@ There is no "last result" field: it goes stale. Results belong in the report.
 A known bug is a defect that is recorded in a problems file and not fixed in this change. Its test must keep running, must fail loudly when anything else breaks, and must tell you when the bug is fixed. Use `knownBug` from `__tests__/helpers/known-bug.ts` (Vitest) or `knownBugE2e` from `__tests__/e2e/known-bug.ts` (Playwright; `bug(...)` wraps a Playwright `expect`); plain `test.fails` and skipped tests are not allowed for this, because they also pass when sign-in, the network or a query is broken.
 
 ```ts
-knownBug("P28", "[K3] a learner can change their own profiles.email", async (bug) => {
+knownBug("<ID>", "[K3] a learner can change their own profiles.email", async (bug) => {
   // 1. Preconditions, plain expect: the row exists and holds its initial value.
   // 2. The request. Plain expect that it reached the database: no error, or only the expected 42501.
   // 3. Read the persisted state back through the service role.

@@ -62,6 +62,12 @@ describe("buildE2eEnv", () => {
     }
   });
 
+  it("gives the payment QR the invented bank configuration, never a real account", () => {
+    expect(env.NEXT_PUBLIC_PAYMENT_BANK_CODE).toBe("VCB");
+    expect(env.NEXT_PUBLIC_PAYMENT_ACCOUNT_NUMBER).toMatch(/^0+$/);
+    expect(env.NEXT_PUBLIC_PAYMENT_ACCOUNT_NAME).toBe("DEVSPACE TEST");
+  });
+
   it("points Next at the e2e API on its own port, and switches the fixture pages on", () => {
     expect(E2E_API_ORIGIN).not.toBe(E2E_ORIGIN);
     expect(env.API_INTERNAL_URL).toBe(E2E_API_ORIGIN);

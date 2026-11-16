@@ -93,6 +93,21 @@ describe("buildDevProcessEnv", () => {
     expect(JSON.stringify(env)).not.toContain("owner@gmail.com");
   });
 
+  it("replaces an inherited bank configuration with the invented one", () => {
+    const withBank = buildDevProcessEnv(
+      {
+        ...inherited,
+        NEXT_PUBLIC_PAYMENT_BANK_CODE: "XX",
+        NEXT_PUBLIC_PAYMENT_ACCOUNT_NUMBER: "123456789",
+        NEXT_PUBLIC_PAYMENT_ACCOUNT_NAME: "OWNER NAME",
+      },
+      stack,
+    );
+    expect(withBank.NEXT_PUBLIC_PAYMENT_BANK_CODE).toBe("VCB");
+    expect(withBank.NEXT_PUBLIC_PAYMENT_ACCOUNT_NUMBER).toMatch(/^0+$/);
+    expect(withBank.NEXT_PUBLIC_PAYMENT_ACCOUNT_NAME).toBe("DEVSPACE TEST");
+  });
+
   it("removes an inherited AI key so Next takes it only from the environment file", () => {
     expect(env).not.toHaveProperty(AI_KEY_VARIABLE);
   });

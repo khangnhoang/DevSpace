@@ -37,6 +37,14 @@ Charter: [README.md](README.md). Progress: [progress.md](progress.md).
 - Direction: a later initiative decides between no trace, a scrubbed trace or accepting local-only traces.
 - Exit condition: a failure artifact holds no cookie or token value, or the Owner accepts the exposure.
 
+### QE-P10: a public course-navigation e2e row failed once on a three-heading strict-mode match
+
+- Status: Open (2026-11-16, found by the SE-U5 implementor during its final regression; outside that change, which touched only the payment modal, its configuration and their tests).
+- Problem: in a full `npm run test:e2e` run, the anonymous visitor row "cancels a pending review page when navigating to another course" (`__tests__/e2e/public.spec.ts:192`) failed at line 229: `getByRole('heading', { name: 'Làm quen với HTML', exact: true })` resolved to 3 elements (the detail page `h1` and two course-card headings, an `h2` and an `h3`), so the strict-mode `toBeVisible()` threw.
+- Evidence: 2026-11-16 on `1f4d779` (branch `chore/se-u5-public-repo-readiness`): 182 passed, 1 failed. Right after, `npm run test:e2e -- public -g "cancels a pending review page" --repeat-each=5` passed 5 of 5, and a second full run passed 183/183. The log and trace were kept only in the implementor's session scratchpad, not in the repository. The cause (whether course cards of another page were still rendered when the assertion ran, or the detail page itself rendered matching card headings) is not established, and the green reruns do not resolve it.
+- Direction: reproduce with repeated full runs keeping the trace of a failure, then make the row wait for a state unique to the destination page or scope the locator to the detail page's own heading, once the cause is named; do not add a retry or a longer timeout without a named cause.
+- Exit condition: the cause is named and fixed, one `--repeat-each=10` invocation of `public.spec.ts` passes, and one final full `npm run test:e2e` run passes the row.
+
 ## Resolved
 
 One line each: ID, status, one-line outcome. Details stay in Git.

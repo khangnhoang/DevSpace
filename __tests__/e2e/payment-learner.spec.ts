@@ -43,6 +43,8 @@
 //   [H13] refusal: an owner gets no pending order
 //   [H14] refusal: a free course gets no pending order
 //   [H15] refusal: a malformed argument writes nothing
+import { buildVietQrUrl } from "../../lib/payment-config";
+import { PAYMENT_PLACEHOLDER_ENV } from "../helpers/payment-placeholders";
 import { IDS, authFile } from "./accounts";
 import { expect, test } from "./fixtures";
 import {
@@ -96,9 +98,27 @@ test.describe("buying the paid course through the page", () => {
       }),
     ).toBeVisible();
     await expect(modalAmount(page)).toContainText(money("199000"));
-    expect(await learnerOrders()).toMatchObject([
+    const orders = await learnerOrders();
+    expect(orders).toMatchObject([
       { course_id: 2, amount: 199000, status: "pending" },
     ]);
+    // SE-U5: the built app inlined the placeholder bank configuration into the QR. Only the attribute is read; the
+    // network guard still aborts the image request itself.
+    const transfer =
+      `HOCPHI ${IDS.learner.slice(0, 4)} PAY${orders[0].id} javascript-can-ban`.toUpperCase();
+    await expect(page.getByRole("img", { name: "QR Payment" })).toHaveAttribute(
+      "src",
+      buildVietQrUrl(
+        {
+          bankCode: PAYMENT_PLACEHOLDER_ENV.NEXT_PUBLIC_PAYMENT_BANK_CODE,
+          accountNumber:
+            PAYMENT_PLACEHOLDER_ENV.NEXT_PUBLIC_PAYMENT_ACCOUNT_NUMBER,
+          accountName: PAYMENT_PLACEHOLDER_ENV.NEXT_PUBLIC_PAYMENT_ACCOUNT_NAME,
+        },
+        199000,
+        transfer,
+      ),
+    );
   });
 
   test("[PF2] reloading the page shows the order as waiting and still holds one pending order", async ({

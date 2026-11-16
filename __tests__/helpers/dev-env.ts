@@ -1,5 +1,6 @@
 import { apiDatabaseUrl } from "./api-role.ts";
 import type { LocalStack } from "./local-stack";
+import { PAYMENT_PLACEHOLDER_ENV } from "./payment-placeholders.ts";
 
 export const DEV_PORT = 3000;
 export const DEV_HOST = "127.0.0.1";
@@ -27,6 +28,7 @@ export function buildDevEnv(stack: LocalStack): Record<string, string> {
     GMAIL_PASS: "dev-placeholder-not-a-password",
     // The API `npm run dev` starts beside Next (DEV_API_PORT): `/api/*` is rewritten to it and the helper calls it.
     API_INTERNAL_URL: `http://${DEV_HOST}:${DEV_API_PORT}`,
+    ...PAYMENT_PLACEHOLDER_ENV,
   };
 }
 

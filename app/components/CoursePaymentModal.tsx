@@ -4,6 +4,7 @@ import Image from "next/image";
 import { X, Loader2, Copy, Check, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { cancelPayment, updatePaymentWithCoupon } from "@/app/action/payment";
+import { buildVietQrUrl, readPaymentBankConfig } from "@/lib/payment-config";
 
 interface Props {
   course: { name: string; slug: string; price: number };
@@ -36,10 +37,12 @@ export default function CoursePaymentModal({
   const transferContent =
     `HOCPHI ${userId.slice(0, 4)} PAY${paymentId} ${course.slug}`.toUpperCase();
 
-  // Tạo link QR Code động theo giá tiền (finalPrice)
-  // Lưu ý: addInfo chính là nội dung chuyển khoản
-  // MB Bank (Mã là MB) - STK: 0985357081 - Tên: NGUYEN HOANG KHANG
-  const qrUrl = `https://img.vietqr.io/image/MB-0985357081-compact2.png?amount=${finalPrice}&addInfo=${transferContent}&accountName=NGUYEN HOANG KHANG`;
+  // Null when the deployment lacks a bank value: the modal then shows no QR and blocks the confirm (SE-U5 AC3).
+  const bankConfig = readPaymentBankConfig();
+  // The QR follows the price after a coupon (finalPrice); addInfo carries the transfer content.
+  const qrUrl = bankConfig
+    ? buildVietQrUrl(bankConfig, finalPrice, transferContent)
+    : null;
 
   // --- LOGIC CHECK COUPON ---
   const handleCheckCoupon = async () => {
@@ -170,17 +173,27 @@ export default function CoursePaymentModal({
           {/* QR Code & Info Box */}
           <div className="w-full bg-blue-50 border border-blue-200 p-4 rounded-xl flex flex-col items-center gap-4">
             {/* Ảnh QR từ VietQR */}
-            <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-100">
-              {/* unoptimized: the QR URL carries the amount and transfer content, so the browser loads it straight from VietQR instead of through the image optimizer (Owner decision, BL-P1). */}
-              <Image
-                src={qrUrl}
-                alt="QR Payment"
-                width={160}
-                height={160}
-                unoptimized
-                className="w-40 h-40 object-contain"
-              />
-            </div>
+            {qrUrl ? (
+              <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-100">
+                {/* unoptimized: the QR URL carries the amount and transfer content, so the browser loads it straight from VietQR instead of through the image optimizer (Owner decision, BL-P1). */}
+                <Image
+                  src={qrUrl}
+                  alt="QR Payment"
+                  width={160}
+                  height={160}
+                  unoptimized
+                  className="w-40 h-40 object-contain"
+                />
+              </div>
+            ) : (
+              <p
+                role="alert"
+                className="w-full bg-white border border-amber-300 text-amber-800 rounded-lg p-3 text-sm text-center"
+              >
+                Thanh toán tạm thời chưa khả dụng. Vui lòng quay lại sau hoặc
+                hủy đơn này.
+              </p>
+            )}
 
             <div className="w-full space-y-2 text-sm">
               {/* Dòng hiển thị giá tiền */}
@@ -231,8 +244,8 @@ export default function CoursePaymentModal({
         <div className="p-4 border-t bg-gray-50 flex flex-col gap-3">
           <button
             onClick={handleConfirmPayment}
-            disabled={isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.98]"
+            disabled={isLoading || !bankConfig}
+            className={`w-full bg-blue-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg ${bankConfig ? "hover:bg-blue-700 active:scale-[0.98]" : "opacity-50 cursor-not-allowed"}`}
           >
             {isLoading ? (
               <Loader2 className="animate-spin" />

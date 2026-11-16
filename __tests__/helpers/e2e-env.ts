@@ -1,5 +1,6 @@
 import { apiDatabaseUrl } from "./api-role.ts";
 import type { LocalStack } from "./local-stack";
+import { PAYMENT_PLACEHOLDER_ENV } from "./payment-placeholders.ts";
 
 // The E2E server uses a distinct port, but managed dev and tests contend for the same local database.
 export const E2E_PORT = 3100;
@@ -28,6 +29,7 @@ export function buildE2eEnv(stack: LocalStack): Record<string, string> {
     API_INTERNAL_URL: E2E_API_ORIGIN,
     // Read by next.config.ts: the page extension that makes the test-only fixture routes exist in this build only.
     E2E_NEXT_FIXTURES: "1",
+    ...PAYMENT_PLACEHOLDER_ENV,
   };
 }
 

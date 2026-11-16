@@ -25,8 +25,8 @@ export function paymentBankConfig(
   return { bankCode, accountNumber, accountName };
 }
 
-// Each read names its public variable literally: `next build` inlines only such reads into the client bundle, so a
-// dynamic key would leave the modal unconfigured in production. The values are fixed when the build runs.
+// Each read names its public variable literally, which is what guarantees `next build` inlines the value into the
+// client bundle; a dynamic key leaves the modal unconfigured in production. The values are fixed when the build runs.
 export function readPaymentBankConfig(): PaymentBankConfig | null {
   return paymentBankConfig({
     bankCode: process.env.NEXT_PUBLIC_PAYMENT_BANK_CODE,

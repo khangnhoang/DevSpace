@@ -109,6 +109,8 @@ npm install
 
 File môi trường là của Owner, không nằm trong repo và không cần mở hay sửa. Lệnh chạy Supabase local (Docker Desktop phải đang chạy) nằm ở mục Commands của [AGENTS.md](AGENTS.md).
 
+Bản triển khai cần ba biến cho mã QR thanh toán: `NEXT_PUBLIC_PAYMENT_BANK_CODE` (mã ngân hàng theo VietQR), `NEXT_PUBLIC_PAYMENT_ACCOUNT_NUMBER` (số tài khoản) và `NEXT_PUBLIC_PAYMENT_ACCOUNT_NAME` (tên chủ tài khoản). Giá trị được gắn vào bản build lúc `next build`, nên sau khi đổi phải build lại. Thiếu hoặc để trống một biến thì cửa sổ thanh toán không hiện mã QR và báo thanh toán tạm thời chưa khả dụng. `npm run dev`, e2e và CI dùng giá trị giả, không cần giá trị thật.
+
 ### 3. Chạy ứng dụng
 
 ```bash

@@ -6,16 +6,16 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | [SE-U1 plan](implementation-plans/se-u1-payment-write-integrity/plan.md) r3, approved by the Owner on 2026-11-07 after the Codex plan gate passed in round 4. |
-| Current unit / checkpoint | None open. SE-U1 is delivered: PR 1 (PR 71, `268545d`) and PR 2 (PR 72, `8fb9b59`). |
-| Status | SE-U1 completed on 2026-11-07: M1 and M2 are applied to hosted with their postflights and D5 probes, both production deploys succeeded, and production QA passed. SE-P8 to SE-P12 are resolved. |
-| Completed evidence | SE-U1 milestones; M1 and M2 postflights and D5 probes below; PRs 71 and 72; production QA below. SE-U4: milestones and PR #70. |
+| Spec revision | [SE-U5 plan](implementation-plans/se-u5-public-repo-readiness/plan.md) r3, approved by the Owner on 2026-11-16 after the Codex plan gate passed in round 4. |
+| Current unit / checkpoint | SE-U5, CP1 not started. |
+| Status | In progress: plan approved, implementation not started. Rollout step 1 is done: the Owner set the three payment variables on Vercel for Production and Preview on 2026-11-16. |
+| Completed evidence | SE-U5: Codex plan gate PASS on r3; `npm run docs:check` clean. Historical: SE-U1 to SE-U4 milestones below. |
 | Accepted deviations | None. |
 | Hosted state | Hosted migration history ends at `20261106214043_se_u1_payment_write_lock` (M2), applied on 2026-11-07 under the Owner's prepare and apply grants, after `20261106211345_se_u1_payment_rpcs` (M1). M1 catalog postflight: the four functions are `security definer` with an empty `search_path`, owned by `postgres` and executable only by `service_role`; the three guard triggers, the statement-level release trigger, the partial unique index and the `coupon_id` FK (`on delete restrict`) are present. M2 postflight: the `payments` grants for anon, authenticated and service_role are DELETE, REFERENCES, SELECT, TRIGGER and TRUNCATE, with no INSERT or UPDATE. M2 D5 probe (Owner grant: `student@devspace.com`, course `ngonngu-c` id 22, coupon `SV2025`) as service_role in a rolled-back transaction: a direct insert and a direct update each returned 42501; create, apply (+1 use), cancel (−1 use) and approve (success, plus enrollment) all worked; anon and authenticated inserts returned 42501; afterwards no order or enrollment remained and `SV2025` was at 0 uses. Production keeps the QA orders PAY101 (failed) and PAY102 (success, enrolled). The branches `fix/se-u1-payment-write-integrity` and `fix/se-u1-payment-write-lock` remain on origin. |
 | Production QA | Passed on 2026-11-07 (plan runbook step 11) as `student@devspace.com` on `ngonngu-c`, after the Owner signed in: an invalid code left the amount at 500000; `SV2025` gave 400000 and its use count went 0 to 1; cancelling PAY101 set it to failed and the count back to 0; PAY102 with `SV2025` went to pending and showed "Đang chờ duyệt"; the Owner approved PAY102 as admin, so it became success, the student was enrolled and `SV2025` stayed at 1. Not checked: the approval mail, and the coupon switch in the UI (the code field locks once a code is applied; the switch was proven only by the D5 probe). |
 | Blockers / Owner decisions | None. |
-| Next action | None in SE-U1; the Owner selects the next security-engineering item. SE-F2 and SE-F3 move to the techstack migration (Owner decision of 2026-11-07, [future-features.md](future-features.md)). |
-| Current authority | None open for security-engineering. |
+| Next action | The implementor implements CP1 and CP2 of SE-U5; Main reviews, then the Codex gate on the diff. |
+| Current authority | SE-U5: implementation by a separate implementor session with local commits per checkpoint. Push, PR, merge and the visibility switch are not granted. |
 
 ## Milestones
 
@@ -54,3 +54,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-07 SE-U1 Codex implementation gate PASS in round 4; M1 applied to hosted with catalog postflight and D5 behavior probes passed; PR 1 merged and deployed to production (PR 71, 268545d)
 - 2026-11-07 SE-U1 M2 applied to hosted with its postflight and D5 probe, and PR 2 delivered with the direct `payments` INSERT and UPDATE revoked from the API roles (PR 72, `8fb9b59`)
 - 2026-11-07 SE-U1 production QA passed on both deploys: coupon applied, cancelled and re-applied, and an admin approval enrolled the student; SE-P8 to SE-P12 resolved (PR 72, `8fb9b59`)
+- 2026-11-16 Owner approved SE-U5 r3 (public repository readiness) after Codex PASS in round 4, set the three payment variables on Vercel, and granted the plan commit and implementation (this commit)

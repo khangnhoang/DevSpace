@@ -1,5 +1,5 @@
 "use client";
-import { useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import type { ReactNode } from "react";
 import { Play, FileCode, FileJson, Cpu } from "lucide-react";
 import Editor, { loader } from "@monaco-editor/react";
@@ -7,7 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import MobileBlocker from "@/app/components/MobileBlocker";
 import { readTryItParams, type TryItLanguage } from "@/lib/try-it";
-import { interpretPistonResponse } from "./_lib/piston-result";
+import { runCpp } from "./_lib/run-cpp";
 
 // Monaco is copied from the npm package to public/monaco/vs at install (scripts/monaco/copy-vs.mjs), so the editor
 // runs the version package-lock.json holds from this origin instead of the loader's default CDN.
@@ -63,8 +63,27 @@ function TryItEditor() {
   const [srcDoc, setSrcDoc] = useState("");
   const [consoleOutput, setConsoleOutput] = useState<string[]>([]);
   const [isRunning, setIsRunning] = useState(false);
+  // The controller of the pending C++ run, and the token that makes it current: only the run it holds may change
+  // the console, the toast or the waiting state. Null while nothing is pending.
+  const pendingRun = useRef<AbortController | null>(null);
+
+  const cancelPendingRun = () => {
+    pendingRun.current?.abort();
+    pendingRun.current = null;
+    setIsRunning(false);
+  };
+
+  // Aborts only a pending run, so React's development remount of effects cannot stop a live one.
+  useEffect(
+    () => () => {
+      pendingRun.current?.abort();
+      pendingRun.current = null;
+    },
+    [],
+  );
 
   const switchLanguage = (lang: TryItLanguage) => {
+    cancelPendingRun();
     setLanguage(lang);
     setCode(
       example.code !== null && lang === example.language
@@ -77,6 +96,8 @@ function TryItEditor() {
   };
 
   const handleRunCode = async () => {
+    // A second activation before the disabled button renders starts no second request.
+    if (pendingRun.current) return;
     setIsRunning(true);
     setConsoleOutput([]);
 
@@ -120,31 +141,24 @@ function TryItEditor() {
 
     // C++
     if (language === "cpp") {
-      try {
-        const res = await fetch("https://emkc.org/api/v2/piston/execute", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            language: "cpp",
-            version: "10.2.0",
-            files: [{ content: code }],
-          }),
-        });
+      const run = new AbortController();
+      pendingRun.current = run;
+      const result = await runCpp(code, fetch, run.signal);
+      // A run abandoned by a tab switch or by leaving the page changes nothing.
+      if (pendingRun.current !== run) return;
+      pendingRun.current = null;
+      setIsRunning(false);
+      if (result.outcome === "aborted") return;
 
-        // A non-JSON body (an HTML error page) is read as no body, so it shows the HTTP error below.
-        const data: unknown = await res.json().catch(() => null);
-        const display = interpretPistonResponse(res.status, res.ok, data);
-        setConsoleOutput(display.lines);
-        if (display.outcome === "success") toast.success("Chạy thành công!");
-        else if (display.outcome === "run-error")
-          toast.error("Có lỗi biên dịch hoặc runtime!");
-        else toast.error("Server biên dịch không chạy được mã!");
-      } catch {
+      setConsoleOutput(result.lines);
+      if (result.outcome === "success") toast.success("Chạy thành công!");
+      else if (result.outcome === "run-error")
+        toast.error("Có lỗi biên dịch hoặc runtime!");
+      else if (result.outcome === "timeout")
+        toast.error("Chương trình chạy quá lâu!");
+      else if (result.outcome === "connection-error")
         toast.error("Lỗi kết nối Server biên dịch!");
-        setConsoleOutput(["Lỗi: Không thể kết nối đến server Piston API."]);
-      } finally {
-        setIsRunning(false);
-      }
+      else toast.error("Server biên dịch không chạy được mã!");
     }
   };
 

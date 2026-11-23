@@ -40,6 +40,18 @@ Future initiatives retain their transferred scope and need separate approval. QE
 - Direction: a few whole-schema assertions in the integration layer, written like the existing catalog checks (`has_function_privilege` in `[P10]` of `__tests__/rls/profiles.test.ts` and in `community.test.ts`): every `public` table has RLS enabled; no `security definer` function is executable by `anon` or `authenticated` outside an explicit allowlist with reasons; named constraints the app relies on exist (a unique `courses.slug` once BL-P12 adds it). They fail on the migration that forgets one. No pgTAP or `supabase test db`, since the techstack migration (ADR 0001) replaces Supabase.
 - Target program: quality-engineering.
 
+## QE-F11: Shorter e2e CI feedback: shards, flaky counts and setup cost
+
+- Status: Recorded 2026-11-24 by the Owner; deferred until its own initiative is approved. It narrows QE-F3 for the `e2e` job: the Owner chose sharding now, which replaces QE-F3's "no premature sharding" for this job; the rest of QE-F3 stays open.
+- Direction:
+  - Measured baseline, PR #91 run 45276184825 (head `75ba2c5`), `e2e` job 6 min 6 s: `npm ci` 56 s, browser install 4 s, test stack start 71 s (about 28 s of it image pulls), Next and API build 23 s, tests about 3 min 17 s at `workers: 1`. Test time per spec: `auth-forms` 59 s, `admin` 23 s, `public` 23 s, `admin-content-forms` 19 s, `student` 16 s, the rest under 12 s each (192 s in all).
+  - Do: split `e2e` into 2 shards (a matrix, each with its own runner and test stack, so tests share no data), balanced by file from measured times; `auth-forms` alone bounds a third shard at about 65 s, so 2 is the target. Keep a single `e2e` result that the six blocking checks of `pr-and-ci.md` and any branch protection the Owner sets can still name, and keep the `playwright-report` artifact per shard. Rerunning only the failed shard is part of the gain.
+  - Do: the PR body's `CI result` states the number of flaky tests (failed, then passed on retry) with their names, read from the run, so a retry-passed test is not silent (`git-pr-workflow`, `pr-and-ci.md`, Record the CI result).
+  - Try, keep only if a measured run shows a gain: cache `node_modules` keyed on `package-lock.json` and `.node-version` (applies to all six jobs); pull the test stack's Docker images in the background while `npm ci` runs (the image list follows the pinned Supabase CLI version, so a CLI update must keep it in step).
+  - Not doing (Owner, 2026-11-24): `maxFailures` fail-fast. No `retries` increase and no worker increase: the specs share one stack, its seed, the API call record files and the local Auth sign-in limit.
+  - CI changes need their own plan, the Codex gate (`AGENTS.md` section 2) and delivery grants.
+- Target program: quality-engineering.
+
 ## Closed
 
 - QE-F5 — Done: QE-U3 runs `rls` and `e2e` on a separate `devspace-test` stack (ports 55320–55329) that the test commands start, check and reset, beside the dev stack (PR #50)

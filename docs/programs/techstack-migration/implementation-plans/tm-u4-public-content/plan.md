@@ -134,3 +134,115 @@ Baseline: `a568e98`. Owner approval: 2026-11-10. This appendix defines the next 
 - Route paths and pagination wiring are implementation hypotheses. If reviews use the browser rewrite, after the backend deploy measure sequential anonymous reads through the production frontend origin against the 600 ms end-to-end p95 target in ADR 0008 D11. Report the endpoint, sample count, status results and p95. Bring the result to the Owner before switching the frontend if it exceeds the target.
 - For visual QA, compare the existing course details and review layout at desktop and 375 px on the dev stack. Use test-stack fixtures for pagination and tied timestamps. After the frontend deploy, the Owner smoke-checks the public route using an existing course, without creating hosted fixtures.
 - Before the backend PR merges: Codex reviews the grants and rollback, CI passes, and the Owner takes a fresh backup that Main verifies. Main obtains separate prepare and apply grants and verifies the exact migration and effective privileges before merge. Before the frontend PR merges: Railway health reports the backend merge commit and both public endpoints answer as expected. Keep existing public Data API access for the old frontend and other callers. After the frontend deploy, verify both reads on production. If rolling back, verify the compatible frontend is live before removing endpoints, then verify no deployed API uses the new grants before revoking them.
+
+## Appendix B — Try It C++ runner (r3)
+
+Baseline: `f10c1d5`, checked 2026-11-17. Owner approval: 2026-11-17, after the Codex plan gate passed in round 3. This appendix defines the last slice of TM-U4 and resolves TM-P11. Sections 1–5 and Appendix A above preserve the two approved slices.
+
+Sizing (master plan decision 13): medium, one PR, frontend only. No route, migration, grant, session or payment code changes, so decision 11 asks for a short plan and Main's review of the diff; the Owner asked for the Codex gate on this plan.
+
+### B.1 Binding Spec
+
+Outcome: a visitor runs C++ on `/try_it` and sees the program's result, because the C++ tab sends the code from the browser to Wandbox instead of the Piston API that refuses it; every way a run can fail shows a message and frees the button.
+
+| ID | Observable result |
+| --- | --- |
+| B-AC1 | A visitor, signed in or not, runs a C++ program and the answer has `status` "0" and an empty `signal`: the console shows the compiler text when there is any (a warning), then the program's standard output, line by line, and the toast "Chạy thành công!" appears. |
+| B-AC2 | The answer has any other `status` (the empty string included) or a `signal` that is not empty: the console shows, in this order, the compiler text, the program's standard output and its standard error, each only when it is not empty, and then one closing line that says compiling or running did not succeed and gives the status and the signal when they are not empty; the toast "Có lỗi biên dịch hoặc runtime!" appears. A program that does not compile therefore shows the compiler's message and the closing line, and a segmentation fault, which returns no text, shows the closing line alone. |
+| B-AC3 | The closing line of B-AC2 is never cut: when the output is longer than the B-AC7 limit, the cut notice and then the closing line still end the console. The page does not try to tell a compile failure from a run failure, because the answer does not let it: a program that compiles with a warning and returns 1 without printing looks the same as one that does not compile (trial result 2). |
+| B-AC4 | Wandbox answers with an HTTP status other than 200, or with a body that is not a JSON object in which `status`, `signal`, `compiler_error`, `program_output` and `program_error` are all strings (a field that is missing or of another type): the console shows one error line that carries the HTTP status and the toast "Server biên dịch không chạy được mã!" appears. For HTTP 429 the line tells the visitor in Vietnamese that they ran code too many times and should wait a few minutes. |
+| B-AC5 | No answer arrives within the deadline (30 seconds): the page stops waiting and aborts its request, the console shows one Vietnamese line that says it stopped waiting because the run took too long and suggests checking for an endless loop, an error toast appears and the run button is usable again. A request that fails to connect shows the existing connection error, worded without the name of a provider. |
+| B-AC6 | While a C++ run is waiting, the run button is disabled, a second activation before the next render starts no second request, and the console shows "Compiling...". Only the current run may change the console, the toast and the waiting state: when the visitor switches tab during the wait, the request is aborted and the button is usable at once on the new tab; the abandoned run writes nothing and shows no toast, also after the visitor returns to the C++ tab, and when the visitor starts a new run there, the end of the abandoned one neither enables the button nor replaces the new run's console. Leaving the page aborts a pending request. |
+| B-AC7 | The console shows at most a fixed number of output lines (1,000) followed by one line that says the rest was cut; shorter output is shown whole. Output is rendered as text, never as markup. |
+| B-AC8 | The only request the application sends for a C++ run goes to `https://wandbox.org/api/compile.json` (with the preflight the browser adds), as a POST with `credentials: "omit"` and `referrerPolicy: "no-referrer"` whose JSON body holds exactly the compiler name and the code in the editor. Loading `/try_it` still sends no request off the app's origin, and the HTML and JavaScript tabs run the visitor's code as at the baseline. |
+| B-AC9 | No file under `app/`, `lib/` or `__tests__/` names Piston or `emkc.org` any more, and no message the application writes names the provider. |
+
+Scope: `app/(main)/try_it/page.tsx`, its `_lib/` helpers and their tests; the TM-P11 entry; this program's State. No instruction line becomes false: `AGENTS.md`, `README.md` and the skills name `/try_it` only as a route and for its editor files. Non-goals: a NestJS endpoint or any server-side call for running code; standard input, compiler options or a choice of compiler in the UI; any change to the look of the page, to the HTML and JavaScript tabs, to `lib/try-it.ts` or to the lesson "Thử ngay" links; a second provider or an automatic fallback; other languages.
+
+| Guardrail | Failure if omitted |
+| --- | --- |
+| B-G1. The call is made by the visitor's browser, never by Next or NestJS. | The one non-browser client tried was refused by Wandbox's front end (trial result 3), and requests are limited per IP (trial result 4): a server-side call risks failing outright and would share one limit among all visitors. |
+| B-G2. Every path out of the current run (answer, refusal, deadline, abort, thrown error) ends the waiting state, and a run that is no longer current changes nothing. | An endless loop keeps the request open past 38 seconds (trial result 5); with the one button disabled on every tab, the visitor could run nothing until a reload. Without the second half, the late end of an abandoned run frees the button or overwrites the console of the run that replaced it. |
+| B-G3. The result is read from the fields B-AC4 names with a type check on each; a missing or wrongly typed field is the B-AC4 case, and an empty `status` string is the B-AC2 case, never an empty success. | TM-P11 itself: an answer the code did not expect showed nothing. |
+| B-G4. The application puts nothing but the editor's code and the compiler name into the request: no cookie, session token, user id or page URL in the body, the headers it sets or the referrer. | The code crosses to a third party with no agreement; an identifier the application added would tie it to an account. What the browser and the network reveal by themselves (B-D2) is outside this guardrail. |
+| B-G5. The interpreting logic stays in a `_lib/` module with no React, Next or Supabase import, and the request function takes its `fetch` as a parameter. | The unit tests could not reach the rules without a DOM or a network (`frontend-workflow`, route-private files). |
+
+Owner decisions that bind this slice, taken with the approval of this appendix on 2026-11-17:
+
+- B-D1. The C++ runner is Wandbox (`wandbox.org`), called straight from the browser with no key. Its FAQ allows use for lectures and commercial use, warns of per-IP limits and promises no SLA. The alternatives from the Owner's research (OneCompiler or JDoodle behind a NestJS endpoint with a key, a quota and a rate limit; Judge0) are not built.
+- B-D2. The visitor's code is sent to that third party, which the Owner does not control and which may keep it. A direct call also shows that party what any website sees: the visitor's IP address, the browser's user agent and the `Origin` of DevSpace. No notice is added to the page.
+- B-D3. The compiler is pinned to `gcc-13.2.0` (Piston ran GCC 10.2.0). When Wandbox retires that name every run shows the B-AC4 error until the constant is changed; this is accepted instead of reading the compiler list at run time.
+- B-D4. When Wandbox is down, limited or gone, the C++ tab shows the error and nothing else changes. A replacement provider is a new Owner decision then, not part of this slice.
+- B-D5. This slice moves no data operation to NestJS: the master plan's TM-U4 row asks only for "a C++ runner the detail plan chooses", and Outcome 1 covers application data operations, which a code run is not.
+
+### B.2 Repository facts and trial results
+
+Repository facts, at the baseline:
+
+1. `app/(main)/try_it/page.tsx:122-148` posts `{ language, version, files }` to `https://emkc.org/api/v2/piston/execute` and reads the answer with `interpretPistonResponse` (`_lib/piston-result.ts`), which already maps a refusal to an error line; the Piston API answers 401 to everyone (TM-P11) — justifies the slice and B-AC9. The catch branch prints "Lỗi: Không thể kết nối đến server Piston API." — B-AC5.
+2. `handleRunCode` sets `isRunning` for all three languages and one button serves all tabs (`page.tsx:79-82`, `:182-194`); `switchLanguage` clears the console but does not stop a pending request (`:67-77`) — B-AC6, B-G2.
+3. The console renders each line as a text child of a `div` (`page.tsx:241-245`) — B-AC7.
+4. `__tests__/unit/piston-result.test.ts` holds the rows of the current interpreter; no component test of the page exists; `public.spec.ts` `[S5]` asserts that loading `/try_it` sends no request off the app's origin, and the e2e network guard aborts any request to a non-local host (`test-quality-strategy`, End-to-end) — justifies the test allocation in B.4.
+5. The app sets no Content-Security-Policy (`next.config.*` and `proxy.ts` hold no such header) — a cross-origin `fetch` from the page is not blocked by the app.
+6. `lib/try-it.ts` and `app/components/PreBlock.tsx` only build the `/try_it?lang=&code=` link — unchanged by this slice.
+
+Trial results, 2026-11-17 (the feasibility check of this slice, `planning` step 10). Method: `fetch` from the page `https://devspace-lms.vercel.app/try_it` in Chromium, so the real origin and the real CORS path; invented sample programs only. Evidence kind: manual, live provider; Wandbox may change any of it.
+
+1. The preflight for a JSON POST answers 204 with `Access-Control-Allow-Origin: *`; eleven POSTs from the production origin were answered — B-D1, B-G1.
+2. An answered run returns HTTP 200 and a JSON object of strings: `status`, `signal`, `compiler_output`, `compiler_error`, `compiler_message`, `program_output`, `program_error`, `program_message`. Observed: success `status "0"` with the output in `program_output`; compile error `status "1"` with the text in `compiler_error` and empty program fields; an uncaught exception `status "134"` with `program_output` and `program_error` both filled; `return 3` `status "3"`; a null dereference `status "139"` with every text field empty; a program that prints without end returned after 15.9 s with `program_output` cut at 131,072 characters and an empty `status`; a program that reads standard input gets none and runs on; UTF-8 output arrives intact — B-AC1 to B-AC3, B-AC7, B-G3.
+3. The same POST from a non-browser client (Python `urllib`) is refused with HTTP 403 and the text "error code: 1010" by the service's front end — B-G1.
+4. After eleven requests in about a minute the next three got HTTP 429 with the plain text "Error: Too many requests"; requests succeeded again a few minutes later — B-AC4. An unknown compiler name gets HTTP 500 with plain text, a body without `code` gets HTTP 422 with plain text — B-AC4, B-D3.
+5. `int main() { for(;;){} }` got no answer within 38 seconds, when the trial aborted it; the service's own limit was not found — B-AC5, B-G2.
+6. Ordinary runs took 2.1 to 5.2 seconds — context for "Compiling..." and the deadline.
+
+Not established: Wandbox's exact limits (requests per IP, run time), whether it stores submitted code, and its behavior from a shared campus address.
+
+### B.3 Bounded implementation hypotheses
+
+Each may change while B.1 holds.
+
+- `_lib/piston-result.ts` becomes `_lib/wandbox-result.ts`: `interpretWandboxResponse(status, ok, body)` returns the lines and one of the three existing outcomes, and applies the B-AC7 cap; `__tests__/unit/piston-result.test.ts` is renamed with it.
+- A `_lib/run-cpp.ts` function takes the code, a `fetch` and an `AbortSignal`, sends the B-AC8 request and returns the display, mapping a deadline, an abort and a thrown error to their own results.
+- A run is current while its token (a counter or its controller, held in a ref) is the latest; the handler checks it synchronously before the request and again before every state update after an `await`.
+- The page keeps one `AbortController` in a ref for the pending run: `switchLanguage` and unmount abort it; the deadline is `AbortSignal.timeout` combined with it, or a timer.
+- The compiler name, the deadline and the line cap are named constants in `_lib/`.
+- Suggested wording of the new lines, which the implementor may improve under `frontend-design` (natural Vietnamese): "Biên dịch hoặc chạy không thành công (mã thoát 139).", "Lỗi: Bạn đã chạy mã quá nhiều lần. Vui lòng thử lại sau ít phút. (HTTP 429)", "Lỗi: Đã ngừng chờ kết quả vì chương trình chạy quá lâu. Hãy kiểm tra xem có vòng lặp vô hạn không.", "… (đã cắt bớt phần còn lại của kết quả)", "Lỗi: Không thể kết nối đến server biên dịch."
+
+### B.4 Checkpoints and verification
+
+| CP | Outcome | Verification |
+| --- | --- | --- |
+| B-CP1 | The interpreter, the request function, the page wiring and their tests (B-AC1 to B-AC9) | `npm run test:unit`, each new row proven by a mutation; `npx tsc --noEmit`, `npm run lint`, `npm run format:check` on the changed files; `npm run test:e2e -- public` for `[S5]` and `[S5b]` |
+| B-CP2 | Whole-diff review, TM-P11 set to `Fixed locally, awaiting delivery` (it is resolved only after the production check), State updated, final regression | `npm test`, `npm run test:e2e`, `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run docs:check` |
+
+| Guarantee | Layer and place | Assertion |
+| --- | --- | --- |
+| B-AC1 to B-AC4, B-AC7, B-G3 | unit, `__tests__/unit/wandbox-result.test.ts` | One row per observed answer of trial results 2 and 4, fed the captured field shapes, asserting the exact lines, their order and the outcome: success; success with compiler text; compile failure; compiler text with a non-zero status and no program text; status 134 with both program fields; status 139 with no text; a `signal` that is not empty; `status` "" (B-AC2) and, as separate rows, a missing `status` and a non-string field (B-AC4); a non-JSON body; exactly 1,000 lines uncut, and 1,001 lines with a failing status ending in the cut notice and then the closing line; the 429 wording |
+| B-AC5, B-AC8, B-G4 | unit, beside it, with `fetch` faked as the external boundary | The URL, method, `credentials: "omit"`, `referrerPolicy: "no-referrer"`, the headers set and the exact body keys; a deadline, a rejected `fetch` and an abort each return their own result |
+| B-AC5, B-AC6, B-G2 | component, `__tests__/unit/components/TryItPage.test.tsx`, with `@monaco-editor/react`, `next/navigation`, `sonner` and the global `fetch` replaced; the handler and the `_lib/` helpers run for real | With a held `fetch`: button disabled and "Compiling..." while pending, and two activations in one tick send one request. Each way out enables the button and shows its line and toast: a success, a failed run (HTTP 200 with `status` "1" and compiler text: the compiler text, the closing line and the toast "Có lỗi biên dịch hoặc runtime!"), a refusal (429), a rejected `fetch`, the deadline (fake timers). A tab switch aborts the signal and enables the button; the late end of that run adds no line and no toast after returning to C++. Run A, switch away, return and start run B: when A ends (resolved and rejected variants), the button stays disabled and B's console is untouched; when B resolves, its output shows. Unmount aborts the pending signal. One mutation per row (remove the current-run check, the synchronous guard, the abort on switch, the unmount cleanup, the deadline, the toast of each outcome) |
+| B-AC8 (page load), HTML and JavaScript tabs | e2e, the existing `/try_it` rows of `public.spec.ts` (`[S5]` and `[S5b]` for the load, `[S7]` and `[S8]` for running the HTML and JavaScript tabs) | Unchanged rows keep passing |
+| B-AC9 | command | `git grep -i -E "piston|emkc" -- app lib __tests__` returns nothing |
+
+No e2e row runs C++: the network guard aborts the request to `wandbox.org`, and a row that fulfilled it with `page.route` would assert only client logic that the component rows already cover (`test-quality-strategy`, E2E rule).
+
+Residual manual QA, each because it needs the live provider or perceptual judgment:
+
+- Main, on `npm run dev` in the browser pane, before the PR, at desktop width since the page blocks mobile. Live provider (the answer shapes of B.2 are a snapshot that only a real call confirms): the default example, a compile error, a null dereference, an endless loop (the deadline line), an endless print (the cut notice and the closing line). Wiring that no automated row reaches: a lesson's C++ block opened through "Thử ngay". Real request (B-G4 cannot be proven with a faked `fetch`): Main reads the C++ request in the network panel and reports its credentials mode, its referrer and its body keys. Perceptual: the new lines read naturally in the console.
+- The Owner, on production after the deploy: one successful run and one compile error.
+
+Not checkable on demand: the 429 path without spending the limit of the tester's own address; it is covered by the unit row and by trial result 4.
+
+### B.5 Risks, rollout and rollback
+
+| Risk | Impact | Mitigation and earliest exposure |
+| --- | --- | --- |
+| Wandbox is down, changes its answer or starts challenging browsers | C++ runs fail for everyone | Every failure shows a message (B-AC4, B-AC5, B-G3); B-D4; exposed by Main's manual pass and the production QA, and afterwards only by a visitor's report, because no monitor watches a third party |
+| Many learners behind one address (a campus network) hit the per-IP limit | 429 for that group | The B-AC4 wording tells them to wait; the limit is not known (B.2); a server-side provider is the Owner's later choice (B-D4) |
+| The pinned compiler is retired | Every run shows the B-AC4 error | B-D3; one constant to change |
+| A visitor pastes private text into the editor | It reaches a third party | B-D2, B-G4; the page is a practice editor and sends nothing by itself |
+| The deadline cuts a slow but valid program | A false "took too long" | 30 seconds against 2.1 to 5.2 seconds observed for ordinary runs and 15.9 seconds for the heaviest answered one |
+
+- Rollout, each step under its own Owner grant: implementation by a separate implementor session with local commits per checkpoint; Main's review and manual pass; push and PR; CI; merge; the Owner's production check; then Main records TM-P11 as resolved with the PR and updates State, which completes TM-U4.
+- No hosted database step, no environment variable and no Railway change. Vercel deploys on merge as usual.
+- Stop when: the trial results no longer hold when the implementor or Main repeats a run (the answer shape, CORS); a guarantee would need a server-side call; the component test cannot hold the page without replacing its own logic.
+- Rollback: revert the PR. The C++ tab then shows the Piston refusal as an error again, as today; nothing else depends on this slice.

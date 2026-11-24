@@ -11,7 +11,7 @@ Use when a task adds, removes or updates a package in `package.json` or `package
 
 Do not use it for a change that touches no dependency, for reviewing a dependency diff (`code-review`, [special-cases.md](../code-review/references/special-cases.md), Dependency), or for the Supabase migration workflow (`supabase-migration`).
 
-Whether an install, update or removal is allowed at all is owned by `AGENTS.md` section 4 ([rules](../../../AGENTS.md)): it needs the Owner's request or an approved plan. This skill says how, not whether. It holds no list of current versions, outdated packages or open findings; those are state, recorded in the `dependency-maintenance` program docs (`program-docs`).
+Whether an install, update or removal is allowed at all is owned by `AGENTS.md` section 4 ([rules](../../../AGENTS.md)): the Owner can request the change directly or authorize implementation of a plan that includes it ([planning, Git and approval](../planning/SKILL.md#git-and-approval)). This skill says how, not whether. It holds no list of current versions, outdated packages or open findings; those are state, recorded in the `dependency-maintenance` program docs (`program-docs`).
 
 ## Workflow
 
@@ -19,7 +19,7 @@ Whether an install, update or removal is allowed at all is owned by `AGENTS.md` 
 2. When the change gets a plan (a major, or an initiative of `dependency-maintenance`), run the trial install below during discovery, before the plan goes to the Owner.
 3. Follow the procedure for that type. Type fallout of an updated package follows Type-only edits below.
 4. Run the Dependency row of [test-quality-strategy](../test-quality-strategy/SKILL.md#which-command-for-which-change) after the last edit, and report the commands and counts as that skill says. A failed check is not waved through as "unrelated to the update".
-5. Stage `package.json` and `package-lock.json` together; commits follow `git-pr-workflow`.
+5. When committing, include the changed owning manifests and lockfile together. A lockfile-only fix may leave all manifests unchanged. Follow `git-pr-workflow`.
 
 ### Trial install
 
@@ -94,6 +94,7 @@ A package that was already in `package.json` before this skill and has no specia
 | `postcss-selector-parser` | `overrides` in `package.json`, scoped to `@tailwindcss/typography` | `@tailwindcss/typography` pins an exact version below the security fix 6.1.5. Remove the entry once `@tailwindcss/typography` no longer pins a version below 6.1.5. A change of it, or of `@tailwindcss/typography` or Tailwind, is proved by comparing the CSS files of two clean builds (`.next` removed first), as the override was. |
 | `radix-ui` | `package.json`; imported by `components/ui/*` | The one package behind the shadcn primitives. Keep `npm run build` and the confirm-dialog E2E checks besides the Dependency row. Allocate portal, Escape, focus return and pending-state checks through [test-quality-strategy](../test-quality-strategy/SKILL.md#select-checks-from-the-contract): reuse or extend the existing dialog rows and justify residual visual/exploratory checks; preserve approved acceptance. |
 | `class-variance-authority` | `package.json`; imported by `components/ui/button.tsx` | No rule beyond the procedures above. |
+| Motion for React (`motion`) | Root `package.json`, frontend runtime dependency | No rule beyond the procedures above. |
 | `zod` | `package.json` (a dependency: the schemas in `lib/schemas/` run in server actions); also a transitive dependency of `eslint-plugin-react-hooks`, so the lockfile holds one copy | The schemas are the contract of the server actions: an update runs `npm run test:unit` (`action-schemas.test.ts`, `action-parse.test.ts`) and `npm run test:e2e`, and a minor is read for changed messages, `z.url`, `z.email` and `z.uuid` rules, which the schemas rely on. A Zod major is its own task and moves the client forms with it. The API takes no direct dependency on `zod`: the schemas of `lib/schemas/` are compiled into its build (`dist/lib/schemas`) and resolve `zod` from the root, so an update also runs `npm run build:api` and `npm test` (`api` project). |
 | `react-hook-form` | `package.json` (a dependency: the learner forms import it) | An update runs `npm run test:unit` (`learner-form-schemas.test.ts`), `npm run test:e2e` (`learner-forms.spec.ts`) and `npm run lint`: a minor is read for changes to `handleSubmit`, `register`, `useWatch` and the type parameters of `useForm`, and the React Compiler lint rule `react-hooks/refs`, which rejects `handleSubmit(fn)` in render when `fn` reads a ref. |
 | `@hookform/resolvers` | `package.json` (a dependency); the code imports only `@hookform/resolvers/zod` | Its peer `zod` (`^3.25.0 \|\| ^4.0.0`) must match the installed `zod` and its peer `react-hook-form` the installed one. Its optional peer `ajv@^8` is not installed: adding the package left older `ajv` and `json-schema-traverse` copies under `eslint` and `@eslint/eslintrc` in the lockfile (dev only), which is expected. An update runs the rows of `react-hook-form`. |
@@ -120,6 +121,6 @@ A package that was already in `package.json` before this skill and has no specia
 - [ ] a plan for the change, when it has one, was written from a trial install, and the copy was removed
 - [ ] every type fallout edit stays type-only and is listed in the report with its error
 - [ ] the Dependency row of `test-quality-strategy` ran after the last edit, with counts reported
-- [ ] `package.json` and `package-lock.json` changed together, and nothing unrelated
+- [ ] the diff includes the affected root or workspace manifests and lockfile changes, with no unrelated edits
 - [ ] every added package added its row, a removed one lost its row
 - [ ] a dependency check changed only records and installed nothing

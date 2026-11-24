@@ -1,6 +1,6 @@
 # Public and marketing pages
 
-Read this for the home page, course discovery and detail for visitors, `try_it`, `login`, pricing, promotion and other public UI.
+Read this for the home page, course discovery and detail for visitors, the page composition of `try_it` (its editor and run feedback: [learning-experience.md](learning-experience.md)), `login`, pricing, promotion and other public UI.
 
 Direction: high latitude. The page should feel polished, modern and trustworthy for someone deciding whether to learn programming here. Stronger art direction, expressive type, storytelling and purposeful interaction are allowed; each effect must improve comprehension, trust or conversion. A hero can be the visual thesis: the most characteristic expression of what the course teaches (code, a running result, a learning path) instead of a metric on a gradient.
 

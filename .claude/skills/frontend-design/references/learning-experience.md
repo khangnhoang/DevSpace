@@ -1,6 +1,6 @@
 # Learning experience
 
-Read this for lessons (`learn`), quizzes and exercises, the code playground, notes and comments in a lesson, progress, certificates and the learner `profile`.
+Read this for lessons (`learn`), quizzes and exercises, the editor and run feedback of a code playground (including `try_it`, whose page composition follows [client-marketing.md](client-marketing.md)), notes and comments in a lesson, progress, certificates and the learner `profile`.
 
 Direction: medium-to-high latitude. Focused, motivating, low friction. Spend expressiveness on interaction, immediate feedback, visible progress and completion. Personality must support focus, repeated use, keyboard use and mobile. A signature element comes from learning behavior (recall, progression, correction, completion), not decoration.
 

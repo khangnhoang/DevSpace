@@ -91,25 +91,6 @@ Every entry below moved here on 2026-11-08 (Owner decision 5 in the plan) with i
 - Direction: upload after the user exists and then set the avatar, or remove the object when the create fails; either changes the write path of the form or the action, so it gets its own plan.
 - Exit condition: a failed create leaves no new object in `avatars`, or the Owner drops it.
 
-### TM-P11: running C++ on Try It shows nothing, because the public Piston API now refuses it
-
-- Status: Fixed locally, awaiting delivery (2026-11-17); opened 2026-11-01, moved from BL-P5 (the backlog) on 2026-11-08, techstack-migration Owner decision 5.
-- Problem: the C++ tab of `/try_it` posts to `https://emkc.org/api/v2/piston/execute` (`app/(main)/try_it/page.tsx:117`). The public Piston API answers 401: since 2026-02-15 it accepts only whitelisted callers. The handler reads only `data.run` (`page.tsx:129`), so a 401 body shows no output, no toast and no error. The learner sees nothing happen.
-- Evidence:
-  - DM-U4 manual pass on the local dev server, 2026-11-01: a C++ link from `tryItHref` loaded the exact code, and "Chạy Code" left the console at its placeholder.
-  - The same request sent from the page returned status 401 with the message "Public Piston API is now whitelist only as of 2/15/2026".
-  - The behavior predates DM-U4, which did not change this request.
-- Direction: suggested only. These options come from a first look at public docs (2026-11-01); none was tried, so each needs research before a plan. The Owner picks the backend. Separately, any non-OK response or a body without `run` should show an error to the learner.
-  - The Piston whitelist is unlikely to fit: its README grants keys only to non-commercial educational projects and excludes individual, portfolio and university-assignment projects.
-  - Judge0 through a server-side call (free RapidAPI plan, or self-hosted later). It is the leading suggestion, but the key must stay on the server, so the call adds a public POST endpoint that needs rate limiting (`server-actions`). The free quota is unverified.
-  - Wandbox (`wandbox.org/api/compile.json`) needs no key and is the smallest change, but it is a community service with no guarantee. Browser CORS and its terms are unverified.
-  - Compiler Explorer (godbolt.org) can execute code, but its docs warn that rate limits and authentication may come later.
-  - Self-hosted Piston needs a privileged Docker host with cgroup v2, which Vercel cannot provide.
-  - Removing the C++ tab.
-- Update (2026-11-07, Owner decision): the error display is fixed locally and awaiting delivery: a non-OK answer or a body without `run` shows an error line in the console and an error toast. Choosing the backend moves to the techstack migration, so this entry stays open for it.
-- Update (2026-11-17): the Owner chose Wandbox, called from the browser (TM-U4 Appendix B, B-D1). The C++ tab now posts to `https://wandbox.org/api/compile.json` and shows a message for every way a run ends (`c640322`). The entry is resolved after Main's live-provider pass, the merge and the Owner's production check (one successful run and one compile error).
-- Exit condition: C++ code runs and shows its output, or the C++ tab is removed; a failed run always shows an error.
-
 ### TM-P12: course and lesson slugs have no format rule, and a course slug is not unique
 
 - Status: Open (2026-11-04, Owner decision while planning AF-U5: the AF-U5 forms add no slug rule, and this is recorded instead); moved from BL-P12 (the backlog) on 2026-11-08, techstack-migration Owner decision 5.
@@ -159,3 +140,4 @@ One line each: ID, status, one-line outcome. Details stay in Git.
 
 - TM-P17 — Resolved 2026-11-09: no upload moves behind the Vercel rewrite, because uploads stay straight to Supabase Storage (master plan decision 10); the T1 figures stay in ADR 0008 D5 and binary bodies of 4 MiB through Vercel stay unsupported (master plan r5).
 - TM-P14 — Resolved 2026-11-09: no `x-middleware-rewrite` header on a deployed anonymous `/api/health` response, and the Owner accepts that reading (Owner decision 30, `e651698`).
+- TM-P11 — Resolved 2026-11-24: the Wandbox C++ runner shows successful output and compiler errors, both verified on production by Main at the Owner's request (PR #91).

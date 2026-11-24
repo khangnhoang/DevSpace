@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | [AW-U14 plan](implementation-plans/aw-u14-durable-skills/plan.md) r4, approved by the Owner on 2026-11-14. |
-| Current unit / checkpoint | None. AW-U14 is complete. |
-| Status | AW-U14 delivered in PR 89 (`4a41c02`). No initiative is open. |
-| Completed evidence | AW-U14: the Codex plan gate passed on r3 and r4, Main's review passed after one correction, and CI was green on `28ff996`; the figures are in Milestones and the PR 89 body. |
+| Spec revision | [AW-U15 plan](implementation-plans/aw-u15-motion-instruction-audit/plan.md) r3, approved on 2026-11-24. |
+| Current unit / checkpoint | AW-U15, approved plan. |
+| Status | The Owner paused implementation. |
+| Completed evidence | Independent static plan review passed on r3 with GPT-6.2 Sol at high effort. |
 | Accepted deviations | None. |
 | Blockers / Owner decisions | none. |
-| Next action | None. The Owner selects the next initiative. |
-| Current authority | None active. |
+| Next action | Wait for the Owner to resume implementation. |
+| Current authority | Commit the approved plan and its records only. |
 
 ## Milestones
 
@@ -135,3 +135,4 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-14 AW-U14 CP4: charter decision and invariant, State, the AW-F6 split entry and the techstack-migration problem for the missing API-read procedure; final regression passed (`99561b9`).
 - 2026-11-14 AW-U14 Main review correction: three inventory and state statements in `qa-matrix.md`, `rls-test-design.md` and `backup-and-restore.md` reworded as rules naming their stable sources (`28ff996`).
 - 2026-11-14 AW-U14 completed: merged with CI green on all six jobs and Vercel (PR 89, `4a41c02`).
+- 2026-11-24 AW-U15 r3 passed independent plan review and the Owner approved the plan, deferring implementation (this commit).

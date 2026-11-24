@@ -69,11 +69,17 @@ export function pidAlive(pid) {
 // that still exists throws an error that keeps what the failure left behind (exit status, signal, stderr, duration), so
 // a failure in a loaded run names its cause (QE-P5). The error is still thrown: the caller never reads it as "dead".
 // `exec` is a seam for the tests.
+/** @param {number} pid @param {(file: string, args: string[], options: object) => string | Buffer} [exec] */
 export function windowsStartTime(pid, exec = execFileSync) {
-  const script = `$p = Get-Process -Id ${Number(pid)} -ErrorAction SilentlyContinue; if ($p) { $p.StartTime.ToFileTimeUtc() }`;
+  const id = Number(pid);
+  // Get-Process gives a null StartTime for a protected process (svchost.exe, WmiPrvSE.exe) that reused a recorded
+  // PID (QE-P11). Only then the script also reads the image name and creation time through CIM, which needs no
+  // handle to the process; `windowsIdentity` decides what that answer proves.
+  const script = `$p = Get-Process -Id ${id} -ErrorAction SilentlyContinue; if ($p) { $s = if ($p.StartTime) { $p.StartTime.ToFileTimeUtc() } else { '' }; $c = if (-not $s) { Get-CimInstance Win32_Process -Filter 'ProcessId=${id}' -ErrorAction SilentlyContinue } else { $null }; $t = if ($c -and $c.CreationDate) { $c.CreationDate.ToFileTimeUtc() } else { '' }; [pscustomobject]@{ start = "$s"; name = "$($c.Name)"; created = "$t" } | ConvertTo-Json -Compress }`;
   const began = Date.now();
+  let out;
   try {
-    return String(
+    out = String(
       exec(
         "powershell.exe",
         ["-NoProfile", "-NonInteractive", "-Command", script],
@@ -94,6 +100,35 @@ export function windowsStartTime(pid, exec = execFileSync) {
       { cause: error },
     );
   }
+  const identity = windowsIdentity(out);
+  if (identity !== null) return identity;
+  if (!pidAlive(pid)) return "";
+  throw new Error(
+    `Cannot read the start time of process ${pid}, and Windows does not show it to be a program other than node.exe, so its identity is not established.`,
+  );
+}
+
+// Reads the script's answer: "" when there is no process, the start time when Get-Process returned one, and an
+// identity that can equal no record when the PID now belongs to a process that is not node.exe. Every identity the
+// lock and the writer records hold is a Node process (the launcher, the suites and their forks), so a process with
+// another image name cannot be the recorded one. A Node process without a start time returns null: its identity is
+// not established, and the caller fails closed.
+export function windowsIdentity(out) {
+  const text = String(out ?? "").trim();
+  if (!text) return "";
+  let answer;
+  try {
+    answer = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  const start = String(answer?.start ?? "").trim();
+  if (start) return start;
+  const name = String(answer?.name ?? "").trim();
+  const created = String(answer?.created ?? "").trim();
+  if (name && created && name.toLowerCase() !== "node.exe")
+    return `other:${name}:${created}`;
+  return null;
 }
 
 // The start time of a process, as an opaque string; null only when the process does not exist. A live process

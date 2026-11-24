@@ -261,6 +261,47 @@ describe("start-time read diagnostics and fail-closed identity", () => {
     );
   });
 
+  it("establishes that a recorded PID reused by a protected non-Node process is a different process", async () => {
+    // QE-P11: Get-Process returns no StartTime for svchost.exe or WmiPrvSE.exe; CIM still gives name and creation.
+    const live = new Probe("idle");
+    const pid = (await live.event("idle")).pid as number;
+    const protectedReuse = () =>
+      JSON.stringify({
+        start: "",
+        name: "WmiPrvSE.exe",
+        created: "134399900080000000",
+      });
+    const identity = lock.windowsStartTime(pid, protectedReuse);
+    expect(identity).toBe("other:WmiPrvSE.exe:134399900080000000");
+    const recorded = { pid, start: "134399899992221401" };
+    expect(lock.isLive(recorded, () => identity)).toBe(false);
+  });
+
+  it("keeps refusing when a live Node process has no readable start time", async () => {
+    const live = new Probe("idle");
+    const pid = (await live.event("idle")).pid as number;
+    for (const answer of [
+      { start: "", name: "node.exe", created: "134399900080000000" },
+      { start: "", name: "NODE.EXE", created: "134399900080000000" },
+      { start: "", name: "svchost.exe", created: "" },
+      { start: "", name: "", created: "" },
+    ])
+      expect(() =>
+        lock.windowsStartTime(pid, () => JSON.stringify(answer)),
+      ).toThrow(/identity is not established/);
+    expect(() => lock.windowsStartTime(pid, () => "not json")).toThrow(
+      /identity is not established/,
+    );
+    expect(alive(pid)).toBe(true);
+  });
+
+  it("reads the start time Get-Process returns, and no output as no process", () => {
+    expect(lock.windowsIdentity('{"start":"134399894561187414"}')).toBe(
+      "134399894561187414",
+    );
+    expect(lock.windowsIdentity("")).toBe("");
+  });
+
   it("neither takes over a lock nor stops a writer when the start-time read throws", async () => {
     const holder = new Probe("hold", ["npm test (holder)"]);
     await holder.event("held");

@@ -24,7 +24,7 @@ Do not use it to justify committing unfinished, conflicting, unrelated or knowin
 
 Run `git branch --show-current` and `git status --short`. If the tree is dirty, identify and keep pre-existing changes: do not revert, stage or commit them, and stop if ownership cannot be told.
 
-New task branch: read [branch-and-commit.md](references/branch-and-commit.md). Short form: branch from the latest `main` (fetch and fast-forward only with permission when it touches the network), name it `<type>/<kebab-name>` (`feat fix refactor test docs chore perf ci`, never `claude/` or `agent/`), and stop if the base or a dependency on unmerged work is unclear.
+New task branch: read [branch-and-commit.md](references/branch-and-commit.md). Short form: branch independent work from the latest `main` (fetch and fast-forward only with permission when it touches the network) and stacked work, which really depends on unmerged work, from that verified dependency head; name it `<type>/<kebab-name>` (`feat fix refactor test docs chore perf ci`, never `claude/` or `agent/`), and stop if the base or a dependency on unmerged work is unclear.
 
 ## Format the changed files
 
@@ -35,7 +35,7 @@ The delivery order is: implement, format the changed files, self-review, test, c
 Read [branch-and-commit.md](references/branch-and-commit.md) when you are about to stage or commit. The gate:
 
 - permission exists; the checkpoint's scope and acceptance are complete and its self-review passed (`docs/agent-loops.md`, Self-review); checks for this verification stage ran or have valid reused evidence under [test-quality-strategy, Verification stages](../test-quality-strategy/SKILL.md#verification-stages), and `npm run format:check -- <changed paths>` passed (a file it reports is formatted and its change reviewed again before the commit); no conflict marker, debug code or secret; no unresolved decision;
-- stage explicit paths (`git add path/a path/b`), not `git add .`, unless the tree began clean and everything is in scope; inspect `git diff --cached` and `git diff --check`;
+- stage explicit paths (`git add path/a path/b`), never `git add .`, on an independent or a stacked branch alike; inspect `git diff --cached` and `git diff --check`;
 - one commit per checkpoint (a small task without checkpoints: as `docs/agent-loops.md` Sizing allows); split a checkpoint only for a reason you state in the report (for example a part that must revert alone). Commit in its own message after every edit succeeded, never in parallel with an edit. Message `<type>(<scope>): <imperative summary>`, language per `AGENTS.md` section 1, no trailing period, no vague words ("update files", "final fix").
 
 Fixes for findings of a review after the commit are new correction commits; never amend a reviewed commit by default.
@@ -46,7 +46,7 @@ When the work is done, report as `docs/agent-loops.md` Loop 1 (Report) says, wit
 
 ## Push, PR, CI and merge
 
-Read [pr-and-ci.md](references/pr-and-ci.md) before any push, PR, CI or merge request. Short form (the grants are owned by `AGENTS.md` section 4): a normal push needs a clean tree and the exact branch and range; a PR needs the head already on the remote; the PR title and body follow `.github/pull_request_template.md` and state only what really ran; when CI on the PR ends, red or green, Main writes the result into the body's `CI result` section and stops; the CI jobs, which block and how to read a failure are in `pr-and-ci.md` (`gh pr checks --watch`); merge and auto-merge follow "Merge" in `pr-and-ci.md`. Who may fix CI, and how many rounds, is owned by `docs/agent-loops.md` Loop 3 and `AGENTS.md` section 4.
+Read [pr-and-ci.md](references/pr-and-ci.md) before any push, PR, CI or merge request. Short form (the grants are owned by `AGENTS.md` section 4): a normal push needs a clean tree and the exact branch and range; a PR needs the head already on the remote; the PR title and body follow `.github/pull_request_template.md` and state only what really ran; under a grant to create or update the PR, when its CI ends, red or green, Main writes the result into the body's `CI result` section and stops unless a separately granted next action passes its gates (inspect or watch alone writes nothing); the CI jobs, which block and how to read a failure are in `pr-and-ci.md` (`gh pr checks --watch`); merge and auto-merge follow "Merge" in `pr-and-ci.md`. Who may fix CI, and how many rounds, is owned by `docs/agent-loops.md` Loop 3 and `AGENTS.md` section 4.
 
 ## Stop when
 

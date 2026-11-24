@@ -6,7 +6,7 @@ Read this only when migrating a live program's docs to the current shape, reshap
 
 1. Record the baseline: the commit that holds the old files, and the paths you will change. Confirm no other session or branch is editing them; stop if one is.
 2. List what must survive. From the old files, extract every Owner decision, invariant, gate, hard rule, rollout step and open problem, with its number or ID. This is the meaning checklist.
-3. Find citations that constrain paths: search `supabase/migrations/*.sql`, `AGENTS.md`, `CLAUDE.md`, `.claude/` and other docs for each path you might move. A path cited by a published migration never moves, renames or renumbers; it stays resolvable and goes on the docs-check allowlist with a reason (`security-hotfix` is the existing case). Never edit a published migration. Prefer moving nothing.
+3. Find citations that constrain paths: search `supabase/migrations/*.sql`, `AGENTS.md`, `CLAUDE.md`, `.claude/` and other docs for each path you might move. A path cited by a published migration never moves, renames or renumbers, and a published migration is never edited. If the migration or reshape would move, rename or renumber such a path, stop and report before changing any file, whatever `docs:check` says: only the Owner decides that case (the docs-check allowlist, where `security-hotfix` is the existing entry, records a decided exception and never authorizes the change). Prefer moving nothing.
 4. Write the new version from the old one, one file at a time, in the template shape:
    - master plan: keep decisions numbered and dated, invariants, units, gates and rollout order; remove State and history;
    - progress: one in-place State block with the current truth (read Git and the old State for it), then one-line milestones;
@@ -20,10 +20,11 @@ Read this only when migrating a live program's docs to the current shape, reshap
 
 ## Reshape: a single-unit program gains a second unit
 
+Before step 1, run Procedure step 3 on the root `plan.md` and every path you would move. If a published migration cites one, stop and report before any change: the reshape cannot keep that path and also meet the plan shape, so it needs the Owner's decision.
+
 1. Move the root detail plan to `implementation-plans/<code>-u1-<slug>/plan.md` with its approved Spec unchanged.
 2. Write a master plan at the root `plan.md` from the master-plan template: goal, numbered decisions, invariants, a unit table with both units, rollout order.
-3. Fix links and the progress pointer; update State to name the new plan path and revision.
-4. A path that published migrations cite never moves. Keep it in place on the allowlist and put the new unit's plan beside it instead.
+3. Fix links and the progress pointer (the moved plan links `../../progress.md`); update State to name the new plan path and revision.
 
 ## Reshape: a program becomes evergreen
 
@@ -36,7 +37,7 @@ Only on the Owner's decision that the program owns a long-lived capability ([ADR
 
 ## Stop
 
-Stop and report when an item cannot be expressed without changing its meaning, a cited path would break, or the baseline moved under the files you are migrating.
+Stop and report, before changing any file, when an item cannot be expressed without changing its meaning, a path a published migration cites would move, rename or renumber (even when `docs:check` would pass), or the baseline moved under the files you are migrating.
 
 ## Rollback
 

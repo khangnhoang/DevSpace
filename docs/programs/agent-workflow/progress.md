@@ -7,13 +7,13 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 | Field | Value |
 | --- | --- |
 | Spec revision | [AW-U15 plan](implementation-plans/aw-u15-motion-instruction-audit/plan.md) r3, approved on 2026-11-24. |
-| Current unit / checkpoint | AW-U15, approved plan. |
-| Status | The Owner paused implementation. |
-| Completed evidence | Independent static plan review passed on r3 with GPT-6.2 Sol at high effort. |
-| Accepted deviations | None. |
-| Blockers / Owner decisions | none. |
-| Next action | Wait for the Owner to resume implementation. |
-| Current authority | Commit the approved plan and its records only. |
+| Current unit / checkpoint | AW-U15: Motion guidance and instruction audit corrections implemented and committed locally in two groups; final independent instruction audit and final regression next. |
+| Status | Implementation complete locally; Main's self-review passed with 0 Critical and 0 Required. The TM-U4 catch-up landed in `df3ccfe`. |
+| Completed evidence | Independent static plan review passed on r3 with GPT-6.2 Sol at high effort. On Node v26.13.0: `npm run docs:check` passed with 0 violations and 0 broken links, `npx tsc --noEmit` clean, `motion/react` resolves `motion` and `AnimatePresence` from `motion` 14.14.0, `.claude/skills/playwright-cli` references and `LICENSE` keep their blob hashes. |
+| Accepted deviations | Owner instruction of 2026-11-24: Main implements the plan in this session instead of a separate implementor session. The TM-U4 catch-up attributes the two production outcomes to Main's production check at the Owner's request (Owner answer of 2026-11-24), not to a separate Owner confirmation as plan section 4 assumed. AW-P1 keeps its Accepted disposition: both templates still sit in one folder, and the detail-plan template comment now names the nested `../../progress.md` link. |
+| Blockers / Owner decisions | Docker Desktop is not running, so `npm test` and `npm run test:e2e` of the final regression have not run. |
+| Next action | Main runs the final independent instruction audit with GPT-6.2 Sol at high effort and, once Docker Desktop runs, the final regression (lint, both builds, `npm test`, `npm run test:e2e`). |
+| Current authority | Local commits by related group (Owner, 2026-11-24). Push, PR and merge are not granted. |
 
 ## Milestones
 
@@ -135,4 +135,6 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-14 AW-U14 CP4: charter decision and invariant, State, the AW-F6 split entry and the techstack-migration problem for the missing API-read procedure; final regression passed (`99561b9`).
 - 2026-11-14 AW-U14 Main review correction: three inventory and state statements in `qa-matrix.md`, `rls-test-design.md` and `backup-and-restore.md` reworded as rules naming their stable sources (`28ff996`).
 - 2026-11-14 AW-U14 completed: merged with CI green on all six jobs and Vercel (PR 89, `4a41c02`).
-- 2026-11-24 AW-U15 r3 passed independent plan review and the Owner approved the plan, deferring implementation (this commit).
+- 2026-11-24 AW-U15 r3 passed independent plan review and the Owner approved the plan, deferring implementation (`dfc4c17`).
+- 2026-11-24 AW-U15 Motion group: `motion` 14.14.0 added to the root dependencies, with the Motion, playground-routing and dependency-grant guidance in the frontend and dependency skills (`1ba2fde`).
+- 2026-11-24 AW-U15 instruction audit corrections E1 to E13 across `AGENTS.md` and the git, migration, server-action, test, program-docs and playwright skills (this commit).

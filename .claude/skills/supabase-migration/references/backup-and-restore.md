@@ -7,10 +7,10 @@ Read this before a hosted write step whose plan requires a backup, and when the 
 | Step | Who | Where |
 | --- | --- | --- |
 | Dump the database and download Storage (section 1) | The Owner, in their own PowerShell window | Repository root, output outside the repository |
-| Read exact hosted counts and the migration list, write `hosted.json` (section 3) | Main, under the Owner's grant for that backup | Hosted, counts only |
+| Read exact hosted counts, the migration list and the hosted service versions, write `hosted.json` (section 3) | Main, under the Owner's grant for that backup | Hosted, counts and metadata only |
 | Restore into the scratch stack and compare (section 4) | Main, under the Owner's grant for that backup | Local Docker only |
 
-An implementor runs no hosted command and no step of this runbook that touches a real backup.
+An implementor runs no hosted command and no step of this runbook that touches a real backup. A reviewer of a backup or of this runbook stays read-only: it reads the files and the result, and runs or edits nothing. No agent takes the dump or the Storage download.
 
 The backup holds personal data and password hashes. Keep it outside the repository and outside `AppData` (the desktop app virtualizes writes there), never paste its content, and delete old backups yourself (Owner decision 9: `%USERPROFILE%\devspace-backups\<yyyymmdd-hhmm>`).
 
@@ -32,7 +32,7 @@ The backup holds personal data and password hashes. Keep it outside the reposito
 
 Where to run it: Windows PowerShell, or a PowerShell tab of Windows Terminal, in the Owner's own window. Not Git Bash or `cmd` (the block is PowerShell), and not the Claude app's Terminal panel or an agent tool (only the Owner runs a hosted command, and the output stays out of agent sessions). First `cd` to the repository root, the checkout linked to the hosted project, and start Docker Desktop (`db dump` runs in a container).
 
-Paste the whole block once and press Enter. It is a single statement, so PowerShell reads all of it before anything runs and no pasted line can land in a password prompt. If the CLI asks for the database password, type it at that prompt; do not pass `-p` or put it in a variable or file. The block stops at the first command that fails, and the folder it leaves is not a backup: run the whole block again at least a minute later, which starts a new folder (the name has minutes only, and the block refuses a folder that exists). Section 2 explains its Storage and manifest steps.
+Paste the whole block once and press Enter. It is a single statement, so PowerShell reads all of it before anything runs and no pasted line can land in a password prompt. If the CLI asks for the database password, type it at that prompt; do not pass `-p` or put it in a variable or file. The block stops at the first command that fails, and the folder it leaves is not a backup: run the whole block again at least a minute later, which starts a new folder (the name has minutes only, and the block refuses a folder that exists). Before any command that reaches the linked project, the block stops when `supabase\.temp\project-ref` is missing, unreadable or names a project other than `lkvxxrxojjlkchzzqidu` (`AGENTS.md`). Section 2 explains its Storage and manifest steps.
 
 ```powershell
 & {
@@ -42,6 +42,8 @@ Paste the whole block once and press Enter. It is a single statement, so PowerSh
     if ($LASTEXITCODE -ne 0) { throw "supabase $($args[0]) $($args[1]) failed (exit $LASTEXITCODE). Stop and report this line." }
   }
   if (-not (Test-Path 'supabase\.temp\project-ref')) { throw 'Run this from the repository root.' }
+  $ref = try { (Get-Content -Raw -ErrorAction Stop 'supabase\.temp\project-ref').Trim() } catch { '' }
+  if ($ref -ne 'lkvxxrxojjlkchzzqidu') { throw 'supabase\.temp\project-ref is unreadable or names another project. Stop and report this line.' }
   $buckets = @('avatars')
   $remote = @{}
   foreach ($s in (((Invoke-Supabase services -o json) -join "`n") | ConvertFrom-Json)) { $remote[$s.name] = $s.remote }
@@ -83,7 +85,7 @@ The `versions` in the manifest are the `remote` column of `npx supabase services
 
 ## 3. Hosted counts and `hosted.json` (Main)
 
-Under the Owner's grant for this backup, and right after the dump, Main reads counts only (Owner decision 12): every `public` table, `auth.users`, `auth.identities` and `storage.objects`, plus the migration list (`npx supabase migration list --linked`, a read-only metadata read). No row is read.
+Under the Owner's grant for this backup, and right after the dump, Main reads counts only (Owner decision 12): every `public` table, `auth.users`, `auth.identities` and `storage.objects`, plus the migration list (`npx supabase migration list --linked`, a read-only metadata read) and the hosted service versions (`npx supabase services`, agent-workflow AW-U15 Owner decision 1). No row is read. Before the first of these linked commands Main checks that `supabase/.temp/project-ref` reads `lkvxxrxojjlkchzzqidu`, and stops when it is missing, unreadable or different.
 
 ```sql
 select tablename from pg_tables where schemaname = 'public' order by 1;
@@ -121,9 +123,11 @@ It starts the scratch stack (`devspace-backup-check`, ports 56320 to 56329, pinn
 - (c) the restored migration history equals the `migrations` list;
 - (d) every `storage.objects` row has a file of the same size (and the same MD5 where the stored ETag is a plain MD5) under `storage/`, and no file lacks a row.
 
+A pass proves only these four comparisons. Equal counts do not prove equal row contents, and an object whose ETag is not a plain MD5 is compared by size only; report the pass with those limits.
+
 Output is aggregates only: table names, counts, totals and pass or fail. A failed step prints its name, exit code and SQLSTATE and nothing from the data; an error while reading the backup (an object or file it cannot open, a JSON or SQL file it cannot parse) prints the step and an error code, never a path or content. The exit code is 0 pass, 1 fail, 2 unresolved (teardown not confirmed, `--teardown` included), 3 refused before anything was written.
 
-A refusal names its cause: a folder inside the repository or under `AppData`, a missing file, a second run or a `--teardown` while another live process holds the run, a container of another project on a scratch port, a Docker engine that is not local. After every run, pass or fail, no `devspace-backup-check` container or volume remains.
+A refusal names its cause: a folder inside the repository or under `AppData`, a missing file, a second run or a `--teardown` while another live process holds the run, a container of another project on a scratch port, a Docker engine that is not local. Every run, pass or fail, tears the scratch stack down and confirms that no `devspace-backup-check` container or volume remains. Only that confirmation establishes removal: exit code 2 means it is not confirmed, so the stack may remain until a `--teardown` run confirms it.
 
 If a run is killed (or the machine shuts down) its run lock and containers stay. The next `backup:check` takes the lock over and removes them first, and says so. To clean up without a new check (refused while a run is live, never tearing it down):
 

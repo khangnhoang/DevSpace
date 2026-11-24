@@ -21,7 +21,7 @@ There is no "last result" field: it goes stale. Results belong in the report.
 
 ## Known bug pattern
 
-A known bug is a defect that is recorded in a problems file and not fixed in this change. Its test must keep running, must fail loudly when anything else breaks, and must tell you when the bug is fixed. Use `knownBug` from `__tests__/helpers/known-bug.ts` (Vitest) or `knownBugE2e` from `__tests__/e2e/known-bug.ts` (Playwright; `bug(...)` wraps a Playwright `expect`); plain `test.fails` and skipped tests are not allowed for this, because they also pass when sign-in, the network or a query is broken.
+A known bug is a defect that is recorded in a problems file and not fixed in this change; the wrapper is reserved for it. A defect fixed in this change gets an ordinary regression test (Regression in `SKILL.md`), and a defect not yet recorded is reported to Main first, never wrapped. Its test must keep running, must fail loudly when anything else breaks, and must tell you when the bug is fixed. Use `knownBug` from `__tests__/helpers/known-bug.ts` (Vitest) or `knownBugE2e` from `__tests__/e2e/known-bug.ts` (Playwright; `bug(...)` wraps a Playwright `expect`); plain `test.fails` and skipped tests are not allowed for this, because they also pass when sign-in, the network or a query is broken.
 
 ```ts
 knownBug("<ID>", "[K3] a learner can change their own profiles.email", async (bug) => {

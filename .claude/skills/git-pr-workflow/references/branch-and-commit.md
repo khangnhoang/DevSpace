@@ -9,7 +9,7 @@ Read this when starting or switching a branch, staging, committing, or deciding 
 3. Independent task: with permission, `git fetch`, then switch to `main`, `git pull --ff-only`, confirm it matches `origin/main`, then create the branch from it. Never branch from a stale `main` or from a feature branch just because it has recent work.
 4. Stacked task (it really depends on unmerged work): create the branch from that verified dependency `HEAD` and say that the stacked procedure applies.
 5. If several branches are unmerged and independence is unclear, stop and report the branch and dependency state. Do not guess a base.
-6. Stop when the tree is dirty, `main` cannot fast-forward, a required dependency is missing from `origin/main`, or fetch is not permitted.
+6. Stop when the tree is dirty, fetch is not permitted, or: for an independent task, `main` cannot fast-forward or a required dependency is missing from `origin/main`; for a stacked task, the dependency head cannot be verified.
 
 Do not create, rename, switch, merge or delete branches just to silence a problem. Claim a branch was created or synchronized only after you ran it and saw the resulting `HEAD` and ahead/behind state.
 

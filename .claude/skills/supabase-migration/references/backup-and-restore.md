@@ -16,7 +16,7 @@ The backup holds personal data and password hashes. Keep it outside the reposito
 
 ## Folder layout
 
-`backup:check` requires exactly these files in the backup folder; a missing one is refused before anything starts.
+`backup:check` requires these input files in the backup folder (other files are ignored); a missing one is refused before anything starts.
 
 | File | Written by | Holds |
 | --- | --- | --- |
@@ -30,7 +30,7 @@ The backup holds personal data and password hashes. Keep it outside the reposito
 
 ## 1. Take the backup in one paste (Owner)
 
-Where to run it: Windows PowerShell, or a PowerShell tab of Windows Terminal, in the Owner's own window. Not Git Bash or `cmd` (the block is PowerShell), and not the Claude app's Terminal panel or an agent tool (only the Owner runs a hosted command, and the output stays out of agent sessions). First `cd` to the repository root, the checkout linked to the hosted project, and start Docker Desktop (`db dump` runs in a container).
+Where to run it: Windows PowerShell, or a PowerShell tab of Windows Terminal, in the Owner's own window. Not Git Bash or `cmd` (the block is PowerShell), and not the Claude app's Terminal panel or an agent tool (only the Owner runs this dump and download block, and its output stays out of agent sessions; Main's granted reads are section 3). First `cd` to the repository root, the checkout linked to the hosted project, and start Docker Desktop (`db dump` runs in a container).
 
 Paste the whole block once and press Enter. It is a single statement, so PowerShell reads all of it before anything runs and no pasted line can land in a password prompt. If the CLI asks for the database password, type it at that prompt; do not pass `-p` or put it in a variable or file. The block stops at the first command that fails, and the folder it leaves is not a backup: run the whole block again at least a minute later, which starts a new folder (the name has minutes only, and the block refuses a folder that exists). Before any command that reaches the linked project, the block stops when `supabase\.temp\project-ref` is missing, unreadable or names a project other than `lkvxxrxojjlkchzzqidu` (`AGENTS.md`). Section 2 explains its Storage and manifest steps.
 
@@ -127,7 +127,7 @@ A pass proves only these four comparisons. Equal counts do not prove equal row c
 
 Output is aggregates only: table names, counts, totals and pass or fail. A failed step prints its name, exit code and SQLSTATE and nothing from the data; an error while reading the backup (an object or file it cannot open, a JSON or SQL file it cannot parse) prints the step and an error code, never a path or content. The exit code is 0 pass, 1 fail, 2 unresolved (teardown not confirmed, `--teardown` included), 3 refused before anything was written.
 
-A refusal names its cause: a folder inside the repository or under `AppData`, a missing file, a second run or a `--teardown` while another live process holds the run, a container of another project on a scratch port, a Docker engine that is not local. Every run, pass or fail, tears the scratch stack down and confirms that no `devspace-backup-check` container or volume remains. Only that confirmation establishes removal: exit code 2 means it is not confirmed, so the stack may remain until a `--teardown` run confirms it.
+A refusal names its cause: a folder inside the repository or under `AppData`, a missing file, a second run or a `--teardown` while another live process holds the run, a container of another project on a scratch port, a Docker engine that is not local. A run that started the scratch stack tears it down, pass or fail, and confirms that no `devspace-backup-check` container, volume or scratch network remains. A run can also end early: a refusal (exit 3) or a failed Docker query or result write before the stack starts (exit 1) creates nothing to remove. Only that teardown confirmation establishes removal: exit code 2 means it is not confirmed, so resources may remain until a `--teardown` run confirms it.
 
 If a run is killed (or the machine shuts down) its run lock and containers stay. The next `backup:check` takes the lock over and removes them first, and says so. To clean up without a new check (refused while a run is live, never tearing it down):
 

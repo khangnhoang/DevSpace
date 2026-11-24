@@ -27,9 +27,9 @@ Allocate manual QA per remaining scenario, with a reason: perceptual/design judg
 | --- | --- | --- | --- |
 | `unit` | `__tests__/unit/**/*.test.ts` | `npm run test:unit` | nothing (no Docker) |
 | `components` | `__tests__/unit/components/**/*.test.tsx` (jsdom, Testing Library) | `npm run test:unit` (runs `unit` and `components`) | nothing (no Docker) |
-| `api` | `__tests__/api/**/*.test.ts` (Vitest, node; a real API process per file) | `npm test` (runs every project) | Docker Desktop; the command builds the API (`dist` and `dist-e2e`), then starts and resets the test stack |
-| `rls` | `__tests__/rls/**/*.test.ts` | `npm test` (runs every project) | Docker Desktop; the command starts and resets the test stack (Test stack) |
-| `e2e` | `__tests__/e2e/*.spec.ts` (Playwright, Chromium) | `npm run test:e2e` | Docker Desktop, and Chromium (`npx playwright install chromium`, about 180 MB, once per machine); the command starts and resets the test stack |
+| `api` | `__tests__/api/**/*.test.ts` (Vitest, node; a real API process per file) | `npm test` (runs every project) | Docker Desktop; the command builds the API (`dist` and `dist-e2e`), then starts the test stack if needed and resets it under the reset rules of Test stack |
+| `rls` | `__tests__/rls/**/*.test.ts` | `npm test` (runs every project) | Docker Desktop; the command starts the test stack if needed and resets it under the reset rules of Test stack (Test stack) |
+| `e2e` | `__tests__/e2e/*.spec.ts` (Playwright, Chromium) | `npm run test:e2e` | Docker Desktop, and Chromium (`npx playwright install chromium`, about 180 MB, once per machine); the command starts the test stack if needed and resets it under the reset rules of Test stack |
 
 - `vitest.config.mts` defines the projects, turns env-file loading off and runs the `rls` files one at a time. Shared helpers: `__tests__/helpers` (the local-stack host check, `knownBug` and its runner-neutral core, the server action reader) and `__tests__/rls/helpers.ts` (actor clients).
 - The `rls` global setup reads the API URL, database URL and keys from `npx supabase status -o json` of the test stack only (`scripts/test-stack/read.mjs`, after the Docker identity check of the test project), refuses a host other than `127.0.0.1` or `localhost`, and signs in the seed users once. It refuses to run outside `npm test`, which holds the lock. A test never reads `.env*` or a hosted URL.
@@ -170,7 +170,7 @@ One passing final regression run per suite is the default. Neither a writing tes
 
 ## Which command for which change
 
-The rows select behavior-specific coverage and commands; Verification stages determines their scope and timing, including the final regression across suites. Run the row for each kind of change, plus the static checks (`npx tsc --noEmit`, `npm run lint` with 0 problems) for any code change. "Docker" means Docker Desktop running (the test commands start and reset the test stack themselves); "Chromium" means `npx playwright install chromium`.
+The rows select behavior-specific coverage and commands; Verification stages determines their scope and timing, including the final regression across suites. Run the row for each kind of change, plus the static checks (`npx tsc --noEmit`, `npm run lint` with 0 problems) for any code change. "Docker" means Docker Desktop running (the test commands start the test stack and reset it under Test stack themselves); "Chromium" means `npx playwright install chromium`.
 
 | Change | Run | Needs |
 | --- | --- | --- |
@@ -188,7 +188,7 @@ The rows select behavior-specific coverage and commands; Verification stages det
 ## Running and reporting
 
 - During implementation run the narrowest command that can detect the change, and say why when you run wider; complete Verification stages before final delivery. A targeted run is never called a full-suite run.
-- Before an rls run: only Docker Desktop is needed; the command starts and resets the test stack, and the next command handles an interrupted run under the Test stack rules. Select repeats under Repeatability checks; writing rls tests alone does not require two full runs.
+- Before an rls run: only Docker Desktop is needed; the command starts the test stack if needed and resets it under the reset rules of Test stack, and the next command handles an interrupted run under the Test stack rules. Select repeats under Repeatability checks; writing rls tests alone does not require two full runs.
 - The report separates automated results (command, files, test counts), static checks (`npx tsc --noEmit`, `npm run lint`, `npm run docs:check`), manual QA, and what is pending or limited by the environment. Never claim a check that did not run, and never report a skipped test as passed.
 - Test files are type-checked by `next build` and `tsc`: run `npx tsc --noEmit`. New files add no lint problems. A session file or report under `__tests__/e2e/.auth/`, `test-results/` or `playwright-report/` is never committed.
 

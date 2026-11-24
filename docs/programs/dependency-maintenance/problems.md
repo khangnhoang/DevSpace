@@ -12,6 +12,14 @@ Charter: [README.md](README.md). Progress: [progress.md](progress.md).
 - Direction: groups A and C were fixed by [DM-U3](implementation-plans/dm-u3-audit-cleanup/plan.md) (PR 48, `0666754`: `npm audit fix` without `--force`, and an `overrides` entry for `postcss-selector-parser`); `npm audit --omit=dev` now reports only group B (2 findings). The entry stays open for group B: no `dompurify` override; [DM-U4](implementation-plans/dm-u4-monaco-self-host/plan.md) serves Monaco from the npm package (0.57.0, DOMPurify 3.4.15) instead of the CDN (0.55.1, DOMPurify 3.2.7), together with the `/try_it` fixes of BL-P4; DM-U4 delivered this in PR 49 (`1bc9802`), so `npm audit` now sees the running version; then wait for a Monaco release that bundles DOMPurify 3.4.17 or later, re-checking at each dependency check. Never `npm audit fix --force`.
 - Exit condition: `npm audit --omit=dev` reports no critical or high finding, and every remaining finding is accepted by the Owner in this entry.
 
+### DM-P2: `next build` stops on a Next.js security advisory
+
+- Status: Open (2026-11-24, found during the AW-U15 final regression).
+- Problem: `npm run build` compiles and lists the routes, then exits 1 with `Error [SecurityFatalError]: Your version of Next.js is affected by a known security vulnerability.` The build of the installed `next` (`^16.4.3` in `package.json`) now refuses to finish, so the local final regression has no build evidence and the CI `build` job is likely affected too.
+- Evidence: on `e73ed80` with Node v26.13.0, two runs of `npm run build` on 2026-11-24 ended the same way after `Compiled successfully`; the change under test touched no Next code or config.
+- Direction: identify the advisory and the fixed `next` version with `npm audit` and the npm advisory, then update `next` with `eslint-config-next` under [dependency-updates](../../../.claude/skills/dependency-updates/SKILL.md) as its own task with the Owner's grant. Do not run an upgrade the build output suggests without that grant.
+- Exit condition: `npm run build` passes on the updated `next`, or the Owner records a decision for this advisory.
+
 
 ## Resolved
 

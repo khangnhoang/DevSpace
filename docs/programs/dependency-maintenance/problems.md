@@ -15,8 +15,8 @@ Charter: [README.md](README.md). Progress: [progress.md](progress.md).
 ### DM-P2: `next build` stops on a Next.js security advisory
 
 - Status: Open (2026-11-24, found during the AW-U15 final regression).
-- Problem: `npm run build` compiles and lists the routes, then exits 1 with `Error [SecurityFatalError]: Your version of Next.js is affected by a known security vulnerability.` The build of the installed `next` (`^16.4.3` in `package.json`) now refuses to finish, so the local final regression has no build evidence and the CI `build` job is likely affected too.
-- Evidence: on `e73ed80` with Node v26.13.0, two runs of `npm run build` on 2026-11-24 ended the same way after `Compiled successfully`; the change under test touched no Next code or config.
+- Problem: under an agent session, `npm run build` with the installed `next` 16.4.3 compiles and lists the routes, then exits 1 with `Error [SecurityFatalError]: Your version of Next.js is affected by a known security vulnerability.` The stop comes from the upgrade nudge in `node_modules/next/dist/lib/upgrade/nudge.js`, which branches on agent detection and on CI, so an agent's local final regression has no build evidence. Whether the CI `build` job or a build in the Owner's own shell stops too is not verified.
+- Evidence: on `e73ed80` with Node v26.13.0, two agent runs of `npm run build` on 2026-11-24 ended the same way after `Compiled successfully`; the change under test touched no Next code or config.
 - Direction: identify the advisory and the fixed `next` version with `npm audit` and the npm advisory, then update `next` with `eslint-config-next` under [dependency-updates](../../../.claude/skills/dependency-updates/SKILL.md) as its own task with the Owner's grant. Do not run an upgrade the build output suggests without that grant.
 - Exit condition: `npm run build` passes on the updated `next`, or the Owner records a decision for this advisory.
 

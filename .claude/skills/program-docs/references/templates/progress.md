@@ -12,7 +12,7 @@ Plan: `plan.md` (an evergreen program: the charter `README.md`). Problems: `prob
 | Current unit / checkpoint | <unit and checkpoint, or "none active"> |
 | Status | <one status, e.g. not started, in progress, blocked, automated checks passed, manual QA pending, merged, completed> |
 | Completed evidence | <checks actually run and results, commits; label historical evidence> |
-| Accepted deviations | <bounded deviation from the Spec or hypotheses, or "none"> |
+| Accepted deviations | <implementation deviation from the hypotheses or facts that keeps the Spec, or "none"; a Spec change is a new plan revision, not a deviation> |
 | Blockers / Owner decisions | <open blocker or pending Owner decision, or "none"> |
 | Next action | <the single next step and who takes it> |
 | Current authority | <what is permitted now: implement, commit, push, PR, merge, rollout step; everything else is not granted> |

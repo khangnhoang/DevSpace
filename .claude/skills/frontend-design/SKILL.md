@@ -13,7 +13,7 @@ Do not use for logic with no visible change, or for data and state mechanics (`f
 
 ## Current stack (only what exists)
 
-Next.js App Router, React 19, Tailwind CSS 4 (`app/globals.css`), `lucide-react` icons, `sonner` toasts (`<Toaster richColors position="top-right" />` in `app/layout.tsx`), and feature components in `app/components/`. shadcn primitives sit in `components/ui/` (`components.json`) on `radix-ui` and `class-variance-authority`. A new or reworked form uses React Hook Form with `zod` through `@hookform/resolvers` ([frontend-workflow](../frontend-workflow/references/async-state-and-forms.md)); a form still on controlled state is converted only by a task that owns it ([ADR 0003](../../../docs/adr/0003-app-foundation-program.md)). The auth forms share their controls in `app/components/AuthFields.tsx`. Packages, fonts and an animation library are not added in a design task unless the Owner asked for them (`AGENTS.md` section 4); a plan may propose one (Plan, then critique).
+Next.js App Router, React 19, Tailwind CSS 4 (`app/globals.css`), `lucide-react` icons, `sonner` toasts (`<Toaster richColors position="top-right" />` in `app/layout.tsx`), and feature components in `app/components/`. shadcn primitives sit in `components/ui/` (`components.json`) on `radix-ui` and `class-variance-authority`. A new or reworked form uses React Hook Form with `zod` through `@hookform/resolvers` ([frontend-workflow](../frontend-workflow/references/async-state-and-forms.md)); a form still on controlled state is converted only by a task that owns it ([ADR 0003](../../../docs/adr/0003-app-foundation-program.md)). The auth forms share their controls in `app/components/AuthFields.tsx`. Motion for React is available for the interactions described in [Motion](#motion).
 
 Adding a primitive: `npx shadcn add <name>`, never `npx shadcn init` (it rewrites `app/globals.css` and `lib/utils.ts` and installs `cn`, `shadcn` and `tw-animate-css`). Then edit the generated file as `button.tsx` and `alert-dialog.tsx` were edited, and no further:
 
@@ -34,7 +34,7 @@ The generated form controls are generic: a form restyles them at the usage site 
 | Learning experience | `learn`, `quiz`, lesson pages, `profile` progress | medium-high | [learning-experience.md](references/learning-experience.md) |
 | Admin / operations | `app/admin/*` (courses, chapters, lessons, users, transactions) | medium | [admin-operations.md](references/admin-operations.md) |
 
-Read every reference whose row matches before designing; skip the others. A shared component such as `Header` or `Sidebar` is not changed for one screen: use `className` or composition at the usage site, and inspect all usages before touching it. Change a shared component only when the change is truly global, usage-site customization is insufficient, and the change is backward-compatible or the Owner approved it. Never change dialog width, button radius, card padding or table density globally for one screen.
+Read every reference whose row matches before designing; skip the others. A screen can match two rows by part: on the public `try_it` playground, the page composition (layout, framing, call to action) reads the public reference, the editor and its run feedback (output, errors, practice feedback) read the learning reference, and work on both reads both. A shared component such as `Header` or `Sidebar` is not changed for one screen: use `className` or composition at the usage site, and inspect all usages before touching it. Change a shared component only when the change is truly global, usage-site customization is insufficient, and the change is backward-compatible or the Owner approved it. Never change dialog width, button radius, card padding or table density globally for one screen.
 
 Scale the process to the change:
 
@@ -46,7 +46,7 @@ Scale the process to the change:
 ## Plan, then critique
 
 1. **Ground in the real screen:** the feature, the audience (learner, visitor, admin), the screen's single job, the vocabulary of programming courses, and the identity already in the repo.
-2. **Plan:** by default reuse the existing colors and Tailwind patterns; say which tokens stay. A new page or redesign at high or medium-high latitude may instead propose a new palette, a font or an animation library, as an Owner decision in the plan that says what it replaces; adding a font or package stays an Owner grant (`AGENTS.md` section 4, [dependency-updates](../dependency-updates/SKILL.md)). Define type roles by scale and weight with the current font stack, or the proposed one. Describe the layout concepts (prose or a small ASCII sketch). Name one structural or state-language element the screen should be remembered by, taken from the subject (recall, progress, correction, completion), not a random gradient or decoration.
+2. **Plan:** by default reuse the existing colors and Tailwind patterns; say which tokens stay. A new page or redesign at high or medium-high latitude may instead propose a new palette or font, as an Owner decision in the plan that says what it replaces. Adding a font or package stays an Owner grant (`AGENTS.md` section 4, [dependency-updates](../dependency-updates/SKILL.md)). Define type roles by scale and weight with the current font stack, or the proposed one. Describe the layout concepts (prose or a small ASCII sketch). Name one structural or state-language element the screen should be remembered by, taken from the subject (recall, progress, correction, completion), not a random gradient or decoration.
 3. **Critique before building:** could this direction fit any SaaS landing page unchanged? Does it lean on generic purple gradients, glassmorphism, bento cards, pill buttons everywhere or floating icons? Then the opposite failure: is it so cautious that nothing on the screen would be remembered, or is the bold concept only the safe one recoloured? A bold concept still keeps the screen's job, its states and the accessibility floor. Check the plan against Visual quality below. If it is generic or timid, revise and say what changed.
 
 ## Visual quality
@@ -87,7 +87,9 @@ UI copy is natural Vietnamese, written from the user's side: active voice, plain
 
 ## Motion
 
-Only to clarify state or support learning: hover and focus transitions, dialog open and close, answer reveal, progress, completion feedback. Never delay repeated actions or ignore reduced motion. The completion `canvas-confetti` is allowed where it already fits. CSS transitions, keyframes and `tailwindcss-animate` cover most effects. When an effect needs more (an exit animation, smooth reordering, drag, a chained sequence), say so and propose a library as an Owner decision instead of hand-writing a fragile imitation.
+During design, name what the user should notice: which cards remain after filtering, how a line of code relates to its output, or what changed after an answer. When movement could clarify that relationship or give the screen a purposeful visual signature, explore the [Motion for React documentation and examples](https://motion.dev/docs/react) before settling on the interaction. Try a candidate in context and keep it only if it serves that purpose.
+
+Use CSS transitions, keyframes or `tailwindcss-animate` for simple effects. For coordinated entry and exit, layout changes or gestures, prefer the primitives in `motion/react`. Combine them when an example covers only part of the interaction. Write custom animation logic only for a specific need the existing tools cannot meet. Keep repeated actions responsive and preserve the feedback when reduced motion is enabled. The completion `canvas-confetti` is allowed where it already fits.
 
 ## Boundaries and output
 
@@ -97,8 +99,8 @@ Prefer existing components and usage-site customization. Do not invent paths or 
 
 | Resource | Read when | Skip when |
 | --- | --- | --- |
-| [client-marketing.md](references/client-marketing.md) | home, discovery, pricing, login or other public pages | learner or admin screens |
-| [learning-experience.md](references/learning-experience.md) | lessons, quizzes, progress, profile learning views | public or admin screens |
+| [client-marketing.md](references/client-marketing.md) | home, discovery, pricing, login, the `try_it` page composition or other public pages | learner or admin screens |
+| [learning-experience.md](references/learning-experience.md) | lessons, quizzes, progress, profile learning views, the editor and run feedback of a code playground (`try_it` included) | public composition only, or admin screens |
 | [admin-operations.md](references/admin-operations.md) | anything under `app/admin` or an operational table or confirmation | learner or public screens |
 
 ## Final check
@@ -108,4 +110,4 @@ Prefer existing components and usage-site customization. Do not invent paths or 
 - [ ] primary, secondary and destructive actions are clear; destructive flows confirm in `ConfirmDialog` with context
 - [ ] states, long and missing data, mobile and overflow are handled
 - [ ] semantic controls, focus and contrast checked or marked not verified
-- [ ] shared components untouched unless the change is global and inspected; no new library added
+- [ ] shared components untouched unless the change is global and inspected; any new dependency was authorized and checked under [dependency-updates](../dependency-updates/SKILL.md)

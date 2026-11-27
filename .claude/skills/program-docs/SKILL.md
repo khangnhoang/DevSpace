@@ -41,7 +41,7 @@ Plan shape, checked by `npm run docs:check` (rule `plan-shape`):
 - `progress.md` is the only place State lives. A plan has a one-line pointer to it and no State section. A detail plan links to its `progress.md` with a Markdown link.
 - State describes the current unit and current authority only. When a unit finishes, its evidence shrinks to milestone lines citing the PR or commit.
 - Update State in the same commit as the change it describes; use a standalone docs commit only for a blocker, a merge or rollout event, or a handoff. A milestone citing `(this commit)` is replaced with the hash in the next commit that edits the file.
-- An implementation discovery is an accepted deviation in State. Do not edit the frozen Spec to match it; route material changes through `planning`.
+- An implementation discovery that keeps the Spec (a changed hypothesis, mechanism or fact) is an accepted deviation in State. A change to the Spec itself (outcome, acceptance, scope, guardrail or Owner decision) is not a deviation: it is a new plan revision approved through `planning`. Do not edit the frozen Spec to match an implementation.
 
 ## Problems and future features
 
@@ -101,7 +101,7 @@ After editing program docs, `docs/README.md`, `docs/adr/` or `docs/backlog/`, ru
 ## Stop when
 
 - a migrated Owner decision, invariant, gate, rollout step or open problem cannot keep its meaning in the new shape;
-- a published migration (`supabase/migrations/*.sql`) cites a path you would move, rename or renumber (never edit a published migration);
+- a published migration (`supabase/migrations/*.sql`) cites a path you would move, rename or renumber: stop before the change, even when `docs:check` would pass (never edit a published migration);
 - another session or branch is editing the same files;
 - the work would change planning, permission or skill rules owned elsewhere, or a required Owner decision on taxonomy or scope is missing.
 

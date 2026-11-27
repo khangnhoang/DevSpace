@@ -6,14 +6,14 @@ Plan: the charter `README.md` and the initiative plans under `implementation-pla
 
 | Field | Value |
 | --- | --- |
-| Spec revision | [AW-U14 plan](implementation-plans/aw-u14-durable-skills/plan.md) r4, approved by the Owner on 2026-11-14. |
-| Current unit / checkpoint | None. AW-U14 is complete. |
-| Status | AW-U14 delivered in PR 89 (`4a41c02`). No initiative is open. |
-| Completed evidence | AW-U14: the Codex plan gate passed on r3 and r4, Main's review passed after one correction, and CI was green on `28ff996`; the figures are in Milestones and the PR 89 body. |
-| Accepted deviations | None. |
-| Blockers / Owner decisions | none. |
-| Next action | None. The Owner selects the next initiative. |
-| Current authority | None active. |
+| Spec revision | [AW-U15 plan](implementation-plans/aw-u15-motion-instruction-audit/plan.md) r3, approved on 2026-11-24. |
+| Current unit / checkpoint | AW-U15: implemented and committed locally; audit rounds 1 (9 Required, `518aaad`) and 2 (5 Required and a Nit, `31f6104`) corrected; round 3 passed with 0 Critical and 0 Required, and its two Suggestions are applied in this commit. |
+| Status | Ready for delivery, stacked after dependency-maintenance DM-P2: the final regression passed on a local merge of this branch, the DM-P2 branch and the quality-engineering QE-P11 fix. The TM-U4 catch-up landed in `df3ccfe`. |
+| Completed evidence | Independent static plan review passed on r3 with GPT-6.2 Sol at high effort; the implementation audit passed in round 3 with the same model and effort. On Node v26.13.0: `npm run docs:check` passed with 0 violations and 0 broken links; `motion/react` resolves `motion` and `AnimatePresence` from `motion` 14.14.0; `.claude/skills/playwright-cli` references and `LICENSE` keep their blob hashes. Final regression on `fb6e6c5` (this branch at `31f6104`, the QE-P11 fix `68b9e16` and the DM-P2 branch `513d889` with `next` 16.4.5): `npx tsc --noEmit`, `npm run build` and `npm run build:api` exit 0; `npm test` 85 files and 1,409 tests passed with exit 0; `npm run test:e2e` 183 passed. `npm run lint` there reported problems only inside a nested agent worktree under `.claude/worktrees/`, and passed with 0 problems once that folder was ignored (`75ef027` on the QE-P11 branch). |
+| Accepted deviations | Owner instruction of 2026-11-24: Main implements the plan in this session instead of a separate implementor session, and may commit during implementation, so the group commits `1ba2fde` and `e73ed80` precede the final audit and regression that plan section 4 orders first; audit findings land as correction commits. The TM-U4 catch-up attributes the two production outcomes to Main's production check at the Owner's request (Owner answer of 2026-11-24), not to a separate Owner confirmation as plan section 4 assumed. AW-P1 keeps its Accepted disposition: both templates still sit in one folder, and the detail-plan template comment now names the nested `../../progress.md` link. |
+| Blockers / Owner decisions | The Owner chose a separate task for the Next.js update (DM-P2) and on 2026-11-24 chose three stacked PRs: DM-P2 to `main` first, then this branch, then the QE-P11 fix with the lint ignore. Without DM-P2 under it, `npm run build` on this branch alone stops under an agent session on the Next.js 16.4.3 upgrade nudge. |
+| Next action | The Owner grants push and PR creation for the three stacked PRs. |
+| Current authority | Local commits by related group (Owner, 2026-11-24). Push, PR and merge are not granted. |
 
 ## Milestones
 
@@ -135,3 +135,8 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-14 AW-U14 CP4: charter decision and invariant, State, the AW-F6 split entry and the techstack-migration problem for the missing API-read procedure; final regression passed (`99561b9`).
 - 2026-11-14 AW-U14 Main review correction: three inventory and state statements in `qa-matrix.md`, `rls-test-design.md` and `backup-and-restore.md` reworded as rules naming their stable sources (`28ff996`).
 - 2026-11-14 AW-U14 completed: merged with CI green on all six jobs and Vercel (PR 89, `4a41c02`).
+- 2026-11-24 AW-U15 r3 passed independent plan review and the Owner approved the plan, deferring implementation (`dfc4c17`).
+- 2026-11-24 AW-U15 Motion group: `motion` 14.14.0 added to the root dependencies, with the Motion, playground-routing and dependency-grant guidance in the frontend and dependency skills (`1ba2fde`).
+- 2026-11-24 AW-U15 instruction audit corrections E1 to E13 across `AGENTS.md` and the git, migration, server-action, test, program-docs and playwright skills (`e73ed80`).
+- 2026-11-24 AW-U15 audit round 1 correction: nine Required findings on reduced motion, the schema-check reading, backup runbook scope and teardown, stacked branch stops, reset order, the write-stop apply branch, the handoff template and the State order (`518aaad`).
+- 2026-11-24 AW-U15 audit round 2 correction: stacked-branch fetch stop, the write-stop scope of Hosted apply, the stale backup result, and the DM-P2 and QE-P11 evidence (this commit).

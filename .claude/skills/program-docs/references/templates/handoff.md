@@ -1,4 +1,4 @@
-<!-- Template: handoff. Record using the authorized storage binding of the agent environment, one file per task, fill every <placeholder>, and delete this comment. Claude: copy to its memory folder and link from MEMORY.md (.claude/rules.md section 7). A handoff carries exactly one task (docs/agent-loops.md, Handoff) and holds only the facts no doc reflects yet, plus the next task's approved scope; link to the owning docs instead of copying them. -->
+<!-- Template: handoff. Record using the authorized storage binding of the agent environment, one file per task, fill every <placeholder>, and delete this comment. Claude: copy to its memory folder and link from MEMORY.md (.claude/rules.md section 7). A handoff carries exactly one task (docs/agent-loops.md, Handoff) and holds only the facts no doc reflects yet, plus the approved scope of the task it hands over; link to the owning docs instead of copying them. -->
 
 ---
 name: <task-id>-handoff
@@ -7,7 +7,7 @@ metadata:
   type: project
 ---
 
-Written <YYYY-MM-DD> at the Owner's request. Task: <program> <task>. Delete this file (and, in Claude storage, its `MEMORY.md` line) when <the task's PR n is merged and the owning docs record every durable fact below | the catch-up item has moved to a new task's handoff>.
+Written <YYYY-MM-DD> <at the Owner's request | because the session must stop with work in flight | at the merge of PR n, trimmed to the lagging docs | at the merge of PR n, holding only the lagging docs>. Task: <program> <task>. Delete this file (and, in Claude storage, its `MEMORY.md` line) when <the task's PR n is merged and the owning docs record every durable fact below | the lagging docs below are updated | the catch-up item has moved to a new task's handoff | the Owner cancels the task>; while the task is partly complete, trim it to what is still open and not yet in a doc, and delete it when nothing is left.
 
 **Session facts (expire with the task)**
 - Hosted state: <what was applied or checked on hosted, or "none">.
@@ -20,7 +20,7 @@ Written <YYYY-MM-DD> at the Owner's request. Task: <program> <task>. Delete this
 **Approved scope**
 - <item one: what to do, with a link to the owning doc instead of a copy>.
 - <item two>.
-- Docs catch-up from PR <n> (only when the previous task's docs lagged at its merge): <doc and the fact it must record>, one line per doc item.
+- Docs catch-up from PR <n> (only when the previous task's docs lagged at its merge and the Owner asked for this new task's handoff; it moves here once, and the old handoff is deleted in the same turn): <doc and the fact it must record>, one line per doc item.
 
 **Later unit owns**
 - <what a later unit or program owns, with a link>.

@@ -8,7 +8,7 @@ Main uses the model and effort the Owner selected in the current chat; do not ov
 | --- | --- | --- | --- | --- |
 | Explore | GPT-6 Luna (`gpt-6-luna`) | `high` | Haiku | `high` |
 | Implementor | GPT-6.1 Sol (`gpt-6.1-sol`) | `medium` | Sonnet (`claude-sonnet-5-5`) | `high` |
-| Independent reviewer | GPT-6.1 Sol (`gpt-6.1-sol`) | `high` | Opus | `high` |
+| Independent reviewer | GPT-6.2 Astra (`gpt-6.2-astra`) | `medium` | Opus | `high` |
 
 Use the selected model's supported identifier from the current execution tool. Haiku and Opus name families, not pinned API versions; do not invent an identifier. If the selected model, effort or required execution method is unavailable or ambiguous, report the blocker instead of silently selecting another model or effort. Verify the effective model and effort when the tool exposes them.
 

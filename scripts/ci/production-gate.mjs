@@ -357,29 +357,53 @@ async function fetchHealthReal(url) {
   };
 }
 
-// The 100 newest runs cover any realistic backlog of merges inside one deadline window.
-async function listRunsReal() {
-  const repository = process.env.GITHUB_REPOSITORY;
-  const token = process.env.GITHUB_TOKEN;
-  if (!repository || !token)
-    throw new Error("GITHUB_REPOSITORY or GITHUB_TOKEN is missing");
-  const response = await fetch(
-    `https://api.github.com/repos/${repository}/actions/workflows/production-gate.yml/runs?branch=main&event=push&per_page=100`,
-    {
-      headers: {
-        authorization: `Bearer ${token}`,
-        accept: "application/vnd.github+json",
-        "x-github-api-version": "2022-11-28",
-      },
-      signal: AbortSignal.timeout(10_000),
-    },
-  );
-  if (response.status !== 200)
-    throw new Error(`the runs API answered ${response.status}`);
-  const data = await response.json();
-  if (!data || !Array.isArray(data.workflow_runs))
-    throw new Error("the runs API answered without workflow_runs");
-  return data.workflow_runs;
+// Every page of the workflow's push runs on main, newest first, so an old run's ordering check cannot miss a later
+// success that sits beyond the first page. Any failed page throws: the caller waits and never reads a partial
+// listing as "no earlier run in progress". The page cap only stops a runaway loop and also throws.
+export const RUNS_PER_PAGE = 100;
+const MAX_RUN_PAGES = 50;
+
+/**
+ * @param {{ repository: string, token: string, fetchImpl?: typeof fetch, perPage?: number }} input
+ */
+export function createListRuns({
+  repository,
+  token,
+  fetchImpl = fetch,
+  perPage = RUNS_PER_PAGE,
+}) {
+  return async () => {
+    if (!repository || !token)
+      throw new Error("GITHUB_REPOSITORY or GITHUB_TOKEN is missing");
+    /** @type {Array<{ id: number, head_sha: string, status: string, conclusion: string | null }>} */
+    const runs = [];
+    for (let page = 1; page <= MAX_RUN_PAGES; page++) {
+      const response = await fetchImpl(
+        `https://api.github.com/repos/${repository}/actions/workflows/production-gate.yml/runs?branch=main&event=push&per_page=${perPage}&page=${page}`,
+        {
+          headers: {
+            authorization: `Bearer ${token}`,
+            accept: "application/vnd.github+json",
+            "x-github-api-version": "2022-11-28",
+          },
+          signal: AbortSignal.timeout(10_000),
+        },
+      );
+      if (response.status !== 200)
+        throw new Error(
+          `the runs API answered ${response.status} on page ${page}`,
+        );
+      const data = await response.json();
+      if (!data || !Array.isArray(data.workflow_runs)) {
+        throw new Error(
+          `the runs API answered without workflow_runs on page ${page}`,
+        );
+      }
+      runs.push(...data.workflow_runs);
+      if (data.workflow_runs.length < perPage) return runs;
+    }
+    throw new Error(`the runs listing has more than ${MAX_RUN_PAGES} pages`);
+  };
 }
 
 async function main() {
@@ -404,7 +428,10 @@ async function main() {
         now: () => Date.now(),
         sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
         fetchHealth: fetchHealthReal,
-        listRuns: listRunsReal,
+        listRuns: createListRuns({
+          repository: process.env.GITHUB_REPOSITORY ?? "",
+          token: process.env.GITHUB_TOKEN ?? "",
+        }),
         git: createGit(M),
         log: (line) =>
           process.stdout.write(`${new Date().toISOString()} ${line}\n`),

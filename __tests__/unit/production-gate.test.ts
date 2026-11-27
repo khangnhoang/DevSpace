@@ -15,6 +15,7 @@ import {
   createGit,
   decide,
   findWatchCommit,
+  createListRuns,
   runGate,
   toPathspec,
   toPathspecs,
@@ -529,6 +530,148 @@ describe("runGate (AC2)", () => {
       });
       expect((await h.result).pass).toBe(true);
     });
+  });
+});
+
+// The page walk of the real runs listing, with the HTTP call faked (two runs per page keeps the pages small).
+describe("createListRuns pagination (AC2)", () => {
+  type Run = {
+    id: number;
+    head_sha: string;
+    status: string;
+    conclusion: string | null;
+  };
+  const mk = (
+    id: number,
+    head: string,
+    status = "completed",
+    conclusion: string | null = "success",
+  ): Run => ({
+    id,
+    head_sha: head,
+    status,
+    conclusion,
+  });
+  // pages[n] is the answer for page n + 1: a run list, or an HTTP status number for a failed page.
+  const fakeFetch = (pages: Array<Run[] | number>) => {
+    const urls: string[] = [];
+    const fetchImpl = (async (url: string) => {
+      urls.push(url);
+      const page = Number(new URL(url).searchParams.get("page"));
+      const answer = pages[page - 1];
+      if (answer === undefined)
+        throw new Error(`unexpected request for page ${page}`);
+      if (typeof answer === "number")
+        return { status: answer, json: async () => ({}) };
+      return { status: 200, json: async () => ({ workflow_runs: answer }) };
+    }) as unknown as typeof fetch;
+    return { fetchImpl, urls };
+  };
+  const list = (pages: Array<Run[] | number>) => {
+    const f = fakeFetch(pages);
+    return {
+      listRuns: createListRuns({
+        repository: "o/r",
+        token: "t",
+        fetchImpl: f.fetchImpl,
+        perPage: 2,
+      }),
+      urls: f.urls,
+    };
+  };
+
+  it("reads every page until one holds fewer runs than a full page", async () => {
+    const { listRuns, urls } = list([
+      [mk(1, C.c1), mk(2, C.c2)],
+      [mk(3, C.c3), mk(4, C.c4)],
+      [mk(5, C.c5)],
+    ]);
+    expect((await listRuns()).map((r) => r.id)).toEqual([1, 2, 3, 4, 5]);
+    expect(urls).toHaveLength(3);
+    expect(urls[0]).toContain("branch=main");
+    expect(urls[0]).toContain("event=push");
+  });
+
+  it("stops after an empty page when the last full page was the end", async () => {
+    const { listRuns, urls } = list([[mk(1, C.c1), mk(2, C.c2)], []]);
+    expect(await listRuns()).toHaveLength(2);
+    expect(urls).toHaveLength(2);
+  });
+
+  it("throws on a failed or malformed later page instead of returning the pages read so far", async () => {
+    await expect(
+      list([[mk(1, C.c1), mk(2, C.c2)], 403]).listRuns(),
+    ).rejects.toThrow("403");
+    await expect(
+      list([[mk(1, C.c1), mk(2, C.c2)], 500]).listRuns(),
+    ).rejects.toThrow("500");
+  });
+
+  it("throws without a token or repository", async () => {
+    const f = fakeFetch([[]]);
+    await expect(
+      createListRuns({ repository: "", token: "t", fetchImpl: f.fetchImpl })(),
+    ).rejects.toThrow();
+    await expect(
+      createListRuns({
+        repository: "o/r",
+        token: "",
+        fetchImpl: f.fetchImpl,
+      })(),
+    ).rejects.toThrow();
+  });
+
+  const gate = (listRuns: () => Promise<Run[]>, deadlineMs = 30_000) => {
+    let time = 0;
+    return runGate({
+      M: C.c5,
+      W: C.c3,
+      ownRunId: 100,
+      deadlineMs,
+      pollMs: 15_000,
+      deps: {
+        now: () => time,
+        sleep: async (ms: number) => {
+          time += ms;
+        },
+        fetchHealth: async () => healthy(C.c5) as never,
+        listRuns: listRuns as never,
+        git: {
+          ...chainGit(),
+          fetchMain: () => {},
+          orderSets: () => ({
+            earlier: new Set([C.c1]),
+            later: new Set([C.c6]),
+          }),
+        },
+      },
+    });
+  };
+
+  it("a later success that sits only on page 2 makes a re-run of an older commit superseded", async () => {
+    const { listRuns } = list([
+      [
+        mk(1, C.c4, "completed", "failure"),
+        mk(2, C.c4, "completed", "cancelled"),
+      ],
+      [mk(9, C.c6)],
+    ]);
+    const result = await gate(listRuns);
+    expect(result.pass).toBe(false);
+    expect(result.message).toContain(`superseded by ${C.c6}`);
+  });
+
+  it("an error on page 2 waits and never reads the first page as no earlier run in progress", async () => {
+    const { listRuns } = list([
+      [
+        mk(1, C.c4, "completed", "failure"),
+        mk(2, C.c4, "completed", "cancelled"),
+      ],
+      502,
+    ]);
+    const result = await gate(listRuns);
+    expect(result.pass).toBe(false);
+    expect(result.message).toContain("timed out");
   });
 });
 

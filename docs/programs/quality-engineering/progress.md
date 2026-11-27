@@ -8,7 +8,7 @@ Charter: [README.md](README.md). Problems: [problems.md](problems.md). Git histo
 | --- | --- |
 | Spec revision | none open. The last initiative, [QE-U6](implementation-plans/qe-u6-e2e-coverage/plan.md) r1 (2026-11-07), is delivered. |
 | Current unit / checkpoint | none. QE-U6 is delivered in PR 75 (`db73c2e`). |
-| Status | QE-U6 completed on 2026-11-07: QE-F10 resolved and every e2e row classified for QE-F8. No initiative is open. QE-P7, QE-P9 and the QE-F8 moves are open. |
+| Status | QE-U6 completed on 2026-11-07: QE-F10 resolved and every e2e row classified for QE-F8. No initiative is open. QE-P3, QE-P4, QE-P7, QE-P9, QE-P12 and the QE-F8 moves are open; QE-P10 and QE-P11 were fixed outside an initiative (PRs 95 and 94). |
 | Completed evidence | QE-U6 milestones and PR 75. AC4 and AC5 ran on an owned fixture course (one lesson, two exercises, no progress) instead of seed lesson 3, an accepted deviation: `user_progress` is unique per user and lesson, so an unwanted insert on the seed row fails with 23505 and the app ignores it, which would leave "rows unchanged" unable to fail. |
 | Accepted deviations | none open. |
 | Blockers / Owner decisions | none. |
@@ -60,3 +60,5 @@ One line each, newest last. No review rounds or command logs.
 - 2026-11-07 QE-U6 CP3 adds three admin e2e rows: the dashboard of the seed [A14], and the header bell on owned admin notifications, opening one [A15] and mark all read [A16], with the student's seed notification as the unread control; one temporary app mutation per new e2e row of CP2 and CP3 (nine rows) failed its own row on the intended assertion (`dd9055f`).
 - 2026-11-07 QE-U6 CP4 classifies all 164 test-defining e2e rows (155 `test(` and 9 `recoveryTest(`) in the 11 spec headers, 28 of them client-only; QE-F8 lists the client-only rows per spec and stays open for the moves, and QE-F10 is `Fixed locally, awaiting delivery` until the PR exists (`85cb4a1`).
 - 2026-11-07 QE-U6 merged: QE-F10 closed; the QE-F8 moves stay open for a later initiative (PR 75, `db73c2e`).
+- 2026-11-27 QE-P10 fixed: the public course-navigation row waits for the detail page before naming the course (PR 95, `31578d8`).
+- 2026-11-27 QE-P11 fixed: a reused writer PID held by a protected non-Node process no longer blocks the test commands, and agent worktrees are ignored by lint (PR 94, `5acf405`).

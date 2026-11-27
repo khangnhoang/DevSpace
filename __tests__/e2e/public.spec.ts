@@ -224,8 +224,18 @@ test.describe("anonymous visitor", () => {
         .getByRole("link", { name: "DevSpace" })
         .click();
       await page.locator('a[href="/course/lam-quen-voi-html"]').first().click();
+      // The home page titles this course three times (hero h1, card h2, h3), and the click returns before the
+      // navigation commits, so wait for the detail route and a heading only that page has before naming the course.
+      await expect(page).toHaveURL(/\/course\/lam-quen-voi-html$/);
       await expect(
-        page.getByRole("heading", { name: "Làm quen với HTML", exact: true }),
+        page.getByRole("heading", { name: "Bạn sẽ học được gì?" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("heading", {
+          level: 1,
+          name: "Làm quen với HTML",
+          exact: true,
+        }),
       ).toBeVisible();
       expect(await abandoned).not.toBeNull();
       await expect(page.getByText(/E2E đánh giá số/)).toHaveCount(0);

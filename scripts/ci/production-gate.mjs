@@ -151,20 +151,34 @@ export async function runGate({
     refetched: new Set(),
   };
 
+  // The deadline is checked before every poll and again before a pass is returned, so a poll that starts or ends
+  // after it never passes (AC2: at the deadline the run exits non-zero). The sleep is capped at the time left.
+  let lastNote = "no poll ran";
   for (;;) {
+    if (now() >= deadline) return timedOut(lastNote);
     const outcome = await pollOnce();
-    if (outcome.done) return outcome.result;
-    log(outcome.note);
-    if (now() >= deadline) {
-      const blocker = state.waitingOn ? ` Waiting on ${state.waitingOn}.` : "";
-      return {
-        pass: false,
-        message:
-          `production-gate timed out: M=${M} W=${W} last reported commit=${state.lastC} ` +
-          `last answer=${state.lastAnswer} server=${state.lastServer}. ${outcome.note}.${blocker}`,
-      };
+    if (outcome.done) {
+      if (outcome.result.pass && now() >= deadline) {
+        return timedOut("the deadline passed while the last check was running");
+      }
+      return outcome.result;
     }
-    await sleep(pollMs);
+    lastNote = outcome.note;
+    log(outcome.note);
+    const left = deadline - now();
+    if (left <= 0) return timedOut(lastNote);
+    await sleep(Math.min(pollMs, left));
+  }
+
+  /** @param {string} note */
+  function timedOut(note) {
+    const blocker = state.waitingOn ? ` Waiting on ${state.waitingOn}.` : "";
+    return {
+      pass: false,
+      message:
+        `production-gate timed out: M=${M} W=${W} last reported commit=${state.lastC} ` +
+        `last answer=${state.lastAnswer} server=${state.lastServer}. ${note}.${blocker}`,
+    };
   }
 
   async function pollOnce() {
@@ -357,9 +371,13 @@ async function fetchHealthReal(url) {
   };
 }
 
-// Every page of the workflow's push runs on main, newest first, so an old run's ordering check cannot miss a later
-// success that sits beyond the first page. Any failed page throws: the caller waits and never reads a partial
-// listing as "no earlier run in progress". The page cap only stops a runaway loop and also throws.
+// Every page of the workflow's runs, newest first, so an old run's ordering check cannot miss a later success that
+// sits beyond the first page. The request carries no `branch` or `event` filter: GitHub returns at most 1000 results
+// for a filtered listing and then empty pages, which would end the walk with history missing. The workflow runs only on
+// push to main, so the unfiltered listing is the same set; a run that positively names another branch or event is
+// dropped locally, and one whose fields are missing is kept, because dropping an unknown run could hide an earlier
+// run that is still in progress (the unsafe direction). Any failed page throws: the caller waits and never reads a
+// partial listing as "no earlier run in progress". The page cap only stops a runaway loop and also throws.
 export const RUNS_PER_PAGE = 100;
 const MAX_RUN_PAGES = 50;
 
@@ -379,7 +397,7 @@ export function createListRuns({
     const runs = [];
     for (let page = 1; page <= MAX_RUN_PAGES; page++) {
       const response = await fetchImpl(
-        `https://api.github.com/repos/${repository}/actions/workflows/production-gate.yml/runs?branch=main&event=push&per_page=${perPage}&page=${page}`,
+        `https://api.github.com/repos/${repository}/actions/workflows/production-gate.yml/runs?per_page=${perPage}&page=${page}`,
         {
           headers: {
             authorization: `Bearer ${token}`,
@@ -399,7 +417,14 @@ export function createListRuns({
           `the runs API answered without workflow_runs on page ${page}`,
         );
       }
-      runs.push(...data.workflow_runs);
+      for (const run of data.workflow_runs) {
+        const otherBranch =
+          typeof run?.head_branch === "string" && run.head_branch !== "main";
+        const otherEvent =
+          typeof run?.event === "string" && run.event !== "push";
+        if (!otherBranch && !otherEvent) runs.push(run);
+      }
+      // The raw page size decides the end, not the filtered one.
       if (data.workflow_runs.length < perPage) return runs;
     }
     throw new Error(`the runs listing has more than ${MAX_RUN_PAGES} pages`);

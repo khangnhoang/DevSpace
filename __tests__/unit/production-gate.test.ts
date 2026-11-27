@@ -540,6 +540,8 @@ describe("createListRuns pagination (AC2)", () => {
     head_sha: string;
     status: string;
     conclusion: string | null;
+    head_branch?: string;
+    event?: string;
   };
   const mk = (
     id: number,
@@ -553,7 +555,7 @@ describe("createListRuns pagination (AC2)", () => {
     conclusion,
   });
   // pages[n] is the answer for page n + 1: a run list, or an HTTP status number for a failed page.
-  const fakeFetch = (pages: Array<Run[] | number>) => {
+  const fakeFetch = (pages: Array<Run[] | number | { body: unknown }>) => {
     const urls: string[] = [];
     const fetchImpl = (async (url: string) => {
       urls.push(url);
@@ -563,11 +565,13 @@ describe("createListRuns pagination (AC2)", () => {
         throw new Error(`unexpected request for page ${page}`);
       if (typeof answer === "number")
         return { status: answer, json: async () => ({}) };
+      if (!Array.isArray(answer))
+        return { status: 200, json: async () => answer.body };
       return { status: 200, json: async () => ({ workflow_runs: answer }) };
     }) as unknown as typeof fetch;
     return { fetchImpl, urls };
   };
-  const list = (pages: Array<Run[] | number>) => {
+  const list = (pages: Array<Run[] | number | { body: unknown }>) => {
     const f = fakeFetch(pages);
     return {
       listRuns: createListRuns({
@@ -588,8 +592,8 @@ describe("createListRuns pagination (AC2)", () => {
     ]);
     expect((await listRuns()).map((r) => r.id)).toEqual([1, 2, 3, 4, 5]);
     expect(urls).toHaveLength(3);
-    expect(urls[0]).toContain("branch=main");
-    expect(urls[0]).toContain("event=push");
+    expect(urls[0]).not.toContain("branch=");
+    expect(urls[0]).not.toContain("event=");
   });
 
   it("stops after an empty page when the last full page was the end", async () => {
@@ -605,6 +609,48 @@ describe("createListRuns pagination (AC2)", () => {
     await expect(
       list([[mk(1, C.c1), mk(2, C.c2)], 500]).listRuns(),
     ).rejects.toThrow("500");
+  });
+
+  it("throws on a 200 page whose workflow_runs is missing or not an array", async () => {
+    const full = [mk(1, C.c1), mk(2, C.c2)];
+    await expect(list([{ body: {} }]).listRuns()).rejects.toThrow(
+      "workflow_runs",
+    );
+    await expect(list([{ body: null }]).listRuns()).rejects.toThrow(
+      "workflow_runs",
+    );
+    await expect(
+      list([full, { body: { workflow_runs: "nope" } }]).listRuns(),
+    ).rejects.toThrow("workflow_runs");
+  });
+
+  it("drops runs that name another branch or event, keeps runs with missing fields, and ends on the raw page size", async () => {
+    const mine = {
+      ...mk(1, C.c1, "in_progress", null),
+      head_branch: "main",
+      event: "push",
+    };
+    const other = [
+      {
+        ...mk(2, C.c2, "in_progress", null),
+        head_branch: "feature",
+        event: "push",
+      },
+      {
+        ...mk(3, C.c3, "in_progress", null),
+        head_branch: "main",
+        event: "pull_request",
+      },
+    ];
+    const unknown = mk(4, C.c4, "in_progress", null);
+    // Page 1 is full (2 runs) but holds one dropped run; the walk must still read page 2.
+    const { listRuns, urls } = list([
+      [mine, other[0]],
+      [other[1], unknown],
+      [mk(5, C.c5)],
+    ]);
+    expect((await listRuns()).map((r) => r.id)).toEqual([1, 4, 5]);
+    expect(urls).toHaveLength(3);
   });
 
   it("throws without a token or repository", async () => {
@@ -672,6 +718,87 @@ describe("createListRuns pagination (AC2)", () => {
     const result = await gate(listRuns);
     expect(result.pass).toBe(false);
     expect(result.message).toContain("timed out");
+  });
+});
+
+describe("deadline (AC2)", () => {
+  const baseGit = {
+    ...chainGit(),
+    fetchMain: () => {},
+    orderSets: () => ({ earlier: new Set<string>(), later: new Set<string>() }),
+  };
+
+  it("an API that catches up only after the deadline fails with the timeout message", async () => {
+    const h = harness({
+      answers: [healthy(C.c2), healthy(C.c2), healthy(C.c3)],
+      deadlineMs: 30_000,
+    });
+    const result = await h.result;
+    expect(result.pass).toBe(false);
+    expect(result.message).toContain("timed out");
+    expect(h.counts().healthCalls).toBe(2);
+  });
+
+  it("caps the last sleep at the time left and does not poll at or after the deadline", async () => {
+    const h = harness({ answers: [healthy(C.c2)], deadlineMs: 40_000 });
+    expect((await h.result).pass).toBe(false);
+    expect(h.counts().sleeps).toEqual([15_000, 15_000, 10_000]);
+    expect(h.counts().healthCalls).toBe(3);
+  });
+
+  it.each(["health", "runs"])(
+    "a %s call that moves the clock past the deadline makes a would-be pass fail",
+    async (slow) => {
+      let time = 0;
+      const result = await runGate({
+        M: C.c5,
+        W: C.c3,
+        ownRunId: 100,
+        deadlineMs: 30_000,
+        pollMs: 15_000,
+        deps: {
+          now: () => time,
+          sleep: async (ms: number) => {
+            time += ms;
+          },
+          fetchHealth: async () => {
+            if (slow === "health") time = 30_000;
+            return healthy(C.c3) as never;
+          },
+          listRuns: async () => {
+            if (slow === "runs") time = 30_000;
+            return [];
+          },
+          git: baseGit,
+        },
+      });
+      expect(result.pass).toBe(false);
+      expect(result.message).toContain("timed out");
+    },
+  );
+
+  it("a poll that finishes before the deadline still passes", async () => {
+    let time = 0;
+    const result = await runGate({
+      M: C.c5,
+      W: C.c3,
+      ownRunId: 100,
+      deadlineMs: 30_000,
+      pollMs: 15_000,
+      deps: {
+        now: () => time,
+        sleep: async (ms: number) => {
+          time += ms;
+        },
+        fetchHealth: async () => {
+          time = 29_999;
+          return healthy(C.c3) as never;
+        },
+        listRuns: async () => [],
+        git: baseGit,
+      },
+    });
+    expect(result.pass).toBe(true);
   });
 });
 

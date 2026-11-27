@@ -1,6 +1,6 @@
 # TM-U16 detail plan — Production gate
 
-Revision: r3, 2026-11-27. Owner approval: pending. Master plan or charter: [plan.md](../../plan.md) (decision 17, TM-U16 row).
+Revision: r3, 2026-11-27. Owner approval: approved by the Owner on 2026-11-27. Master plan or charter: [plan.md](../../plan.md) (decision 17, TM-U16 row).
 
 ## 1. Binding Spec
 

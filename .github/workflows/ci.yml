@@ -1,7 +1,9 @@
 name: CI
 
 # Pull requests only (Owner decision, 2026-11-08): the required checks gate each merge, and a merge commit on
-# main gets no run of its own. Branch protection is not strict, so a PR can merge without testing the latest main.
+# main gets no run of this workflow. Its own run on main is the separate production-gate workflow (TM-U16), which
+# holds the production domain until the Railway API is live. Branch protection is not strict, so a PR can merge
+# without testing the latest main.
 on:
   pull_request:
     branches: [main]

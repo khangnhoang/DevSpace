@@ -1,0 +1,39 @@
+name: production-gate
+
+# The production gate (techstack-migration TM-U16, decision 17). Runs on every push to main, which is every merge,
+# and passes only when the Railway API reports a backend commit that contains the merge's backend change
+# (scripts/ci/production-gate.mjs). Vercel's Deployment Checks hold the production domain assignment for the
+# merge's deployment until this check passes; that is an Owner setting in Vercel, not something this file does.
+#
+# - The job id is the check name Vercel is given: do not rename it or add `name:`.
+# - No `concurrency`: a cancelled run is a non-passing check, so that merge's deployment would never reach
+#   production even when its API is live (G5). Runs stay ordered by the script itself.
+# - No secret and no `npm ci` (G6): the script needs only Node, git and the automatic token, which can read this
+#   repository's contents and list its workflow runs (the merge-order check), and nothing else.
+# - Railway's "Wait for CI" must stay off (G2), or Railway would wait for this check while it waits for Railway.
+# - A merge commit must not carry [skip ci] or a similar marker (G7): no run starts, and Vercel would hold that
+#   deployment with no timeout.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  production-gate:
+    runs-on: ubuntu-latest
+    # The script's own deadline is 20 minutes; this only bounds a hung step.
+    timeout-minutes: 25
+    steps:
+      # The whole history: the script asks git which commit is an ancestor of which, and it fetches main again itself.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+      - run: node scripts/ci/production-gate.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

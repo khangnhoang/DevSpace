@@ -107,7 +107,7 @@ export function checkOrder({ runs, ownRunId, relation }) {
 /**
  * The polling loop. Every dependency is injected so a test drives it with a fake clock.
  * @param {{
- *   M: string, W: string, ownRunId: number, healthUrl?: string, deadlineMs?: number, pollMs?: number,
+ *   M: string, W: string | null, ownRunId: number, healthUrl?: string, deadlineMs?: number, pollMs?: number,
  *   deps: {
  *     now: () => number,
  *     sleep: (ms: number) => Promise<void>,
@@ -133,6 +133,13 @@ export async function runGate({
   pollMs = POLL_MS,
   deps,
 }) {
+  // No watch-path commit in M's history means the gate cannot tell what the API must report: fail before any poll.
+  if (W === null) {
+    return {
+      pass: false,
+      message: `production-gate failed: no commit at or before ${M} touches a Railway watch path`,
+    };
+  }
   const { now, sleep, fetchHealth, listRuns, git } = deps;
   const log = deps.log ?? (() => {});
   const deadline = now() + deadlineMs;
@@ -389,13 +396,6 @@ async function main() {
       ),
     );
     const W = findWatchCommit(M, toPathspecs(patterns));
-    if (W === null) {
-      process.stderr.write(
-        `production-gate failed: no commit at or before ${M} touches a Railway watch path\n`,
-      );
-      process.exitCode = 1;
-      return;
-    }
     const result = await runGate({
       M,
       W,

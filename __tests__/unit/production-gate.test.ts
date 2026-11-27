@@ -252,6 +252,41 @@ const run = (
 ) => ({ id, head_sha, status, conclusion });
 
 describe("runGate (AC2)", () => {
+  it("fails at once with a message naming M when no commit touches a watch path, without polling", async () => {
+    let calls = 0;
+    const forbidden = async () => {
+      calls++;
+      throw new Error("must not be called");
+    };
+    const result = await runGate({
+      M: C.c5,
+      W: null,
+      ownRunId: 100,
+      deps: {
+        now: () => {
+          calls++;
+          return 0;
+        },
+        sleep: forbidden,
+        fetchHealth: forbidden,
+        listRuns: forbidden,
+        git: {
+          has: () => true,
+          isAncestor: () => true,
+          fetchMain: () => {},
+          orderSets: () => ({
+            earlier: new Set<string>(),
+            later: new Set<string>(),
+          }),
+        },
+      },
+    });
+    expect(result.pass).toBe(false);
+    expect(result.message).toContain(C.c5);
+    expect(result.message).toContain("watch path");
+    expect(calls).toBe(0);
+  });
+
   it("passes on the first poll that satisfies the rule, without sleeping", async () => {
     const h = harness({ answers: [healthy(C.c3)] });
     const result = await h.result;
@@ -503,23 +538,18 @@ describe("watch paths (AC3)", () => {
   );
   const patterns: string[] = JSON.parse(readFileSync(file, "utf8"));
 
-  it("holds exactly the eight patterns the Railway dashboard shows", () => {
-    expect(patterns).toEqual([
-      "/backend/**",
-      "/lib/schemas/**",
-      "/scripts/api/**",
-      "/package.json",
-      "/package-lock.json",
-      "/.node-version",
-      "/Dockerfile.api",
-      "/.dockerignore",
-    ]);
+  it("is a non-empty list of valid, distinct dashboard patterns (the file is their only definition)", () => {
+    expect(Array.isArray(patterns)).toBe(true);
+    expect(patterns.length).toBeGreaterThan(0);
+    for (const pattern of patterns)
+      expect(() => toPathspec(pattern)).not.toThrow();
+    expect(new Set(patterns).size).toBe(patterns.length);
   });
 
   it("turns a dashboard pattern into a root-relative glob pathspec", () => {
     expect(toPathspec("/backend/**")).toBe(":(glob)backend/**");
     expect(toPathspec("/package.json")).toBe(":(glob)package.json");
-    expect(toPathspecs(patterns)).toHaveLength(8);
+    expect(toPathspecs(patterns)).toHaveLength(patterns.length);
   });
 
   it.each([[""], ["backend/**"], ["/"], [undefined], [3]])(

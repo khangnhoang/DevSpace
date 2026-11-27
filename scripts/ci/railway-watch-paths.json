@@ -1,0 +1,10 @@
+[
+  "/backend/**",
+  "/lib/schemas/**",
+  "/scripts/api/**",
+  "/package.json",
+  "/package-lock.json",
+  "/.node-version",
+  "/Dockerfile.api",
+  "/.dockerignore"
+]

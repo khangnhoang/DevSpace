@@ -21,6 +21,8 @@ const eslintConfig = defineConfig([
     "backend/**",
     "dist/**",
     "dist-e2e/**",
+    // Agent worktrees (git-ignored): other checkouts with their own build output, linted in their own runs.
+    ".claude/worktrees/**",
   ]),
 ]);
 

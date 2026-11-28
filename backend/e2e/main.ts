@@ -68,9 +68,34 @@ function slowHome(app: NestExpressApplication) {
   });
 }
 
+// Makes one learn route fail for a caller that carries the cookie `e2e-learn-fault=<route>.<kind>`, route being outline,
+// lesson or quiz and kind 500 or malformed (a 200 whose body is not the route's). It answers before the guards, so a
+// browser row can fail the layout's outline read while the page's own read succeeds (TM-U5 AC10), which no other
+// switch can do because both reads carry the same cookies. src/ has nothing like it.
+function learnFault(app: NestExpressApplication) {
+  app.use((request: Request, response: Response, next: NextFunction) => {
+    const match =
+      /(?:^|;\s*)e2e-learn-fault=(outline|lesson|quiz)\.(500|malformed)/.exec(
+        request.headers.cookie ?? "",
+      );
+    if (
+      request.method !== "GET" ||
+      !match ||
+      request.path !== `/api/learn/${match[1]}`
+    ) {
+      next();
+      return;
+    }
+    if (match[2] === "500") response.status(500).json({ message: "fault" });
+    else response.status(200).json({ unexpected: true });
+  });
+}
+
 function configure(app: NestExpressApplication) {
-  slowHome(app);
+  // The record goes first, so a request that the fault answers is recorded too.
   requestRecord()?.(app);
+  learnFault(app);
+  slowHome(app);
 }
 
 async function main() {

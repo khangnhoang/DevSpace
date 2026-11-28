@@ -8,6 +8,7 @@ import { BodyInterceptor } from "./common/body.interceptor";
 import { TimeoutInterceptor } from "./common/timeout.interceptor";
 import { SERVER_ENV } from "./common/tokens";
 import { CoursesModule } from "./courses/courses.module";
+import { LearnModule } from "./learn/learn.module";
 import { DbService } from "./db/db.service";
 import { HealthController } from "./health/health.controller";
 
@@ -19,7 +20,7 @@ export class AppModule {
   ): DynamicModule {
     return {
       module: AppModule,
-      imports: [DiscoveryModule, CoursesModule, ...extraModules],
+      imports: [DiscoveryModule, CoursesModule, LearnModule, ...extraModules],
       controllers: [HealthController],
       providers: [
         { provide: SERVER_ENV, useValue: env },

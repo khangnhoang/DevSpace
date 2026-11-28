@@ -3,8 +3,8 @@
 //   learner or an admin, in the order and shape the /learn pages read (TM-U5 AC4, G1, G2, G6, G8).
 // Layer: api (the production build as a process on the test stack, under the network guard).
 // Subject: GET /api/learn/lesson, /api/learn/outline and /api/learn/quiz.
-// Data: three minted users (enrolled in the fixture course and in seed course 2, not enrolled, admin) and owned
-//   fixtures: a course whose chapter and lesson order values disagree with the insertion order, a lesson with a video
+// Data: four minted users (enrolled in the fixture course and in seed course 2, enrolled only in a second fixture
+//   course, not enrolled, admin) and owned fixtures: a course whose chapter and lesson order values disagree with the insertion order, a lesson with a video
 //   address, a lesson filed under that course's chapter while its course_id names seed course 1 (with an exercise),
 //   and a lesson with an exercise inside the course. All are reserved before they are written and removed by the scope.
 // Invariants: the order is session (401), course (404), access (403), lesson (404); a refusal carries no lesson
@@ -47,6 +47,7 @@ type Chapter = { id: number; title: string; lessons: Lesson[] };
 let api: RunningApi;
 let enrolled: MintedSession;
 let plain: MintedSession;
+let onlyElsewhere: MintedSession;
 let admin: MintedSession;
 let course: string;
 let tag: string;
@@ -58,6 +59,7 @@ beforeAll(async () => {
   tag = scope.tag;
   enrolled = await sessions.mint("learn-enrolled");
   plain = await sessions.mint("learn-plain");
+  onlyElsewhere = await sessions.mint("learn-elsewhere");
   admin = await sessions.mint("learn-admin");
   const insert = async (table: string, row: Record<string, unknown>) => {
     const { data, error } = await scope.db
@@ -178,15 +180,21 @@ beforeAll(async () => {
       correct_answer: "a",
     });
   }
-  for (const user of [enrolled]) {
-    for (const id of [courseId, 2]) {
-      await scope.reserve("enrollments", {
-        user_id: user.userId,
-        course_id: id,
-      });
-      await insert("enrollments", { user_id: user.userId, course_id: id });
-    }
-  }
+  // A second course the learner below is enrolled in and nothing else: it makes an enrollment row exist for the
+  // caller, so only the course predicate of the access check can refuse the first course.
+  const otherName = scope.label("TM-U5 other course");
+  await scope.reserve("courses", { name: otherName });
+  const otherCourseId = await insert("courses", {
+    name: otherName,
+    slug: `tm-u5-other-${tag}`,
+    price: 0,
+  });
+  const enroll = async (user: MintedSession, id: number) => {
+    await scope.reserve("enrollments", { user_id: user.userId, course_id: id });
+    await insert("enrollments", { user_id: user.userId, course_id: id });
+  };
+  for (const id of [courseId, 2]) await enroll(enrolled, id);
+  await enroll(onlyElsewhere, otherCourseId);
   api = await startApi(apiTestEnv(stack));
 });
 
@@ -205,6 +213,24 @@ const lessonPath = (courseSlug: string, lessonSlug: string, route = "lesson") =>
 const outlinePath = (courseSlug: string) =>
   `/api/learn/outline?course=${encodeURIComponent(courseSlug)}`;
 
+// A 401, 403 or 404 body is the framework's refusal and nothing else: no key of an answer and no lesson text.
+async function expectRefusal(response: Response, status: number) {
+  expect(response.status).toBe(status);
+  const text = await response.text();
+  expect(text).not.toMatch(/secret content|Khai báo|TM-U5 lesson/);
+  const body = JSON.parse(text) as Record<string, unknown>;
+  for (const key of [
+    "content",
+    "video_url",
+    "chapters",
+    "lesson",
+    "user",
+    "course",
+    "isAdmin",
+  ])
+    expect(body, key).not.toHaveProperty(key);
+}
+
 const ROUTES = [
   (c: string, l: string) => lessonPath(c, l, "lesson"),
   (c: string, l: string) => lessonPath(c, l, "quiz"),
@@ -214,20 +240,17 @@ const ROUTES = [
 describe("the order of the refusals (AC4, G1, G2)", () => {
   it("[AC4] a request with no session is 401 on every route and reaches no lesson data", async () => {
     for (const route of ROUTES) {
-      const response = await get(route(course, slugs.second));
-      expect(response.status).toBe(401);
-      expect(await response.text()).not.toContain("secret content");
+      await expectRefusal(await get(route(course, slugs.second)), 401);
     }
   });
 
   it("[AC4] a course slug that does not exist is 404, even for a caller with no access to anything", async () => {
     for (const route of ROUTES) {
       for (const session of [plain, enrolled, admin]) {
-        const response = await get(
-          route("no-such-course", slugs.second),
-          session,
+        await expectRefusal(
+          await get(route("no-such-course", slugs.second), session),
+          404,
         );
-        expect(response.status).toBe(404);
       }
     }
   });
@@ -235,39 +258,52 @@ describe("the order of the refusals (AC4, G1, G2)", () => {
   it("[AC4] a session that is neither enrolled nor admin is 403 and the body holds no lesson column or outline", async () => {
     for (const route of ROUTES) {
       const response = await get(route(course, slugs.second), plain);
-      expect(response.status).toBe(403);
-      const text = await response.text();
+      const text = await response.clone().text();
       expect(text).not.toMatch(/content|video_url|chapters|lesson|secret/);
       expect(JSON.parse(text)).toEqual({
         message: "Forbidden",
         statusCode: 403,
       });
+      await expectRefusal(response, 403);
     }
+  });
+
+  it("[AC4] a learner enrolled only in another course is 403 on every route, and before the lesson is looked up", async () => {
+    for (const route of ROUTES)
+      await expectRefusal(
+        await get(route(course, slugs.second), onlyElsewhere),
+        403,
+      );
+    // A lesson slug that does not exist in the course they are refused: access is decided first, so it is 403, not 404.
+    for (const route of ["lesson", "quiz"])
+      await expectRefusal(
+        await get(lessonPath(course, "no-such-lesson", route), onlyElsewhere),
+        403,
+      );
   });
 
   it("[AC4] a caller who is not enrolled in the asked course is refused even when it names another course's id or user", async () => {
     // The seed course 2 is a real course the plain user is not enrolled in; extra parameters are ignored.
-    const response = await get(lessonPath(SEED_COURSE, SEED_LESSON), plain);
-    expect(response.status).toBe(403);
+    await expectRefusal(
+      await get(lessonPath(SEED_COURSE, SEED_LESSON), plain),
+      403,
+    );
     const url = `${lessonPath(course, slugs.second)}&courseId=2&userId=${enrolled.userId}`;
-    expect((await get(url, plain)).status).toBe(403);
+    await expectRefusal(await get(url, plain), 403);
   });
 
   it("[AC4] an enrolled caller asking for a lesson slug outside the course is 404, also for a lesson that exists elsewhere", async () => {
     for (const route of ["lesson", "quiz"]) {
       for (const session of [enrolled, admin]) {
-        const missing = await get(
-          lessonPath(course, "no-such-lesson", route),
-          session,
+        await expectRefusal(
+          await get(lessonPath(course, "no-such-lesson", route), session),
+          404,
         );
-        expect(missing.status).toBe(404);
         // The seed lesson belongs to course 2, and the fixture course is asked for.
-        const elsewhere = await get(
-          lessonPath(course, SEED_LESSON, route),
-          session,
+        await expectRefusal(
+          await get(lessonPath(course, SEED_LESSON, route), session),
+          404,
         );
-        expect(elsewhere.status).toBe(404);
-        expect(await elsewhere.text()).not.toContain("Khai báo biến");
       }
     }
   });
@@ -275,12 +311,10 @@ describe("the order of the refusals (AC4, G1, G2)", () => {
   it("[G8] a lesson filed under the course's chapter but owned by another course is 404 and gives no private column", async () => {
     for (const route of ["lesson", "quiz"]) {
       for (const session of [enrolled, admin]) {
-        const response = await get(
-          lessonPath(course, slugs.cross, route),
-          session,
+        await expectRefusal(
+          await get(lessonPath(course, slugs.cross, route), session),
+          404,
         );
-        expect(response.status, `${route} as ${session.email}`).toBe(404);
-        expect(await response.text()).not.toContain("secret content");
       }
     }
   });
@@ -445,11 +479,27 @@ describe("the routes are not public (G6)", () => {
     }
   });
 
+  it("[G6] none of the three learn routes is @Sensitive(): a lesson load takes the cached session check", () => {
+    for (const folder of ["dist", "dist-e2e"] as const) {
+      const { sensitive } = enumerateRoutes(folder);
+      expect(
+        sensitive.filter((route) => route.includes("/api/learn/")),
+        folder,
+      ).toEqual([]);
+    }
+    // The enumeration does see a marker: the fixture route that carries @Sensitive() is listed.
+    expect(enumerateRoutes("dist-e2e").sensitive).toContain(
+      "GET /api/e2e/sensitive",
+    );
+  });
+
   it("[G6] a request with a cookie that is no session is refused as well", async () => {
-    const response = await fetch(`${api.url}${outlinePath(course)}`, {
-      headers: { cookie: "sb-127-auth-token=not-a-session" },
-    });
-    expect(response.status).toBe(401);
+    await expectRefusal(
+      await fetch(`${api.url}${outlinePath(course)}`, {
+        headers: { cookie: "sb-127-auth-token=not-a-session" },
+      }),
+      401,
+    );
   });
 });
 

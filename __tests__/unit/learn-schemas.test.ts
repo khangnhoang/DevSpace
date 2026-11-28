@@ -14,12 +14,20 @@ describe("learn query schemas", () => {
     );
   });
 
-  it("rejects a missing, empty, repeated, over-long or NUL-carrying slug", () => {
+  it("accepts a stored slug of any length, because the admin lesson form sets no limit", () => {
+    expect(
+      learnLessonQuery.safeParse({
+        course: "a".repeat(256),
+        lesson: "b".repeat(1000),
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a missing, empty, repeated or NUL-carrying slug", () => {
     for (const input of [
       {},
       { course: "" },
       { course: ["a", "b"] },
-      { course: "a".repeat(256) },
       { course: "a\0b" },
     ]) {
       expect(

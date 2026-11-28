@@ -1,11 +1,10 @@
 import { z } from "zod";
 
-// A slug as the /learn URLs carry it. The bounds only keep an absurd value out of a query; a slug that matches no row
-// is a 404 from the lookup, not a validation failure.
+// A slug as the /learn URLs carry it. It has no upper bound because the admin lesson form sets none, so any stored
+// slug must still be found; a slug that matches no row is a 404 from the lookup, not a validation failure.
 const slug = z
   .string()
   .min(1)
-  .max(255)
   .refine((value) => !value.includes("\0"));
 
 export const learnOutlineQuery = z.object({ course: slug });

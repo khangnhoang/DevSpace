@@ -9,6 +9,9 @@ export type RouteEnumeration = {
   declared: EnumeratedRoute[];
   // What the Express router actually registered after the application was initialized, as "METHOD path".
   registered: string[];
+  // "METHOD path" of every route whose handler or controller carries @Sensitive() (the session guard then skips its
+  // cache). Read apart from `declared` so the public-set rows do not change shape.
+  sensitive: string[];
 };
 
 // Runs inside a child process on the compiled output, because the API relies on decorator metadata that the test
@@ -38,8 +41,29 @@ const out = (name) => require(path.join(root, folder, "backend", name));
     .filter((layer) => layer.route)
     .flatMap((layer) => Object.keys(layer.route.methods).map((method) => method.toUpperCase() + " " + layer.route.path));
   const declared = listRoutes(app);
+  const { DiscoveryService, Reflector } = require("@nestjs/core");
+  const { METHOD_METADATA, PATH_METADATA } = require("@nestjs/common/constants");
+  const { RequestMethod } = require("@nestjs/common");
+  const { IS_SENSITIVE } = out("src/auth/decorators.js");
+  const reflector = app.get(Reflector);
+  const sensitive = [];
+  for (const { instance, metatype } of app.get(DiscoveryService).getControllers()) {
+    if (!instance || !metatype) continue;
+    const base = Reflect.getMetadata(PATH_METADATA, metatype) ?? "";
+    const prototype = Object.getPrototypeOf(instance);
+    for (const name of Object.getOwnPropertyNames(prototype)) {
+      const handler = prototype[name];
+      if (typeof handler !== "function") continue;
+      const method = Reflect.getMetadata(METHOD_METADATA, handler);
+      if (method === undefined) continue;
+      if (reflector.getAllAndOverride(IS_SENSITIVE, [handler, metatype]) !== true) continue;
+      const route = "/" + ["api", base, Reflect.getMetadata(PATH_METADATA, handler) ?? ""]
+        .flatMap((part) => part.split("/")).filter((part) => part !== "").join("/");
+      sensitive.push(RequestMethod[method] + " " + route);
+    }
+  }
   await app.close();
-  console.log("ROUTES:" + JSON.stringify({ declared, registered }));
+  console.log("ROUTES:" + JSON.stringify({ declared, registered, sensitive: sensitive.sort() }));
 })().catch((error) => { console.error(error); process.exit(1); });
 `;
 

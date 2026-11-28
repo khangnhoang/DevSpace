@@ -16,7 +16,8 @@ export class HealthController {
   ) {}
 
   // Touches no database: Railway's health check calls it, and a paused or unreachable database must not put the
-  // API in a restart loop (ADR 0008 D2).
+  // API in a restart loop (ADR 0008 D2). The production gate reads `commit` to see which backend is live
+  // (ADR 0008 D10): keep the field and its meaning.
   @Get()
   health() {
     return { ok: true, commit: this.env.commit };

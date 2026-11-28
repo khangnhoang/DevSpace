@@ -58,7 +58,7 @@ async function handled(): Promise<number> {
 }
 
 describe("default deny (AC5)", () => {
-  it("[AC5] the production build registers exactly the public health and course routes", () => {
+  it("[AC5] the production build registers the public health and course routes and the private learn routes", () => {
     const routes = enumerateRoutes("dist");
     expect(routes.declared).toEqual([
       { method: "GET", path: "/api/courses/detail", public: true },
@@ -66,6 +66,10 @@ describe("default deny (AC5)", () => {
       { method: "GET", path: "/api/courses/reviews", public: true },
       { method: "GET", path: "/api/health", public: true },
       { method: "GET", path: "/api/health/db", public: true },
+      // TM-U5: session routes, none public.
+      { method: "GET", path: "/api/learn/lesson", public: false },
+      { method: "GET", path: "/api/learn/outline", public: false },
+      { method: "GET", path: "/api/learn/quiz", public: false },
     ]);
     expect(routes.registered.sort()).toEqual([
       "GET /api/courses/detail",
@@ -73,6 +77,9 @@ describe("default deny (AC5)", () => {
       "GET /api/courses/reviews",
       "GET /api/health",
       "GET /api/health/db",
+      "GET /api/learn/lesson",
+      "GET /api/learn/outline",
+      "GET /api/learn/quiz",
     ]);
   });
 

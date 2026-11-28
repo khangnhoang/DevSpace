@@ -11,7 +11,7 @@ Every entry below moved here on 2026-11-08 (Owner decision 5 in the plan) with i
 - Status: Deferred to techstack-migration (moved from SH-P7 on 2026-11-05, Owner decisions 1 and 2); moved from SE-P13 (security-engineering) on 2026-11-08, techstack-migration Owner decision 5.
 - Problem: Server components read data with the anon client, not per user.
 - Evidence: Legacy P7; severity Low; discovery-era Planned: techstack-migration (out of scope for `infrastructure`, its plan section 7); preserved from docs/programs/security-hotfix/problems.md at baseline ddcefd0 (discovery 2026-10-21; later discoveries retain their dates above).
-- Direction: Handle in techstack-migration, outside infrastructure (its historical plan section 7); H2-1 fixed only the learn/quiz/layout paths.
+- Direction: Handle in techstack-migration, outside infrastructure (its historical plan section 7); H2-1 fixed only the learn/quiz/layout paths. TM-U5 moved the `/learn` layout, lesson and quiz page reads and the finish page's gate to the API (CP3, local); the course detail, home and reviews reads moved in TM-U4.
 - Exit condition: Remaining server reads use the intended caller context under the migration contract.
 
 ### TM-P2: Auth flow migration follow-up
@@ -128,7 +128,7 @@ Every entry below moved here on 2026-11-08 (Owner decision 5 in the plan) with i
 
 ### TM-P18: no frontend procedure for a page that reads through the API
 
-- Status: Open (2026-11-14, found by the instruction audit of AW-U14; recorded by the implementor).
+- Status: Fixed locally, awaiting delivery (TM-U5 CP3: `frontend-workflow` has the procedure in `references/api-backed-pages.md`, written from the `/learn` pages).
 - Problem: `frontend-design` and `frontend-workflow` describe pages that read with the Supabase clients and server actions. No skill tells an agent how a page or component reads data through the API (`lib/api.server.ts`, the `/api/*` rewrite in `proxy.ts`): where the call sits, how a refused or failed call reaches the UI state, and what the page test fakes. Each frontend unit that moves a read would invent it.
 - Evidence: a search of `.claude/skills/` for `api.server` and `API_INTERNAL_URL` finds only `server-actions/SKILL.md`, which covers the controller side (read at `2ddfce8`). Tooling-specific skill content that a unit adds together with its tooling stays with this program (agent-workflow charter, Boundary).
 - Direction: the first frontend unit that moves a page's read behind the API adds the procedure to `frontend-workflow` in the same change, from the page it moves.

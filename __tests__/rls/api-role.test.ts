@@ -8,6 +8,8 @@
 // Invariants: effective privileges read from the catalog for public, auth and storage; the rollback is replayed
 //   inside a transaction that is rolled back, so the committed state never changes. The migration touches no object it
 //   does not grant on (API-R9, API-R8) and stops on a privilege or an owned object it does not manage (API-R7, API-R10).
+//   TM-U5 adds column grants on lessons, enrollments and exercises in migration 20261128110449_tm_u5_api_learn_read
+//   (API-R14, API-R15); undoHomeGrants undoes them first.
 //   TM-U4 (first slice) adds column grants on courses and lessons in migration 20261109145730_tm_u4_api_home_course_read
 //   (API-R11, API-R12). The replays of the TM-U3 migration and rollback (API-R5 to API-R10) start from a state where
 //   those grants are undone inside their own transaction (`undoHomeGrants`): replaying TM-U3 on top of them would stop
@@ -27,6 +29,7 @@ const stack = inject("localStack");
 const migration = "20261108143215_devspace_api";
 const homeMigration = "20261109145730_tm_u4_api_home_course_read";
 const detailMigration = "20261110101429_tm_u4_api_course_detail_reviews";
+const learnMigration = "20261128110449_tm_u5_api_learn_read";
 
 const HOME_COURSE_COLUMNS = [
   "description",
@@ -44,6 +47,13 @@ const DETAIL_COLUMNS = {
   lessons: ["chapter_id", "has_video", "title", "word_count"],
   profile_cards: ["avatar_url", "full_name", "id"],
   reviews: ["content", "course_id", "created_at", "id", "rating", "user_id"],
+};
+
+// TM-U5 (AC7): exactly these columns, and nothing else on these three tables.
+const LEARN_COLUMNS = {
+  enrollments: ["course_id", "user_id"],
+  exercises: ["lesson_id"],
+  lessons: ["content", "created_at", "order_index", "video_url"],
 };
 
 // Functions of public, auth and storage that devspace_api can execute through PUBLIC, recorded on the local stack
@@ -123,6 +133,8 @@ const homeUp = () => readBody("migrations", `${homeMigration}.sql`);
 const homeDown = () => readBody("rollbacks", `${homeMigration}.down.sql`);
 const detailUp = () => readBody("migrations", `${detailMigration}.sql`);
 const detailDown = () => readBody("rollbacks", `${detailMigration}.down.sql`);
+const learnUp = () => readBody("migrations", `${learnMigration}.sql`);
+const learnDown = () => readBody("rollbacks", `${learnMigration}.down.sql`);
 
 async function homeColumns(owner: pg.Client) {
   return (
@@ -142,6 +154,7 @@ async function homeColumns(owner: pg.Client) {
 // checks both ends, so a rollback that stopped working or a committed state that lost the grants fails here, not in
 // a replay that would then prove something else.
 async function undoHomeGrants(owner: pg.Client) {
+  await owner.query(await learnDown());
   await owner.query(await detailDown());
   expect(
     (await homeColumns(owner)).length,
@@ -230,6 +243,7 @@ describe("devspace_api role", () => {
       await refused(client, "select email from public.profiles");
       await refused(client, "select * from public.profiles");
       await refused(client, "select id from public.enrollments");
+      await refused(client, "select * from public.enrollments");
       await refused(client, "select id from public.payments");
       await refused(client, "select id from auth.users");
       await refused(client, "select id from storage.objects");
@@ -273,6 +287,9 @@ describe("devspace_api role", () => {
           ...HOME_COURSE_COLUMNS.map((column) => `public.courses.${column}`),
           ...HOME_LESSON_COLUMNS.map((column) => `public.lessons.${column}`),
           ...Object.entries(DETAIL_COLUMNS).flatMap(([table, names]) =>
+            names.map((name) => `public.${table}.${name}`),
+          ),
+          ...Object.entries(LEARN_COLUMNS).flatMap(([table, names]) =>
             names.map((name) => `public.${table}.${name}`),
           ),
           "public.profiles.id",
@@ -700,16 +717,6 @@ describe("devspace_api role", () => {
 
       await refused(client, "select created_at from public.courses");
       await refused(client, "select * from public.courses");
-      // Named in a row with the granted columns, so a grant of the whole table or of one extra column fails here.
-      for (const column of [
-        "content",
-        "video_url",
-        "order_index",
-        "created_at",
-      ]) {
-        await refused(client, `select id, ${column} from public.lessons`);
-      }
-      await refused(client, "select * from public.lessons");
       await refused(client, "update public.courses set price = 0");
       await refused(client, "update public.lessons set slug = 'x'");
       await refused(client, "update public.courses set id = id");
@@ -765,9 +772,18 @@ describe("devspace_api role", () => {
       await owner.query("begin");
       try {
         const committed = await snapshot(owner);
+        await owner.query(await learnDown());
+        const beforeLearn = await snapshot(owner);
+        expect(differing(committed, beforeLearn)).toEqual(
+          Object.entries(LEARN_COLUMNS)
+            .flatMap(([table, columns]) =>
+              columns.map((column) => `column public.${table}.${column}`),
+            )
+            .sort(),
+        );
         await owner.query(await detailDown());
         const beforeDetail = await snapshot(owner);
-        expect(differing(committed, beforeDetail)).toEqual(
+        expect(differing(beforeLearn, beforeDetail)).toEqual(
           Object.entries(DETAIL_COLUMNS)
             .flatMap(([table, columns]) =>
               columns.map((column) => `column public.${table}.${column}`),
@@ -797,10 +813,120 @@ describe("devspace_api role", () => {
         await owner.query(await homeUp());
         expect(differing(beforeDetail, await snapshot(owner))).toEqual([]);
         await owner.query(await detailUp());
+        expect(differing(beforeLearn, await snapshot(owner))).toEqual([]);
+        await owner.query(await learnUp());
         expect(
           differing(committed, await snapshot(owner)),
           "the migration puts back exactly what the rollback took",
         ).toEqual([]);
+      } finally {
+        await owner.query("rollback");
+      }
+    });
+  });
+  it("[API-R14] [AC7] reads the learn columns and refuses every other column of those tables and every write", async () => {
+    const counts = await withPg(async (owner) => ({
+      lessons: (
+        await owner.query(
+          "select count(*)::int as n from public.lessons where content is not null and content <> ''",
+        )
+      ).rows[0].n as number,
+      enrollments: (
+        await owner.query("select count(*)::int as n from public.enrollments")
+      ).rows[0].n as number,
+      exercises: (
+        await owner.query("select count(*)::int as n from public.exercises")
+      ).rows[0].n as number,
+    }));
+    expect(
+      counts.lessons,
+      "the seed holds lessons with content",
+    ).toBeGreaterThan(0);
+    expect(counts.enrollments, "the seed holds enrollments").toBeGreaterThan(0);
+    expect(counts.exercises, "the seed holds exercises").toBeGreaterThan(0);
+    await asApi(async (client) => {
+      const lessons = await client.query(
+        "select content, video_url, order_index, created_at from public.lessons where content is not null and content <> ''",
+      );
+      expect(lessons.rows).toHaveLength(counts.lessons);
+      const enrollments = await client.query(
+        "select user_id, course_id from public.enrollments",
+      );
+      expect(enrollments.rows).toHaveLength(counts.enrollments);
+      const exercises = await client.query(
+        "select lesson_id from public.exercises",
+      );
+      expect(exercises.rows).toHaveLength(counts.exercises);
+
+      // The grant names columns, so every other column of these tables stays refused even next to a granted one.
+      await refused(client, "select user_id, id from public.enrollments");
+      await refused(
+        client,
+        "select user_id, created_at from public.enrollments",
+      );
+      for (const column of [
+        "id",
+        "question",
+        "option_a",
+        "option_b",
+        "option_c",
+        "option_d",
+        "correct_answer",
+        "explanation",
+      ]) {
+        await refused(
+          client,
+          `select lesson_id, ${column} from public.exercises`,
+        );
+      }
+      await refused(client, "update public.lessons set content = 'x'");
+      await refused(client, "update public.lessons set video_url = 'x'");
+      await refused(client, "update public.enrollments set course_id = 1");
+      await refused(
+        client,
+        "insert into public.enrollments (user_id, course_id) values (gen_random_uuid(), 1)",
+      );
+      await refused(client, "delete from public.enrollments");
+      await refused(client, "update public.exercises set lesson_id = 1");
+      await refused(client, "delete from public.exercises");
+      await refused(client, "truncate public.exercises");
+    });
+  });
+
+  it("[API-R15] [AC7] the TM-U5 rollback removes exactly its grants, and its migration puts them back", async () => {
+    await withPg(async (owner) => {
+      await owner.query("begin");
+      try {
+        const columns = async () =>
+          (
+            await owner.query(
+              `select c.relname || '.' || a.attname as column
+               from pg_attribute a join pg_class c on c.oid = a.attrelid
+               where c.relnamespace = 'public'::regnamespace
+                 and c.relname in ('lessons', 'enrollments', 'exercises')
+                 and a.attnum > 0 and not a.attisdropped
+                 and has_column_privilege($1, c.oid, a.attnum, 'SELECT,INSERT,UPDATE,REFERENCES')
+               order by 1`,
+              [API_ROLE],
+            )
+          ).rows.map((row) => row.column as string);
+        const before = await columns();
+        await owner.query(await learnDown());
+        const after = await columns();
+        expect(before.filter((column) => !after.includes(column))).toEqual(
+          Object.entries(LEARN_COLUMNS)
+            .flatMap(([table, names]) => names.map((n) => `${table}.${n}`))
+            .sort(),
+        );
+        // What stays is the TM-U4 grants on lessons, and nothing on enrollments or exercises.
+        expect(after.some((column) => column.startsWith("enrollments."))).toBe(
+          false,
+        );
+        expect(after.some((column) => column.startsWith("exercises."))).toBe(
+          false,
+        );
+        await owner.query(await learnUp());
+        expect(await columns()).toEqual(before);
       } finally {
         await owner.query("rollback");
       }

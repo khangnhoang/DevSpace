@@ -1,5 +1,4 @@
 import { createBrowserClient } from "@supabase/ssr";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
 // ✅ 1. IMPORT & RE-EXPORT
 // Dòng này giúp các file khác vẫn import type từ đây được (không gãy code cũ)
@@ -8,7 +7,6 @@ export * from "@/lib/types";
 // Import nội bộ để dùng trong file này
 import type {
   DBCourse,
-  DBLesson,
   DBChapter,
   DBProfile,
   DashboardCourse,
@@ -35,62 +33,6 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 // On the server (no `document`) this client has no session and acts as anon,
 // which is what server components importing it already relied on.
 export const supabase = createBrowserClient(supabaseUrl, supabaseKey);
-
-// --------------------------------------------------------
-// SECTION A: LOGIC BÀI HỌC (LESSONS)
-// --------------------------------------------------------
-
-// Rows from the untyped client: only the nested shapes these mappers read.
-interface LessonRow {
-  exercises?: { count: number }[] | null;
-  [key: string]: unknown;
-}
-interface ChapterRow {
-  lessons?: LessonRow[] | null;
-  [key: string]: unknown;
-}
-
-export async function getLessonsByCourse(
-  courseSlug: string,
-  client: SupabaseClient = supabase,
-) {
-  // Bước 1: Tìm xem cái slug 'html-css' là ID số mấy?
-  const { data: course } = await client
-    .from("courses")
-    .select("id")
-    .eq("slug", courseSlug)
-    .single();
-
-  if (!course) return [];
-
-  // Bước 2: Lấy các bài học thuộc ID đó
-  const { data: chapters } = await client
-    .from("chapters")
-    .select(
-      `id, title, order_index, lessons (id, title, slug, has_video, exercises (count))`,
-    )
-    .eq("course_id", course.id)
-    .order("order_index", { ascending: true })
-    .order("order_index", {
-      referencedTable: "lessons",
-      ascending: true,
-      nullsFirst: false,
-    })
-    .order("created_at", { referencedTable: "lessons", ascending: true });
-
-  const formattedChapters = (chapters || []).map((ch: ChapterRow) => ({
-    ...ch,
-    lessons: (ch.lessons || []).map((l: LessonRow) => ({
-      ...l,
-      has_exercise: l.exercises && l.exercises[0]?.count > 0,
-      exercises: undefined,
-    })),
-  }));
-
-  return formattedChapters as unknown as (DBChapter & {
-    lessons: (DBLesson & { has_video: boolean; has_exercise: boolean })[];
-  })[]; // Trả về Chapter[]
-}
 
 // --------------------------------------------------------
 // SECTION B: LOGIC BÀI TẬP (QUIZ / EXERCISES)

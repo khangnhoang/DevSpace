@@ -1,6 +1,8 @@
 import "server-only";
 
 import type { User } from "@supabase/supabase-js";
+import { learnOutcome } from "@/lib/learn-api";
+import { getCourseOutline } from "@/lib/learn.server";
 import { createSupabaseServerClient } from "@/lib/supabase.server";
 
 export type AuthResult = { user: User } | { error: string };
@@ -37,39 +39,29 @@ export async function requireAdmin(): Promise<AuthResult> {
 }
 
 export type CourseAccess =
-  | { user: User; course: { id: number; slug: string }; isAdmin: boolean }
+  | {
+      // The id the API answer names; the quiz page is its only reader, and it needs nothing else of the session.
+      user: { id: string };
+      course: { id: number; slug: string };
+      isAdmin: boolean;
+    }
   | { redirect: string }
-  | { notFound: true };
+  | { notFound: true }
+  // The API failed without a refusal (a 5xx, an unreachable API, an answer that does not match its schema). A page
+  // shows its message and never redirects, so an outage does not read as "not signed in" or "not enrolled" (G4).
+  | { unavailable: true };
 
-// Gate for /learn pages: signed in, course exists, and the user is enrolled or
-// an admin. Runs with the caller's own session, so RLS only exposes their rows.
+// Gate for /learn pages whose own read is the outline: the API decides everything (session, course, enrollment or
+// admin) and answers 401, 403 or 404, which map to the same redirects and not-found screen as before (TM-U5). No
+// `getCurrentUser()` runs here: the API is the one authority, and only its 401 sends a visitor to /login. The lesson
+// and quiz pages take the same verdict from their own routes' answers (`lib/learn.server.ts`) instead of a second call.
 export async function requireCourseAccess(
   courseSlug: string,
 ): Promise<CourseAccess> {
-  const user = await getCurrentUser();
-  if (!user) return { redirect: "/login" };
-
-  const supabase = await createSupabaseServerClient();
-
-  const { data: course } = await supabase
-    .from("courses")
-    .select("id, slug")
-    .eq("slug", courseSlug)
-    .maybeSingle();
-  if (!course) return { notFound: true };
-
-  const [{ data: profile }, { data: enrollment }] = await Promise.all([
-    supabase.from("profiles").select("role").eq("id", user.id).maybeSingle(),
-    supabase
-      .from("enrollments")
-      .select("course_id")
-      .eq("user_id", user.id)
-      .eq("course_id", course.id)
-      .maybeSingle(),
-  ]);
-
-  const isAdmin = profile?.role === "admin";
-  if (!isAdmin && !enrollment) return { redirect: `/course/${course.slug}` };
-
+  const read = await getCourseOutline(courseSlug);
+  const outcome = learnOutcome(read, courseSlug);
+  if (outcome) return outcome;
+  if (read.status !== "ok") return { unavailable: true };
+  const { user, course, isAdmin } = read.data;
   return { user, course, isAdmin };
 }

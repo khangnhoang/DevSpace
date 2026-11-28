@@ -1,11 +1,11 @@
 // app/learn/[course]/[slug]/page.tsx
 import { redirect } from "next/navigation";
-import { getLessonsByCourse } from "@/lib/supabase";
-import { requireCourseAccess } from "@/lib/auth.server";
-import { createSupabaseServerClient } from "@/lib/supabase.server";
-import { supabaseAdmin } from "@/lib/supabase.admin";
+import { getLesson } from "@/lib/learn.server";
+import { learnOutcome } from "@/lib/learn-api";
+import type { Chapter, Lessons } from "@/lib/supabase";
 import LearnClient from "@/app/components/LearnClient"; // Import component con
 import NotFoundLesson from "@/app/components/NotFoundLesson";
+import LessonUnavailable from "@/app/components/LessonUnavailable";
 import matter from "gray-matter";
 import LessonContent from "@/app/components/LessonContent";
 
@@ -35,44 +35,30 @@ export default async function LearnPage({
 }) {
   const { course, slug } = await params;
 
-  // 1. Gate on the server before any lesson content is read.
-  const access = await requireCourseAccess(course);
-  if ("redirect" in access) redirect(access.redirect);
-  if ("notFound" in access) return <NotFoundLesson />;
-
-  // 2. Public metadata only; the lesson must belong to the course in the URL.
-  const supabase = await createSupabaseServerClient();
-  const { data: lesson, error } = await supabase
-    .from("lessons")
-    .select("id, title, slug, course_id, chapter_id, order_index, created_at")
-    .eq("slug", slug)
-    .eq("course_id", access.course.id)
-    .maybeSingle();
-
-  if (error || !lesson) {
-    return <NotFoundLesson />;
+  // 1. One call: the API decides access, then returns the lesson, its private columns and the outline, so no lesson
+  // column is read before the verdict and the page makes no Supabase read of its own (TM-U5).
+  const read = await getLesson(course, slug);
+  const outcome = learnOutcome(read, course);
+  if (outcome) {
+    if ("redirect" in outcome) redirect(outcome.redirect);
+    if ("notFound" in outcome) return <NotFoundLesson />;
+    return <LessonUnavailable />;
   }
+  if (read.status !== "ok") return <LessonUnavailable />;
+  const { lesson: lessonRow, content, video_url, isAdmin } = read.data;
+  const lesson = lessonRow as unknown as Lessons;
+  const chapters = read.data.chapters as unknown as Chapter[];
 
-  // 3. Private columns, read with the service role only after the gate.
-  const { data: privateData } = await supabaseAdmin
-    .from("lessons")
-    .select("content, video_url")
-    .eq("id", lesson.id)
-    .single();
-
-  // 4. Logic bài trước/sau
-  const chapters = await getLessonsByCourse(course, supabase);
-  const allLessons = chapters.flatMap((chapter) => chapter.lessons);
-  const currentIndex = allLessons?.findIndex((i) => i.slug === slug) ?? -1;
-  const prevLesson = currentIndex > 0 ? allLessons![currentIndex - 1] : null;
+  // 2. Logic bài trước/sau
+  const allLessons = read.data.chapters.flatMap((chapter) => chapter.lessons);
+  const currentIndex = allLessons.findIndex((i) => i.slug === slug);
+  const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
   const nextLesson =
-    allLessons && currentIndex < allLessons.length - 1
-      ? allLessons[currentIndex + 1]
-      : null;
+    currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null;
 
   // 5. Xử lý content
-  const { content: cleanContent } = matter(privateData?.content || "");
-  const videoId = getYouTubeId(privateData?.video_url ?? null);
+  const { content: cleanContent } = matter(content || "");
+  const videoId = getYouTubeId(video_url);
 
   return (
     <LearnClient
@@ -83,7 +69,7 @@ export default async function LearnPage({
       nextLesson={nextLesson}
       prevLesson={prevLesson}
       videoId={videoId}
-      isAdmin={access.isAdmin}
+      isAdmin={isAdmin}
     >
       <LessonContent content={cleanContent} />
     </LearnClient>

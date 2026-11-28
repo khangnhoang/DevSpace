@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
-import { getLessonsByCourse } from "@/lib/supabase";
-import { requireCourseAccess } from "@/lib/auth.server";
+import { getQuiz } from "@/lib/learn.server";
+import { learnOutcome } from "@/lib/learn-api";
 import { createSupabaseServerClient } from "@/lib/supabase.server";
 import NotFoundLesson from "@/app/components/NotFoundLesson";
+import LessonUnavailable from "@/app/components/LessonUnavailable";
 import Quiz, { QuizQuestion } from "@/app/components/Quiz";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
@@ -15,25 +16,19 @@ interface Props {
 export default async function QuizPage({ params }: Props) {
   const { course, slug } = await params;
 
-  // 1. Gate on the server: signed in and enrolled (or admin)
-  const access = await requireCourseAccess(course);
-  if ("redirect" in access) redirect(access.redirect);
-  if ("notFound" in access) return <NotFoundLesson />;
-
-  // 2. Lấy thông tin bài học (phải thuộc khóa học trên URL)
-  const supabase = await createSupabaseServerClient();
-  const { data: lesson, error } = await supabase
-    .from("lessons")
-    .select("id, title, slug")
-    .eq("slug", slug)
-    .eq("course_id", access.course.id)
-    .maybeSingle();
-
-  if (error || !lesson) {
-    return <NotFoundLesson />;
+  // 1. The API gates (signed in, enrolled or admin, lesson in this course) and returns the lesson and the outline.
+  const read = await getQuiz(course, slug);
+  const outcome = learnOutcome(read, course);
+  if (outcome) {
+    if ("redirect" in outcome) redirect(outcome.redirect);
+    if ("notFound" in outcome) return <NotFoundLesson />;
+    return <LessonUnavailable />;
   }
+  if (read.status !== "ok") return <LessonUnavailable />;
+  const { lesson, user } = read.data;
 
-  const user = access.user;
+  // 2. Bài tập: the lesson id comes from the API's answer, the read stays with the caller's session until TM-U15.
+  const supabase = await createSupabaseServerClient();
 
   // 3. Lấy bài tập (RLS cho phép vì đã enroll / admin)
   const { data: exercisesRaw } = await supabase
@@ -46,9 +41,13 @@ export default async function QuizPage({ params }: Props) {
     return (
       <div className="p-8 min-h-screen w-full bg-gray-50 pt-16 flex flex-col items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-700 mb-2">Chưa có bài tập</h2>
-          <p className="text-gray-500 mb-6">Bài học này hiện chưa cập nhật bài tập thực hành.</p>
-          <Link 
+          <h2 className="text-2xl font-bold text-gray-700 mb-2">
+            Chưa có bài tập
+          </h2>
+          <p className="text-gray-500 mb-6">
+            Bài học này hiện chưa cập nhật bài tập thực hành.
+          </p>
+          <Link
             href={`/learn/${course}/${slug}`}
             className="text-blue-600 hover:underline flex items-center justify-center gap-2"
           >
@@ -67,25 +66,25 @@ export default async function QuizPage({ params }: Props) {
   }));
 
   // 4. Logic bài tiếp theo
-  const chapters = await getLessonsByCourse(course, supabase);
-  const allLessons = chapters.flatMap((chapter) => chapter.lessons);
-  const currentIndex = allLessons?.findIndex((i) => i.slug === slug) ?? -1;
+  const allLessons = read.data.chapters.flatMap((chapter) => chapter.lessons);
+  const currentIndex = allLessons.findIndex((i) => i.slug === slug);
   const nextLesson =
-    allLessons && currentIndex < allLessons.length - 1
-      ? allLessons[currentIndex + 1]
-      : null;
-  const nextLessonPath = nextLesson ? `/learn/${course}/${nextLesson.slug}` : null;
+    currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null;
+  const nextLessonPath = nextLesson
+    ? `/learn/${course}/${nextLesson.slug}`
+    : null;
 
   return (
     <div className="md:p-8 min-h-screen p-4 w-full bg-gray-50 lg:w-3/4 mx-auto pt-16">
       {/* Breadcrumb / Back Link */}
       <div className="mb-6">
-        <Link 
-          href={`/learn/${course}/${slug}`} 
+        <Link
+          href={`/learn/${course}/${slug}`}
           className="inline-flex items-center text-sm text-gray-500 hover:text-blue-600 transition-colors"
         >
           <ChevronLeft size={16} className="mr-1" />
-          Quay lại bài học: <span className="font-bold ml-1">{lesson.title}</span>
+          Quay lại bài học:{" "}
+          <span className="font-bold ml-1">{lesson.title}</span>
         </Link>
       </div>
 
@@ -100,11 +99,11 @@ export default async function QuizPage({ params }: Props) {
         </div>
 
         {/* Component Quiz tái sử dụng */}
-        <Quiz 
-          questions={quizQuestions} 
-          lessonId={lesson.id} 
+        <Quiz
+          questions={quizQuestions}
+          lessonId={lesson.id}
           userId={user.id}
-          nextLessonPath={nextLessonPath} 
+          nextLessonPath={nextLessonPath}
         />
       </div>
     </div>

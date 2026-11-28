@@ -42,6 +42,7 @@ Stop and report when business behavior, a status or a transition is unclear; the
 | Resource | Read when | Skip when |
 | --- | --- | --- |
 | [async-state-and-forms.md](references/async-state-and-forms.md) | implementing or reviewing a mutation, optimistic update, form, dynamic field or complex client state | static composition with no async or form |
+| [api-backed-pages.md](references/api-backed-pages.md) | a page, layout or server component reads from the NestJS API through `lib/api.server.ts` | the page reads with a Supabase client or a server action |
 | [manual-ui-validation.md](references/manual-ui-validation.md) | planning, running or reporting manual validation in the browser | no browser check is planned or the Owner deferred it |
 
 ## Final report

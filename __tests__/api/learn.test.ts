@@ -213,22 +213,17 @@ const lessonPath = (courseSlug: string, lessonSlug: string, route = "lesson") =>
 const outlinePath = (courseSlug: string) =>
   `/api/learn/outline?course=${encodeURIComponent(courseSlug)}`;
 
-// A 401, 403 or 404 body is the framework's refusal and nothing else: no key of an answer and no lesson text.
-async function expectRefusal(response: Response, status: number) {
+// The framework's own refusal for each status, and nothing else: an exact compare, so a nested field or a lesson text
+// anywhere in a refusal body fails it.
+const REFUSALS: Record<number, { message: string; statusCode: number }> = {
+  401: { message: "Unauthorized", statusCode: 401 },
+  403: { message: "Forbidden", statusCode: 403 },
+  404: { message: "Not Found", statusCode: 404 },
+};
+
+async function expectRefusal(response: Response, status: 401 | 403 | 404) {
   expect(response.status).toBe(status);
-  const text = await response.text();
-  expect(text).not.toMatch(/secret content|Khai báo|TM-U5 lesson/);
-  const body = JSON.parse(text) as Record<string, unknown>;
-  for (const key of [
-    "content",
-    "video_url",
-    "chapters",
-    "lesson",
-    "user",
-    "course",
-    "isAdmin",
-  ])
-    expect(body, key).not.toHaveProperty(key);
+  expect(await response.json()).toEqual(REFUSALS[status]);
 }
 
 const ROUTES = [
